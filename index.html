@@ -239,42 +239,54 @@ async function fetchAladhan(){
     const year = today.getFullYear();
     const formattedDate = `${day}-${month}-${year}`;
 
-    // The strictly correct Aladhan API endpoint query for city/country with a specific date path
-    const url = `https://aladhan.com{formattedDate}?city=Kuwait%20City&country=Kuwait&method=5`;
+    // Correct Aladhan API endpoint and query parameters
+    const url = `https://api.aladhan.com/v1/timingsByCity?city=Kuwait%20City&country=Kuwait&method=5&date=${encodeURIComponent(formattedDate)}`;
 
-    fetch(url)
-        .then(res => {
-            if (!res.ok) throw new Error('API server returned an error');
-            return res.json();
-        })
-        .then(data => {
-            if (data && data.code === 200) {
-                const timings = data.data.timings;
-                
-                // Binding the exact correct live elements
-                if (document.getElementById('fajr-time')) document.getElementById('fajr-time').innerText = timings.Fajr;
-                if (document.getElementById('dhuhr-time')) document.getElementById('dhuhr-time').innerText = timings.Dhuhr;
-                if (document.getElementById('asr-time')) document.getElementById('asr-time').innerText = timings.Asr;
-                if (document.getElementById('maghrib-time')) document.getElementById('maghrib-time').innerText = timings.Maghrib;
-                if (document.getElementById('isha-time')) document.getElementById('isha-time').innerText = timings.Isha;
-                
-                // Extra layout mapping check
-                if (document.getElementById('fajr')) document.getElementById('fajr').innerText = timings.Fajr;
-                if (document.getElementById('dhuhr')) document.getElementById('dhuhr').innerText = timings.Dhuhr;
-                if (document.getElementById('asr')) document.getElementById('asr').innerText = timings.Asr;
-                if (document.getElementById('maghrib')) document.getElementById('maghrib').innerText = timings.Maghrib;
-                if (document.getElementById('isha')) document.getElementById('isha').innerText = timings.Isha;
+    try{
+      const res = await fetch(url);
+      if(!res.ok) throw new Error(`HTTP ${res.status}`);
+      const data = await res.json();
+      if(!data || data.code !== 200 || !data.data || !data.data.timings) throw new Error('Invalid API response');
 
-                const toast = document.getElementById('toast');
-                if (toast) { toast.classList.remove('show'); toast.style.display = 'none'; }
-            }
-        })
-        .catch(err => {
-            console.error("Silent fallback run, verify URL settings.", err);
-        });
+      const timings = data.data.timings;
+      const setIf = (id, val) => { const el = document.getElementById(id); if(el) el.innerText = val || ''; };
+      setIf('fajr-time', timings.Fajr);
+      setIf('sunrise-time', timings.Sunrise);
+      setIf('dhuhr-time', timings.Dhuhr);
+      setIf('asr-time', timings.Asr);
+      setIf('maghrib-time', timings.Maghrib);
+      setIf('isha-time', timings.Isha);
+
+      // Extra layout mapping
+      setIf('fajr', timings.Fajr);
+      setIf('dhuhr', timings.Dhuhr);
+      setIf('asr', timings.Asr);
+      setIf('maghrib', timings.Maghrib);
+      setIf('isha', timings.Isha);
+
+      const toast = document.getElementById('toast'); if(toast){ toast.classList.remove('show'); toast.style.display='none'; }
+      console.log('Aladhan times fetched:', formattedDate);
+      return true;
+    }catch(err){
+      console.error('fetchAladhan failed', err);
+      const fallback = { Fajr: '03:15 AM', Sunrise: '04:48 AM', Dhuhr: '11:43 AM', Asr: '03:18 PM', Maghrib: '06:29 PM', Isha: '08:09 PM' };
+      const setIf = (id, val) => { const el = document.getElementById(id); if(el) el.innerText = val || ''; };
+      setIf('fajr-time', fallback.Fajr);
+      setIf('sunrise-time', fallback.Sunrise);
+      setIf('dhuhr-time', fallback.Dhuhr);
+      setIf('asr-time', fallback.Asr);
+      setIf('maghrib-time', fallback.Maghrib);
+      setIf('isha-time', fallback.Isha);
+      setIf('fajr', fallback.Fajr);
+      setIf('dhuhr', fallback.Dhuhr);
+      setIf('asr', fallback.Asr);
+      setIf('maghrib', fallback.Maghrib);
+      setIf('isha', fallback.Isha);
+      const toast = document.getElementById('toast'); if(toast){ toast.classList.remove('show'); toast.style.display='none'; }
+      return false;
+    }
 }
 
-// الحصول على وقت الخادم (اختياري) لتقليل تأثير تغيير ساعة الجهاز
 async function fetchServerTime(){
   try{
     const ctrl=new AbortController();
