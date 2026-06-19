@@ -153,16 +153,24 @@ function initFirebase(){
 function signInWithGoogle(){
   if(!fbAuth){showToast('الرجاء إعداد firebaseConfig');return}
   const provider=new firebase.auth.GoogleAuthProvider();
-  fbAuth.signInWithPopup(provider).catch(()=>showToast('فشل تسجيل الدخول'));
+  fbAuth.signInWithPopup(provider).catch(err=>{
+    console.error('Google signIn failed',err);
+    showToast(err && err.message? err.message : 'فشل تسجيل الدخول');
+  });
 }
 
 function signInWithEmail(email,password){
   if(!fbAuth){showToast('الرجاء إعداد firebaseConfig');return}
   fbAuth.signInWithEmailAndPassword(email,password).catch(err=>{
-    if(err.code==='auth/user-not-found'){
-      // create account
-      fbAuth.createUserWithEmailAndPassword(email,password).catch(()=>showToast('فشل إنشاء الحساب'))
-    }else showToast('فشل تسجيل الدخول');
+    console.error('Email signIn failed',err);
+    if(err && err.code==='auth/user-not-found'){
+      fbAuth.createUserWithEmailAndPassword(email,password).catch(e=>{
+        console.error('Create user failed',e);
+        showToast(e && e.message? e.message : 'فشل إنشاء الحساب');
+      })
+    }else{
+      showToast(err && err.message? err.message : 'فشل تسجيل الدخول');
+    }
   });
 }
 
