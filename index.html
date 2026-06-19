@@ -153,7 +153,20 @@ function initFirebase(){
 function signInWithGoogle(){
   if(!fbAuth){showToast('الرجاء إعداد firebaseConfig');return}
   const provider=new firebase.auth.GoogleAuthProvider();
-  fbAuth.signInWithPopup(provider).catch(err=>{
+  fbAuth.signInWithPopup(provider).then(result=>{
+    const user = result && result.user;
+    const allowedEmail = 'ashafei1905@gmail.com';
+    if(user && user.email === allowedEmail){
+      // allowed - let onAuthStateChanged handle the UI updates
+      console.log('Authorized user signed in', user.email);
+      showToast('تم تسجيل الدخول');
+      return;
+    }
+    // unauthorized - sign out immediately and block access
+    console.warn('Unauthorized user attempted login', user && user.email);
+    showToast('Sign-in failed: Unauthorized user');
+    fbAuth.signOut().catch(e=>console.error('Sign-out after unauthorized login failed',e));
+  }).catch(err=>{
     console.error('Google signIn failed',err);
     showToast(err && err.message? err.message : 'فشل تسجيل الدخول');
   });
