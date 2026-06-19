@@ -240,37 +240,12 @@ async function fetchAladhan(){
     const formattedDate = `${day}-${month}-${year}`;
 
     // Correct Aladhan API endpoint and query parameters
-    const url = `https://api.aladhan.com/v1/timingsByCity?city=Kuwait%20City&country=Kuwait&method=5&date=${encodeURIComponent(formattedDate)}`;
+    const apiUrl = `https://api.aladhan.com/v1/timingsByCity?city=Kuwait%20City&country=Kuwait&method=5&date=${encodeURIComponent(formattedDate)}`;
+    const proxyUrl = `https://api.allorigins.win/raw?url=${encodeURIComponent(apiUrl)}`;
 
-    try{
-      const res = await fetch(url);
-      if(!res.ok) throw new Error(`HTTP ${res.status}`);
-      const data = await res.json();
-      if(!data || data.code !== 200 || !data.data || !data.data.timings) throw new Error('Invalid API response');
-
-      const timings = data.data.timings;
-      const setIf = (id, val) => { const el = document.getElementById(id); if(el) el.innerText = val || ''; };
-      setIf('fajr-time', timings.Fajr);
-      setIf('sunrise-time', timings.Sunrise);
-      setIf('dhuhr-time', timings.Dhuhr);
-      setIf('asr-time', timings.Asr);
-      setIf('maghrib-time', timings.Maghrib);
-      setIf('isha-time', timings.Isha);
-
-      // Extra layout mapping
-      setIf('fajr', timings.Fajr);
-      setIf('dhuhr', timings.Dhuhr);
-      setIf('asr', timings.Asr);
-      setIf('maghrib', timings.Maghrib);
-      setIf('isha', timings.Isha);
-
-      const toast = document.getElementById('toast'); if(toast){ toast.classList.remove('show'); toast.style.display='none'; }
-      console.log('Aladhan times fetched:', formattedDate);
-      return true;
-    }catch(err){
-      console.error('fetchAladhan failed', err);
+    const setIf = (id, val) => { const el = document.getElementById(id); if(el) el.innerText = val || ''; };
+    const setFallback = () => {
       const fallback = { Fajr: '03:15 AM', Sunrise: '04:48 AM', Dhuhr: '11:43 AM', Asr: '03:18 PM', Maghrib: '06:29 PM', Isha: '08:09 PM' };
-      const setIf = (id, val) => { const el = document.getElementById(id); if(el) el.innerText = val || ''; };
       setIf('fajr-time', fallback.Fajr);
       setIf('sunrise-time', fallback.Sunrise);
       setIf('dhuhr-time', fallback.Dhuhr);
@@ -283,7 +258,55 @@ async function fetchAladhan(){
       setIf('maghrib', fallback.Maghrib);
       setIf('isha', fallback.Isha);
       const toast = document.getElementById('toast'); if(toast){ toast.classList.remove('show'); toast.style.display='none'; }
-      return false;
+    };
+
+    const loadTimings = async (url)=>{
+      const res = await fetch(url);
+      if(!res.ok) throw new Error(`HTTP ${res.status}`);
+      const data = await res.json();
+      if(!data || data.code !== 200 || !data.data || !data.data.timings) throw new Error('Invalid API response');
+      return data.data.timings;
+    };
+
+    try{
+      let timings = await loadTimings(apiUrl);
+      console.log('Aladhan direct fetch succeeded');
+      setIf('fajr-time', timings.Fajr);
+      setIf('sunrise-time', timings.Sunrise);
+      setIf('dhuhr-time', timings.Dhuhr);
+      setIf('asr-time', timings.Asr);
+      setIf('maghrib-time', timings.Maghrib);
+      setIf('isha-time', timings.Isha);
+      setIf('fajr', timings.Fajr);
+      setIf('dhuhr', timings.Dhuhr);
+      setIf('asr', timings.Asr);
+      setIf('maghrib', timings.Maghrib);
+      setIf('isha', timings.Isha);
+      const toast = document.getElementById('toast'); if(toast){ toast.classList.remove('show'); toast.style.display='none'; }
+      return true;
+    }catch(directErr){
+      console.warn('Direct Aladhan fetch failed, trying proxy', directErr);
+      try{
+        let timings = await loadTimings(proxyUrl);
+        console.log('Aladhan proxy fetch succeeded');
+        setIf('fajr-time', timings.Fajr);
+        setIf('sunrise-time', timings.Sunrise);
+        setIf('dhuhr-time', timings.Dhuhr);
+        setIf('asr-time', timings.Asr);
+        setIf('maghrib-time', timings.Maghrib);
+        setIf('isha-time', timings.Isha);
+        setIf('fajr', timings.Fajr);
+        setIf('dhuhr', timings.Dhuhr);
+        setIf('asr', timings.Asr);
+        setIf('maghrib', timings.Maghrib);
+        setIf('isha', timings.Isha);
+        const toast = document.getElementById('toast'); if(toast){ toast.classList.remove('show'); toast.style.display='none'; }
+        return true;
+      }catch(proxyErr){
+        console.error('Aladhan proxy fetch failed', proxyErr);
+        setFallback();
+        return false;
+      }
     }
 }
 
