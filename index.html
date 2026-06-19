@@ -171,7 +171,7 @@ function sendPasswordReset(email){
 const DKEYS=['sun','mon','tue','wed','thu','fri','sat'];
 const DSHORT=['أحد','اثنين','ثلاثاء','أربعاء','خميس','جمعة','سبت'];
 const PMETA={Fajr:{ar:'الفجر',ic:'🌙',pts:15},Dhuhr:{ar:'الظهر',ic:'☀️',pts:10},Asr:{ar:'العصر',ic:'🌤️',pts:10},Maghrib:{ar:'المغرب',ic:'🌅',pts:10},Isha:{ar:'العشاء',ic:'🌙',pts:10}};
-const FALLBK={Fajr:'03:15',Dhuhr:'11:43',Asr:'15:18',Maghrib:'18:29',Isha:'20:09'};
+const FALLBK={Fajr:'03:15',Sunrise:'05:40',Dhuhr:'11:43',Asr:'15:18',Maghrib:'18:29',Isha:'20:09'};
 let PRYT={...FALLBK};
 const p2=n=>String(n).padStart(2,'0');
 const todayStr=()=>{const d=new Date();return `${d.getFullYear()}-${p2(d.getMonth()+1)}-${p2(d.getDate())}`};
@@ -209,70 +209,75 @@ async function fetchPrayers(){
 }
 
 async function fetchAladhan(){
-  // Reliable fetch: use Aladhan API timingsByCity with today's date (DD-MM-YYYY) and method=5
   try{
-    const now = new Date(Date.now()+SERVER_TIME_OFFSET);
+    const now = new Date();
     const dd = String(now.getDate()).padStart(2,'0');
     const mm = String(now.getMonth()+1).padStart(2,'0');
     const yyyy = now.getFullYear();
     const dateStr = `${dd}-${mm}-${yyyy}`; // DD-MM-YYYY
 
     const method = '5';
-    const city = encodeURIComponent('Kuwait City');
-    const country = encodeURIComponent('Kuwait');
-    const tz = Intl.DateTimeFormat().resolvedOptions().timeZone||'';
+    const city = 'Kuwait City';
+    const country = 'Kuwait';
+    const tz = Intl.DateTimeFormat().resolvedOptions().timeZone || '';
 
-    const url = `https://api.aladhan.com/v1/timingsByCity?city=${city}&country=${country}&method=${method}&date=${encodeURIComponent(dateStr)}${tz?`&timezonestring=${encodeURIComponent(tz)}`:''}`;
+    const url = new URL('/v1/timingsByCity', 'https://aladhan.com');
+    url.searchParams.set('city', city);
+    url.searchParams.set('country', country);
+    url.searchParams.set('method', method);
+    url.searchParams.set('date', dateStr);
+    if(tz) url.searchParams.set('timezonestring', tz);
 
-    const ctrl=new AbortController();
-    const tmr=setTimeout(()=>ctrl.abort(),5000);
-    let res;
+    const ctrl = new AbortController();
+    const tmr = setTimeout(() => ctrl.abort(), 10000);
+    let res = null;
     try{
-      res = await fetch(url,{signal:ctrl.signal});
+      res = await fetch(url.toString(), { signal: ctrl.signal });
     }catch(err){
-      console.warn('direct fetch failed, will try proxy',err);res=null;
+      console.warn('Aladhan direct fetch failed', err);
+    } finally {
+      clearTimeout(tmr);
     }
-    clearTimeout(tmr);
+
     let d = null;
+    if(!res || !res.ok){
+      try{
+        const proxy = 'https://api.allorigins.win/raw?url=' + encodeURIComponent(url.toString());
+        res = await fetch(proxy);
+      }catch(err){
+        console.warn('Aladhan proxy fetch failed', err);
+      }
+    }
     if(res && res.ok){
       d = await res.json();
-    } else {
-      // Try AllOrigins proxy to avoid CORS issues when opening file://
-      try{
-        const proxy = 'https://api.allorigins.win/raw?url='+encodeURIComponent(url);
-        const pres = await fetch(proxy);
-        if(pres && pres.ok){
-          d = await pres.json();
-        }
-      }catch(perr){
-        console.warn('proxy fetch failed',perr);
-      }
+    } else if(res){
+      console.warn('Aladhan fetch response not ok', res.status);
     }
+
     if(d && d.data && d.data.timings){
-        const t=d.data.timings;
-        // map API keys directly to PRYT used by the app
-        PRYT={
-          Fajr: cleanTimeStr(t.Fajr) || FALLBK.Fajr,
-          Dhuhr: cleanTimeStr(t.Dhuhr) || FALLBK.Dhuhr,
-          Asr: cleanTimeStr(t.Asr) || FALLBK.Asr,
-          Maghrib: cleanTimeStr(t.Maghrib) || FALLBK.Maghrib,
-          Isha: cleanTimeStr(t.Isha) || FALLBK.Isha
-        };
-        computeAutoFreeTime();
-        document.getElementById('panels').innerHTML=[0,1,2,3,4,5,6].map(renderPanel).join('');
-        switchDay(todayJD());
-        const ld=document.getElementById('ld'); if(ld) ld.style.display='none';
-        const app=document.getElementById('app'); if(app) app.style.display='block';
-        console.log('Prayer times updated for', dateStr);
-        return true;
-      }
+      const t = d.data.timings;
+      PRYT = {
+        Fajr: cleanTimeStr(t.Fajr) || FALLBK.Fajr,
+        Dhuhr: cleanTimeStr(t.Dhuhr) || FALLBK.Dhuhr,
+        Asr: cleanTimeStr(t.Asr) || FALLBK.Asr,
+        Maghrib: cleanTimeStr(t.Maghrib) || FALLBK.Maghrib,
+        Isha: cleanTimeStr(t.Isha) || FALLBK.Isha
+      };
+      computeAutoFreeTime();
+      document.getElementById('panels').innerHTML = [0,1,2,3,4,5,6].map(renderPanel).join('');
+      switchDay(todayJD());
+      const ld=document.getElementById('ld'); if(ld) ld.style.display='none';
+      const app=document.getElementById('app'); if(app) app.style.display='block';
+      console.log('Prayer times updated for', dateStr);
+      return true;
+    }
   }catch(e){
-    console.warn('fetchAladhan failed',e);
+    console.warn('fetchAladhan failed', e);
   }
-  // On any failure, silently use fallback values (avoid showing failure toast) and update UI
-  PRYT={...FALLBK};
+
+  PRYT = { ...FALLBK };
   computeAutoFreeTime();
-  document.getElementById('panels').innerHTML=[0,1,2,3,4,5,6].map(renderPanel).join('');
+  document.getElementById('panels').innerHTML = [0,1,2,3,4,5,6].map(renderPanel).join('');
   switchDay(todayJD());
   const ld=document.getElementById('ld'); if(ld) ld.style.display='none';
   const app=document.getElementById('app'); if(app) app.style.display='block';
