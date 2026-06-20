@@ -254,7 +254,7 @@ async function fetchAladhan(){
     const city = encodeURIComponent('Kuwait City');
     const country = encodeURIComponent('Kuwait');
     const timezone = encodeURIComponent('Asia/Kuwait');
-    const apiUrl = `https://aladhan.com/v1/timingsByCity?city=${city}&country=${country}&method=9&timezonestring=${timezone}&date=${formattedDate}`;
+    const apiUrl = `https://aladhan.com/v1/timingsByCity?city=${city}&country=${country}&method=9&timezonestring=${timezone}&date=${formattedDate}&tune=9,0,0,0,-1,0,0,0,0`;
     const proxyUrl = `https://api.allorigins.win/raw?url=${encodeURIComponent(apiUrl)}`;
 
     const setIf = (id, val) => { const el = document.getElementById(id); if(el) el.innerText = val || ''; };
