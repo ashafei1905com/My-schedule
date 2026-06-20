@@ -250,7 +250,7 @@ function initFirebase() {
 
     if (user) {
       const firstName = (user.displayName || "").trim().split(/\s+/)[0];
-      if (nameEl) nameEl.textContent = user.displayName || user.email || "";
+      if (nameEl) nameEl.textContent = (user.displayName || user.email || "").split('@')[0];
       if (btn) btn.textContent = firstName ? `خروج (${firstName})` : "Sign Out";
 
       // Allow sign-out by clicking again
@@ -258,7 +258,13 @@ function initFirebase() {
         btn.onclick = () => {
           fbAuth
             .signOut()
-            .then(() => showToast("تم تسجيل الخروج"));
+            .then(() => {
+              Object.keys(localStorage).forEach(k => { if(k.startsWith('sc:')) localStorage.removeItem(k); });
+              STATS = {cur:0, best:0, pts:0, lc:null, lf:null};
+              DONE = {};
+              updateUI();
+              showToast("تم تسجيل الخروج");
+            });
         };
       }
 
@@ -541,7 +547,7 @@ document.addEventListener('DOMContentLoaded',()=>{
 
 // ---- Firestore sync helpers ----
 async function cloudSaveStats(s){try{if(!fbAuth?.currentUser)return;const uid=fbAuth.currentUser.uid;await setDoc(doc(fbDb,'users',uid),{stats:s},{merge:true});return true}catch(e){console.warn(e);return false}}
-async function cloudSaveDay(dt,d){try{if(!fbAuth?.currentUser)return;const uid=fbAuth.currentUser.uid;await setDoc(doc(fbDb,'users',uid,'days',dt),{done:d});return true}catch(e){console.warn(e);return false}}
+async function cloudSaveDay(dt,d){try{if(!fbAuth?.currentUser)return;const uid=fbAuth.currentUser.uid;await setDoc(doc(fbDb,'users',uid),{[dt]:{done:d}},{merge:true});return true}catch(e){console.warn(e);return false}}
 
 async function loadCloudDataForUser(user){
   if(!fbDb||!user) return;
