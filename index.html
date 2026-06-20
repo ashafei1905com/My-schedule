@@ -262,6 +262,10 @@ btn.onclick = () => {
             });
             STATS = {cur:0, best:0, pts:0, lc:null, lf:null};
             DONE = {};
+            if (window.__sc_unsubPoints) {
+              try { window.__sc_unsubPoints(); } catch(e) {}
+              window.__sc_unsubPoints = null;
+            }
             document.getElementById('sv1').textContent = '0';
             document.getElementById('sv2').textContent = '0';
             document.getElementById('sv3').textContent = '0';
