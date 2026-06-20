@@ -743,27 +743,78 @@ function renderCard(task, isToday) {
   const done = DONE[id] || false;
 
   if (cat === 'free') {
-    return `<div class="tc" data-c="free"><div class="tctime">${arTime}</div><div class="tcico">${ico}</div><div class="tcbody"><div class="tcname" style="color:#6366f1">${name}</div><div class="tcdesc">${desc}</div></div></div>`;
+    return (
+      '<div class="tc" data-c="free">' +
+      '<div class="tctime">' + arTime + '</div>' +
+      '<div class="tcico">' + ico + '</div>' +
+      '<div class="tcbody">' +
+      '<div class="tcname" style="color:#6366f1">' + name + '</div>' +
+      '<div class="tcdesc">' + desc + '</div>' +
+      '</div></div>'
+    );
   }
 
   let act = '';
+  if (isEx) {
+    act = '<div class="excbadge">🔓 استثناء</div>';
+  } else if (isToday) {
+    if (done) {
+      act = '<div class="cbtn done">✅<span style="font-size:.7rem;color:var(--gr)">تم</span></div>';
+    } else {
+      act = '<button class="cbtn" data-action="confirm" data-id="' +
+        id +
+        '" data-pts="' +
+        pts +
+        '">تأكيد ✓<span class="ptslbl">+' +
+        pts +
+        '⭐</span></button>';
+    }
+  }
 
-  if(isEx)act=`<div class="excbadge">🔓 استثناء</div>`;
-    else if(isToday){
-    if(done)act=`<div class="cbtn done">✅<span style="font-size:.7rem;color:var(--gr)">تم</span></div>`;
-    else act=`<button class="cbtn" data-action="confirm" data-id="${id}" data-pts="${pts}">تأكيد ✓<span class="ptslbl">+${pts}⭐</span></button>`;
+  if (done) {
+    act = '<div class="cbtn done">✅</div>';
+  } else if (!act) {
+    act = '<div class="ptsbdg">' + pts + '⭐</div>';
   }
-    if(done)act=`<div class="cbtn done">✅</div>`;
-    else act=`<div class="ptsbdg">${pts}⭐</div>`;
-  }
-  const altH=alts?`<button class="altbtn" data-action="alts" data-id="${id}">🔄 بدائل (${alts.length})</button><div class="altlist" id="al-${id}">${alts.map(a=>`<div class="altitem" role="button" tabindex="0" data-alt="${String(a).replace(/"/g,'"')}">${a}</div>`).join('')}</div>`:'';
-  const hwH=hw?`<div class="hwtag">⏰ ${hw}</div>`:'';
-  return `<div class="tc${done?' done':''}${isEx?' excx':''}" data-c="${cat}" id="c-${id}">
-    <div class="tctime">${arTime}</div><div class="tcico">${ico}</div>
-    <div class="tcbody"><div class="tcname">${name}</div><div class="tcdesc">${desc}</div>${hwH}${altH}</div>
-    ${act}
-  </div>`;
+
+  const altH = alts
+    ? '<button class="altbtn" data-action="alts" data-id="' +
+      id +
+      '">🔄 بدائل (' +
+      alts.length +
+      ')</button>' +
+      '<div class="altlist" id="al-' +
+      id +
+      '">' +
+      alts
+        .map((a) =>
+          '<div class="altitem" role="button" tabindex="0" data-alt="' +
+          String(a).replace(/"/g, '"') +
+          '">' +
+          a +
+          '</div>'
+        )
+        .join('') +
+      '</div>'
+    : '';
+
+  const hwH = hw ? '<div class="hwtag">⏰ ' + hw + '</div>' : '';
+
+  return (
+    '<div class="tc' + (done ? ' done' : '') + (isEx ? ' excx' : '') + '" data-c="' + cat + '" id="c-' + id + '">' +
+    '<div class="tctime">' + arTime + '</div>' +
+    '<div class="tcico">' + ico + '</div>' +
+    '<div class="tcbody">' +
+    '<div class="tcname">' + name + '</div>' +
+    '<div class="tcdesc">' + desc + '</div>' +
+    hwH +
+    altH +
+    '</div>' +
+    act +
+    '</div>'
+  );
 }
+
 
 function renderPanel(jd){
   const d=SCHED[jd];if(!d)return'';
@@ -859,14 +910,16 @@ async function init(){
 
 // Hard guarantee: if init didn’t run (or got stuck), still reveal the main landmark after a short delay
 window.addEventListener('DOMContentLoaded', init);
-setTimeout(() => {
-  const ld = document.getElementById('ld');
-  const app = document.getElementById('app');
-  if (app && ld && app.style.display === 'none') {
-    ld.style.display = 'none';
-    app.style.display = 'block';
-  }
-}, 3000);
+(function revealLater(){
+  setTimeout(() => {
+    const ld = document.getElementById('ld');
+    const app = document.getElementById('app');
+    if (app && ld && app.style.display === 'none') {
+      ld.style.display = 'none';
+      app.style.display = 'block';
+    }
+  }, 3000);
+})();
 </script>
 </body>
 </html>
