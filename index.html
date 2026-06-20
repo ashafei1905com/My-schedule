@@ -138,8 +138,7 @@ function initFirebase(){
     if(!firebaseConfig.apiKey || firebaseConfig.apiKey.startsWith('REPLACE')) return;
     fbApp = firebase.apps.length? firebase.app() : firebase.initializeApp(firebaseConfig);
     fbAuth = firebase.auth();
-    // Firestore sync disabled to avoid backend permission and offline errors
-    fbDb = null;
+    fbDb = firebase.firestore();
     fbAuth.setPersistence(firebase.auth.Auth.Persistence.LOCAL);
     fbAuth.onAuthStateChanged(user=>{
       const nameEl=document.getElementById('authName');
@@ -148,6 +147,7 @@ function initFirebase(){
         nameEl.textContent = user.displayName || user.email || '';
         btn.textContent = 'خروج';
         btn.onclick = ()=>fbAuth.signOut().then(()=>showToast('تم تسجيل الخروج'));
+        loadCloudDataForUser(user);
       }else{
         nameEl.textContent = '';
         btn.textContent = 'تسجيل دخول';
@@ -413,8 +413,21 @@ async function cloudSaveStats(s){try{if(!fbDb||!fbAuth||!fbAuth.currentUser) ret
 async function cloudSaveDay(dt,d){try{if(!fbDb||!fbAuth||!fbAuth.currentUser) return;const uid=fbAuth.currentUser.uid;await fbDb.collection('users').doc(uid).collection('days').doc(dt).set({done:d});return true}catch(e){console.warn(e);return false}}
 
 async function loadCloudDataForUser(user){
-  // Cloud sync is currently disabled to avoid backend permission failures.
-  return;
+  if(!fbDb||!user) return;
+  const uid=user.uid;
+  try{
+    const doc=await fbDb.collection('users').doc(uid).get();
+    if(doc.exists){const data=doc.data();if(data.stats){
+      const cloud=data.stats;const local=STATS||{lf:null};
+      if(!local.lf || (cloud.lf && cloud.lf!==local.lf && new Date(cloud.lf)>new Date(local.lf))){STATS=cloud;await saveStats(STATS)}
+    }}
+    const daysSnap=await fbDb.collection('users').doc(uid).collection('days').get();
+    daysSnap.forEach(d=>{localStorage.setItem('sc:day:'+d.id,JSON.stringify(d.data().done));});
+  }catch(e){console.warn('loadCloudData failed',e)}
+  try{
+    fbDb.collection('users').doc(user.uid).onSnapshot(snap=>{const data=snap.data();if(!data) return; if(data.stats){STATS=data.stats;saveStats(STATS)} });
+    fbDb.collection('users').doc(user.uid).collection('days').onSnapshot(qs=>{qs.docChanges().forEach(ch=>{if(ch.type==='added'||ch.type==='modified'){localStorage.setItem('sc:day:'+ch.doc.id,JSON.stringify(ch.doc.data().done)); if(ch.doc.id===TODAY){DONE=ch.doc.data().done;updateUI()}}})});
+  }catch(e){console.warn('listen fail',e)}
 }
 
 const BKA=['لبنة ٤ ملاعق + بيضتين مسلوقتين + رغيف أسمر','جبنة دمياطي ١٠٠جم + بيضة + خبز أسمر'];
