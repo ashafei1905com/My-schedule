@@ -133,7 +133,7 @@ import {
   getFirestore,
   doc,
   setDoc,
-  getDoc
+  onSnapshot
 } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
 
 const firebaseConfig = {
@@ -231,27 +231,61 @@ function initFirebase() {
   }
 
   // Listen auth state changes and load points/streak
-  onAuthStateChanged(fbAuth, async (user) => {
+  onAuthStateChanged(fbAuth, (user) => {
     const nameEl = document.getElementById("authName");
     const btn = document.getElementById("btn-signin");
 
     if (user) {
+      const firstName = (user.displayName || "").trim().split(/\s+/)[0];
       if (nameEl) nameEl.textContent = user.displayName || user.email || "";
-      if (btn) btn.textContent = "خروج";
+      if (btn) btn.textContent = firstName ? `خروج (${firstName})` : "Sign Out";
 
       // Allow sign-out by clicking again
       if (btn) {
-        btn.onclick = () => fbAuth.signOut().then(() => showToast("تم تسجيل الخروج"));
+        btn.onclick = () => {
+          fbAuth
+            .signOut()
+            .then(() => showToast("تم تسجيل الخروج"));
+        };
       }
 
-      await loadMyPoints(user);
+      // Real-time sync to guarantee cross-device updates
+      const userRef = doc(fbDb, "users", user.uid);
+      if (window.__sc_unsubPoints) {
+        try {
+          window.__sc_unsubPoints();
+        } catch {}
+      }
+      window.__sc_unsubPoints = onSnapshot(userRef, (snap) => {
+        const data = snap.data() || {};
+        const stats = data.stats || {};
 
-      // Also attempt to load DONE stats from existing local storage logic
-      // (original code already uses localStorage for DONE/stats; this only syncs points/streak)
+        // Update local JS stats
+        STATS.pts = typeof stats.pts === "number" ? stats.pts : 0;
+        STATS.cur = typeof stats.cur === "number" ? stats.cur : 0;
+        STATS.best = typeof stats.best === "number" ? stats.best : STATS.best ?? 0;
+        STATS.lc = stats.lc ?? null;
+        STATS.lf = stats.lf ?? null;
+
+        // Update UI immediately
+        const sv1 = document.getElementById("sv1");
+        const sv2 = document.getElementById("sv2");
+        if (sv1) sv1.textContent = STATS.cur;
+        if (sv2) sv2.textContent = STATS.pts;
+
+        updateUI();
+      });
     } else {
       if (nameEl) nameEl.textContent = "";
-      if (btn) btn.textContent = "تسجيل دخول";
-      // Revert button behavior
+      if (btn) btn.textContent = "Sign In";
+      if (window.__sc_unsubPoints) {
+        try {
+          window.__sc_unsubPoints();
+        } catch {}
+        window.__sc_unsubPoints = null;
+      }
+
+      // Restore sign-in behavior
       if (btn) {
         btn.onclick = async () => {
           try {
@@ -266,6 +300,7 @@ function initFirebase() {
     }
   });
 }
+
 
 // Keeping these functions to avoid breaking existing modal handlers
 function signInWithGoogle() {
