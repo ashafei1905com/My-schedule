@@ -739,11 +739,15 @@ function toggleAlts(id) {
 }
 
 function renderCard(task, isToday) {
+  const [id, arTime, cat, ico, name, desc, pts, alts, hw, isEx] = task;
+  const done = DONE[id] || false;
 
-  const[id,arTime,cat,ico,name,desc,pts,alts,hw,isEx]=task;
-  const done=DONE[id]||false;
-  if(cat==='free')return `<div class="tc" data-c="free"><div class="tctime">${arTime}</div><div class="tcico">${ico}</div><div class="tcbody"><div class="tcname" style="color:#6366f1">${name}</div><div class="tcdesc">${desc}</div></div></div>`;
-  let act='';
+  if (cat === 'free') {
+    return `<div class="tc" data-c="free"><div class="tctime">${arTime}</div><div class="tcico">${ico}</div><div class="tcbody"><div class="tcname" style="color:#6366f1">${name}</div><div class="tcdesc">${desc}</div></div></div>`;
+  }
+
+  let act = '';
+
   if(isEx)act=`<div class="excbadge">🔓 استثناء</div>`;
     else if(isToday){
     if(done)act=`<div class="cbtn done">✅<span style="font-size:.7rem;color:var(--gr)">تم</span></div>`;
