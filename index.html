@@ -255,16 +255,24 @@ function initFirebase() {
 
       // Allow sign-out by clicking again
       if (btn) {
-        btn.onclick = () => {
-          fbAuth
-            .signOut()
-            .then(() => {
-              Object.keys(localStorage).forEach(k => { if(k.startsWith('sc:')) localStorage.removeItem(k); });
-              STATS = {cur:0, best:0, pts:0, lc:null, lf:null};
-              DONE = {};
-              updateUI();
-              showToast("تم تسجيل الخروج");
+btn.onclick = () => {
+          fbAuth.signOut().then(() => {
+            Object.keys(localStorage).forEach(k => {
+              if (k.startsWith('sc:')) localStorage.removeItem(k);
             });
+            STATS = {cur:0, best:0, pts:0, lc:null, lf:null};
+            DONE = {};
+            document.getElementById('sv1').textContent = '0';
+            document.getElementById('sv2').textContent = '0';
+            document.getElementById('sv3').textContent = '0';
+            document.getElementById('pfill').style.width = '0%';
+            document.getElementById('ptxt').textContent = '٠/٠ مهمة';
+            document.getElementById('ppts').textContent = '٠ نقطة اليوم';
+            document.getElementById('panels').innerHTML = 
+              [0,1,2,3,4,5,6].map(renderPanel).join('');
+            switchDay(todayJD());
+            showToast("تم تسجيل الخروج");
+          });
         };
       }
 
