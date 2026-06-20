@@ -754,6 +754,7 @@ function renderCard(task, isToday) {
     <div class="tcbody"><div class="tcname">${name}</div><div class="tcdesc">${desc}</div>${hwH}${altH}</div>
     ${act}
   </div>`;
+}
 
 function renderPanel(jd){
   const d=SCHED[jd];if(!d)return'';
@@ -847,7 +848,16 @@ async function init(){
   scheduleDailyRefresh();
 }
 
-window.addEventListener('DOMContentLoaded',init);
+// Hard guarantee: if init didn’t run (or got stuck), still reveal the main landmark after a short delay
+window.addEventListener('DOMContentLoaded', init);
+setTimeout(() => {
+  const ld = document.getElementById('ld');
+  const app = document.getElementById('app');
+  if (app && ld && app.style.display === 'none') {
+    ld.style.display = 'none';
+    app.style.display = 'block';
+  }
+}, 3000);
 </script>
 </body>
 </html>
