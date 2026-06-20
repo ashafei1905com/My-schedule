@@ -91,11 +91,10 @@ body{font-family:'Cairo',sans-serif;background:var(--bg);color:var(--tx);directi
 input:focus-visible, button:focus-visible{outline:2px solid var(--ac);outline-offset:2px}
 </style>
 <!-- Firebase (fill firebaseConfig below after creating a project) -->
-<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
-</head>
+<!-- Modular v9+ ESM via gstatic.com scripts (no npm/Node needed) -->
+<!-- Add your Firebase config below -->
 <body>
+
 <div id="ld" style="display:flex;align-items:center;justify-content:center;height:100vh;flex-direction:column;gap:16px">
   <div style="width:40px;height:40px;border:3px solid #1e2d45;border-top-color:#3b82f6;border-radius:50%;animation:spin .8s linear infinite"></div>
   <span style="color:#64748b;font-family:Cairo,sans-serif;font-size:.9rem">جاري تحميل جدول عبدالله...</span>
@@ -120,9 +119,23 @@ input:focus-visible, button:focus-visible{outline:2px solid var(--ac);outline-of
   <div id="panels"></div>
 </main>
 <div id="toast"></div>
-<script>
+<script type="module">
 'use strict';
-// ---- Firebase auth placeholder ----
+// ---- Firebase modular v9+ ESM (CDN) ----
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
+import {
+  getAuth,
+  GoogleAuthProvider,
+  signInWithPopup,
+  onAuthStateChanged
+} from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
+import {
+  getFirestore,
+  doc,
+  setDoc,
+  getDoc
+} from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
+
 const firebaseConfig = {
   apiKey: "AIzaSyDevk9uUTTiXaNKA5UrGN7KrbCtWgqAnYk",
   authDomain: "my-schedule-10a33.firebaseapp.com",
@@ -132,72 +145,142 @@ const firebaseConfig = {
   appId: "1:814163254112:web:c7b591228c727dd5db9c05",
   measurementId: "G-Y9DKK5TVW0"
 };
-let fbApp=null, fbAuth=null, fbDb=null;
-function initFirebase(){
-  try{
-    if(!firebaseConfig.apiKey || firebaseConfig.apiKey.startsWith('REPLACE')) return;
-    fbApp = firebase.apps.length? firebase.app() : firebase.initializeApp(firebaseConfig);
-    fbAuth = firebase.auth();
-    fbDb = firebase.firestore();
-    fbAuth.setPersistence(firebase.auth.Auth.Persistence.LOCAL);
-    fbAuth.onAuthStateChanged(user=>{
-      const nameEl=document.getElementById('authName');
-      const btn=document.getElementById('btn-signin');
-      if(user){
-        nameEl.textContent = user.displayName || user.email || '';
-        btn.textContent = 'خروج';
-        btn.onclick = ()=>fbAuth.signOut().then(()=>showToast('تم تسجيل الخروج'));
-        loadCloudDataForUser(user);
-      }else{
-        nameEl.textContent = '';
-        btn.textContent = 'تسجيل دخول';
-        btn.onclick = ()=>document.getElementById('authModal').classList.add('open');
+
+const fbApp = initializeApp(firebaseConfig);
+const fbAuth = getAuth(fbApp);
+const fbDb = getFirestore(fbApp);
+
+let FIREBASE_READY = true;
+
+async function saveMyPoints(points, streak) {
+  try {
+    const user = fbAuth.currentUser;
+    if (!user) return false;
+
+    const userId = user.uid;
+    const userRef = doc(fbDb, "users", userId);
+
+    // Keeping existing nested stats structure: { stats: {cur,best,pts,lc,lf} }
+    await setDoc(
+      userRef,
+      {
+        stats: {
+          cur: streak, // streak is STATS.cur
+          best: STATS.best ?? 0,
+          pts: points,
+          lc: STATS.lc ?? null,
+          lf: STATS.lf ?? null,
+        }
+      },
+      { merge: true }
+    );
+
+    return true;
+  } catch (e) {
+    console.warn("saveMyPoints failed", e);
+    return false;
+  }
+}
+
+async function loadMyPoints(user) {
+  try {
+    const userId = user.uid;
+    const userRef = doc(fbDb, "users", userId);
+    const snap = await getDoc(userRef);
+    if (!snap.exists()) return;
+
+    const data = snap.data() || {};
+    const stats = data.stats || {};
+
+    // Existing app uses STATS.cur (streak) and STATS.pts (points)
+    STATS.cur = typeof stats.cur === "number" ? stats.cur : 0;
+    STATS.best = typeof stats.best === "number" ? stats.best : STATS.best ?? 0;
+    STATS.pts = typeof stats.pts === "number" ? stats.pts : 0;
+    STATS.lc = stats.lc ?? null;
+    STATS.lf = stats.lf ?? null;
+
+    // Update UI elements immediately
+    const sv1 = document.getElementById("sv1");
+    const sv2 = document.getElementById("sv2");
+    if (sv1) sv1.textContent = STATS.cur;
+    if (sv2) sv2.textContent = STATS.pts;
+
+    // Update fill/progress too
+    updateUI();
+
+    return true;
+  } catch (e) {
+    console.warn("loadMyPoints failed", e);
+    return false;
+  }
+}
+
+function initFirebase() {
+  // Wire #btn-signin click to Google popup sign-in
+  const btn = document.getElementById("btn-signin");
+  if (btn) {
+    btn.onclick = async () => {
+      try {
+        const provider = new GoogleAuthProvider();
+        await signInWithPopup(fbAuth, provider);
+      } catch (e) {
+        console.warn("signInWithPopup failed", e);
+        showToast(e?.message || "فشل تسجيل الدخول");
       }
-    });
-  }catch(e){console.warn('Firebase init failed',e)}
-}
-function signInWithGoogle(){
-  if(!fbAuth){showToast('الرجاء إعداد firebaseConfig');return}
-  const provider=new firebase.auth.GoogleAuthProvider();
-  fbAuth.signInWithPopup(provider).then(result=>{
-    const user = result && result.user;
-    const allowedEmail = 'ashafei1905@gmail.com';
-    if(user && user.email === allowedEmail){
-      // allowed - let onAuthStateChanged handle the UI updates
-      console.log('Authorized user signed in', user.email);
-      showToast('تم تسجيل الدخول');
-      return;
+    };
+  }
+
+  // Listen auth state changes and load points/streak
+  onAuthStateChanged(fbAuth, async (user) => {
+    const nameEl = document.getElementById("authName");
+    const btn = document.getElementById("btn-signin");
+
+    if (user) {
+      if (nameEl) nameEl.textContent = user.displayName || user.email || "";
+      if (btn) btn.textContent = "خروج";
+
+      // Allow sign-out by clicking again
+      if (btn) {
+        btn.onclick = () => fbAuth.signOut().then(() => showToast("تم تسجيل الخروج"));
+      }
+
+      await loadMyPoints(user);
+
+      // Also attempt to load DONE stats from existing local storage logic
+      // (original code already uses localStorage for DONE/stats; this only syncs points/streak)
+    } else {
+      if (nameEl) nameEl.textContent = "";
+      if (btn) btn.textContent = "تسجيل دخول";
+      // Revert button behavior
+      if (btn) {
+        btn.onclick = async () => {
+          try {
+            const provider = new GoogleAuthProvider();
+            await signInWithPopup(fbAuth, provider);
+          } catch (e) {
+            console.warn("signInWithPopup failed", e);
+            showToast(e?.message || "فشل تسجيل الدخول");
+          }
+        };
+      }
     }
-    // unauthorized - sign out immediately and block access
-    console.warn('Unauthorized user attempted login', user && user.email);
-    showToast('Sign-in failed: Unauthorized user');
-    fbAuth.signOut().catch(e=>console.error('Sign-out after unauthorized login failed',e));
-  }).catch(err=>{
-    console.error('Google signIn failed',err);
-    showToast(err && err.message? err.message : 'فشل تسجيل الدخول');
   });
 }
 
-function signInWithEmail(email,password){
-  if(!fbAuth){showToast('الرجاء إعداد firebaseConfig');return}
-  fbAuth.signInWithEmailAndPassword(email,password).catch(err=>{
-    console.error('Email signIn failed',err);
-    if(err && err.code==='auth/user-not-found'){
-      fbAuth.createUserWithEmailAndPassword(email,password).catch(e=>{
-        console.error('Create user failed',e);
-        showToast(e && e.message? e.message : 'فشل إنشاء الحساب');
-      })
-    }else{
-      showToast(err && err.message? err.message : 'فشل تسجيل الدخول');
-    }
-  });
+// Keeping these functions to avoid breaking existing modal handlers
+function signInWithGoogle() {
+  // Uses the same handler bound to #btn-signin
+  const btn = document.getElementById("btn-signin");
+  btn?.click();
+}
+function signInWithEmail() {
+  showToast("تسجيل البريد غير مفعّل في هذه النسخة — استخدم Google");
+}
+function sendPasswordReset() {
+  showToast("إعادة تعيين كلمة المرور غير مفعّلة — استخدم Google");
 }
 
-function sendPasswordReset(email){
-  if(!fbAuth){showToast('الرجاء إعداد firebaseConfig');return}
-  fbAuth.sendPasswordResetEmail(email).then(()=>showToast('تم إرسال رابط إعادة تعيين إلى بريدك')).catch(()=>showToast('فشل إرسال رسالة إعادة التعيين'));
-}
-// ---- end Firebase placeholder ----
+// ---- end Firebase modular v9+ ----
 const DKEYS=['sun','mon','tue','wed','thu','fri','sat'];
 const DSHORT=['أحد','اثنين','ثلاثاء','أربعاء','خميس','جمعة','سبت'];
 const PMETA={Fajr:{ar:'الفجر',ic:'🌙',pts:15},Dhuhr:{ar:'الظهر',ic:'☀️',pts:10},Asr:{ar:'العصر',ic:'🌤️',pts:10},Maghrib:{ar:'المغرب',ic:'🌅',pts:10},Isha:{ar:'العشاء',ic:'🌙',pts:10}};
@@ -585,6 +668,8 @@ async function checkTask(id,pts,ev){
   DONE[id]=true;
   await saveDD(TODAY,DONE);
   STATS.pts+=pts;
+  // Sync streak+points to cloud (if user signed in)
+  try{ await saveMyPoints(STATS.pts, STATS.cur); }catch{}
   const card=document.getElementById('c-'+id);
   if(card){
     card.classList.add('done');
