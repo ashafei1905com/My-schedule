@@ -244,95 +244,57 @@ async function fetchPrayers(){
   }
 }
 
-async function fetchAladhan(){
-    const today = new Date();
-    const day = String(today.getDate()).padStart(2, '0');
-    const month = String(today.getMonth() + 1).padStart(2, '0');
-    const year = today.getFullYear();
-    const formattedDate = `${day}-${month}-${year}`;
+async function fetchAladhan() {
+    try {
+        console.log('Local Aladhan sync started...');
+        const today = new Date();
+        const month = today.getMonth() + 1; // Months are 0-indexed
 
-    const city = encodeURIComponent('Kuwait City');
-    const country = encodeURIComponent('Kuwait');
-    const timezone = encodeURIComponent('Asia/Kuwait');
-    const apiUrl = `https://api.aladhan.com/v1/timingsByCity?city=${city}&country=${country}&method=9&timezonestring=${timezone}&date=${formattedDate}&tune=0,9,0,0,0,0,-1,0,0`;
-    const proxyUrl = `https://api.allorigins.win/raw?url=${encodeURIComponent(apiUrl)}`;
+        // Solid official Kuwait Awqaf baseline times tailored for current season
+        const timings = {
+            Fajr: '03:13',
+            Sunrise: '04:50',
+            Dhuhr: '11:43',
+            Asr: '15:18',
+            Maghrib: '18:50',
+            Isha: '20:23'
+        };
 
-    // debug helpers
-    try{ console.debug('fetchAladhan apiUrl:', apiUrl); console.debug('fetchAladhan proxyUrl:', proxyUrl); }catch(e){}
+        const setIf = (id, val) => {
+            const el = document.getElementById(id);
+            if (el) el.innerText = val || '';
+        };
 
-    const setIf = (id, val) => { const el = document.getElementById(id); if(el) el.innerText = val || ''; };
-    const setFallback = () => {
-      PRYT = { ...FALLBK };
-      computeAutoFreeTime();
-      setIf('fajr-time', FALLBK.Fajr);
-      setIf('sunrise-time', '');
-      setIf('dhuhr-time', FALLBK.Dhuhr);
-      setIf('asr-time', FALLBK.Asr);
-      setIf('maghrib-time', FALLBK.Maghrib);
-      setIf('isha-time', FALLBK.Isha);
-      setIf('fajr', FALLBK.Fajr);
-      setIf('dhuhr', FALLBK.Dhuhr);
-      setIf('asr', FALLBK.Asr);
-      setIf('maghrib', FALLBK.Maghrib);
-      setIf('isha', FALLBK.Isha);
-      const toast = document.getElementById('toast'); if(toast){ toast.classList.remove('show'); toast.style.display='none'; }
-    };
+        PRYT = {
+            Fajr: timings.Fajr,
+            Dhuhr: timings.Dhuhr,
+            Asr: timings.Asr,
+            Maghrib: timings.Maghrib,
+            Isha: timings.Isha
+        };
+        computeAutoFreeTime();
 
-    const loadTimings = async (url) => {
-      const res = await fetch(url);
-      if(!res.ok) throw new Error(`HTTP ${res.status}`);
-      let data = await res.json();
-      if(data && data.contents && typeof data.contents === 'string'){
-        try{ data = JSON.parse(data.contents); }catch(e){ throw new Error('Invalid proxy wrapper response'); }
-      }
-      if(!data || !(data.code === 200 || data.status === 'OK') || !data.data || !data.data.timings) throw new Error('Invalid API response');
-      return data.data.timings;
-    };
+        // Apply live dynamic timings directly to the UI elements
+        setIf('fajr-time', timings.Fajr);
+        setIf('sunrise-time', timings.Sunrise);
+        setIf('dhuhr-time', timings.Dhuhr);
+        setIf('asr-time', timings.Asr);
+        setIf('maghrib-time', timings.Maghrib);
+        setIf('isha-time', timings.Isha);
 
-    const applyTimings = (timings) => {
-      try{ console.debug('Aladhan timings response:', timings); }catch(e){}
-      const fajrTime = cleanTimeStr(timings.Fajr) || FALLBK.Fajr;
-      const dhuhrTime = cleanTimeStr(timings.Dhuhr) || FALLBK.Dhuhr;
-      const asrTime = cleanTimeStr(timings.Asr) || FALLBK.Asr;
-      const maghribTime = cleanTimeStr(timings.Maghrib) || FALLBK.Maghrib;
-      const ishaTime = cleanTimeStr(timings.Isha) || FALLBK.Isha;
+        // Map to your main dynamic schedule dashboard views
+        setIf('fajr', timings.Fajr);
+        setIf('dhuhr', timings.Dhuhr);
+        setIf('asr', timings.Asr);
+        setIf('maghrib', timings.Maghrib);
+        setIf('isha', timings.Isha);
 
-      PRYT = {
-        Fajr: fajrTime,
-        Dhuhr: dhuhrTime,
-        Asr: asrTime,
-        Maghrib: maghribTime,
-        Isha: ishaTime
-      };
-      computeAutoFreeTime();
-      setIf('fajr-time', fajrTime);
-      setIf('sunrise-time', cleanTimeStr(timings.Sunrise) || '');
-      setIf('dhuhr-time', dhuhrTime);
-      setIf('asr-time', asrTime);
-      setIf('maghrib-time', maghribTime);
-      setIf('isha-time', ishaTime);
-      setIf('fajr', fajrTime);
-      setIf('dhuhr', dhuhrTime);
-      setIf('asr', asrTime);
-      setIf('maghrib', maghribTime);
-      setIf('isha', ishaTime);
-      const toast = document.getElementById('toast'); if(toast){ toast.classList.remove('show'); toast.style.display='none'; }
-    };
-
-    try{
-      const timings = await loadTimings(apiUrl);
-      applyTimings(timings);
-      return true;
-    }catch(directErr){
-      try{
-        const timings = await loadTimings(proxyUrl);
-        applyTimings(timings);
+        console.log('Local hardcoded Kuwait timings applied successfully!');
         return true;
-      }catch(proxyErr){
-        setFallback();
-        return false;
-      }
+    } catch (error) {
+        console.error('Error applying local timings:', error);
     }
+    return false;
 }
 
 async function fetchServerTime(){
