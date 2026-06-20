@@ -240,7 +240,7 @@ async function fetchAladhan(){
     const formattedDate = `${day}-${month}-${year}`;
 
     // Correct Aladhan API endpoint and query parameters
-    const apiUrl = `https://api.aladhan.com/v1/timingsByCity?city=Kuwait%20City&country=Kuwait&method=5&date=${encodeURIComponent(formattedDate)}`;
+    const apiUrl = `https://api.aladhan.com/v1/timingsByCity?city=Kuwait%20City&country=Kuwait&method=5&timezonestring=Asia%2FKuwait&date=${encodeURIComponent(formattedDate)}`;
     const proxyUrl = `https://api.allorigins.win/raw?url=${encodeURIComponent(apiUrl)}`;
 
     const setIf = (id, val) => { const el = document.getElementById(id); if(el) el.innerText = val || ''; };
@@ -270,18 +270,26 @@ async function fetchAladhan(){
 
     try{
       let timings = await loadTimings(apiUrl);
-      console.log('Aladhan direct fetch succeeded');
-      setIf('fajr-time', timings.Fajr);
-      setIf('sunrise-time', timings.Sunrise);
-      setIf('dhuhr-time', timings.Dhuhr);
-      setIf('asr-time', timings.Asr);
-      setIf('maghrib-time', timings.Maghrib);
-      setIf('isha-time', timings.Isha);
-      setIf('fajr', timings.Fajr);
-      setIf('dhuhr', timings.Dhuhr);
-      setIf('asr', timings.Asr);
-      setIf('maghrib', timings.Maghrib);
-      setIf('isha', timings.Isha);
+      console.log('Aladhan direct fetch succeeded', timings);
+      PRYT = {
+        Fajr: cleanTimeStr(timings.Fajr) || FALLBK.Fajr,
+        Dhuhr: cleanTimeStr(timings.Dhuhr) || FALLBK.Dhuhr,
+        Asr: cleanTimeStr(timings.Asr) || FALLBK.Asr,
+        Maghrib: cleanTimeStr(timings.Maghrib) || FALLBK.Maghrib,
+        Isha: cleanTimeStr(timings.Isha) || FALLBK.Isha
+      };
+      computeAutoFreeTime();
+      setIf('fajr-time', PRYT.Fajr);
+      setIf('sunrise-time', cleanTimeStr(timings.Sunrise) || '');
+      setIf('dhuhr-time', PRYT.Dhuhr);
+      setIf('asr-time', PRYT.Asr);
+      setIf('maghrib-time', PRYT.Maghrib);
+      setIf('isha-time', PRYT.Isha);
+      setIf('fajr', PRYT.Fajr);
+      setIf('dhuhr', PRYT.Dhuhr);
+      setIf('asr', PRYT.Asr);
+      setIf('maghrib', PRYT.Maghrib);
+      setIf('isha', PRYT.Isha);
       const toast = document.getElementById('toast'); if(toast){ toast.classList.remove('show'); toast.style.display='none'; }
       return true;
     }catch(directErr){
@@ -289,17 +297,25 @@ async function fetchAladhan(){
       try{
         let timings = await loadTimings(proxyUrl);
         console.log('Aladhan proxy fetch succeeded');
-        setIf('fajr-time', timings.Fajr);
-        setIf('sunrise-time', timings.Sunrise);
-        setIf('dhuhr-time', timings.Dhuhr);
-        setIf('asr-time', timings.Asr);
-        setIf('maghrib-time', timings.Maghrib);
-        setIf('isha-time', timings.Isha);
-        setIf('fajr', timings.Fajr);
-        setIf('dhuhr', timings.Dhuhr);
-        setIf('asr', timings.Asr);
-        setIf('maghrib', timings.Maghrib);
-        setIf('isha', timings.Isha);
+        PRYT = {
+          Fajr: cleanTimeStr(timings.Fajr) || FALLBK.Fajr,
+          Dhuhr: cleanTimeStr(timings.Dhuhr) || FALLBK.Dhuhr,
+          Asr: cleanTimeStr(timings.Asr) || FALLBK.Asr,
+          Maghrib: cleanTimeStr(timings.Maghrib) || FALLBK.Maghrib,
+          Isha: cleanTimeStr(timings.Isha) || FALLBK.Isha
+        };
+        computeAutoFreeTime();
+        setIf('fajr-time', PRYT.Fajr);
+        setIf('sunrise-time', cleanTimeStr(timings.Sunrise) || '');
+        setIf('dhuhr-time', PRYT.Dhuhr);
+        setIf('asr-time', PRYT.Asr);
+        setIf('maghrib-time', PRYT.Maghrib);
+        setIf('isha-time', PRYT.Isha);
+        setIf('fajr', PRYT.Fajr);
+        setIf('dhuhr', PRYT.Dhuhr);
+        setIf('asr', PRYT.Asr);
+        setIf('maghrib', PRYT.Maghrib);
+        setIf('isha', PRYT.Isha);
         const toast = document.getElementById('toast'); if(toast){ toast.classList.remove('show'); toast.style.display='none'; }
         return true;
       }catch(proxyErr){
