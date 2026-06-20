@@ -291,25 +291,31 @@ async function fetchAladhan(){
 
     const applyTimings = (timings) => {
       try{ console.debug('Aladhan timings response:', timings); }catch(e){}
+      const fajrTime = cleanTimeStr(timings.Fajr) || FALLBK.Fajr;
+      const dhuhrTime = cleanTimeStr(timings.Dhuhr) || FALLBK.Dhuhr;
+      const asrTime = cleanTimeStr(timings.Asr) || FALLBK.Asr;
+      const maghribTime = cleanTimeStr(timings.Maghrib) || FALLBK.Maghrib;
+      const ishaTime = cleanTimeStr(timings.Isha) || FALLBK.Isha;
+
       PRYT = {
-        Fajr: cleanTimeStr(timings.Fajr) || FALLBK.Fajr,
-        Dhuhr: cleanTimeStr(timings.Dhuhr) || FALLBK.Dhuhr,
-        Asr: cleanTimeStr(timings.Asr) || FALLBK.Asr,
-        Maghrib: cleanTimeStr(timings.Maghrib) || FALLBK.Maghrib,
-        Isha: cleanTimeStr(timings.Isha) || FALLBK.Isha
+        Fajr: fajrTime,
+        Dhuhr: dhuhrTime,
+        Asr: asrTime,
+        Maghrib: maghribTime,
+        Isha: ishaTime
       };
       computeAutoFreeTime();
-      setIf('fajr-time', PRYT.Fajr);
+      setIf('fajr-time', fajrTime);
       setIf('sunrise-time', cleanTimeStr(timings.Sunrise) || '');
-      setIf('dhuhr-time', PRYT.Dhuhr);
-      setIf('asr-time', PRYT.Asr);
-      setIf('maghrib-time', PRYT.Maghrib);
-      setIf('isha-time', PRYT.Isha);
-      setIf('fajr', PRYT.Fajr);
-      setIf('dhuhr', PRYT.Dhuhr);
-      setIf('asr', PRYT.Asr);
-      setIf('maghrib', PRYT.Maghrib);
-      setIf('isha', PRYT.Isha);
+      setIf('dhuhr-time', dhuhrTime);
+      setIf('asr-time', asrTime);
+      setIf('maghrib-time', maghribTime);
+      setIf('isha-time', ishaTime);
+      setIf('fajr', fajrTime);
+      setIf('dhuhr', dhuhrTime);
+      setIf('asr', asrTime);
+      setIf('maghrib', maghribTime);
+      setIf('isha', ishaTime);
       const toast = document.getElementById('toast'); if(toast){ toast.classList.remove('show'); toast.style.display='none'; }
     };
 
