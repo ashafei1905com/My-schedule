@@ -139,6 +139,7 @@ import {
   getFirestore,
   doc,
   setDoc,
+  getDoc,
   onSnapshot
 } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
 
@@ -193,7 +194,9 @@ async function loadMyPoints(user) {
     const userId = user.uid;
     const userRef = doc(fbDb, "users", userId);
     const snap = await getDoc(userRef);
-    if (!snap.exists()) return;
+    if (!snap.exists()) {return true;}
+
+
 
     const data = snap.data() || {};
     const stats = data.stats || {};
