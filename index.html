@@ -540,8 +540,8 @@ document.addEventListener('DOMContentLoaded',()=>{
 });
 
 // ---- Firestore sync helpers ----
-async function cloudSaveStats(s){try{if(!fbDb||!fbAuth||!fbAuth.currentUser) return;const uid=fbAuth.currentUser.uid;await fbDb.collection('users').doc(uid).set({stats:s},{merge:true});return true}catch(e){console.warn(e);return false}}
-async function cloudSaveDay(dt,d){try{if(!fbDb||!fbAuth||!fbAuth.currentUser) return;const uid=fbAuth.currentUser.uid;await fbDb.collection('users').doc(uid).collection('days').doc(dt).set({done:d});return true}catch(e){console.warn(e);return false}}
+async function cloudSaveStats(s){try{if(!fbAuth?.currentUser)return;const uid=fbAuth.currentUser.uid;await setDoc(doc(fbDb,'users',uid),{stats:s},{merge:true});return true}catch(e){console.warn(e);return false}}
+async function cloudSaveDay(dt,d){try{if(!fbAuth?.currentUser)return;const uid=fbAuth.currentUser.uid;await setDoc(doc(fbDb,'users',uid,'days',dt),{done:d});return true}catch(e){console.warn(e);return false}}
 
 async function loadCloudDataForUser(user){
   if(!fbDb||!user) return;
@@ -900,6 +900,12 @@ async function init(){
   });
 
   // UI button handlers
+  document.getElementById('panels').addEventListener('click',function(ev){
+  const btn=ev.target.closest('[data-action]');if(!btn)return;
+  const action=btn.dataset.action,id=btn.dataset.id,pts=parseInt(btn.dataset.pts||'0',10);
+  if(action==='confirm')checkTask(id,pts,ev);
+  else if(action==='alts')toggleAlts(id);
+});
   document.getElementById('btn-export')?.addEventListener('click',exportBackup);
   document.getElementById('btn-import')?.addEventListener('click',()=>document.getElementById('file-import').click());
   document.getElementById('file-import')?.addEventListener('change',e=>{const f=e.target.files[0];if(f)importBackupFile(f)});
