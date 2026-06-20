@@ -723,28 +723,33 @@ async function checkTask(id,pts,ev){
   }else{await saveStats(STATS)}
   updateUI();
 }
-function toggleAlts(id){document.getElementById('al-'+id)?.classList.toggle('open')}
-function renderCard(task,isToday){
+function toggleAlts(id) {
+  document.getElementById('al-' + id)?.classList.toggle('open');
+}
+
+function renderCard(task, isToday) {
+
   const[id,arTime,cat,ico,name,desc,pts,alts,hw,isEx]=task;
   const done=DONE[id]||false;
   if(cat==='free')return `<div class="tc" data-c="free"><div class="tctime">${arTime}</div><div class="tcico">${ico}</div><div class="tcbody"><div class="tcname" style="color:#6366f1">${name}</div><div class="tcdesc">${desc}</div></div></div>`;
   let act='';
   if(isEx)act=`<div class="excbadge">🔓 استثناء</div>`;
-  else if(isToday){
+    else if(isToday){
     if(done)act=`<div class="cbtn done">✅<span style="font-size:.7rem;color:var(--gr)">تم</span></div>`;
-    else act=`<button class="cbtn" onclick="checkTask('${id}',${pts},event)">تأكيد ✓<span class="ptslbl">+${pts}⭐</span></button>`;
-  }else{
+    else act=`<button class="cbtn" data-action="confirm" data-id="${id}" data-pts="${pts}">تأكيد ✓<span class="ptslbl">+${pts}⭐</span></button>`;
+  }
     if(done)act=`<div class="cbtn done">✅</div>`;
     else act=`<div class="ptsbdg">${pts}⭐</div>`;
   }
-  const altH=alts?`<button class="altbtn" onclick="toggleAlts('${id}')">🔄 بدائل (${alts.length})</button><div class="altlist" id="al-${id}">${alts.map(a=>`<div class="altitem">${a}</div>`).join('')}</div>`:'';
+  const altH=alts?`<button class="altbtn" data-action="alts" data-id="${id}">🔄 بدائل (${alts.length})</button><div class="altlist" id="al-${id}">${alts.map(a=>`<div class="altitem" role="button" tabindex="0" data-alt="${String(a).replace(/"/g,'"')}">${a}</div>`).join('')}</div>`:'';
   const hwH=hw?`<div class="hwtag">⏰ ${hw}</div>`:'';
   return `<div class="tc${done?' done':''}${isEx?' excx':''}" data-c="${cat}" id="c-${id}">
     <div class="tctime">${arTime}</div><div class="tcico">${ico}</div>
     <div class="tcbody"><div class="tcname">${name}</div><div class="tcdesc">${desc}</div>${hwH}${altH}</div>
     ${act}
   </div>`;
-}
+
+
 function renderPanel(jd){
   const d=SCHED[jd];if(!d)return'';
   const k=DKEYS[jd];const isToday=jd===todayJD();
