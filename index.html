@@ -1,4 +1,4 @@
-@<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="ar" dir="rtl">
 <head>
 <meta charset="UTF-8">
@@ -368,10 +368,40 @@ function showToast(msg,ms=3500){const t=document.getElementById('toast');t.textC
 async function sGet(k){try{const r=localStorage.getItem(k);return r?JSON.parse(r):null}catch{return null}}
 async function sSet(k,v){try{localStorage.setItem(k,JSON.stringify(v))}catch{}}
 
-async function loadStats(){return(await sGet('sc:stats'))||{cur:0,best:0,pts:0,lc:null,lf:null}}
-async function saveStats(s){await sSet('sc:stats',s);if(typeof fbAuth!=='undefined'&&fbAuth&&fbAuth.currentUser)cloudSaveStats(s)}
-async function loadDD(dt){return(await sGet('sc:day:'+dt))||{}}
-async function saveDD(dt,d){await sSet('sc:day:'+dt,d);if(typeof fbAuth!=='undefined'&&fbAuth&&fbAuth.currentUser)cloudSaveDay(dt,d)}
+async function loadStats(){
+  if(typeof fbAuth!=='undefined'&&fbAuth&&fbAuth.currentUser){
+    try{
+      const uid=fbAuth.currentUser.uid;
+      const snap=await getDoc(doc(fbDb,'users',uid));
+      if(snap.exists()&&snap.data().stats) return snap.data().stats;
+    }catch(e){}
+  }
+  return(await sGet('sc:stats'))||{cur:0,best:0,pts:0,lc:null,lf:null}
+}
+async function saveStats(s){
+  if(typeof fbAuth!=='undefined'&&fbAuth&&fbAuth.currentUser){
+    cloudSaveStats(s);
+  }else{
+    await sSet('sc:stats',s);
+  }
+}
+async function loadDD(dt){
+  if(typeof fbAuth!=='undefined'&&fbAuth&&fbAuth.currentUser){
+    try{
+      const uid=fbAuth.currentUser.uid;
+      const snap=await getDoc(doc(fbDb,'users',uid));
+      if(snap.exists()){const d=snap.data();if(d[dt]&&d[dt].done) return d[dt].done;}
+    }catch(e){}
+  }
+  return(await sGet('sc:day:'+dt))||{}
+}
+async function saveDD(dt,d){
+  if(typeof fbAuth!=='undefined'&&fbAuth&&fbAuth.currentUser){
+    cloudSaveDay(dt,d);
+  }else{
+    await sSet('sc:day:'+dt,d);
+  }
+}
 async function fetchPrayers(){
   try{
     const ok = await fetchAladhan(null,null);
