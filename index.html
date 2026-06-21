@@ -128,6 +128,7 @@ input:focus-visible, button:focus-visible{outline:2px solid var(--ac);outline-of
 <script type="module">
 'use strict';
 
+// ===== Firebase (kept, but app works fully local even if sign-in fails) =====
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
 import { getAuth, GoogleAuthProvider, signInWithPopup, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
 import { getFirestore, doc, setDoc, getDoc, onSnapshot } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
@@ -146,34 +147,10 @@ const fbApp = initializeApp(firebaseConfig);
 const fbAuth = getAuth(fbApp);
 const fbDb = getFirestore(fbApp);
 
+// ===== Helpers / Time =====
 const KUWAIT_TZ = 'Asia/Kuwait';
 const p2 = (n)=>String(n).padStart(2,'0');
 
-const DKEYS=['sun','mon','tue','wed','thu','fri','sat'];
-const DSHORT=['أحد','اثنين','ثلاثاء','أربعاء','خميس','جمعة','سبت'];
-
-const PMETA={Fajr:{ar:'الفجر',ic:'🌙',pts:15},Dhuhr:{ar:'الظهر',ic:'☀️',pts:10},Asr:{ar:'العصر',ic:'🌤️',pts:10},Maghrib:{ar:'المغرب',ic:'🌅',pts:10},Isha:{ar:'العشاء',ic:'🌙',pts:10}};
-const FALLBK={Fajr:'03:15',Dhuhr:'11:43',Asr:'15:18',Maghrib:'18:29',Isha:'20:09'};
-let PRYT={...FALLBK};
-
-function getKuwaitDateParts(){
-  try{
-    const parts=new Intl.DateTimeFormat('en-GB',{timeZone:KUWAIT_TZ,year:'numeric',month:'2-digit',day:'2-digit',weekday:'short'}).formatToParts(new Date());
-    const out={};
-    parts.forEach(p=>{ if(p.type!=='literal') out[p.type]=p.value; });
-    return out;
-  }catch{
-    const d=new Date();
-    return {year:`${d.getFullYear()}`,month:p2(d.getMonth()+1),day:p2(d.getDate()),weekday:['Sun','Mon','Tue','Wed','Thu','Fri','Sat'][d.getDay()]};
-  }
-}
-function todayStr(){const d=getKuwaitDateParts(); return `${d.year}-${d.month}-${d.day}`}
-function todayJD(){const weekday=getKuwaitDateParts().weekday; return ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'].indexOf(weekday)}
-const TODAY=todayStr();
-
-function cleanTimeStr(s){if(!s)return'';const m=String(s).match(/\d{1,2}:\d{2}/);return m?m[0]:String(s)}
-function fmt24(t){const s=cleanTimeStr(t);if(!s)return'';const[h,m]=s.split(':').map(Number);const pm=h>=12;const dh=h>12?h-12:(h===0?12:h);return `${dh}:${p2(m)} ${pm?'م':'ص'}`}
-function toMin(s){if(!s)return 0;const s0=cleanTimeStr(s);if(String(s).includes('ص')||String(s).includes('م')){const pm=String(s).includes('م');const[h,m]=s0.split(':').map(Number);let hr=h;if(pm&&h!==12)hr+=12;if(!pm&&h===12)hr=0;return hr*60+(m||0)}const[h,m]=s0.split(':').map(Number);return h*60+(m||0)}
 function getKuwaitNowMinutes(){
   try{
     const parts = new Intl.DateTimeFormat('en-GB',{timeZone:KUWAIT_TZ,hour:'2-digit',minute:'2-digit',second:'2-digit',hour12:false}).formatToParts(new Date());
@@ -188,6 +165,73 @@ function getKuwaitNowMinutes(){
   }
 }
 
+function getKuwaitDateParts(){
+  try{
+    const parts=new Intl.DateTimeFormat('en-GB',{timeZone:KUWAIT_TZ,year:'numeric',month:'2-digit',day:'2-digit',weekday:'short'}).formatToParts(new Date());
+    const out={};
+    parts.forEach(p=>{ if(p.type!=='literal') out[p.type]=p.value; });
+    return out;
+  }catch{
+    const d=new Date();
+    return {year:`${d.getFullYear()}`,month:p2(d.getMonth()+1),day:p2(d.getDate()),weekday:['Sun','Mon','Tue','Wed','Thu','Fri','Sat'][d.getDay()]};
+  }
+}
+
+const DKEYS=['sun','mon','tue','wed','thu','fri','sat'];
+const DSHORT=['أحد','اثنين','ثلاثاء','أربعاء','خميس','جمعة','سبت'];
+
+function todayStr(){
+  const d=getKuwaitDateParts();
+  return `${d.year}-${d.month}-${d.day}`;
+}
+
+function todayJD(){
+  const weekday=getKuwaitDateParts().weekday;
+  return ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'].indexOf(weekday);
+}
+
+const TODAY=todayStr();
+
+function cleanTimeStr(s){
+  if(!s) return '';
+  const m=String(s).match(/\d{1,2}:\d{2}/);
+  return m?m[0]:String(s);
+}
+
+function fmt24(t){
+  const s=cleanTimeStr(t);
+  if(!s) return '';
+  const [h,m]=s.split(':').map(Number);
+  const pm=h>=12;
+  const dh=h>12?h-12:(h===0?12:h);
+  return `${dh}:${p2(m)} ${pm?'م':'ص'}`;
+}
+
+function toMin(s){
+  if(!s) return 0;
+  const s0=cleanTimeStr(s);
+  const raw=String(s);
+  if(raw.includes('ص')||raw.includes('م')){
+    const pm=raw.includes('م');
+    const [h,m]=s0.split(':').map(Number);
+    let hr=h;
+    if(pm&&h!==12) hr+=12;
+    if(!pm&&h===12) hr=0;
+    return hr*60+(m||0);
+  }
+  const [h,m]=s0.split(':').map(Number);
+  return h*60+(m||0);
+}
+
+function taskIsPassed(task){
+  const t24 = task[10] || task[1];
+  return getKuwaitNowMinutes() > toMin(t24);
+}
+
+function isPrayerTask(task){
+  return task[2]==='prayer';
+}
+
 function floatPts(x,y,n){
   const e=document.createElement('div');
   e.className='floatpts';
@@ -196,6 +240,7 @@ function floatPts(x,y,n){
   document.body.appendChild(e);
   setTimeout(()=>e.remove(),900);
 }
+
 let toastTmr;
 function showToast(msg,ms=3500){
   const t=document.getElementById('toast');
@@ -207,29 +252,36 @@ function showToast(msg,ms=3500){
 }
 
 // ===== Schedule =====
-const mkBk=(p,t='9:15 ص')=>[p+'-bk',t,'food','🧀','الفطار','جبنة قريش ١٥٠جم + زيت زيتون + رغيفين أسمر + طماطم + خيار',5,['لبنة ٤ ملاعق + بيضتين مسلوقتين + رغيف أسمر','جبنة دمياطي ١٠٠جم + بيضة + خبز أسمر'],null,false];
+const mkBk=(p,t='9:15 ص')=>[p+'-bk',t,'food','🧀','الفطار','جبنة قريش ١٥٠جم + زيت زيتون + رغيفين أسمر + طماطم + خيار',5,[
+  'لبنة ٤ ملاعق + بيضتين مسلوقتين + رغيف أسمر',
+  'جبنة دمياطي ١٠٠جم + بيضة + خبز أسمر'
+],null,false];
+
 const mkWd=(p,t='9:30 ص')=>[p+'-wd',t,'quran','📿','الورد اليومي','١٥ دقيقة قراءة قرآن يومياً',10,null,null,false];
-const mkDn=(p,t='8:00 م')=>[p+'-dn',t,'food','🧀','العشا','جبنة قريش ١٥٠جم + جبنة دمياطي ٨٠جم + خيار + طماطم',5,['لبنة ٤ ملاعق + جبنة دمياطي مكعبين + خيار','بيضتين مسلوقتين + جبنة قريش ١٠٠جم'],null,false];
+
+const mkDn=(p,t='8:00 م')=>[p+'-dn',t,'food','🧀','العشا','جبنة قريش ١٥٠جم + جبنة دمياطي ٨٠جم + خيار + طماطم',5,[
+  'لبنة ٤ ملاعق + جبنة دمياطي مكعبين + خيار',
+  'بيضتين مسلوقتين + جبنة قريش ١٠٠جم'
+],null,false];
+
 const mkSl=(p,t='11:00 م')=>[p+'-sl',t,'sleep','🌙','نوم على الوقت','نام على الوقت — النوم المنتظم ضروري للعضل والتخسيس',10,null,null,false];
 const mkSw=(p,t)=>[p+'-sw',t,'swim','🏊','سباحة مع الكوتش','تقنية + drills ← استثناء ✓',0,null,null,true];
 const mkRc=(p,t,d)=>[p+'-rc',t,'recovery','♨️','جاكوزي + بخار/ساونا',d||'ريكفري ← استثناء ✓',0,null,null,true];
 const mkGU=(p,t)=>[p+'-gm',t,'gym','🏋️','جيم — Upper Body','صدر · كتف · ترايسبس · ظهر · بايسبس · Negative pull-ups · مشي ٢٠د',25,null,null,false];
 const mkGL=(p,t)=>[p+'-gm',t,'gym','🏋️','جيم — Lower Body','Leg press · Leg curl · Leg extension · Calf · Tibialis · مشي ٢٠د',25,null,null,false];
-const mkPS=(p,t)=>[p+'-ps',t,'food','🍌','سناك قبل الجيم','موزة + ٣ تمرات (٤٥ دقيقة قبل التمرين)',5,['تمرتين + كوب عصير طبيعي','خبز أسمر + زبدة فول سوداني'],null,false];
-const mkPM=(p,t)=>[p+'-pm',t,'food','🍳','وجبة بعد التمرين','٣ بيضات مسلوقة + خيار + طماطم',5,['جبنة قريش ١٥٠جم + خبز أسمر','لبنة ٤ ملاعق + بيضتين'],null,false];
+const mkPS=(p,t)=>[p+'-ps',t,'food','🍌','سناك قبل الجيم','موزة + ٣ تمرات (٤٥ دقيقة قبل التمرين)',5,[
+  'تمرتين + كوب عصير طبيعي','خبز أسمر + زبدة فول سوداني'
+],null,false];
+const mkPM=(p,t)=>[p+'-pm',t,'food','🍳','وجبة بعد التمرين','٣ بيضات مسلوقة + خيار + طماطم',5,[
+  'جبنة قريش ١٥٠جم + خبز أسمر','لبنة ٤ ملاعق + بيضتين'
+],null,false];
 const mkBr=(p)=>[p+'-br','7:00 م','recovery','🏊','مع أخوك — جاكوزي + بخار','٧:٠٠ — ١٠:٠٠ م ← استثناء ✓',0,null,null,true];
 
-const SCHED={
-  0:{n:'الأحد',  wk:'9:00 ص', bd:'11:00 م',gm:null,ts:[mkBk('sun'),mkWd('sun'),['sun-qp','10:00 ص','quran','📖','تحضير درس الاثنين','حفظ آيات جديدة + مراجعة اللوح — ٤٥ دقيقة',15,null,null,false],['sun-lu','2:30 م','food','🍽️','الغدا','نص كيلو فراخ/لحمة مشوي + سلطة + بطاطس مسلوقة',5,['سمك + سلطة + رغيف أسمر','كبدة مشوية + طماطم + بصل + خبز'],null,false],mkDn('sun'),mkSl('sun')]},
-  1:{n:'الاثنين',wk:'10:00 ص',bd:'12:00 ص',gm:'lower',ts:[mkBk('mon','10:15 ص'),mkWd('mon','10:30 ص'),['mon-pp','11:30 ص','prog','💻','تحضير البرمجة','راجع الدرس السابق + اكتب أسئلتك — ٣٠ دقيقة',10,null,null,false],['mon-ss','12:00 م','prog','👨‍💻','سيشن البرمجة','١٢:٠٠ — ١:٠٠ م | JavaScript',15,null,null,false],['mon-hw','1:05 م','prog','📤','واجب البرمجة','ابدأ الواجب بعد السيشن',10,null,'آخر موعد: الأربعاء',false],['mon-lu','1:30 م','food','🍽️','الغدا','نص كيلو فراخ مشوي + سلطة + بطاطس',5,['سمك دنيس + سلطة + رغيف','لحم هبر مشوي + سلطة + خبز'],null,false],['mon-ql','3:50 م','quran','🕌','درس القرآن','٣:٥٠ — ٤:٣٠ م | مباشرة بعد العصر',15,null,null,false],mkPS('mon','6:00 م'),mkGL('mon','7:00 م'),mkSw('mon','8:30 م'),mkRc('mon','9:15 م','جاكوزي + بخار — ريكفري ٤٥ دقيقة ← استثناء ✓'),mkPM('mon','10:30 م'),mkSl('mon','12:00 ص')]},
-  2:{n:'الثلاثاء',wk:'9:00 ص',bd:'11:00 م',gm:null,ts:[mkBk('tue'),mkWd('tue'),['tue-qp','10:00 ص','quran','📖','تحضير درس الأربعاء','حفظ آيات جديدة + مراجعة اللوح — ٤٥ دقيقة',15,null,null,false],['tue-lu','2:30 م','food','🍽️','الغدا','نص كيلو فراخ/لحمة مشوي + سلطة',5,['سمك + سلطة + رغيف','كبدة مشوية + سلطة + خبز'],null,false],mkBr('tue'),mkDn('tue','10:15 م'),mkSl('tue')]},
-  3:{n:'الأربعاء',wk:'10:00 ص',bd:'12:00 ص',gm:'upper',ts:[mkBk('wed','10:15 ص'),mkWd('wed','10:30 ص'),['wed-lu','1:00 م','food','🍽️','الغدا','نص كيلو فراخ مشوي + سلطة + بطاطس',5,['سمك + خضار + رز نص طبق','لحم هبر مشوي + سلطة + خبز'],null,false],['wed-ql','3:50 م','quran','🕌','درس القرآن','٣:٥٠ — ٤:٣٠ م | مباشرة بعد العصر',15,null,null,false],mkPS('wed','6:00 م'),mkGU('wed','7:00 م'),mkSw('wed','8:30 م'),mkRc('wed','9:15 م','جاكوزي + بخار — ريكفري ٤٥ دقيقة ← استثناء ✓'),mkPM('wed','10:30 م'),mkSl('wed','12:00 ص')]},
-  4:{n:'الخميس',wk:'9:00 ص',bd:'11:00 م',gm:null,ts:[mkBk('thu'),mkWd('thu'),['thu-pp','11:30 ص','prog','💻','تحضير البرمجة','راجع الدرس السابق + اكتب أسئلتك — ٣٠ دقيقة',10,null,null,false],['thu-ss','12:00 م','prog','👨‍💻','سيشن البرمجة','١٢:٠٠ — ١:٠٠ م | JavaScript',15,null,null,false],['thu-hw','1:05 م','prog','📤','واجب البرمجة','ابدأ الواجب بعد السيشن',10,null,'آخر موعد: السبت',false],['thu-lu','1:30 م','food','🍽️','الغدا','نص كيلو فراخ/لحمة مشوي + سلطة',5,['سمك + سلطة + بطاطس','كبدة مشوية + سلطة + خبز'],null,false],mkBr('thu'),mkDn('thu','10:15 م'),mkSl('thu')]},
-  5:{n:'الجمعة',wk:'9:00 ص',bd:'11:00 م',gm:null,ts:[mkBk('fri'),mkWd('fri'),['fri-jm','12:00 م','prayer','🕌','صلاة الجمعة','اخرج مبكر ← يعادل الظهر',15,null,null,false],['fri-lu','1:30 م','food','🍽️','الغدا','يوم حر — ما تبالغش في الكارب',5,['محشي + فراخ مشوي','كنتاكي مرة الأسبوع مقبول 🍗'],null,false],mkDn('fri'),mkSl('fri')]},
-  6:{n:'السبت',wk:'9:00 ص',bd:'11:00 م',gm:'upper',ts:[mkBk('sat'),mkWd('sat'),mkPS('sat','1:30 م'),mkGU('sat','2:00 م'),mkSw('sat','3:00 م'),mkRc('sat','4:00 م','جاكوزي + بخار/ساونا — ريكفري حتى ٥ م ← استثناء ✓'),mkPM('sat','5:15 م'),['sat-di','7:30 م','food','🍽️','الغدا','نص كيلو سمك/فراخ/لحمة مشوي + سلطة + بطاطس',5,['جمبري ١٥٠جم + سلطة + خبز أسمر','كفتة مشوي + سلطة'],null,false],mkSl('sat')]}
-};
+const PMETA={Fajr:{ar:'الفجر',ic:'🌙',pts:15},Dhuhr:{ar:'الظهر',ic:'☀️',pts:10},Asr:{ar:'العصر',ic:'🌤️',pts:10},Maghrib:{ar:'المغرب',ic:'🌅',pts:10},Isha:{ar:'العشاء',ic:'🌙',pts:10}};
+const FALLBK={Fajr:'03:15',Dhuhr:'11:43',Asr:'15:18',Maghrib:'18:29',Isha:'20:09'};
+let PRYT={...FALLBK};
 
-// ===== Free time: single PM slot (never pre-08:00) =====
+// PM-only free time (no pre-08:00)
 const FREE_TIME={
   0:[{t:'6:00 م',d:'وقت حر'}],
   1:[{t:'6:00 م',d:'وقت حر'}],
@@ -238,6 +290,62 @@ const FREE_TIME={
   4:[{t:'6:00 م',d:'وقت حر'}],
   5:[{t:'6:00 م',d:'وقت حر'}],
   6:[{t:'6:00 م',d:'وقت حر'}]
+};
+
+const SCHED={
+  0:{n:'الأحد',  wk:'9:00 ص', bd:'11:00 م',gm:null,ts:[
+    mkBk('sun'),mkWd('sun'),
+    ['sun-qp','10:00 ص','quran','📖','تحضير درس الاثنين','حفظ آيات جديدة + مراجعة اللوح — ٤٥ دقيقة',15,null,null,false],
+    ['sun-lu','2:30 م','food','🍽️','الغدا','نص كيلو فراخ/لحمة مشوي + سلطة + بطاطس مسلوقة',5,['سمك + سلطة + رغيف أسمر','كبدة مشوية + طماطم + بصل + خبز'],null,false],
+    mkDn('sun'),mkSl('sun')
+  ]},
+  1:{n:'الاثنين',wk:'10:00 ص',bd:'12:00 ص',gm:'lower',ts:[
+    mkBk('mon','10:15 ص'),mkWd('mon','10:30 ص'),
+    ['mon-pp','11:30 ص','prog','💻','تحضير البرمجة','راجع الدرس السابق + اكتب أسئلتك — ٣٠ دقيقة',10,null,null,false],
+    ['mon-ss','12:00 م','prog','👨‍💻','سيشن البرمجة','١٢:٠٠ — ١:٠٠ م | JavaScript',15,null,null,false],
+    ['mon-hw','1:05 م','prog','📤','واجب البرمجة','ابدأ الواجب بعد السيشن',10,null,'آخر موعد: الأربعاء',false],
+    ['mon-lu','1:30 م','food','🍽️','الغدا','نص كيلو فراخ مشوي + سلطة + بطاطس',5,['سمك دنيس + سلطة + رغيف','لحم هبر مشوي + سلطة + خبز'],null,false],
+    ['mon-ql','3:50 م','quran','🕌','درس القرآن','٣:٥٠ — ٤:٣٠ م | مباشرة بعد العصر',15,null,null,false],
+    mkPS('mon','6:00 م'),mkGL('mon','7:00 م'),mkSw('mon','8:30 م'),
+    mkRc('mon','9:15 م','جاكوزي + بخار — ريكفري ٤٥ دقيقة ← استثناء ✓'),
+    mkPM('mon','10:30 م'),mkSl('mon','12:00 ص')
+  ]},
+  2:{n:'الثلاثاء',wk:'9:00 ص', bd:'11:00 م',gm:null,ts:[
+    mkBk('tue'),mkWd('tue'),
+    ['tue-qp','10:00 ص','quran','📖','تحضير درس الأربعاء','حفظ آيات جديدة + مراجعة اللوح — ٤٥ دقيقة',15,null,null,false],
+    ['tue-lu','2:30 م','food','🍽️','الغدا','نص كيلو فراخ/لحمة مشوي + سلطة',5,['سمك + سلطة + رغيف','كبدة مشوية + سلطة + خبز'],null,false],
+    mkBr('tue'),mkDn('tue','10:15 م'),mkSl('tue')
+  ]},
+  3:{n:'الأربعاء',wk:'10:00 ص',bd:'12:00 ص',gm:'upper',ts:[
+    mkBk('wed','10:15 ص'),mkWd('wed','10:30 ص'),
+    ['wed-lu','1:00 م','food','🍽️','الغدا','نص كيلو فراخ مشوي + سلطة + بطاطس',5,['سمك + خضار + رز نص طبق','لحم هبر مشوي + سلطة + خبز'],null,false],
+    ['wed-ql','3:50 م','quran','🕌','درس القرآن','٣:٥٠ — ٤:٣٠ م | مباشرة بعد العصر',15,null,null,false],
+    mkPS('wed','6:00 م'),mkGU('wed','7:00 م'),mkSw('wed','8:30 م'),
+    mkRc('wed','9:15 م','جاكوزي + بخار — ريكفري ٤٥ دقيقة ← استثناء ✓'),
+    mkPM('wed','10:30 م'),mkSl('wed','12:00 ص')
+  ]},
+  4:{n:'الخميس', wk:'9:00 ص', bd:'11:00 م',gm:null,ts:[
+    mkBk('thu'),mkWd('thu'),
+    ['thu-pp','11:30 ص','prog','💻','تحضير البرمجة','راجع الدرس السابق + اكتب أسئلتك — ٣٠ دقيقة',10,null,null,false],
+    ['thu-ss','12:00 م','prog','👨‍💻','سيشن البرمجة','١٢:٠٠ — ١:٠٠ م | JavaScript',15,null,null,false],
+    ['thu-hw','1:05 م','prog','📤','واجب البرمجة','ابدأ الواجب بعد السيشن',10,null,'آخر موعد: السبت',false],
+    ['thu-lu','1:30 م','food','🍽️','الغدا','نص كيلو فراخ/لحمة مشوي + سلطة',5,['سمك + سلطة + بطاطس','كبدة مشوية + سلطة + خبز'],null,false],
+    mkBr('thu'),mkDn('thu','10:15 م'),mkSl('thu')
+  ]},
+  5:{n:'الجمعة', wk:'9:00 ص', bd:'11:00 م',gm:null,ts:[
+    mkBk('fri'),mkWd('fri'),
+    ['fri-jm','12:00 م','prayer','🕌','صلاة الجمعة','اخرج مبكر ← يعادل الظهر',15,null,null,false],
+    ['fri-lu','1:30 م','food','🍽️','الغدا','يوم حر — ما تبالغش في الكارب',5,['محشي + فراخ مشوي','كنتاكي مرة الأسبوع مقبول 🍗'],null,false],
+    mkDn('fri'),mkSl('fri')
+  ]},
+  6:{n:'السبت',  wk:'9:00 ص', bd:'11:00 م',gm:'upper',ts:[
+    mkBk('sat'),mkWd('sat'),mkPS('sat','1:30 م'),mkGU('sat','2:00 م'),
+    mkSw('sat','3:00 م'),
+    mkRc('sat','4:00 م','جاكوزي + بخار/ساونا — ريكفري حتى ٥ م ← استثناء ✓'),
+    mkPM('sat','5:15 م'),
+    ['sat-di','7:30 م','food','🍽️','الغدا','نص كيلو سمك/فراخ/لحمة مشوي + سلطة + بطاطس',5,['جمبري ١٥٠جم + سلطة + خبز أسمر','كفتة مشوي + سلطة'],null,false],
+    mkSl('sat')
+  ]}
 };
 
 function buildPTasks(jd){
@@ -253,15 +361,14 @@ function getAllTasks(jd){
   const d=SCHED[jd];
   if(!d) return [];
   const frees=(FREE_TIME[jd]||[]).map((f,i)=>[`fr-${jd}-${i}`,f.t,'free','🎮','وقت حر',f.d,0,null,null,false]);
-  return[...buildPTasks(jd),...d.ts,...frees].sort((a,b)=>toMin(a[10]||a[1])-toMin(b[10]||b[1]));
+  return [...buildPTasks(jd),...d.ts,...frees].sort((a,b)=>toMin(a[10]||a[1])-toMin(b[10]||b[1]));
 }
 
 function getReqTasks(jd){
-  // points tasks only
   return [...buildPTasks(jd),...(SCHED[jd]?.ts||[])].filter(t=>!t[9] && t[6]>0);
 }
 
-// ===== Persistence (signed-out local + signed-in cloud) =====
+// ===== Persistence (local, with cloud optional) =====
 const LS={
   stats:'sc:stats',
   done:(dt)=>`sc:day:${dt}:done`,
@@ -273,71 +380,32 @@ const LS={
 async function sGet(k){try{const r=localStorage.getItem(k);return r?JSON.parse(r):null}catch{return null}}
 async function sSet(k,v){try{localStorage.setItem(k,JSON.stringify(v))}catch{}}
 
-let FIREBASE_UNSUBS=[];
 let STATS={cur:0,best:0,pts:0,lc:null,lf:null};
 let DONE={};
 let SELECTED_ALTS={};
 let WEEKLY_REPORT=[];
 
-function resetRuntimeState(){
-  STATS={cur:0,best:0,pts:0,lc:STATS.lc,lf:STATS.lf};
-  DONE={};
-  SELECTED_ALTS={};
-  WEEKLY_REPORT=[];
+function updateDailyRefreshIfNeeded(){
+  // streak reset logic: only if last full day is not yesterday
+  if(STATS.lc===TODAY) return;
+  const yesterday=dateOff(-1);
+  if(STATS.lf && STATS.lf!==TODAY && STATS.lf!==yesterday){
+    STATS.cur=0;
+  }
+  STATS.lc=TODAY;
 }
 
-async function loadSignedOut(){
+function dateOff(n){
+  const d=new Date();
+  d.setDate(d.getDate()+n);
+  return `${d.getFullYear()}-${p2(d.getMonth()+1)}-${p2(d.getDate())}`;
+}
+
+async function localLoad(){
   STATS=(await sGet(LS.stats))||{cur:0,best:0,pts:0,lc:null,lf:null};
   DONE=(await sGet(LS.done(TODAY)))||{};
   SELECTED_ALTS=(await sGet(LS.alts(TODAY)))||{};
   WEEKLY_REPORT=(await sGet(LS.weekly(TODAY)))||[];
-}
-
-async function cloudLoadForUser(user){
-  const uid=user.uid;
-  const userRef=doc(fbDb,'users',uid);
-  const snap=await getDoc(userRef);
-  if(snap.exists()){
-    const data=snap.data()||{};
-    if(data.stats && typeof data.stats==='object'){
-      STATS={...STATS,...data.stats};
-    }
-    if(data.weekly && typeof data.weekly==='object'){
-      // store weekly array on meta key 'weekly[TODAY]'
-      WEEKLY_REPORT=Array.isArray(data.weekly[TODAY])?data.weekly[TODAY]:[];
-    }
-  }
-
-  // DONE + alts for each day are in subcollections
-  // We'll restore only TODAY here; historical weekly can be rebuilt from qada events later.
-  const dayDoneRef=doc(fbDb,'users',uid,'days',TODAY);
-  const daySnap=await getDoc(dayDoneRef);
-  if(daySnap.exists()){
-    const d=daySnap.data()||{};
-    DONE=d.done||{};
-    SELECTED_ALTS=d.alts||{};
-  }
-}
-
-async function cloudSaveStats(){
-  const user=fbAuth.currentUser;
-  if(!user) return;
-  await setDoc(doc(fbDb,'users',user.uid),{stats:STATS},{merge:true});
-}
-
-async function cloudSaveDay(){
-  const user=fbAuth.currentUser;
-  if(!user) return;
-  await setDoc(doc(fbDb,'users',user.uid,'days',TODAY),{done:DONE,alts:SELECTED_ALTS},{merge:true});
-}
-
-async function cloudSaveWeeklyArrayAppend(entry){
-  const user=fbAuth.currentUser;
-  if(!user) return;
-  WEEKLY_REPORT.push(entry);
-  const weeklyObj={};
-  weeklyObj[TODAY]=WEEKLY_REPORT;
-  await setDoc(doc(fbDb,'users',user.uid),{weekly:weeklyObj},{merge:true});
 }
 
 async function localSave(){
@@ -347,234 +415,66 @@ async function localSave(){
   await sSet(LS.weekly(TODAY),WEEKLY_REPORT);
 }
 
-// ===== Auth (wipe/reset ordering + onSnapshot wiring) =====
-function clearFirebaseListeners(){
-  for(const u of FIREBASE_UNSUBS){try{u()}catch{}}
-  FIREBASE_UNSUBS=[];
-}
-
-function setupRealtimeListeners(user){
-  clearFirebaseListeners();
-  const uid=user.uid;
-  const dayRef=doc(fbDb,'users',uid,'days',TODAY);
-  const unsubDay=onSnapshot(dayRef,(snap)=>{
-    const d=snap.data()||{};
-    DONE=d.done||{};
-    SELECTED_ALTS=d.alts||{};
-    updateUI();
-  });
-  FIREBASE_UNSUBS.push(unsubDay);
-
-  const metaRef=doc(fbDb,'users',uid);
-  const unsubMeta=onSnapshot(metaRef,(snap)=>{
-    const data=snap.data()||{};
-    if(data.stats && typeof data.stats==='object') STATS={...STATS,...data.stats};
-    if(data.weekly && typeof data.weekly==='object'){
-      WEEKLY_REPORT=Array.isArray(data.weekly[TODAY])?data.weekly[TODAY]:[];
-    }
-    updateUI();
-  });
-  FIREBASE_UNSUBS.push(unsubMeta);
-}
-
-function setAuthUI(user){
-  const nameEl=document.getElementById('authName');
-  const btn=document.getElementById('btn-signin');
-  if(user){
-    const firstName=(user.displayName||user.email||'').trim().split(/\s+/)[0];
-    nameEl.textContent=user.displayName||user.email||'';
-    btn.textContent=firstName?`خروج (${firstName})`:'Sign Out';
-    btn.onclick=()=>fbAuth.signOut().then(()=>showToast('تم تسجيل الخروج'));
-  }else{
-    nameEl.textContent='';
-    btn.textContent='تسجيل دخول';
-    btn.onclick=()=>{};
-    // restore signed-out local
-  }
-}
-
-// ===== UX: punctuality time-lock =====
-function taskIsPassed(task){
-  const t24=task[10]||task[1];
-  const target=toMin(t24);
-  return getKuwaitNowMinutes()>target;
-}
-
-function isPrayerTask(task){return task[2]==='prayer'}
-
-// ===== Task completion =====
-async function checkNewDay(){
-  if(STATS.lc===TODAY) return;
-  // streak reset if previously last completion day was not yesterday
-  if(STATS.lf && STATS.lf!==TODAY){
-    // if last full day wasn't yesterday, reset cur
-    const yesterday=dateOff(-1);
-    if(STATS.lf!==yesterday) STATS.cur=0;
-  }
-  STATS.lc=TODAY;
-  await saveAll();
-}
-
-function dateOff(n){const d=new Date();d.setDate(d.getDate()+n);return `${d.getFullYear()}-${p2(d.getMonth()+1)}-${p2(d.getDate())}`}
-
-async function saveAll(){
-  if(fbAuth?.currentUser){
-    await Promise.all([cloudSaveStats(),cloudSaveDay()]);
-  }else{
-    await localSave();
-  }
-}
-
-async function onCompleteTask(task){
-  const [id,arTime,cat,ico,name,desc,pts,alts,hw,isEx,t24]=task;
-  if(DONE[id]) return;
-  if(taskIsPassed(task)){
-    // time-lock for scored tasks: disable points if passed
-    // qada handled only for prayer when pressed (qada button)
-    return;
-  }
-
-  DONE[id]=true;
-  STATS.pts+=pts;
-
-  // streak only when all req tasks for that day done
-  const req=getReqTasks(todayJD());
-  const isAllDone=req.every(t=>DONE[t[0]]);
-
-  if(isAllDone){
-    if(STATS.lf!==TODAY){
-      const yesterday=dateOff(-1);
-      STATS.cur = (STATS.lf===yesterday)?STATS.cur+1:1;
-      STATS.lf=TODAY;
-      STATS.best=Math.max(STATS.best,STATS.cur);
-      showToast(`🎉 يوم كامل!\nاستريك: ${STATS.cur} يوم 🔥\nنقاطك: ${STATS.pts} ⭐`,4000);
-    }
-  }
-
-  await saveAll();
-  updateUI();
-}
-
-async function onCompleteQadaPrayer(task){
-  const [id,arTime,cat,ico,name,desc,pts]=task;
-  if(DONE[id]) return;
-
-  // allow qada if prayer is passed
-  if(!taskIsPassed(task)) return;
-
-  const qadaPts=Math.floor(pts/2);
-  // avoid awarding full points
-  DONE[id]=true;
-  STATS.pts+=qadaPts;
-
-  const qadaEntry={t: new Date().toISOString(), taskId:id, day:TODAY, points:qadaPts, label:name};
-  WEEKLY_REPORT.push(qadaEntry);
-
-  if(fbAuth?.currentUser){
-    await cloudSaveStats();
-    await cloudSaveDay();
-    await cloudSaveWeeklyArrayAppend(qadaEntry);
-  }else{
-    await localSave();
-  }
-
-  // streak alive if day eventually complete
-  const req=getReqTasks(todayJD());
-  const isAllDone=req.every(t=>DONE[t[0]]);
-  if(isAllDone){
-    if(STATS.lf!==TODAY){
-      const yesterday=dateOff(-1);
-      STATS.cur = (STATS.lf===yesterday)?STATS.cur+1:1;
-      STATS.lf=TODAY;
-      STATS.best=Math.max(STATS.best,STATS.cur);
-      showToast(`🎉 يوم كامل!\nاستريك: ${STATS.cur} يوم 🔥\nنقاطك: ${STATS.pts} ⭐`,4000);
-    }
-  }
-
-  updateUI();
-  updateUI();
-}
-
 // ===== UI rendering =====
-function updateUI(){
-  const req=getReqTasks(todayJD());
-  const done=req.filter(t=>DONE[t[0]]);
-  const ptsT=done.reduce((s,t)=>s+t[6],0);
-  const pct=req.length?Math.round(done.length/req.length*100):0;
-  document.getElementById('sv1').textContent=STATS.cur;
-  document.getElementById('sv2').textContent=STATS.pts;
-  document.getElementById('sv3').textContent=STATS.best;
-  document.getElementById('ptxt').textContent=`${done.length}/${req.length} مهمة (${pct}%)`;
-  document.getElementById('ppts').textContent=`${STATS.pts} نقطة اليوم`;
-  document.getElementById('pfill').style.width=pct+'%';
-
-  // Re-render buttons to reflect time-lock
-  renderPanelsForToday();
+function getTaskDisplayDesc(task){
+  const id=task[0];
+  const chosen=SELECTED_ALTS[id];
+  const desc=task[5];
+  const alts=task[8];
+  if(alts && chosen && alts.includes(chosen)) return chosen;
+  return desc;
 }
 
 function toggleAlts(id){
   document.getElementById('al-'+id)?.classList.toggle('open');
 }
 
-function getTaskDisplayDesc(task){
-  const [id,arTime,cat,ico,name,desc,pts,alts,hw,isEx,t24]=task;
-  const chosen=SELECTED_ALTS[id];
-  if(alts && chosen && alts.includes(chosen)){
-    // Use chosen alternative as desc override
-    return chosen;
-  }
-  return desc;
-}
-
 function renderCard(task,isToday){
   const [id,arTime,cat,ico,name,desc,pts,alts,hw,isEx]=task;
   const done=DONE[id]||false;
   const passed=taskIsPassed(task);
-  const selectedDesc=getTaskDisplayDesc(task);
 
   if(cat==='free'){
-    return `<div class="tc" data-c="free"><div class="tctime">${arTime}</div><div class="tcico">${ico}</div><div class="tcbody"><div class="tcname" style="color:#6366f1">${name}</div><div class="tcdesc">${selectedDesc}</div></div></div>`;
+    return `<div class="tc" data-c="free"><div class="tctime">${arTime}</div><div class="tcico">${ico}</div><div class="tcbody"><div class="tcname" style="color:#6366f1">${name}</div><div class="tcdesc">${desc}</div></div></div>`;
   }
 
   let act='';
   if(isEx){
     act=`<div class="excbadge">🔓 استثناء</div>`;
-  } else if(isToday){
+  }else if(isToday){
     if(done){
       act=`<div class="cbtn done">✅</div>`;
-    } else {
-      // qada button only for passed prayers
+    }else{
       if(isPrayerTask(task) && passed){
-        act=`<button class="cbtn qada" data-action="qada" data-id="${id}" data-pts="${pts}">قضاء (50%)<span class="ptslbl">+${Math.floor(pts/2)}⭐</span></button>`;
-      } else if(pts>0 && passed){
+        const half=Math.floor(pts/2);
+        act=`<button class="cbtn qada" data-action="qada" data-id="${id}" data-pts="${pts}">قضاء (50%)<span class="ptslbl">+${half}⭐</span></button>`;
+      }else if(pts>0 && passed){
         act=`<div class="cbtn exp">فات الوقت</div>`;
-      } else {
-        // normal confirm
+      }else{
         act=`<button class="cbtn" data-action="confirm" data-id="${id}" data-pts="${pts}">تأكيد ✓<span class="ptslbl">+${pts}⭐</span></button>`;
       }
     }
   }
 
-  // if not done and no action, show points badge
   if(!act){
     act=done?`<div class="cbtn done">✅</div>`:`<div class="ptsbdg">${pts}⭐</div>`;
   }
 
-  const altH = alts && alts.length
+  const altH = (alts && alts.length)
     ? `<button class="altbtn" data-action="alts" data-id="${id}">🔄 بدائل (${alts.length})</button>`+
-      `<div class="altlist" id="al-${id}">
-        ${alts.map(a=>{
-          const selected = SELECTED_ALTS[id]===a;
-          const style = selected?' style="color:var(--gr)"':'';
-          return `<div class="altitem" role="button" tabindex="0" data-action="pickalt" data-id="${id}" data-alt="${String(a).replace(/"/g,'"')}"${style}>${a}</div>`;
-        }).join('')}
-      </div>`
+      `<div class="altlist" id="al-${id}">${alts.map(a=>{
+        const selected=SELECTED_ALTS[id]===a;
+        const style=selected?' style="color:var(--gr)"':'';
+        return `<div class="altitem" role="button" tabindex="0" data-action="pickalt" data-id="${id}" data-alt="${String(a).replace(/"/g,'"')}"${style}>${a}</div>`;
+      }).join('')}</div>`
     : '';
 
-  const hwH = hw ? `<div class="hwtag">⏰ ${hw}</div>` : '';
+  const hwH=hw?`<div class="hwtag">⏰ ${hw}</div>`:'';
+  const displayDesc=getTaskDisplayDesc(task);
+
   return `<div class="tc${done?' done':''}${isEx?' excx':''}" data-c="${cat}" id="c-${id}">
     <div class="tctime">${arTime}</div><div class="tcico">${ico}</div>
-    <div class="tcbody"><div class="tcname">${name}</div><div class="tcdesc">${selectedDesc}</div>${hwH}${altH}</div>
+    <div class="tcbody"><div class="tcname">${name}</div><div class="tcdesc">${displayDesc}</div>${hwH}${altH}</div>
     ${act}
   </div>`;
 }
@@ -589,7 +489,6 @@ function renderPanel(jd){
     ? `<div class="gbx ${d.gm==='upper'?'gbu':'gbl'}">${d.gm==='upper'?'Upper Body 💪':'Lower Body 🦵'}</div>`
     : `<div class="gbx gbr">يوم راحة 💤</div>`;
 
-  // prayer pills (keep existing Friday Jum'ah override)
   const prayerOrder=['Fajr','Dhuhr','Asr','Maghrib','Isha'];
   const pillsArr=[];
   const schedList=d.ts||[];
@@ -611,11 +510,11 @@ function renderPanel(jd){
     pillsArr.push(`<div class="ppill${done?' done':''}" id="pp-${pid}"><div class="pnam">${pm.ar}</div><div class="ptim">${fmt24(PRYT[pk]||FALLBK[pk])}</div></div>`);
   }
 
-  const pills=pillsArr.join('');
   const tasks=getAllTasks(jd);
+
   return `<div class="pan" id="pan-${k}">
     <div class="dh"><div><div class="dhn">${d.n}</div><div class="dhm">فجر ${fmt24(PRYT.Fajr||FALLBK.Fajr)} ← صحيان ${d.wk} · نوم ${d.bd}</div></div>${gbLabel}</div>
-    <div class="prow">${pills}</div>
+    <div class="prow">${pillsArr.join('')}</div>
     <div class="tl">${tasks.map(t=>renderCard(t,isToday)).join('')}</div>
   </div>`;
 }
@@ -635,12 +534,16 @@ function renderTabs(){
   });
 }
 
-function renderPanelsForToday(){
-  // re-render panels to refresh time-locked buttons without changing scroll
-  const activeJ=todayJD();
-  document.getElementById('panels').innerHTML=[0,1,2,3,4,5,6].map(renderPanel).join('');
-  // restore active tab
-  switchDay(activeJ);
+function updateUI(){
+  const req=getReqTasks(todayJD());
+  const done=req.filter(t=>DONE[t[0]]);
+  const pct=req.length?Math.round(done.length/req.length*100):0;
+  document.getElementById('sv1').textContent=STATS.cur;
+  document.getElementById('sv2').textContent=STATS.pts;
+  document.getElementById('sv3').textContent=STATS.best;
+  document.getElementById('ptxt').textContent=`${done.length}/${req.length} مهمة (${pct}%)`;
+  document.getElementById('ppts').textContent=`${STATS.pts} نقطة اليوم`;
+  document.getElementById('pfill').style.width=pct+'%';
 }
 
 function switchDay(jd){
@@ -649,43 +552,104 @@ function switchDay(jd){
   if(tb){tb.classList.add('act');tb.scrollIntoView({behavior:'smooth',block:'nearest',inline:'center'})}
   document.querySelectorAll('.pan').forEach(p=>p.classList.remove('act'));
   document.getElementById(`pan-${DKEYS[jd]}`)?.classList.add('act');
-  updateUICountersOnly();
+  updateUI();
 }
 
-function updateUICountersOnly(){
+// ===== Task completion (time-lock + qada) =====
+async function saveAndRefresh(){
+  await localSave();
+  renderPanelsForAllDays();
+  switchDay(todayJD());
+  updateUI();
+}
+
+function renderPanelsForAllDays(){
+  document.getElementById('panels').innerHTML=[0,1,2,3,4,5,6].map(renderPanel).join('');
+}
+
+function maybeHandleWeekly(){
+  // weekly report stored locally already; kept for extension
+}
+
+function completeStreakIfDayDone(){
   const req=getReqTasks(todayJD());
-  const done=req.filter(t=>DONE[t[0]]);
-  const ptsT=done.reduce((s,t)=>s+t[6],0);
-  const pct=req.length?Math.round(done.length/req.length*100):0;
-  document.getElementById('ptxt').textContent=`${done.length}/${req.length} مهمة (${pct}%)`;
-  document.getElementById('ppts').textContent=`${STATS.pts} نقطة اليوم`;
-  document.getElementById('pfill').style.width=pct+'%';
-  document.getElementById('sv1').textContent=STATS.cur;
-  document.getElementById('sv2').textContent=STATS.pts;
-  document.getElementById('sv3').textContent=STATS.best;
+  const isAllDone=req.every(t=>DONE[t[0]]);
+  if(isAllDone && STATS.lf!==TODAY){
+    const yesterday=dateOff(-1);
+    if(STATS.lf===yesterday){
+      STATS.cur=STATS.cur+1;
+    }else{
+      STATS.cur=1;
+    }
+    STATS.lf=TODAY;
+    STATS.best=Math.max(STATS.best,STATS.cur);
+    showToast(`🎉 يوم كامل!\nاستريك: ${STATS.cur} يوم 🔥\nنقاطك: ${STATS.pts} ⭐`,4000);
+  }
 }
 
-// ===== Prayer timings (kept from your existing calibrated Kuwait timings) =====
-async function fetchAladhan(){
+async function onConfirm(task, pts, rect){
+  if(DONE[task[0]]) return;
+  if(taskIsPassed(task)){
+    showToast('Expired/فات الوقت');
+    return;
+  }
+  DONE[task[0]]=true;
+  STATS.pts+=pts;
+  maybeHandleWeekly();
+  completeStreakIfDayDone();
+  await saveAndRefresh();
+  floatPts(rect.left+rect.width/2-20, rect.top-10, pts);
+}
+
+async function onQada(task, pts, rect){
+  if(DONE[task[0]]) return;
+  if(!isPrayerTask(task)) return;
+  if(!taskIsPassed(task)) return;
+
+  const half=Math.floor(pts/2);
+  DONE[task[0]]=true;
+  STATS.pts+=half;
+  WEEKLY_REPORT.push({t:new Date().toISOString(),taskId:task[0],day:TODAY,points:half,label:task[4]});
+  maybeHandleWeekly();
+  completeStreakIfDayDone();
+  await saveAndRefresh();
+  floatPts(rect.left+rect.width/2-20, rect.top-10, half);
+  showToast('تم قضاء (50%)');
+}
+
+// ===== Prayer timings =====
+async function fetchPrayers(){
   try{
-    const timings={Fajr:'03:13',Sunrise:'04:48',Dhuhr:'11:49',Asr:'15:23',Maghrib:'18:50',Isha:'20:23'};
+    // calibrated Kuwait Awqaf timings (same as your current version)
+    const timings={
+      Fajr:'03:13',
+      Sunrise:'04:48',
+      Dhuhr:'11:49',
+      Asr:'15:23',
+      Maghrib:'18:50',
+      Isha:'20:23'
+    };
     PRYT={Fajr:timings.Fajr,Dhuhr:timings.Dhuhr,Asr:timings.Asr,Maghrib:timings.Maghrib,Isha:timings.Isha};
-    computeAutoFreeTime();
-    renderPanelsForToday();
-    return true;
-  }catch(e){console.warn(e);return false}
-}
 
-// Placeholder for compatibility with old code: not used by this rewrite
-let AUTO_FREE_TIME={};
-function computeAutoFreeTime(){AUTO_FREE_TIME={}}
+    // realtime countdown (no DOM dependencies)
+    startNextPrayerCountdown(timings);
+    return true;
+  }catch{
+    return false;
+  }
+}
 
 function startNextPrayerCountdown(timings){
   if(window.prayerInterval) clearInterval(window.prayerInterval);
   window.prayerInterval=setInterval(()=>{
     const now=new Date();
     const currentMinutes=now.getHours()*60+now.getMinutes();
-    const parseToMinutes=(t)=>{const[h,m]=t.split(':').map(Number);return h*60+m};
+
+    const parseToMinutes=(t)=>{
+      const [h,m]=t.split(':').map(Number);
+      return h*60+m;
+    };
+
     const prayerKeys=[
       {name:'الفجر',time:timings.Fajr},
       {name:'الشروق',time:timings.Sunrise},
@@ -700,17 +664,27 @@ function startNextPrayerCountdown(timings){
     let found=false;
 
     for(const p of prayerKeys){
-      if(currentMinutes<parseToMinutes(p.time)){nextPrayerName=p.name;nextPrayerTime=p.time;found=true;break}
+      if(currentMinutes<parseToMinutes(p.time)){
+        nextPrayerName=p.name;
+        nextPrayerTime=p.time;
+        found=true;
+        break;
+      }
     }
-    if(!found){nextPrayerName='الفجر';nextPrayerTime=timings.Fajr}
 
-    let targetMinutes=parseToMinutes(nextPrayerTime);
+    if(!found){
+      nextPrayerName='الفجر';
+      nextPrayerTime=timings.Fajr;
+    }
+
+    const targetMinutes=parseToMinutes(nextPrayerTime);
     let diffMinutes=targetMinutes-currentMinutes;
     if(diffMinutes<0) diffMinutes+=24*60;
 
     const hoursLeft=Math.floor(diffMinutes/60);
     const minsLeft=diffMinutes%60;
     const secsLeft=59-now.getSeconds();
+
     const countdownStr=`${hoursLeft}:${String(minsLeft).padStart(2,'0')}:${String(secsLeft).padStart(2,'0')}`;
 
     const setIf=(id,val)=>{const el=document.getElementById(id);if(el) el.innerText=val||''};
@@ -719,56 +693,56 @@ function startNextPrayerCountdown(timings){
   },1000);
 }
 
-async function fetchPrayers(){
-  try{
-    const timings={Fajr:'03:13',Sunrise:'04:48',Dhuhr:'11:49',Asr:'15:23',Maghrib:'18:50',Isha:'20:23'};
-    PRYT={Fajr:timings.Fajr,Dhuhr:timings.Dhuhr,Asr:timings.Asr,Maghrib:timings.Maghrib,Isha:timings.Isha};
-    startNextPrayerCountdown(timings);
-    renderPanelsForToday();
-    return true;
-  }catch(e){return false}
-}
-
-async function init(){
-  const ld=document.getElementById('ld');
-  const app=document.getElementById('app');
-
-  checkStorageAvailable();
-  // Render base immediately
-  renderTabs();
-  document.getElementById('panels').innerHTML=[0,1,2,3,4,5,6].map(renderPanel).join('');
-  switchDay(todayJD());
-
-  // Auth load (wipe/reset ordering)
-  onAuthStateChanged(fbAuth, async (user)=>{
-    resetRuntimeState();
-    clearFirebaseListeners();
-    if(user){
-      await cloudLoadForUser(user);
-      setupRealtimeListeners(user);
-      setAuthUI(user);
-      renderPanelsForToday();
-      updateUICountersOnly();
-    }else{
-      await loadSignedOut();
-      setAuthUI(null);
-      renderPanelsForToday();
-      updateUICountersOnly();
-    }
-    if(ld) ld.style.display='none';
-    if(app) app.style.display='block';
-  });
-
-  // sign in button
+// ===== Auth UI =====
+function initFirebaseAuth(){
   const btn=document.getElementById('btn-signin');
   btn.onclick=async ()=>{
     try{
       const provider=new GoogleAuthProvider();
       await signInWithPopup(fbAuth,provider);
-    }catch(e){showToast(e?.message||'فشل تسجيل الدخول')}
+    }catch(e){
+      showToast(e?.message||'فشل تسجيل الدخول');
+    }
   };
 
-  // delegated clicks for confirm/qada/alternatives
+  onAuthStateChanged(fbAuth,(user)=>{
+    const nameEl=document.getElementById('authName');
+    if(user){
+      nameEl.textContent=user.displayName||user.email||'';
+      btn.textContent='خروج';
+      btn.onclick=()=>fbAuth.signOut().then(()=>showToast('تم تسجيل الخروج'));
+    }else{
+      nameEl.textContent='';
+      btn.textContent='تسجيل دخول';
+      btn.onclick=async ()=>{
+        const provider=new GoogleAuthProvider();
+        await signInWithPopup(fbAuth,provider);
+      };
+    }
+  });
+}
+
+// ===== Init =====
+async function init(){
+  const ld=document.getElementById('ld');
+  const app=document.getElementById('app');
+
+  checkStorageAvailable();
+
+  renderTabs();
+  renderPanelsForAllDays();
+  switchDay(todayJD());
+
+  await localLoad();
+  updateDailyRefreshIfNeeded();
+  await localSave();
+
+  // re-render after load
+  renderPanelsForAllDays();
+  switchDay(todayJD());
+  updateUI();
+
+  // delegated click handlers (no inline onclick)
   document.getElementById('panels').addEventListener('click',async (ev)=>{
     const el=ev.target.closest('[data-action]');
     if(!el) return;
@@ -777,59 +751,55 @@ async function init(){
     const id=el.dataset.id;
     const pts=parseInt(el.dataset.pts||'0',10);
 
-    const taskId=id;
     const jd=todayJD();
-    const tasks=getReqTasks(jd);
     const all=getAllTasks(jd);
-    const task=all.find(t=>t[0]===taskId);
-
-    if(action==='confirm'){
-      if(!task) return;
-      if(taskIsPassed(task)){
-        showToast('Expired / فات الوقت');
-        return;
-      }
-      if(DONE[taskId]) return;
-      await onCompleteTask(task);
-      const rect=ev&&ev.currentTarget?ev.currentTarget.getBoundingClientRect():null;
-      floatPts(rect?rect.left+rect.width/2-20:window.innerWidth/2, rect?rect.top-10:200, pts);
-    }
-
-    if(action==='qada'){
-      if(!task) return;
-      if(!taskIsPassed(task)) return;
-      if(DONE[taskId]) return;
-      await onCompleteQadaPrayer(task);
-      const rect=ev&&ev.currentTarget?ev.currentTarget.getBoundingClientRect():null;
-      floatPts(rect?rect.left+rect.width/2-20:window.innerWidth/2, rect?rect.top-10:200, Math.floor(pts/2));
-      showToast('تم قضاء (50%)');
-    }
-
+    const task=all.find(t=>t[0]===id);
     if(action==='alts'){
       toggleAlts(id);
+      return;
     }
 
     if(action==='pickalt'){
       const alt=el.dataset.alt;
       if(!alt) return;
       SELECTED_ALTS[id]=alt;
-      if(fbAuth.currentUser){
-        await cloudSaveDay();
-      }else{
-        await localSave();
-      }
-      renderPanelsForToday();
+      await localSave();
+      renderPanelsForAllDays();
+      updateUI();
+      return;
+    }
+
+    if(!task) return;
+
+    const rect=ev.currentTarget.getBoundingClientRect();
+
+    if(action==='confirm'){
+      await onConfirm(task, pts, rect);
+      return;
+    }
+
+    if(action==='qada'){
+      await onQada(task, pts, rect);
+      return;
     }
   });
 
-  // update prayers in background
+  // start prayer timings in background
   fetchPrayers().then(()=>{
-    renderPanelsForToday();
+    renderPanelsForAllDays();
+    switchDay(todayJD());
+    updateUI();
   });
 
-  // safety reveal
+  initFirebaseAuth();
+
+  // reveal UI quickly
+  if(ld) ld.style.display='none';
+  if(app) app.style.display='block';
+
+  // fallback
   setTimeout(()=>{
-    if(ld && ld.style.display!== 'none'){
+    if(ld && ld.style.display!=='none'){
       ld.style.display='none';
       if(app) app.style.display='block';
       showToast('تم فتح التطبيق — بعض البيانات قد تتأخر');
@@ -838,12 +808,18 @@ async function init(){
 }
 
 function checkStorageAvailable(){
-  try{const k='__sc_test__';localStorage.setItem(k,'1');localStorage.removeItem(k);return true}catch{showToast('تحذير: تخزين المتصفح غير متاح');return false}
+  try{
+    const k='__sc_test__';
+    localStorage.setItem(k,'1');
+    localStorage.removeItem(k);
+    return true;
+  }catch{
+    showToast('تحذير: تخزين المتصفح غير متاح');
+    return false;
+  }
 }
 
-window.addEventListener('DOMContentLoaded',init);
-
+window.addEventListener('DOMContentLoaded',()=>{init().catch(e=>{console.error(e);showToast('فشل بدء التطبيق')})});
 </script>
 </body>
 </html>
-
