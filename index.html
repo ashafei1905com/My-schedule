@@ -773,7 +773,7 @@ async function checkTask(id,pts,ev){
     if(btn){btn.className='cbtn done';btn.innerHTML='✅<span style="font-size:.7rem;color:var(--gr)">تم</span>';btn.onclick=null}
   }
   document.getElementById('pp-'+id)?.classList.add('done');
-  if(ev){const r=ev.currentTarget.getBoundingClientRect();floatPts(r.left+r.width/2-20,r.top-10,pts)}
+  if(ev&&ev.currentTarget){const r=ev.currentTarget.getBoundingClientRect();floatPts(r.left+r.width/2-20,r.top-10,pts)}else{floatPts(window.innerWidth/2,200,pts)}
   const req=getReqTasks(todayJD());
   if(req.every(t=>DONE[t[0]])&&STATS.lf!==TODAY){
     STATS.cur=STATS.lf===dateOff(-1)?STATS.cur+1:1;
