@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+@<!DOCTYPE html>
 <html lang="ar" dir="rtl">
 <head>
 <meta charset="UTF-8">
@@ -107,7 +107,7 @@ input:focus-visible, button:focus-visible{outline:2px solid var(--ac);outline-of
 </div>
 <main id="app" style="display:none">
   <div id="sbar">
-    <div class="st"><div class="sv" id="sv1">0</div><div class="sl">🔥 ستريك</div></div>
+    <div class="st"><div class="sv" id="sv1">0</div><div class="sl">🔥 استريك</div></div>
     <div class="st"><div class="sv" id="sv2">0</div><div class="sl">⭐ نقاطي</div></div>
     <div class="st"><div class="sv" id="sv3">0</div><div class="sl">🏆 أعلى</div></div>
     <div class="st" id="authArea"><div class="sv" id="authName"></div><div class="sl" id="authBtn"><button class="altbtn" id="btn-signin">تسجيل دخول</button></div></div>
@@ -139,7 +139,6 @@ import {
   getFirestore,
   doc,
   setDoc,
-  getDoc,
   onSnapshot
 } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
 
@@ -250,30 +249,24 @@ function initFirebase() {
 
     if (user) {
       const firstName = (user.displayName || "").trim().split(/\s+/)[0];
-      if (nameEl) nameEl.textContent = (user.displayName || user.email || "").split('@')[0];
+      if (nameEl) nameEl.textContent = user.displayName || user.email || "";
       if (btn) btn.textContent = firstName ? `خروج (${firstName})` : "Sign Out";
 
       // Allow sign-out by clicking again
       if (btn) {
-btn.onclick = () => {
-          fbAuth.signOut().then(() => {
-            Object.keys(localStorage).forEach(k => {
-              if (k.startsWith('sc:')) localStorage.removeItem(k);
-            });
-            STATS = {cur:0, best:0, pts:0, lc:null, lf:null};
-            DONE = {};
-            if (window.__sc_unsubPoints) {
-              try { window.__sc_unsubPoints(); } catch(e) {}
-              window.__sc_unsubPoints = null;
-            }
-            document.getElementById('sv1').textContent = '0';
-            document.getElementById('sv2').textContent = '0';
-            document.getElementById('sv3').textContent = '0';
-            document.getElementById('pfill').style.width = '0%';
-            document.getElementById('ptxt').textContent = '٠/٠ مهمة';
-            document.getElementById('ppts').textContent = '٠ نقطة اليوم';
-            document.getElementById('panels').innerHTML = 
-              [0,1,2,3,4,5,6].map(renderPanel).join('');
+        btn.onclick = () => {
+          if(window.__sc_unsubPoints){try{window.__sc_unsubPoints();}catch(e){} window.__sc_unsubPoints=null;}
+          fbAuth.signOut().then(()=>{
+            Object.keys(localStorage).forEach(k=>{if(k.startsWith('sc:'))localStorage.removeItem(k);});
+            STATS={cur:0,best:0,pts:0,lc:null,lf:null};
+            DONE={};
+            document.getElementById('sv1').textContent='0';
+            document.getElementById('sv2').textContent='0';
+            document.getElementById('sv3').textContent='0';
+            document.getElementById('pfill').style.width='0%';
+            document.getElementById('ptxt').textContent='٠/٠ مهمة';
+            document.getElementById('ppts').textContent='٠ نقطة اليوم';
+            document.getElementById('panels').innerHTML=[0,1,2,3,4,5,6].map(renderPanel).join('');
             switchDay(todayJD());
             showToast("تم تسجيل الخروج");
           });
@@ -291,19 +284,23 @@ btn.onclick = () => {
         const data = snap.data() || {};
         const stats = data.stats || {};
 
-        // Update local JS stats
         STATS.pts = typeof stats.pts === "number" ? stats.pts : 0;
         STATS.cur = typeof stats.cur === "number" ? stats.cur : 0;
         STATS.best = typeof stats.best === "number" ? stats.best : STATS.best ?? 0;
         STATS.lc = stats.lc ?? null;
         STATS.lf = stats.lf ?? null;
 
-        // Update UI immediately
+        // Restore today's completed tasks
+        const todayDone = data['done_'+TODAY];
+        if(todayDone && typeof todayDone === 'object'){ DONE = todayDone; } else { DONE = {}; }
+
         const sv1 = document.getElementById("sv1");
         const sv2 = document.getElementById("sv2");
         if (sv1) sv1.textContent = STATS.cur;
         if (sv2) sv2.textContent = STATS.pts;
 
+        document.getElementById('panels').innerHTML=[0,1,2,3,4,5,6].map(renderPanel).join('');
+        switchDay(todayJD());
         updateUI();
       });
     } else {
@@ -380,40 +377,10 @@ function showToast(msg,ms=3500){const t=document.getElementById('toast');t.textC
 async function sGet(k){try{const r=localStorage.getItem(k);return r?JSON.parse(r):null}catch{return null}}
 async function sSet(k,v){try{localStorage.setItem(k,JSON.stringify(v))}catch{}}
 
-async function loadStats(){
-  if(typeof fbAuth!=='undefined'&&fbAuth&&fbAuth.currentUser){
-    try{
-      const uid=fbAuth.currentUser.uid;
-      const snap=await getDoc(doc(fbDb,'users',uid));
-      if(snap.exists()&&snap.data().stats) return snap.data().stats;
-    }catch(e){}
-  }
-  return(await sGet('sc:stats'))||{cur:0,best:0,pts:0,lc:null,lf:null}
-}
-async function saveStats(s){
-  if(typeof fbAuth!=='undefined'&&fbAuth&&fbAuth.currentUser){
-    cloudSaveStats(s);
-  }else{
-    await sSet('sc:stats',s);
-  }
-}
-async function loadDD(dt){
-  if(typeof fbAuth!=='undefined'&&fbAuth&&fbAuth.currentUser){
-    try{
-      const uid=fbAuth.currentUser.uid;
-      const snap=await getDoc(doc(fbDb,'users',uid));
-      if(snap.exists()){const d=snap.data();if(d[dt]&&d[dt].done) return d[dt].done;}
-    }catch(e){}
-  }
-  return(await sGet('sc:day:'+dt))||{}
-}
-async function saveDD(dt,d){
-  if(fbAuth&&fbAuth.currentUser){
-    try{await setDoc(doc(fbDb,'users',fbAuth.currentUser.uid),{['done_'+dt]:d},{merge:true});}catch(e){console.warn(e);}
-  }else{
-    await sSet('sc:day:'+dt,d);
-  }
-}
+async function loadStats(){return(await sGet('sc:stats'))||{cur:0,best:0,pts:0,lc:null,lf:null}}
+async function saveStats(s){await sSet('sc:stats',s);if(typeof fbAuth!=='undefined'&&fbAuth&&fbAuth.currentUser)cloudSaveStats(s)}
+async function loadDD(dt){return(await sGet('sc:day:'+dt))||{}}
+async function saveDD(dt,d){if(fbAuth&&fbAuth.currentUser){cloudSaveDay(dt,d);}else{await sSet('sc:day:'+dt,d);}}
 async function fetchPrayers(){
   try{
     const ok = await fetchAladhan(null,null);
@@ -589,7 +556,7 @@ document.addEventListener('DOMContentLoaded',()=>{
 
 // ---- Firestore sync helpers ----
 async function cloudSaveStats(s){try{if(!fbAuth?.currentUser)return;const uid=fbAuth.currentUser.uid;await setDoc(doc(fbDb,'users',uid),{stats:s},{merge:true});return true}catch(e){console.warn(e);return false}}
-async function cloudSaveDay(dt,d){try{if(!fbAuth?.currentUser)return;const uid=fbAuth.currentUser.uid;await setDoc(doc(fbDb,'users',uid),{[dt]:{done:d}},{merge:true});return true}catch(e){console.warn(e);return false}}
+async function cloudSaveDay(dt,d){try{if(!fbAuth?.currentUser)return;const uid=fbAuth.currentUser.uid;await setDoc(doc(fbDb,'users',uid),{['done_'+dt]:d},{merge:true});return true}catch(e){console.warn(e);return false}}
 
 async function loadCloudDataForUser(user){
   if(!fbDb||!user) return;
@@ -720,7 +687,7 @@ function computeAutoFreeTime(){
       }
       if(chosen) break;
     }
-    if(chosen){AUTO_FREE_TIME[jd]=[{t:minutesToHM(chosen.start),d:`وقت حر — ${chosen.dur} دقيقة`}];}else{AUTO_FREE_TIME[jd]=[]}
+    if(chosen&&chosen.start>=8*60){AUTO_FREE_TIME[jd]=[{t:minutesToHM(chosen.start),d:`وقت حر — ${chosen.dur} دقيقة`}];}else{AUTO_FREE_TIME[jd]=[];}
   }
 }
 let STATS={cur:0,best:0,pts:0,lc:null,lf:null};
@@ -804,24 +771,32 @@ function renderCard(task, isToday) {
     );
   }
 
+  const nowMin=(()=>{const n=new Date();return n.getHours()*60+n.getMinutes();})();
+  const taskMin=toMin(task[10]||arTime);
+  const isPrayer=cat==='prayer';
+  const tooEarly=nowMin<taskMin;
+  const tooLate=!isEx&&nowMin>taskMin+45;
+
   let act = '';
   if (isEx) {
     act = '<div class="excbadge">🔓 استثناء</div>';
   } else if (isToday) {
-    if (done) {
+    if (done==='qada') {
+      act = '<div class="cbtn done">🟡<span style="font-size:.7rem;color:var(--or)">قضاء</span></div>';
+    } else if (done) {
       act = '<div class="cbtn done">✅<span style="font-size:.7rem;color:var(--gr)">تم</span></div>';
+    } else if (tooEarly) {
+      act = '<div class="ptsbdg" title="لم يحن الوقت بعد">⏳ '+pts+'⭐</div>';
+    } else if (tooLate && isPrayer) {
+      act = '<button class="cbtn" style="background:rgba(245,158,11,.1);border-color:rgba(245,158,11,.4);color:var(--or);font-size:.7rem" data-action="qada" data-id="'+id+'" data-pts="'+Math.floor(pts/2)+'">قضاء<span class="ptslbl">+'+Math.floor(pts/2)+'⭐</span></button>';
+    } else if (tooLate) {
+      act = '<div class="ptsbdg" style="color:var(--rd);font-size:.7rem">❌ فات الوقت</div>';
     } else {
-      act = '<button class="cbtn" data-action="confirm" data-id="' +
-        id +
-        '" data-pts="' +
-        pts +
-        '">تأكيد ✓<span class="ptslbl">+' +
-        pts +
-        '⭐</span></button>';
+      act = '<button class="cbtn" data-action="confirm" data-id="'+id+'" data-pts="'+pts+'">تأكيد ✓<span class="ptslbl">+'+pts+'⭐</span></button>';
     }
   }
 
-  if (done) {
+  if (done && !isToday) {
     act = '<div class="cbtn done">✅</div>';
   } else if (!act) {
     act = '<div class="ptsbdg">' + pts + '⭐</div>';
@@ -838,9 +813,9 @@ function renderCard(task, isToday) {
       '">' +
       alts
         .map((a) =>
-          '<div class="altitem" role="button" tabindex="0" data-alt="' +
-          String(a).replace(/"/g, '"') +
-          '">' +
+          '<div class="altitem" role="button" tabindex="0" style="cursor:pointer" data-action="pickalt" data-id="'+id+'" data-alt="' +
+          String(a).replace(/"/g, '&quot;') +
+          '">← ' +
           a +
           '</div>'
         )
@@ -947,13 +922,36 @@ async function init(){
     switchDay(todayJD());
   });
 
-  // UI button handlers
+  // Delegated click listener for all panel buttons
   document.getElementById('panels').addEventListener('click',function(ev){
-  const btn=ev.target.closest('[data-action]');if(!btn)return;
-  const action=btn.dataset.action,id=btn.dataset.id,pts=parseInt(btn.dataset.pts||'0',10);
-  if(action==='confirm')checkTask(id,pts,ev);
-  else if(action==='alts')toggleAlts(id);
-});
+    const btn=ev.target.closest('[data-action]');if(!btn)return;
+    const action=btn.dataset.action;
+    const id=btn.dataset.id;
+    const pts=parseInt(btn.dataset.pts||'0',10);
+    if(action==='confirm'){checkTask(id,pts,ev);}
+    else if(action==='alts'){toggleAlts(id);}
+    else if(action==='qada'){
+      if(DONE[id])return;
+      DONE[id]='qada';
+      STATS.pts+=pts;
+      saveDD(TODAY,DONE);
+      saveStats(STATS);
+      try{saveMyPoints(STATS.pts,STATS.cur);}catch(e){}
+      const card=document.getElementById('c-'+id);
+      if(card){card.classList.add('done');const b=card.querySelector('[data-action="qada"]');if(b){b.className='cbtn done';b.innerHTML='🟡<span style="font-size:.7rem;color:var(--or)">قضاء</span>';}}
+      updateUI();
+      showToast('تم تسجيل القضاء — نصف النقاط فقط');
+    }
+    else if(action==='pickalt'){
+      const alt=btn.dataset.alt;
+      const card=document.getElementById('c-'+id);
+      if(card){const desc=card.querySelector('.tcdesc');if(desc)desc.textContent=alt;}
+      document.getElementById('al-'+id)?.classList.remove('open');
+      showToast('تم اختيار البديل: '+alt);
+    }
+  });
+
+  // UI button handlers
   document.getElementById('btn-export')?.addEventListener('click',exportBackup);
   document.getElementById('btn-import')?.addEventListener('click',()=>document.getElementById('file-import').click());
   document.getElementById('file-import')?.addEventListener('change',e=>{const f=e.target.files[0];if(f)importBackupFile(f)});
