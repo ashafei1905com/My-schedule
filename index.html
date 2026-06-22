@@ -53,7 +53,7 @@ body{font-family:'Cairo',sans-serif;background:var(--bg);color:var(--tx);directi
 .ppill:focus-within{border-color:var(--ac);outline:2px solid var(--ac);outline-offset:1px}
 .ppill.done{border-color:var(--gr);background:rgba(16,185,129,.1)}
 .pnam{font-size:.6rem;color:var(--so);font-weight:700}
-.ptim{font-size:.72rem;font-weight:700}
+.ptim覆{font-size:.72rem;font-weight:700}
 .tl{position:relative;padding-right:20px}
 .tl::before{content:'';position:absolute;right:7px;top:0;bottom:0;width:2px;background:linear-gradient(to bottom,var(--ac),transparent);border-radius:2px}
 .tc{position:relative;margin-bottom:8px;padding:12px 14px;background:var(--c);border:1px solid var(--br);border-radius:12px;display:flex;align-items:flex-start;gap:10px;transition:border-color .2s,background .2s}
@@ -224,8 +224,24 @@ function toMin(s){
 }
 
 function taskIsPassed(task){
+  const currentMin = getKuwaitNowMinutes();
   const t24 = task[10] || task[1];
-  return getKuwaitNowMinutes() > toMin(t24);
+  const taskMin = toMin(t24);
+
+  if (isPrayerTask(task)) {
+    let pk = task[0].split('-')[2];
+    if (task[0].includes('fri-jm')) pk = 'Dhuhr';
+
+    // صلاة الفجر تنتهي تماماً بدخول وقت الشروق الفعلي
+    if (pk === 'Fajr') return currentMin >= toMin(PRYT.Sunrise || FALLBK.Sunrise);
+    if (pk === 'Dhuhr') return currentMin >= toMin(PRYT.Asr || FALLBK.Asr);
+    if (pk === 'Asr') return currentMin >= toMin(PRYT.Maghrib || FALLBK.Maghrib);
+    if (pk === 'Maghrib') return currentMin >= toMin(PRYT.Isha || FALLBK.Isha);
+    if (pk === 'Isha') return false; 
+    return currentMin > taskMin;
+  }
+
+  return currentMin > (taskMin + 180);
 }
 
 function isPrayerTask(task){
@@ -278,7 +294,9 @@ const mkPM=(p,t)=>[p+'-pm',t,'food','🍳','وجبة بعد التمرين','٣ 
 const mkBr=(p)=>[p+'-br','7:00 م','recovery','🏊','مع أخوك — جاكوزي + بخار','٧:٠٠ — ١٠:٠٠ م ← استثناء ✓',0,null,null,true];
 
 const PMETA={Fajr:{ar:'الفجر',ic:'🌙',pts:15},Dhuhr:{ar:'الظهر',ic:'☀️',pts:10},Asr:{ar:'العصر',ic:'🌤️',pts:10},Maghrib:{ar:'المغرب',ic:'🌅',pts:10},Isha:{ar:'العشاء',ic:'🌙',pts:10}};
-const FALLBK={Fajr:'03:15',Dhuhr:'11:43',Asr:'15:18',Maghrib:'18:29',Isha:'20:09'};
+
+// قيم الطوارئ المعتدلة والمتوسطة (توقيت ربيعي/خريفي وسط) لتفادي أي فروقات كبيرة لو انقطع الإنترنت
+const FALLBK={Fajr:'04:10',Sunrise:'05:35',Dhuhr:'11:50',Asr:'15:10',Maghrib:'18:00',Isha:'19:20'};
 let PRYT={...FALLBK};
 
 const FREE_TIME={
@@ -429,7 +447,7 @@ function toggleAlts(id){
 
 function renderCard(task,isToday){
   const [id,arTime,cat,ico,name,desc,pts,alts,hw,isEx]=task;
-  const doneState=DONE[id]; // قد تكون true, أو رقم النقاط اللي كسبها
+  const doneState=DONE[id]; 
   const isDone = doneState !== undefined;
   const passed=taskIsPassed(task);
 
@@ -490,12 +508,16 @@ function renderPanel(jd){
     ? `<div class="gbx ${d.gm==='upper'?'gbu':'gbl'}">${d.gm==='upper'?'Upper Body 💪':'Lower Body 🦵'}</div>`
     : `<div class="gbx gbr">يوم راحة 💤</div>`;
 
-  const prayerOrder=['Fajr','Dhuhr','Asr','Maghrib','Isha'];
+  const prayerOrder=['Fajr','Sunrise','Dhuhr','Asr','Maghrib','Isha'];
   const pillsArr=[];
   const schedList=d.ts||[];
   const jumahTask=schedList.find(t=>t[2]==='prayer' && (t[4]?.includes('جمعة')||t[0].includes('fri-jm')));
 
   for(const pk of prayerOrder){
+    if(pk==='Sunrise') {
+      pillsArr.push(`<div class="ppill" style="border-color:var(--or); background:rgba(245,158,11,0.03)"><div class="pnam" style="color:var(--or)">الشروق</div><div class="ptim" style="color:var(--or)">${fmt24(PRYT.Sunrise||FALLBK.Sunrise)}</div></div>`);
+      continue;
+    }
     if(pk==='Dhuhr' && jd===5){
       if(jumahTask){
         const pid=jumahTask[0];
@@ -540,14 +562,10 @@ function updateUI(){
   const done=req.filter(t=>DONE[t[0]]!==undefined);
   const pct=req.length?Math.round(done.length/req.length*100):0;
   
-  // حساب نقاط اليوم من خلال النقط الفعلية المحفوظة في الداتا بيز
   const todayPts=done.reduce((s,t)=>{
       const val = DONE[t[0]];
-      // لو مسجلة كرقم (زي التحديث الجديد)، ضيف الرقم مباشرة
       if(typeof val === 'number') return s + val;
-      // لو متسجلة qada من التحديث اللي قبله (للأمان)
       if(val === 'qada') return s + Math.floor(t[6]/2);
-      // لو متسجلة true (بيانات قديمة)، هتاخد النقط الكاملة 
       return s + t[6];
   },0);
   
@@ -615,7 +633,6 @@ async function onConfirm(task, pts, rect){
     showToast('فات الوقت');
     return;
   }
-  // حفظ النقط الفعلية بالرقم
   DONE[task[0]]=pts;
   STATS.pts+=pts;
   
@@ -633,7 +650,6 @@ async function onQada(task, pts, rect){
   if(!taskIsPassed(task)) return;
 
   const half=Math.floor(pts/2);
-  // حفظ النقط الفعلية المقسومة (7) بالرقم
   DONE[task[0]]=half;
   STATS.pts+=half;
   WEEKLY_REPORT.push({t:new Date().toISOString(),taskId:task[0],day:TODAY,points:half,label:task[4]});
@@ -644,21 +660,53 @@ async function onQada(task, pts, rect){
   showToast('تم قضاء (50%)');
 }
 
-// ===== Prayer timings =====
+// ===== Geolocation & Prayer timings =====
+function getCoords() {
+  return new Promise((resolve) => {
+    if (!navigator.geolocation) return resolve(null);
+    navigator.geolocation.getCurrentPosition(
+      (pos) => resolve({ lat: pos.coords.latitude, lng: pos.coords.longitude }),
+      () => resolve(null),
+      { timeout: 6000 }
+    );
+  });
+}
+
 async function fetchPrayers(){
   try{
-    const timings={
-      Fajr:'03:13',
-      Sunrise:'04:48',
-      Dhuhr:'11:49',
-      Asr:'15:23',
-      Maghrib:'18:50',
-      Isha:'20:23'
-    };
-    PRYT={Fajr:timings.Fajr,Dhuhr:timings.Dhuhr,Asr:timings.Asr,Maghrib:timings.Maghrib,Isha:timings.Isha};
-    startNextPrayerCountdown(timings);
-    return true;
-  }catch{
+    const coords = await getCoords();
+    let url = 'https://api.aladhan.com/v1/timingsByCity?city=Salmiya&country=Kuwait&method=5'; 
+    
+    if (coords) {
+      url = `https://api.aladhan.com/v1/timings?latitude=${coords.lat}&longitude=${coords.lng}&method=5`;
+      console.log(`تم تحديد موقعك الفعلي بنجاح: ${coords.lat}, ${coords.lng}`);
+    } else {
+      console.log('لم يتم منح إذن الموقع الفعلي، تم تفعيل توقيت السالمية الافتراضي.');
+    }
+    
+    const res = await fetch(url);
+    const data = await res.json();
+    
+    if(data && data.code === 200) {
+      const timings = data.data.timings;
+      
+      PRYT = {
+        Fajr: timings.Fajr,
+        Sunrise: timings.Sunrise,
+        Dhuhr: timings.Dhuhr,
+        Asr: timings.Asr,
+        Maghrib: timings.Maghrib,
+        Isha: timings.Isha
+      };
+      
+      startNextPrayerCountdown(PRYT);
+      return true;
+    }
+    throw new Error('تعذر جلب البيانات من الخادم');
+  }catch(e){
+    console.warn('فشل جلب المواقيت الحية، سيتم استخدام التوقيت الاحتياطي المتوسط', e);
+    PRYT = {...FALLBK};
+    startNextPrayerCountdown(PRYT);
     return false;
   }
 }
@@ -813,7 +861,6 @@ async function init(){
       
       if(task && DONE[id]===undefined){
          SELECTED_ALTS[id]=alt;
-         // هنا بنحفظ النقط الفعلية للمهمة (باعتبارها اتعملت في وقتها)
          DONE[id]=pts;
          STATS.pts+=pts;
          WEEKLY_REPORT.push({t:new Date().toISOString(),taskId:id,day:TODAY,points:pts,label:task[4],alt:alt});
@@ -861,6 +908,7 @@ async function init(){
   },7000);
 }
 
+// ===== Storage Check =====
 function checkStorageAvailable(){
   try{
     const k='__sc_test__';
