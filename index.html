@@ -83,8 +83,8 @@ body{font-family:'Cairo',sans-serif;background:var(--bg);color:var(--tx);directi
 .altbtn:focus-visible{outline:2px solid var(--ac);outline-offset:1px}
 .altlist{display:none;margin-top:6px;padding:8px;background:rgba(0,0,0,.2);border-radius:6px;border:1px solid var(--br)}
 .altlist.open{display:block}
-.altitem{font-size:.7rem;color:var(--so);padding:3px 0;display:flex;gap:6px}
-.altitem::before{content:'←';color:var(--ac)}
+.altitem{font-size:.7rem;color:var(--so);padding:6px 0;display:flex;gap:6px;align-items:center;justify-content:space-between;border-bottom:1px solid rgba(255,255,255,0.05)}
+.altitem:last-child{border-bottom:none}
 .cbtn{flex-shrink:0;padding:6px 10px;background:rgba(16,185,129,.1);border:1px solid rgba(16,185,129,.4);border-radius:8px;cursor:pointer;font-family:'Cairo',sans-serif;font-size:.73rem;font-weight:700;color:var(--gr);transition:all .2s;display:flex;flex-direction:column;align-items:center;gap:1px}
 .cbtn:hover{background:rgba(16,185,129,.2)}
 .cbtn:focus-visible{outline:2px solid var(--gr);outline-offset:1px;border-color:var(--gr)}
@@ -464,8 +464,10 @@ function renderCard(task,isToday){
     ? `<button class="altbtn" data-action="alts" data-id="${id}">🔄 بدائل (${alts.length})</button>`+
       `<div class="altlist" id="al-${id}">${alts.map(a=>{
         const selected=SELECTED_ALTS[id]===a;
-        const style=selected?' style="color:var(--gr)"':'';
-        return `<div class="altitem" role="button" tabindex="0" style="cursor:pointer;padding:3px 6px;border-radius:4px${selected?';background:rgba(16,185,129,.15);color:var(--gr)':''}" data-action="pickalt" data-id="${id}" data-alt="${String(a).replace(/"/g,'&quot;')}">${selected?'✓ ':''}${a}</div>`;
+        return `<div class="altitem">
+                  <span style="flex:1; line-height:1.4; padding-left:8px; ${selected?'color:var(--gr);font-weight:bold;':''}">${selected?'✓ ':''}${a}</span>
+                  <button class="cbtn" style="padding:4px 8px; font-size:0.65rem; min-width:65px; ${selected?'background:rgba(16,185,129,.05);color:var(--mu);cursor:default;border-color:transparent':''}" data-action="pickalt" data-id="${id}" data-pts="${pts}" data-alt="${String(a).replace(/"/g,'&quot;')}">${selected?'تم ✅':'اختيار'}</button>
+                </div>`;
       }).join('')}</div>`
     : '';
 
@@ -538,11 +540,16 @@ function updateUI(){
   const req=getReqTasks(todayJD());
   const done=req.filter(t=>DONE[t[0]]);
   const pct=req.length?Math.round(done.length/req.length*100):0;
-  document.getElementById('sv1').textContent=STATS.cur;
-  document.getElementById('sv2').textContent=STATS.pts;
-  document.getElementById('sv3').textContent=STATS.best;
-  document.getElementById('ptxt').textContent=`${done.length}/${req.length} مهمة (${pct}%)`;
+  
+  // حساب نقاط اليوم فقط
   const todayPts=done.reduce((s,t)=>s+(DONE[t[0]]==='qada'?Math.floor(t[6]/2):t[6]),0);
+  
+  document.getElementById('sv1').textContent=STATS.cur;
+  // عرض نقاط اليوم في البار العلوي بدلاً من المجموع الكلي
+  document.getElementById('sv2').textContent=todayPts; 
+  document.getElementById('sv3').textContent=STATS.best;
+  
+  document.getElementById('ptxt').textContent=`${done.length}/${req.length} مهمة (${pct}%)`;
   document.getElementById('ppts').textContent=`${todayPts} نقطة اليوم`;
   document.getElementById('pfill').style.width=pct+'%';
 }
@@ -602,6 +609,10 @@ async function onConfirm(task, pts, rect){
   }
   DONE[task[0]]=true;
   STATS.pts+=pts;
+  
+  // حفظ المهمة في التقرير الأسبوعي
+  WEEKLY_REPORT.push({t:new Date().toISOString(),taskId:task[0],day:TODAY,points:pts,label:task[4]});
+  
   maybeHandleWeekly();
   completeStreakIfDayDone();
   await saveAndRefresh();
@@ -736,6 +747,8 @@ function initFirebaseAuth(){
         }catch(e){console.warn('cloud load failed',e);}
       })();
       btn.textContent='خروج';
+      
+      // إصلاح مشكلة تسجيل الخروج
       btn.onclick=()=>{
         try{if(window.__sc_unsub) window.__sc_unsub();}catch{}
         window.__sc_unsub=null;
@@ -745,15 +758,12 @@ function initFirebaseAuth(){
           STATS={cur:0,best:0,pts:0,lc:null,lf:null};
           DONE={};
           SELECTED_ALTS={};
-          document.getElementById('sv1').textContent='0';
-          document.getElementById('sv2').textContent='0';
-          document.getElementById('sv3').textContent='0';
-          document.getElementById('pfill').style.width='0%';
-          document.getElementById('ptxt').textContent='٠/٠ مهمة';
-          document.getElementById('ppts').textContent='٠ نقطة اليوم';
+          
           renderPanelsForAllDays();
           switchDay(todayJD());
-          showToast('تم تسجيل الخروج');
+          updateUI(); // هذا السطر سيقوم بتحديث الشاشة لتعود الأصفار والأزرار غير مفعلة
+          
+          showToast('تم تسجيل الخروج ومسح البيانات المؤقتة بنجاح');
         });
       };
     } else {
@@ -807,10 +817,20 @@ async function init(){
     if(action==='pickalt'){
       const alt=el.dataset.alt;
       if(!alt) return;
-      SELECTED_ALTS[id]=alt;
-      await localSave();
-      renderPanelsForAllDays();
-      updateUI();
+      
+      // إذا كانت المهمة لم تكتمل مسبقاً، سيتم اختيار البديل وتأكيد المهمة وحساب النقاط
+      if(task && !DONE[id]){
+         SELECTED_ALTS[id]=alt;
+         DONE[id]=true;
+         STATS.pts+=pts;
+         WEEKLY_REPORT.push({t:new Date().toISOString(),taskId:id,day:TODAY,points:pts,label:task[4],alt:alt});
+         maybeHandleWeekly();
+         completeStreakIfDayDone();
+         const rect=ev.currentTarget.getBoundingClientRect();
+         floatPts(rect.left+50, rect.top-10, pts);
+      }
+      
+      await saveAndRefresh();
       return;
     }
 
@@ -847,7 +867,6 @@ async function init(){
     if(ld && ld.style.display!=='none'){
       ld.style.display='none';
       if(app) app.style.display='block';
-      showToast('تم فتح التطبيق — بعض البيانات قد تتأخر');
     }
   },7000);
 }
