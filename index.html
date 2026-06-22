@@ -53,7 +53,7 @@ body{font-family:'Cairo',sans-serif;background:var(--bg);color:var(--tx);directi
 .ppill:focus-within{border-color:var(--ac);outline:2px solid var(--ac);outline-offset:1px}
 .ppill.done{border-color:var(--gr);background:rgba(16,185,129,.1)}
 .pnam{font-size:.6rem;color:var(--so);font-weight:700}
-.ptim覆{font-size:.72rem;font-weight:700}
+.ptim{font-size:.72rem;font-weight:700}
 .tl{position:relative;padding-right:20px}
 .tl::before{content:'';position:absolute;right:7px;top:0;bottom:0;width:2px;background:linear-gradient(to bottom,var(--ac),transparent);border-radius:2px}
 .tc{position:relative;margin-bottom:8px;padding:12px 14px;background:var(--c);border:1px solid var(--br);border-radius:12px;display:flex;align-items:flex-start;gap:10px;transition:border-color .2s,background .2s}
@@ -232,7 +232,6 @@ function taskIsPassed(task){
     let pk = task[0].split('-')[2];
     if (task[0].includes('fri-jm')) pk = 'Dhuhr';
 
-    // صلاة الفجر تنتهي تماماً بدخول وقت الشروق الفعلي
     if (pk === 'Fajr') return currentMin >= toMin(PRYT.Sunrise || FALLBK.Sunrise);
     if (pk === 'Dhuhr') return currentMin >= toMin(PRYT.Asr || FALLBK.Asr);
     if (pk === 'Asr') return currentMin >= toMin(PRYT.Maghrib || FALLBK.Maghrib);
@@ -295,18 +294,12 @@ const mkBr=(p)=>[p+'-br','7:00 م','recovery','🏊','مع أخوك — جاكو
 
 const PMETA={Fajr:{ar:'الفجر',ic:'🌙',pts:15},Dhuhr:{ar:'الظهر',ic:'☀️',pts:10},Asr:{ar:'العصر',ic:'🌤️',pts:10},Maghrib:{ar:'المغرب',ic:'🌅',pts:10},Isha:{ar:'العشاء',ic:'🌙',pts:10}};
 
-// قيم الطوارئ المعتدلة والمتوسطة (توقيت ربيعي/خريفي وسط) لتفادي أي فروقات كبيرة لو انقطع الإنترنت
 const FALLBK={Fajr:'04:10',Sunrise:'05:35',Dhuhr:'11:50',Asr:'15:10',Maghrib:'18:00',Isha:'19:20'};
 let PRYT={...FALLBK};
 
 const FREE_TIME={
-  0:[{t:'6:00 م',d:'وقت حر'}],
-  1:[{t:'6:00 م',d:'وقت حر'}],
-  2:[{t:'6:00 م',d:'وقت حر'}],
-  3:[{t:'6:00 م',d:'وقت حر'}],
-  4:[{t:'6:00 م',d:'وقت حر'}],
-  5:[{t:'6:00 م',d:'وقت حر'}],
-  6:[{t:'6:00 م',d:'وقت حر'}]
+  0:[{t:'6:00 م',d:'وقت حر'}],1:[{t:'6:00 م',d:'وقت حر'}],2:[{t:'6:00 م',d:'وقت حر'}],
+  3:[{t:'6:00 م',d:'وقت حر'}],4:[{t:'6:00 م',d:'وقت حر'}],5:[{t:'6:00 م',d:'وقت حر'}],6:[{t:'6:00 م',d:'وقت حر'}]
 };
 
 const SCHED={
@@ -675,10 +668,11 @@ function getCoords() {
 async function fetchPrayers(){
   try{
     const coords = await getCoords();
-    let url = 'https://api.aladhan.com/v1/timingsByCity?city=Salmiya&country=Kuwait&method=5'; 
+    // تم التعديل إلى method=3 (رابطة العالم الإسلامي) لتعتمد زاوية 18 وتتبع خطوط العرض والفصول ديناميكياً بدون هاردكود
+    let url = 'https://api.aladhan.com/v1/timingsByCity?city=Salmiya&country=Kuwait&method=3'; 
     
     if (coords) {
-      url = `https://api.aladhan.com/v1/timings?latitude=${coords.lat}&longitude=${coords.lng}&method=5`;
+      url = `https://api.aladhan.com/v1/timings?latitude=${coords.lat}&longitude=${coords.lng}&method=3`;
       console.log(`تم تحديد موقعك الفعلي بنجاح: ${coords.lat}, ${coords.lng}`);
     } else {
       console.log('لم يتم منح إذن الموقع الفعلي، تم تفعيل توقيت السالمية الافتراضي.');
