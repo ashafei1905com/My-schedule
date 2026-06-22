@@ -429,8 +429,8 @@ function toggleAlts(id){
 
 function renderCard(task,isToday){
   const [id,arTime,cat,ico,name,desc,pts,alts,hw,isEx]=task;
-  const doneState=DONE[id]; // قد تكون true أو 'qada'
-  const isDone = !!doneState;
+  const doneState=DONE[id]; // قد تكون true, أو رقم النقاط اللي كسبها
+  const isDone = doneState !== undefined;
   const passed=taskIsPassed(task);
 
   if(cat==='free'){
@@ -499,7 +499,7 @@ function renderPanel(jd){
     if(pk==='Dhuhr' && jd===5){
       if(jumahTask){
         const pid=jumahTask[0];
-        const done=DONE[pid]&&isToday;
+        const done=DONE[pid]!==undefined&&isToday;
         pillsArr.push(`<div class="ppill${done?' done':''}" id="pp-${pid}"><div class="pnam">${jumahTask[4]}</div><div class="ptim">${fmt24(jumahTask[1])}</div></div>`);
       }
       continue;
@@ -507,7 +507,7 @@ function renderPanel(jd){
     const pm=PMETA[pk];
     if(!pm) continue;
     const pid=`pr-${k}-${pk}`;
-    const done=DONE[pid]&&isToday;
+    const done=DONE[pid]!==undefined&&isToday;
     pillsArr.push(`<div class="ppill${done?' done':''}" id="pp-${pid}"><div class="pnam">${pm.ar}</div><div class="ptim">${fmt24(PRYT[pk]||FALLBK[pk])}</div></div>`);
   }
 
@@ -537,19 +537,26 @@ function renderTabs(){
 
 function updateUI(){
   const req=getReqTasks(todayJD());
-  const done=req.filter(t=>DONE[t[0]]);
+  const done=req.filter(t=>DONE[t[0]]!==undefined);
   const pct=req.length?Math.round(done.length/req.length*100):0;
   
-  // حساب نقاط اليوم (نص لو قضاء، كاملة لو عادي)
-  const todayPts=done.reduce((s,t)=>s+(DONE[t[0]]==='qada'?Math.floor(t[6]/2):t[6]),0);
+  // حساب نقاط اليوم من خلال النقط الفعلية المحفوظة في الداتا بيز
+  const todayPts=done.reduce((s,t)=>{
+      const val = DONE[t[0]];
+      // لو مسجلة كرقم (زي التحديث الجديد)، ضيف الرقم مباشرة
+      if(typeof val === 'number') return s + val;
+      // لو متسجلة qada من التحديث اللي قبله (للأمان)
+      if(val === 'qada') return s + Math.floor(t[6]/2);
+      // لو متسجلة true (بيانات قديمة)، هتاخد النقط الكاملة 
+      return s + t[6];
+  },0);
   
   document.getElementById('sv1').textContent=STATS.cur;
-  // النقاط العلوية إجمالية
   document.getElementById('sv2').textContent=STATS.pts; 
   document.getElementById('sv3').textContent=STATS.best;
   
   document.getElementById('ptxt').textContent=`${done.length}/${req.length} مهمة (${pct}%)`;
-  document.getElementById('ppts').textContent=`${todayPts} نقطة اليوم`; // نقاط اليوم فقط هنا
+  document.getElementById('ppts').textContent=`${todayPts} نقطة اليوم`;
   document.getElementById('pfill').style.width=pct+'%';
 }
 
@@ -562,13 +569,12 @@ function switchDay(jd){
   updateUI();
 }
 
-// ===== Task completion (time-lock + qada) =====
+// ===== Task completion (time-lock + exact points storage) =====
 async function saveAndRefresh(){
   await localSave();
   if(fbAuth&&fbAuth.currentUser){
     try{
       const uid=fbAuth.currentUser.uid;
-      // حفظ البدائل بجانب المهام في الداتا بيز
       await setDoc(doc(fbDb,'users',uid),{
         ['done_'+TODAY]:DONE,
         ['alts_'+TODAY]:SELECTED_ALTS,
@@ -589,7 +595,7 @@ function maybeHandleWeekly(){}
 
 function completeStreakIfDayDone(){
   const req=getReqTasks(todayJD());
-  const isAllDone=req.every(t=>DONE[t[0]]);
+  const isAllDone=req.every(t=>DONE[t[0]]!==undefined);
   if(isAllDone && STATS.lf!==TODAY){
     const yesterday=dateOff(-1);
     if(STATS.lf===yesterday){
@@ -604,12 +610,13 @@ function completeStreakIfDayDone(){
 }
 
 async function onConfirm(task, pts, rect){
-  if(DONE[task[0]]) return;
+  if(DONE[task[0]]!==undefined) return;
   if(taskIsPassed(task)){
     showToast('فات الوقت');
     return;
   }
-  DONE[task[0]]=true;
+  // حفظ النقط الفعلية بالرقم
+  DONE[task[0]]=pts;
   STATS.pts+=pts;
   
   WEEKLY_REPORT.push({t:new Date().toISOString(),taskId:task[0],day:TODAY,points:pts,label:task[4]});
@@ -621,12 +628,13 @@ async function onConfirm(task, pts, rect){
 }
 
 async function onQada(task, pts, rect){
-  if(DONE[task[0]]) return;
+  if(DONE[task[0]]!==undefined) return;
   if(!isPrayerTask(task)) return;
   if(!taskIsPassed(task)) return;
 
   const half=Math.floor(pts/2);
-  DONE[task[0]]='qada'; // تم التعديل لتُحسب نصف النقاط فقط
+  // حفظ النقط الفعلية المقسومة (7) بالرقم
+  DONE[task[0]]=half;
   STATS.pts+=half;
   WEEKLY_REPORT.push({t:new Date().toISOString(),taskId:task[0],day:TODAY,points:half,label:task[4]});
   maybeHandleWeekly();
@@ -717,7 +725,6 @@ function initFirebaseAuth(){
                 DONE=data['done_'+TODAY]; await sSet(LS.done(TODAY),DONE);
             } else { DONE={}; await sSet(LS.done(TODAY),DONE); }
             
-            // سحب البدائل عشان مفيش حاجة قديمة تتداخل
             if(data['alts_'+TODAY]&&typeof data['alts_'+TODAY]==='object'){
                 SELECTED_ALTS=data['alts_'+TODAY]; await sSet(LS.alts(TODAY),SELECTED_ALTS);
             } else { SELECTED_ALTS={}; await sSet(LS.alts(TODAY),SELECTED_ALTS); }
@@ -799,15 +806,15 @@ async function init(){
       const alt=el.dataset.alt;
       if(!alt) return;
       
-      // التعديل هنا لمنع اختيار بديل لو الوقت فات
       if(task && taskIsPassed(task)){
          showToast('فات الوقت للأسف');
          return;
       }
       
-      if(task && !DONE[id]){
+      if(task && DONE[id]===undefined){
          SELECTED_ALTS[id]=alt;
-         DONE[id]=true;
+         // هنا بنحفظ النقط الفعلية للمهمة (باعتبارها اتعملت في وقتها)
+         DONE[id]=pts;
          STATS.pts+=pts;
          WEEKLY_REPORT.push({t:new Date().toISOString(),taskId:id,day:TODAY,points:pts,label:task[4],alt:alt});
          maybeHandleWeekly();
