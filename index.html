@@ -465,7 +465,7 @@ function renderCard(task,isToday){
       `<div class="altlist" id="al-${id}">${alts.map(a=>{
         const selected=SELECTED_ALTS[id]===a;
         const style=selected?' style="color:var(--gr)"':'';
-        return `<div class="altitem" role="button" tabindex="0" data-action="pickalt" data-id="${id}" data-alt="${String(a).replace(/"/g,'"')}"${style}>${a}</div>`;
+        return `<div class="altitem" role="button" tabindex="0" style="cursor:pointer;padding:3px 6px;border-radius:4px${selected?';background:rgba(16,185,129,.15);color:var(--gr)':''}" data-action="pickalt" data-id="${id}" data-alt="${String(a).replace(/"/g,'&quot;')}">${selected?'✓ ':''}${a}</div>`;
       }).join('')}</div>`
     : '';
 
@@ -542,7 +542,8 @@ function updateUI(){
   document.getElementById('sv2').textContent=STATS.pts;
   document.getElementById('sv3').textContent=STATS.best;
   document.getElementById('ptxt').textContent=`${done.length}/${req.length} مهمة (${pct}%)`;
-  document.getElementById('ppts').textContent=`${STATS.pts} نقطة اليوم`;
+  const todayPts=done.reduce((s,t)=>s+(DONE[t[0]]==='qada'?Math.floor(t[6]/2):t[6]),0);
+  document.getElementById('ppts').textContent=`${todayPts} نقطة اليوم`;
   document.getElementById('pfill').style.width=pct+'%';
 }
 
@@ -558,6 +559,12 @@ function switchDay(jd){
 // ===== Task completion (time-lock + qada) =====
 async function saveAndRefresh(){
   await localSave();
+  if(fbAuth&&fbAuth.currentUser){
+    try{
+      const uid=fbAuth.currentUser.uid;
+      await setDoc(doc(fbDb,'users',uid),{['done_'+TODAY]:DONE,stats:STATS},{merge:true});
+    }catch(e){console.warn('cloud save failed',e);}
+  }
   renderPanelsForAllDays();
   switchDay(todayJD());
   updateUI();
@@ -709,9 +716,47 @@ function initFirebaseAuth(){
     const nameEl=document.getElementById('authName');
     if(user){
       nameEl.textContent=user.displayName||user.email||'';
+      (async()=>{
+        try{
+          const uid=user.uid;
+          const snap=await getDoc(doc(fbDb,'users',uid));
+          if(snap.exists()){
+            const data=snap.data()||{};
+            if(data.stats){STATS=data.stats;await sSet(LS.stats,STATS);}
+            if(data['done_'+TODAY]&&typeof data['done_'+TODAY]==='object'){DONE=data['done_'+TODAY];await sSet(LS.done(TODAY),DONE);}
+          }
+          renderPanelsForAllDays();switchDay(todayJD());updateUI();
+          if(window.__sc_unsub){try{window.__sc_unsub();}catch(e){}}
+          window.__sc_unsub=onSnapshot(doc(fbDb,'users',uid),(snap)=>{
+            const data=snap.data()||{};
+            if(data.stats){STATS=data.stats;sSet(LS.stats,STATS);}
+            if(data['done_'+TODAY]&&typeof data['done_'+TODAY]==='object'){DONE=data['done_'+TODAY];sSet(LS.done(TODAY),DONE);}
+            renderPanelsForAllDays();switchDay(todayJD());updateUI();
+          });
+        }catch(e){console.warn('cloud load failed',e);}
+      })();
       btn.textContent='خروج';
-      btn.onclick=()=>fbAuth.signOut().then(()=>showToast('تم تسجيل الخروج'));
-    }else{
+      btn.onclick=()=>{
+        try{if(window.__sc_unsub) window.__sc_unsub();}catch{}
+        window.__sc_unsub=null;
+
+        fbAuth.signOut().then(()=>{
+          Object.keys(localStorage).forEach(k=>{if(k.startsWith('sc:'))localStorage.removeItem(k);});
+          STATS={cur:0,best:0,pts:0,lc:null,lf:null};
+          DONE={};
+          SELECTED_ALTS={};
+          document.getElementById('sv1').textContent='0';
+          document.getElementById('sv2').textContent='0';
+          document.getElementById('sv3').textContent='0';
+          document.getElementById('pfill').style.width='0%';
+          document.getElementById('ptxt').textContent='٠/٠ مهمة';
+          document.getElementById('ppts').textContent='٠ نقطة اليوم';
+          renderPanelsForAllDays();
+          switchDay(todayJD());
+          showToast('تم تسجيل الخروج');
+        });
+      };
+    } else {
       nameEl.textContent='';
       btn.textContent='تسجيل دخول';
       btn.onclick=async ()=>{
