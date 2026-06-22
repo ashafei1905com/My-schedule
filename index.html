@@ -115,7 +115,7 @@ input:focus-visible, button:focus-visible{outline:2px solid var(--ac);outline-of
   </div>
   <div class="pw">
     <div class="pb">
-      <div class="ph"><span id="ptxt">٠/٠ مهمة</span><span id="ppts">٠ نقطة</span></div>
+      <div class="ph"><span id="ptxt">٠/٠ مهمة</span><span id="ppts">٠ نقطة اليوم</span></div>
       <div class="pbg"><div class="pfx" id="pfill" style="width:0"></div></div>
     </div>
     <div style="margin-top:8px;display:flex;gap:8px;align-items:center;flex-wrap:wrap"></div>
@@ -128,7 +128,7 @@ input:focus-visible, button:focus-visible{outline:2px solid var(--ac);outline-of
 <script type="module">
 'use strict';
 
-// ===== Firebase (kept, but app works fully local even if sign-in fails) =====
+// ===== Firebase =====
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
 import { getAuth, GoogleAuthProvider, signInWithPopup, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
 import { getFirestore, doc, setDoc, getDoc, onSnapshot } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
@@ -281,7 +281,6 @@ const PMETA={Fajr:{ar:'الفجر',ic:'🌙',pts:15},Dhuhr:{ar:'الظهر',ic:'
 const FALLBK={Fajr:'03:15',Dhuhr:'11:43',Asr:'15:18',Maghrib:'18:29',Isha:'20:09'};
 let PRYT={...FALLBK};
 
-// PM-only free time (no pre-08:00)
 const FREE_TIME={
   0:[{t:'6:00 م',d:'وقت حر'}],
   1:[{t:'6:00 م',d:'وقت حر'}],
@@ -368,7 +367,7 @@ function getReqTasks(jd){
   return [...buildPTasks(jd),...(SCHED[jd]?.ts||[])].filter(t=>!t[9] && t[6]>0);
 }
 
-// ===== Persistence (local, with cloud optional) =====
+// ===== Persistence =====
 const LS={
   stats:'sc:stats',
   done:(dt)=>`sc:day:${dt}:done`,
@@ -386,7 +385,6 @@ let SELECTED_ALTS={};
 let WEEKLY_REPORT=[];
 
 function updateDailyRefreshIfNeeded(){
-  // streak reset logic: only if last full day is not yesterday
   if(STATS.lc===TODAY) return;
   const yesterday=dateOff(-1);
   if(STATS.lf && STATS.lf!==TODAY && STATS.lf!==yesterday){
@@ -431,7 +429,8 @@ function toggleAlts(id){
 
 function renderCard(task,isToday){
   const [id,arTime,cat,ico,name,desc,pts,alts,hw,isEx]=task;
-  const done=DONE[id]||false;
+  const doneState=DONE[id]; // قد تكون true أو 'qada'
+  const isDone = !!doneState;
   const passed=taskIsPassed(task);
 
   if(cat==='free'){
@@ -442,7 +441,7 @@ function renderCard(task,isToday){
   if(isEx){
     act=`<div class="excbadge">🔓 استثناء</div>`;
   }else if(isToday){
-    if(done){
+    if(isDone){
       act=`<div class="cbtn done">✅</div>`;
     }else{
       if(isPrayerTask(task) && passed){
@@ -457,7 +456,7 @@ function renderCard(task,isToday){
   }
 
   if(!act){
-    act=done?`<div class="cbtn done">✅</div>`:`<div class="ptsbdg">${pts}⭐</div>`;
+    act=isDone?`<div class="cbtn done">✅</div>`:`<div class="ptsbdg">${pts}⭐</div>`;
   }
 
   const altH = (alts && alts.length)
@@ -474,7 +473,7 @@ function renderCard(task,isToday){
   const hwH=hw?`<div class="hwtag">⏰ ${hw}</div>`:'';
   const displayDesc=getTaskDisplayDesc(task);
 
-  return `<div class="tc${done?' done':''}${isEx?' excx':''}" data-c="${cat}" id="c-${id}">
+  return `<div class="tc${isDone?' done':''}${isEx?' excx':''}" data-c="${cat}" id="c-${id}">
     <div class="tctime">${arTime}</div><div class="tcico">${ico}</div>
     <div class="tcbody"><div class="tcname">${name}</div><div class="tcdesc">${displayDesc}</div>${hwH}${altH}</div>
     ${act}
@@ -541,16 +540,16 @@ function updateUI(){
   const done=req.filter(t=>DONE[t[0]]);
   const pct=req.length?Math.round(done.length/req.length*100):0;
   
-  // حساب نقاط اليوم فقط
+  // حساب نقاط اليوم (نص لو قضاء، كاملة لو عادي)
   const todayPts=done.reduce((s,t)=>s+(DONE[t[0]]==='qada'?Math.floor(t[6]/2):t[6]),0);
   
   document.getElementById('sv1').textContent=STATS.cur;
-  // عرض نقاط اليوم في البار العلوي بدلاً من المجموع الكلي
-  document.getElementById('sv2').textContent=todayPts; 
+  // النقاط العلوية إجمالية
+  document.getElementById('sv2').textContent=STATS.pts; 
   document.getElementById('sv3').textContent=STATS.best;
   
   document.getElementById('ptxt').textContent=`${done.length}/${req.length} مهمة (${pct}%)`;
-  document.getElementById('ppts').textContent=`${todayPts} نقطة اليوم`;
+  document.getElementById('ppts').textContent=`${todayPts} نقطة اليوم`; // نقاط اليوم فقط هنا
   document.getElementById('pfill').style.width=pct+'%';
 }
 
@@ -569,7 +568,12 @@ async function saveAndRefresh(){
   if(fbAuth&&fbAuth.currentUser){
     try{
       const uid=fbAuth.currentUser.uid;
-      await setDoc(doc(fbDb,'users',uid),{['done_'+TODAY]:DONE,stats:STATS},{merge:true});
+      // حفظ البدائل بجانب المهام في الداتا بيز
+      await setDoc(doc(fbDb,'users',uid),{
+        ['done_'+TODAY]:DONE,
+        ['alts_'+TODAY]:SELECTED_ALTS,
+        stats:STATS
+      },{merge:true});
     }catch(e){console.warn('cloud save failed',e);}
   }
   renderPanelsForAllDays();
@@ -581,9 +585,7 @@ function renderPanelsForAllDays(){
   document.getElementById('panels').innerHTML=[0,1,2,3,4,5,6].map(renderPanel).join('');
 }
 
-function maybeHandleWeekly(){
-  // weekly report stored locally already; kept for extension
-}
+function maybeHandleWeekly(){}
 
 function completeStreakIfDayDone(){
   const req=getReqTasks(todayJD());
@@ -604,13 +606,12 @@ function completeStreakIfDayDone(){
 async function onConfirm(task, pts, rect){
   if(DONE[task[0]]) return;
   if(taskIsPassed(task)){
-    showToast('Expired/فات الوقت');
+    showToast('فات الوقت');
     return;
   }
   DONE[task[0]]=true;
   STATS.pts+=pts;
   
-  // حفظ المهمة في التقرير الأسبوعي
   WEEKLY_REPORT.push({t:new Date().toISOString(),taskId:task[0],day:TODAY,points:pts,label:task[4]});
   
   maybeHandleWeekly();
@@ -625,7 +626,7 @@ async function onQada(task, pts, rect){
   if(!taskIsPassed(task)) return;
 
   const half=Math.floor(pts/2);
-  DONE[task[0]]=true;
+  DONE[task[0]]='qada'; // تم التعديل لتُحسب نصف النقاط فقط
   STATS.pts+=half;
   WEEKLY_REPORT.push({t:new Date().toISOString(),taskId:task[0],day:TODAY,points:half,label:task[4]});
   maybeHandleWeekly();
@@ -638,7 +639,6 @@ async function onQada(task, pts, rect){
 // ===== Prayer timings =====
 async function fetchPrayers(){
   try{
-    // calibrated Kuwait Awqaf timings (same as your current version)
     const timings={
       Fajr:'03:13',
       Sunrise:'04:48',
@@ -648,8 +648,6 @@ async function fetchPrayers(){
       Isha:'20:23'
     };
     PRYT={Fajr:timings.Fajr,Dhuhr:timings.Dhuhr,Asr:timings.Asr,Maghrib:timings.Maghrib,Isha:timings.Isha};
-
-    // realtime countdown (no DOM dependencies)
     startNextPrayerCountdown(timings);
     return true;
   }catch{
@@ -662,12 +660,7 @@ function startNextPrayerCountdown(timings){
   window.prayerInterval=setInterval(()=>{
     const now=new Date();
     const currentMinutes=now.getHours()*60+now.getMinutes();
-
-    const parseToMinutes=(t)=>{
-      const [h,m]=t.split(':').map(Number);
-      return h*60+m;
-    };
-
+    const parseToMinutes=(t)=>{const [h,m]=t.split(':').map(Number);return h*60+m;};
     const prayerKeys=[
       {name:'الفجر',time:timings.Fajr},
       {name:'الشروق',time:timings.Sunrise},
@@ -676,35 +669,20 @@ function startNextPrayerCountdown(timings){
       {name:'المغرب',time:timings.Maghrib},
       {name:'العشاء',time:timings.Isha}
     ];
-
-    let nextPrayerName='الفجر';
-    let nextPrayerTime=timings.Fajr;
-    let found=false;
-
+    let nextPrayerName='الفجر'; let nextPrayerTime=timings.Fajr; let found=false;
     for(const p of prayerKeys){
       if(currentMinutes<parseToMinutes(p.time)){
-        nextPrayerName=p.name;
-        nextPrayerTime=p.time;
-        found=true;
-        break;
+        nextPrayerName=p.name; nextPrayerTime=p.time; found=true; break;
       }
     }
-
-    if(!found){
-      nextPrayerName='الفجر';
-      nextPrayerTime=timings.Fajr;
-    }
-
+    if(!found){nextPrayerName='الفجر'; nextPrayerTime=timings.Fajr;}
     const targetMinutes=parseToMinutes(nextPrayerTime);
     let diffMinutes=targetMinutes-currentMinutes;
     if(diffMinutes<0) diffMinutes+=24*60;
-
     const hoursLeft=Math.floor(diffMinutes/60);
     const minsLeft=diffMinutes%60;
     const secsLeft=59-now.getSeconds();
-
     const countdownStr=`${hoursLeft}:${String(minsLeft).padStart(2,'0')}:${String(secsLeft).padStart(2,'0')}`;
-
     const setIf=(id,val)=>{const el=document.getElementById(id);if(el) el.innerText=val||''};
     setIf('next-prayer-title',`المتبقي لأذان ${nextPrayerName}`);
     setIf('next-prayer-countdown',countdownStr);
@@ -734,7 +712,15 @@ function initFirebaseAuth(){
           if(snap.exists()){
             const data=snap.data()||{};
             if(data.stats){STATS=data.stats;await sSet(LS.stats,STATS);}
-            if(data['done_'+TODAY]&&typeof data['done_'+TODAY]==='object'){DONE=data['done_'+TODAY];await sSet(LS.done(TODAY),DONE);}
+            
+            if(data['done_'+TODAY]&&typeof data['done_'+TODAY]==='object'){
+                DONE=data['done_'+TODAY]; await sSet(LS.done(TODAY),DONE);
+            } else { DONE={}; await sSet(LS.done(TODAY),DONE); }
+            
+            // سحب البدائل عشان مفيش حاجة قديمة تتداخل
+            if(data['alts_'+TODAY]&&typeof data['alts_'+TODAY]==='object'){
+                SELECTED_ALTS=data['alts_'+TODAY]; await sSet(LS.alts(TODAY),SELECTED_ALTS);
+            } else { SELECTED_ALTS={}; await sSet(LS.alts(TODAY),SELECTED_ALTS); }
           }
           renderPanelsForAllDays();switchDay(todayJD());updateUI();
           if(window.__sc_unsub){try{window.__sc_unsub();}catch(e){}}
@@ -742,27 +728,24 @@ function initFirebaseAuth(){
             const data=snap.data()||{};
             if(data.stats){STATS=data.stats;sSet(LS.stats,STATS);}
             if(data['done_'+TODAY]&&typeof data['done_'+TODAY]==='object'){DONE=data['done_'+TODAY];sSet(LS.done(TODAY),DONE);}
+            if(data['alts_'+TODAY]&&typeof data['alts_'+TODAY]==='object'){SELECTED_ALTS=data['alts_'+TODAY];sSet(LS.alts(TODAY),SELECTED_ALTS);}
             renderPanelsForAllDays();switchDay(todayJD());updateUI();
           });
         }catch(e){console.warn('cloud load failed',e);}
       })();
       btn.textContent='خروج';
       
-      // إصلاح مشكلة تسجيل الخروج
       btn.onclick=()=>{
         try{if(window.__sc_unsub) window.__sc_unsub();}catch{}
         window.__sc_unsub=null;
-
         fbAuth.signOut().then(()=>{
           Object.keys(localStorage).forEach(k=>{if(k.startsWith('sc:'))localStorage.removeItem(k);});
           STATS={cur:0,best:0,pts:0,lc:null,lf:null};
           DONE={};
           SELECTED_ALTS={};
-          
           renderPanelsForAllDays();
           switchDay(todayJD());
-          updateUI(); // هذا السطر سيقوم بتحديث الشاشة لتعود الأصفار والأزرار غير مفعلة
-          
+          updateUI();
           showToast('تم تسجيل الخروج ومسح البيانات المؤقتة بنجاح');
         });
       };
@@ -792,12 +775,10 @@ async function init(){
   updateDailyRefreshIfNeeded();
   await localSave();
 
-  // re-render after load
   renderPanelsForAllDays();
   switchDay(todayJD());
   updateUI();
 
-  // delegated click handlers (no inline onclick)
   document.getElementById('panels').addEventListener('click',async (ev)=>{
     const el=ev.target.closest('[data-action]');
     if(!el) return;
@@ -818,7 +799,12 @@ async function init(){
       const alt=el.dataset.alt;
       if(!alt) return;
       
-      // إذا كانت المهمة لم تكتمل مسبقاً، سيتم اختيار البديل وتأكيد المهمة وحساب النقاط
+      // التعديل هنا لمنع اختيار بديل لو الوقت فات
+      if(task && taskIsPassed(task)){
+         showToast('فات الوقت للأسف');
+         return;
+      }
+      
       if(task && !DONE[id]){
          SELECTED_ALTS[id]=alt;
          DONE[id]=true;
@@ -849,7 +835,6 @@ async function init(){
     }
   });
 
-  // start prayer timings in background
   fetchPrayers().then(()=>{
     renderPanelsForAllDays();
     switchDay(todayJD());
@@ -858,11 +843,9 @@ async function init(){
 
   initFirebaseAuth();
 
-  // reveal UI quickly
   if(ld) ld.style.display='none';
   if(app) app.style.display='block';
 
-  // fallback
   setTimeout(()=>{
     if(ld && ld.style.display!=='none'){
       ld.style.display='none';
