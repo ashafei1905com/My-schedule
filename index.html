@@ -384,7 +384,8 @@ const LS={
   done:(dt)=>`sc:day:${dt}:done`,
   alts:(dt)=>`sc:day:${dt}:alts`,
   qada:(dt)=>`sc:day:${dt}:qada`,
-  weekly:(dt)=>`sc:weekly:${dt}`
+  weekly:(dt)=>`sc:weekly:${dt}`,
+  coords:'sc:coords'
 };
 
 async function sGet(k){try{const r=localStorage.getItem(k);return r?JSON.parse(r):null}catch{return null}}
@@ -580,8 +581,9 @@ function switchDay(jd){
   updateUI();
 }
 
-// ===== Task completion (time-lock + exact points storage) =====
+// ===== Task completion (Scroll Lock Applied Here) =====
 async function saveAndRefresh(){
+  const savedScroll = window.scrollY; // تثبيت مكان الشاشة الفعلي
   await localSave();
   if(fbAuth&&fbAuth.currentUser){
     try{
@@ -596,6 +598,7 @@ async function saveAndRefresh(){
   renderPanelsForAllDays();
   switchDay(todayJD());
   updateUI();
+  window.scrollTo(0, savedScroll); // إعادة إجبار المتصفح على البقاء في مكانه منعاً للقفز لأعلى
 }
 
 function renderPanelsForAllDays(){
@@ -653,12 +656,29 @@ async function onQada(task, pts, rect){
   showToast('تم قضاء (50%)');
 }
 
-// ===== Geolocation & Prayer timings =====
+// ===== Geolocation Caching to stop repeated browser prompts =====
 function getCoords() {
   return new Promise((resolve) => {
+    try {
+      const cachedData = localStorage.getItem(LS.coords);
+      if (cachedData) {
+        const parsed = JSON.parse(cachedData);
+        if (Date.now() - parsed.timestamp < 3 * 24 * 60 * 60 * 1000) {
+          console.log('تم تحميل الموقع الجغرافي من الكاش المحلي بنجاح.');
+          return resolve(parsed.coords);
+        }
+      }
+    } catch(e) { console.warn('خطأ قراءة كاش الموقع', e); }
+
     if (!navigator.geolocation) return resolve(null);
     navigator.geolocation.getCurrentPosition(
-      (pos) => resolve({ lat: pos.coords.latitude, lng: pos.coords.longitude }),
+      (pos) => {
+        const coords = { lat: pos.coords.latitude, lng: pos.coords.longitude };
+        try {
+          localStorage.setItem(LS.coords, JSON.stringify({ coords, timestamp: Date.now() }));
+        } catch(e){}
+        resolve(coords);
+      },
       () => resolve(null),
       { timeout: 6000 }
     );
@@ -668,14 +688,13 @@ function getCoords() {
 async function fetchPrayers(){
   try{
     const coords = await getCoords();
-    // تم التعديل إلى method=3 (رابطة العالم الإسلامي) لتعتمد زاوية 18 وتتبع خطوط العرض والفصول ديناميكياً بدون هاردكود
-    let url = 'https://api.aladhan.com/v1/timingsByCity?city=Salmiya&country=Kuwait&method=3'; 
+    let url = 'https://api.aladhan.com/v1/timingsByCity?city=Salmiya&country=Kuwait&method=9'; 
     
     if (coords) {
-      url = `https://api.aladhan.com/v1/timings?latitude=${coords.lat}&longitude=${coords.lng}&method=3`;
-      console.log(`تم تحديد موقعك الفعلي بنجاح: ${coords.lat}, ${coords.lng}`);
+      url = `https://api.aladhan.com/v1/timings?latitude=${coords.lat}&longitude=${coords.lng}&method=9`;
+      console.log(`تم تحديد موقعك بدقة: ${coords.lat}, ${coords.lng}`);
     } else {
-      console.log('لم يتم منح إذن الموقع الفعلي، تم تفعيل توقيت السالمية الافتراضي.');
+      console.log('لم يتم منح إذن الموقع الفعلي، تم تفعيل توقيت السالمية الافتراضي (الأوقاف الكويتية).');
     }
     
     const res = await fetch(url);
