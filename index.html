@@ -129,7 +129,7 @@ input:focus-visible, button:focus-visible{outline:2px solid var(--ac);outline-of
 <script type="module">
 'use strict';
 
-// ===== Firebase (kept, but app works fully local even if sign-in fails) =====
+// ===== Firebase =====
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
 import { getAuth, GoogleAuthProvider, signInWithPopup, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
 import { getFirestore, doc, setDoc, getDoc } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
@@ -224,13 +224,38 @@ function toMin(s){
   return h*60+(m||0);
 }
 
-function taskIsPassed(task){
-  const t24 = task[10] || task[1];
-  return getKuwaitNowMinutes() > toMin(t24);
-}
-
 function isPrayerTask(task){
   return task[2]==='prayer';
+}
+
+// Determines if task is PENDING, EXPIRED (after 3 hours), or QADA (missed prayer time)
+function getTaskState(task) {
+  const now = getKuwaitNowMinutes();
+  const start = toMin(task[10] || task[1]);
+  
+  if (isPrayerTask(task)) {
+    let end = start + 60; // safe fallback
+    const parts = task[0].split('-');
+    if (parts.length >= 3) {
+      const pk = parts[2];
+      if(pk === 'Fajr') end = toMin(PRYT.Sunrise || FALLBK.Sunrise);
+      else if(pk === 'Dhuhr') end = toMin(PRYT.Asr || FALLBK.Asr);
+      else if(pk === 'Asr') end = toMin(PRYT.Maghrib || FALLBK.Maghrib);
+      else if(pk === 'Maghrib') end = toMin(PRYT.Isha || FALLBK.Isha);
+      else if(pk === 'Isha') end = 24 * 60; // 11:59 PM
+    }
+    // Handle Friday prayer
+    if (task[0].includes('fri-jm')) {
+      end = toMin(PRYT.Asr || FALLBK.Asr);
+    }
+    if (now > end) return 'QADA';
+    return 'PENDING';
+  } else {
+    // Normal tasks have exactly 3 hours (180 minutes) to be completed
+    const end = start + 180;
+    if (now > end) return 'EXPIRED';
+    return 'PENDING';
+  }
 }
 
 function floatPts(x,y,n){
@@ -368,7 +393,7 @@ function getReqTasks(jd){
   return [...buildPTasks(jd),...(SCHED[jd]?.ts||[])].filter(t=>!t[9] && t[6]>0);
 }
 
-// ===== Persistence (local, with cloud optional) =====
+// ===== Persistence =====
 const LS={
   stats:'sc:stats',
   done:(dt)=>`sc:day:${dt}:done`,
@@ -441,7 +466,9 @@ function toggleAlts(id){
 function renderCard(task,isToday){
   const [id,arTime,cat,ico,name,desc,pts,alts,hw,isEx]=task;
   const done=DONE[id]||false;
-  const passed=taskIsPassed(task);
+  
+  const tState = getTaskState(task);
+  const expired = (tState === 'EXPIRED');
 
   if(cat==='free'){
     return `<div class="tc" data-c="free"><div class="tctime">${arTime}</div><div class="tcico">${ico}</div><div class="tcbody"><div class="tcname" style="color:#6366f1">${name}</div><div class="tcdesc">${desc}</div></div></div>`;
@@ -454,10 +481,10 @@ function renderCard(task,isToday){
     if(done){
       act=`<div class="cbtn done">✅</div>`;
     }else{
-      if(isPrayerTask(task) && passed){
+      if(tState === 'QADA'){
         const half=Math.floor(pts/2);
         act=`<button class="cbtn qada" data-action="qada" data-id="${id}" data-pts="${pts}">قضاء (50%)<span class="ptslbl">+${half}⭐</span></button>`;
-      }else if(pts>0 && passed){
+      }else if(tState === 'EXPIRED'){
         act=`<div class="cbtn exp">فات الوقت</div>`;
       }else{
         act=`<button class="cbtn" data-action="confirm" data-id="${id}" data-pts="${pts}">تأكيد ✓<span class="ptslbl">+${pts}⭐</span></button>`;
@@ -469,7 +496,8 @@ function renderCard(task,isToday){
     act=done?`<div class="cbtn done">✅</div>`:`<div class="ptsbdg">${pts}⭐</div>`;
   }
 
-  const altH = (alts && alts.length)
+  // Hide alternatives completely if 3 hours have passed or it's already done
+  const altH = (alts && alts.length && !expired && !done)
     ? `<button class="altbtn" data-action="alts" data-id="${id}">🔄 بدائل (${alts.length})</button>`+
       `<div class="altlist" id="al-${id}">${alts.map(a=>{
         const selected=SELECTED_ALTS[id]===a;
@@ -565,7 +593,7 @@ function switchDay(jd){
   updateUI();
 }
 
-// ===== Task completion (time-lock + qada) =====
+// ===== Task completion =====
 async function saveAndRefresh(){
   await localSave();
   renderPanelsForAllDays();
@@ -595,8 +623,9 @@ function completeStreakIfDayDone(){
 
 async function onConfirm(task, pts, rect){
   if(DONE[task[0]]) return;
-  if(taskIsPassed(task)){
-    showToast('Expired/فات الوقت');
+  const tState = getTaskState(task);
+  if(tState === 'EXPIRED'){
+    showToast('فات الوقت المخصص لهذه المهمة');
     return;
   }
   DONE[task[0]]=true;
@@ -609,16 +638,17 @@ async function onConfirm(task, pts, rect){
 async function onQada(task, pts, rect){
   if(DONE[task[0]]) return;
   if(!isPrayerTask(task)) return;
-  if(!taskIsPassed(task)) return;
+  const tState = getTaskState(task);
+  if(tState !== 'QADA') return;
 
   const half=Math.floor(pts/2);
-  DONE[task[0]]=true;
+  DONE[task[0]]='qada';
   STATS.pts+=half;
   WEEKLY_REPORT.push({t:new Date().toISOString(),taskId:task[0],day:TODAY,points:half,label:task[4]});
   completeStreakIfDayDone();
   await saveAndRefresh();
   floatPts(rect.left+rect.width/2-20, rect.top-10, half);
-  showToast('تم قضاء (50%)');
+  showToast('تم قضاء الفريضة (50% نقاط)');
 }
 
 // ===== Prayer timings =====
@@ -641,22 +671,7 @@ async function fetchPrayers(){
 function startNextPrayerCountdown(timings){
   if(window.prayerInterval) clearInterval(window.prayerInterval);
   window.prayerInterval=setInterval(()=>{
-    const now=new Date();
-    const currentMinutes=now.getHours()*60+now.getMinutes();
-
-    const parseToMinutes=(t)=>{
-      const [h,m]=t.split(':').map(Number);
-      return h*60+m;
-    };
-
-    const prayerKeys=[
-      {name:'الفجر',time:timings.Fajr},
-      {name:'الشروق',time:timings.Sunrise},
-      {name:'الظهر',time:timings.Dhuhr},
-      {name:'العصر',time:timings.Asr},
-      {name:'المغرب',time:timings.Maghrib},
-      {name:'العشاء',time:timings.Isha}
-    ];
+    // Minimal background check mapping
   },60000);
 }
 
@@ -680,6 +695,12 @@ document.addEventListener('click', async (e)=>{
   } else if(act === 'alts'){
     toggleAlts(id);
   } else if(act === 'pickalt'){
+    const task = getAllTasks(todayJD()).find(t => t[0] === id);
+    // Double safeguard incase someone attempts to click while expired
+    if(task && getTaskState(task) === 'EXPIRED') {
+      showToast('لا يمكن اختيار بديل، فات وقت المهمة');
+      return;
+    }
     const altText = btn.getAttribute('data-alt');
     SELECTED_ALTS[id] = altText;
     await saveAndRefresh();
@@ -707,50 +728,35 @@ async function initApp(){
   renderPanelsForAllDays();
   switchDay(todayJD());
 
-  // Safe removal of the layout block loading curtain
   document.getElementById('ld').style.display = 'none';
   document.getElementById('app').style.display = 'block';
 }
 
-// ===== Firebase Authentication Observer (Guards against Race Conditions) =====
 onAuthStateChanged(fbAuth, async (user) => {
-  const authName = document.getElementById('authName');
-  const authBtn = document.getElementById('authBtn');
-  if (!authName || !authBtn) return;
-
   if (user) {
-    authName.textContent = user.displayName || 'عبدالله';
-    authBtn.innerHTML = `<button class="altbtn" id="btn-signout" style="color:var(--rd);border-color:rgba(239,68,68,0.2)">خروج</button>`;
-    
-    // Cloud sync pulls safely down here inside the lifecycle wrapper loop
+    document.getElementById('authName').textContent = user.displayName;
+    document.getElementById('authBtn').innerHTML = '<button class="altbtn" id="btn-signout">تسجيل خروج</button>';
     try {
       const docSnap = await getDoc(doc(fbDb, "users", user.uid));
-      if (docSnap.exists()) {
-        const cloudData = docSnap.data();
-        if (cloudData.stats) STATS = cloudData.stats;
+      if (docSnap.exists() && docSnap.data().stats) {
+        STATS = docSnap.data().stats;
       }
       const daySnap = await getDoc(doc(fbDb, `users/${user.uid}/days`, TODAY));
       if (daySnap.exists()) {
         DONE = daySnap.data();
       }
-      updateDailyRefreshIfNeeded();
-      renderPanelsForAllDays();
-      switchDay(todayJD());
+      saveAndRefresh();
     } catch (e) {
-      console.warn("Cloud pull sync bypass:", e);
+      console.warn("Error fetching cloud data:", e);
     }
   } else {
-    authName.textContent = '';
-    authBtn.innerHTML = `<button class="altbtn" id="btn-signin">تسجيل دخول</button>`;
+    document.getElementById('authName').textContent = '';
+    document.getElementById('authBtn').innerHTML = '<button class="altbtn" id="btn-signin">تسجيل دخول</button>';
   }
 });
 
-// Fire up app initialization handler
-initApp().catch(err => {
-  console.error("App boot failed:", err);
-  document.getElementById('ld').style.display = 'none';
-  document.getElementById('app').style.display = 'block';
-});
+initApp();
+
 </script>
 </body>
 </html>
