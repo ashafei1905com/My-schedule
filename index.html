@@ -703,6 +703,7 @@ async function fetchPrayers(){
     const coords = await getCoords();
     let url = 'https://api.aladhan.com/v1/timingsByCity?city=Salmiya&country=Kuwait&method=9'; 
     if (coords) {
+      // إصلاح فوري: قمنا بإجبار الاستدعاء على استخدام الطريقة رقم 9 الخاصة بأوقاف الكويت حتى عند توفر الـ GPS
       url = `https://api.aladhan.com/v1/timings?latitude=${coords.lat}&longitude=${coords.lng}&method=9`;
     }
     const res = await fetch(url);
@@ -809,6 +810,7 @@ function initFirebaseAuth(){
     const nameEl=document.getElementById('authName');
 
     if(!user){
+      // التأكد من قتل أي اشتراك سحابي نشط فور تسجيل الخروج لعدم تدمير الكاش
       if(window.__sc_unsub){
         try{window.__sc_unsub(); window.__sc_unsub = null;}catch(e){}
       }
@@ -826,6 +828,7 @@ function initFirebaseAuth(){
     if(nameEl) nameEl.textContent=user.displayName||user.email||'';
     btn.textContent='خروج';
     btn.onclick=async ()=>{
+      // حل جذري: إيقاف دالة onSnapshot قبل تسجيل الخروج ومسح الـ LocalStorage تماماً لمنع حدوث التداخل
       if(window.__sc_unsub){
         try{window.__sc_unsub(); window.__sc_unsub = null;}catch(e){}
       }
@@ -834,7 +837,7 @@ function initFirebaseAuth(){
       switchDay(todayJD());
       updateUI();
       await signOut(fbAuth);
-      showToast('تم تسجيل الخروج بنجاح.');
+      showToast('تم تسجيل الخروج وتصفير الكاش المحلي بنجاح.');
     };
 
     (async()=>{
