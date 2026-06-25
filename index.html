@@ -671,7 +671,7 @@ async function onQada(task, pts, rect){
 
 async function fetchPrayers(){
   try {
-    const url = 'https://api.aladhan.com/v1/timingsByCity?city=Kuwait&country=Kuwait&method=9'; 
+    const url = 'https://api.aladhan.com/v1/timingsByCity?city=Kuwait&country=Kuwait&method=4'; 
     const res = await fetch(url);
     const data = await res.json();
     if(data && data.code === 200) {
@@ -772,12 +772,6 @@ function attachDynamicEvents() {
 function initFirebaseAuth(){
   const btn=document.getElementById('btn-signin');
   if(!btn) return;
-
-  // Catch mobile redirect results
-  getRedirectResult(fbAuth).catch(e => {
-    console.error("Redirect Auth Error:", e);
-    showToast('فشل تسجيل الدخول عبر التحويل.');
-  });
 
   onAuthStateChanged(fbAuth,(user)=>{
     const nameEl=document.getElementById('authName');
