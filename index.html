@@ -24,6 +24,18 @@ body{font-family:'Cairo',sans-serif;background:var(--bg);color:var(--tx);directi
 .sl{font-size:.6rem;color:var(--so);font-weight:700}
 #sv1{color:var(--or)}#sv2{color:var(--ye)}#sv3{color:var(--pu)}
 .pw{padding:10px 16px 0}
+.pb{background:var(--c);border:1px solid var(--br);border-radius:10px;padding:10px 14px}
+.ph{display:flex;justify-content:space-between;font-size:.77rem;color:var(--so);margin-bottom:6px}
+.pbg{height:6px;background:var(--br);border:1px solid rgba(30,45,69,.6);border-radius:3px;overflow:hidden}
+.pfx{height:100%;background:linear-gradient(90deg,var(--ac),var(--gr));border-radius:3px;transition:width .4s}
+.tw{overflow-x:auto;scrollbar-width:none;padding:10px 16px 4px}
+.tw::-webkit-scrollbar{display:none}
+.tabs{display:flex;gap:6px;width:max-content}
+.tab{flex-shrink:0;padding:8px 13px;background:var(--c);border:1px solid var(--br);border-radius:8px;cursor:pointer;font-family:'Cairo',sans-serif;font-size:.82rem;font-weight:700;color:var(--so);display:flex;align-items:center;gap:4px;transition:all .2s}
+.tab:hover{border-color:var(--ac);color:var(--tx)}
+.tab:focus-visible{outline:2px solid #2563eb;outline-offset:2px;border-color:#2563eb}
+.tab.act{background:#2563eb;border-color:#2563eb;color:#fff}
+.tab.tod{border-color:var(--gr);color:var(--gr)}
 </style>
 </head>
 <body>
@@ -31,7 +43,7 @@ body{font-family:'Cairo',sans-serif;background:var(--bg);color:var(--tx);directi
 <div id="sbar">
   <div style="display:flex; gap:16px;">
     <div class="st"><span class="sv" id="sv1">0</span><span class="sl">الاستريك 🔥</span></div>
-    <div class="st"><span class="sv" id="sv2">0</span><span class="sl">النقاط ⭐</span></div>
+    <div class="st"><span class="sv" id="sv2">0</span><span class="sl">الالتحام ⭐</span></div>
     <div class="st"><span class="sv" id="sv3">0</span><span class="sl">أفضل استريك 🏆</span></div>
   </div>
   <div style="display:flex; align-items:center; gap:8px;">
@@ -48,7 +60,7 @@ body{font-family:'Cairo',sans-serif;background:var(--bg);color:var(--tx);directi
 
   <div id="tabrow" style="display:flex; gap:8px; overflow-x:auto; padding-bottom:8px; margin-bottom:16px; scrollbar-width:none;"></div>
   
-  <div style="background:var(--c2); border:1px solid var(--br); border-radius:12px; padding:12px; margin-bottom:16px; display:flex; justify-content:between; align-items:center; gap:12px;">
+  <div style="background:var(--c2); border:1px solid var(--br); border-radius:12px; padding:12px; margin-bottom:16px; display:flex; justify-content:space-between; align-items:center; gap:12px;">
     <div style="flex:1;">
       <div id="ptxt" style="font-size:0.85rem; font-weight:700; margin-bottom:4px;">0/0 مهمة (0%)</div>
       <div style="background:var(--c); height:6px; border-radius:3px; overflow:hidden;">
@@ -227,7 +239,7 @@ function showToast(msg,ms=3500){
   },ms);
 }
 
-const mkBk=(p,t='9:15 ص')=>[p+'-bk',t,'food','🧀','الفطار المتوازن','جبنة قريش (٤-٥ ملاعق كبيرة) + زيت زيتون + رغيفين أسمر + طماطم + خيار',5,[
+const mkBk=(p,t='9:15 ص')=>[p+'-bk',t,'food','🧀','الفطار المتوازن','جبنة قريش (١٥٠جم) + زيت زيتون + رغيفين أسمر + طماطم + خيار',5,[
   'لبنة ٤ ملاعق كبيرة + بيضتين مسلوقتين + رغيف أسمر',
   'جبنة بيضاء خفيفة + بيضة مسلوقة + خبز أسمر'
 ],null,false];
@@ -682,6 +694,9 @@ async function fetchPrayers(){
     let url = 'https://api.aladhan.com/v1/timingsByCity?city=Salmiya&country=Kuwait&method=9'; 
     if (coords) {
       url = `https://api.aladhan.com/v1/timings?latitude=${coords.lat}&longitude=${coords.lng}&method=9`;
+      console.log(`تم تحديد موقعك الفعلي بنجاح: ${coords.lat}, ${coords.lng}`);
+    } else {
+      console.log('لم يتم منح إذن الموقع الفعلي، تم تفعيل توقيت السالمية الافتراضي');
     }
     const res = await fetch(url);
     const data = await res.json();
@@ -845,7 +860,6 @@ function initFirebaseAuth(){
   });
 }
 
-// تشغيل النظام عند التحميل الأساسي
 (async function init(){
   await localLoad();
   updateDailyRefreshIfNeeded();
@@ -856,7 +870,6 @@ function initFirebaseAuth(){
   initFirebaseAuth();
   await fetchPrayers();
 })();
-
 </script>
 </body>
 </html>
