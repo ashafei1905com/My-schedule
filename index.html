@@ -31,55 +31,106 @@ body{font-family:'Cairo',sans-serif;background:var(--bg);color:var(--tx);directi
 .tw{overflow-x:auto;scrollbar-width:none;padding:10px 16px 4px}
 .tw::-webkit-scrollbar{display:none}
 .tabs{display:flex;gap:6px;width:max-content}
-.tab{flex-shrink:0;padding:8px 13px;background:var(--c);border:1px solid var(--br);border-radius:8px;cursor:pointer;font-family:'Cairo',sans-serif;font-size:.82rem;font-weight:700;color:var(--so);display:flex;align-items:center;gap:4px;transition:all .2s}
+.tab{flex-shrink:0;padding:8px 13px;background:var(--c);border:1px solid var(--br);border-radius:8px;cursor:pointer;font-family:'Cairo',sans-serif;font-size:.82rem;font-weight:700;color:var(--so);transition:all .2s;display:flex;flex-direction:column;align-items:center;gap:2px}
 .tab:hover{border-color:var(--ac);color:var(--tx)}
 .tab:focus-visible{outline:2px solid #2563eb;outline-offset:2px;border-color:#2563eb}
 .tab.act{background:#2563eb;border-color:#2563eb;color:#fff}
-.tab.tod{border-color:var(--gr);color:var(--gr)}
+.tab.tod:not(.act){border-color:var(--gr);color:var(--gr)}
+.gdot{width:5px;height:5px;border-radius:50%;background:var(--or)}
+.tab.act .gdot{background:rgba(255,255,255,.7)}
+.pan{display:none;padding:0 16px 100px}
+.pan.act{display:block}
+.dh{padding:14px 16px;background:linear-gradient(135deg,var(--c),var(--c2));border:1px solid var(--br);border-radius:14px;margin-bottom:10px;display:flex;justify-content:space-between;align-items:center}
+.dhn{font-size:1.1rem;font-weight:900}
+.dhm{font-size:.7rem;color:var(--mu);margin-top:2px}
+.gbx{padding:4px 10px;border-radius:6px;font-size:.72rem;font-weight:700}
+.gbu{background:rgba(239,68,68,.15);color:#ef4444}
+.gbl{background:rgba(245,158,11,.15);color:#f59e0b}
+.gbr{background:rgba(100,116,139,.1);color:var(--mu)}
+.prow{display:flex;gap:5px;margin-bottom:10px;overflow-x:auto;scrollbar-width:none}
+.prow::-webkit-scrollbar{display:none}
+.ppill{flex-shrink:0;padding:6px 10px;background:var(--c);border:2px solid var(--br);border-radius:8px;text-align:center;min-width:60px;transition:all .2s}
+.ppill:focus-within{border-color:var(--ac);outline:2px solid var(--ac);outline-offset:1px}
+.ppill.done{border-color:var(--gr);background:rgba(16,185,129,.1)}
+.pnam{font-size:.6rem;color:var(--so);font-weight:700}
+.ptim{font-size:.72rem;font-weight:700}
+.tl{position:relative;padding-right:20px}
+.tl::before{content:'';position:absolute;right:7px;top:0;bottom:0;width:2px;background:linear-gradient(to bottom,var(--ac),transparent);border-radius:2px}
+.tc{position:relative;margin-bottom:8px;padding:12px 14px;background:var(--c);border:1px solid var(--br);border-radius:12px;display:flex;align-items:flex-start;gap:10px;transition:border-color .2s,background .2s}
+.tc:focus-within{border-color:var(--ac);box-shadow:0 0 0 2px rgba(59,130,246,.2)}
+.tc::before{content:'';position:absolute;right:-24px;top:16px;width:10px;height:10px;border-radius:50%;background:var(--c2);border:2px solid var(--br)}
+.tc.done{background:rgba(16,185,129,.05);border-color:rgba(16,185,129,.3)}
+.tc.done::before{border-color:var(--gr);background:var(--gr)}
+.tc.excx{background:rgba(6,182,212,.04);border-color:rgba(6,182,212,.2)}
+.tc[data-c="prayer"]{border-right:3px solid var(--ye)}
+.tc[data-c="food"]{border-right:3px solid var(--or)}
+.tc[data-c="gym"]{border-right:3px solid var(--rd)}
+.tc[data-c="swim"]{border-right:3px solid var(--cy)}
+.tc[data-c="recovery"]{border-right:3px solid var(--gr)}
+.tc[data-c="quran"]{border-right:3px solid var(--ye)}
+.tc[data-c="prog"]{border-right:3px solid var(--pk)}
+.tc[data-c="sleep"]{border-right:3px solid var(--pu)}
+.tc[data-c="free"]{border-right:3px dashed #6366f1;border-style:dashed}
+.tctime{font-size:.67rem;color:var(--mu);font-weight:700;min-width:60px;text-align:left;padding-top:2px;direction:ltr;flex-shrink:0}
+.tcico{font-size:1.1rem;width:32px;height:32px;display:flex;align-items:center;justify-content:center;border-radius:8px;background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.1);flex-shrink:0}
+.tcbody{flex:1;min-width:0}
+.tcname{font-weight:700;font-size:.88rem;margin-bottom:2px}
+.tcdesc{font-size:.73rem;color:var(--so);line-height:1.5}
+.hwtag{display:inline-block;margin-top:4px;padding:2px 7px;background:rgba(239,68,68,.15);border:1px solid rgba(239,68,68,.3);border-radius:4px;font-size:.62rem;color:#ef4444;font-weight:700}
+.excbadge{display:inline-flex;align-items:center;gap:3px;padding:3px 8px;background:rgba(6,182,212,.1);border:1px solid rgba(6,182,212,.3);border-radius:6px;font-size:.67rem;color:var(--cy);font-weight:700;flex-shrink:0}
+.altbtn{margin-top:5px;padding:3px 8px;background:rgba(59,130,246,.08);border:1px solid rgba(59,130,246,.2);border-radius:5px;font-size:.63rem;color:var(--ac);cursor:pointer;display:inline-flex;align-items:center;gap:4px;font-family:'Cairo',sans-serif;transition:all .2s}
+.altbtn:hover{background:rgba(59,130,246,.15);border-color:rgba(59,130,246,.4)}
+.altbtn:focus-visible{outline:2px solid var(--ac);outline-offset:1px}
+.altlist{display:none;margin-top:6px;padding:8px;background:rgba(0,0,0,.2);border-radius:6px;border:1px solid var(--br)}
+.altlist.open{display:block}
+.altitem{font-size:.7rem;color:var(--so);padding:3px 0;display:flex;gap:6px}
+.altitem::before{content:'←';color:var(--ac)}
+.cbtn{flex-shrink:0;padding:6px 10px;background:rgba(16,185,129,.1);border:1px solid rgba(16,185,129,.4);border-radius:8px;cursor:pointer;font-family:'Cairo',sans-serif;font-size:.73rem;font-weight:700;color:var(--gr);transition:all .2s;display:flex;flex-direction:column;align-items:center;gap:1px}
+.cbtn:hover{background:rgba(16,185,129,.2)}
+.cbtn:focus-visible{outline:2px solid var(--gr);outline-offset:1px;border-color:var(--gr)}
+.cbtn.done{background:rgba(16,185,129,.06);border-color:rgba(16,185,129,.2);color:var(--mu);cursor:default}
+.cbtn.exp{background:rgba(100,116,139,.08);border-color:rgba(100,116,139,.4);color:var(--mu);cursor:not-allowed}
+.cbtn.qada{background:rgba(245,158,11,.08);border-color:rgba(245,158,11,.35);color:var(--or)}
+.cbtn.qada:hover{background:rgba(245,158,11,.15)}
+.ptslbl{font-size:.58rem;color:var(--mu)}
+.ptsbdg{padding:4px 8px;background:rgba(100,116,139,.1);border:1px solid var(--br);border-radius:6px;font-size:.67rem;color:var(--mu);flex-shrink:0}
+.floatpts{position:fixed;pointer-events:none;z-index:9999;font-size:1.1rem;font-weight:900;color:var(--ye);font-family:'Cairo',sans-serif;animation:up .8s ease-out forwards}
+#toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%);background:var(--c2);border:2px solid var(--gr);border-radius:12px;padding:14px 20px;font-size:.85rem;font-weight:700;color:var(--gr);z-index:9999;display:none;text-align:center;box-shadow:0 4px 20px rgba(0,0,0,.5);max-width:300px;white-space:pre-line}
+#toast.show{display:block;animation:ti .3s ease}
+input:focus-visible, button:focus-visible{outline:2px solid var(--ac);outline-offset:2px}
 </style>
 </head>
 <body>
 
-<div id="sbar">
-  <div style="display:flex; gap:16px;">
-    <div class="st"><span class="sv" id="sv1">0</span><span class="sl">الاستريك 🔥</span></div>
-    <div class="st"><span class="sv" id="sv2">0</span><span class="sl">الالتحام ⭐</span></div>
-    <div class="st"><span class="sv" id="sv3">0</span><span class="sl">أفضل استريك 🏆</span></div>
-  </div>
-  <div style="display:flex; align-items:center; gap:8px;">
-    <span id="authName" style="font-size:0.85rem; font-weight:700; color:var(--so)"></span>
-    <button id="btn-signin" style="background:var(--ac); color:#fff; border:none; padding:6px 12px; border-radius:6px; font-family:inherit; font-size:0.85rem; font-weight:700; cursor:pointer;">جاري التحميل...</button>
-  </div>
+<div id="ld" style="display:flex;align-items:center;justify-content:center;height:100vh;flex-direction:column;gap:16px">
+  <div style="width:40px;height:40px;border:3px solid #1e2d45;border-top-color:#3b82f6;border-radius:50%;animation:spin .8s linear infinite"></div>
+  <span style="color:#64748b;font-family:Cairo,sans-serif;font-size:.9rem">جاري تحميل جدول عبدالله...</span>
 </div>
-
-<div class="pw">
-  <div style="background:var(--c2); border:1px solid var(--br); border-radius:12px; padding:16px; margin-bottom:16px; text-align:center;">
-    <div id="next-prayer-title" style="font-size:0.85rem; color:var(--so); font-weight:700; margin-bottom:4px;">المتبقي للأذان القادم</div>
-    <div id="next-prayer-countdown" style="font-size:1.8rem; font-weight:900; color:var(--cy); letter-spacing:1px; line-height:1;">00:00:00</div>
+<main id="app" style="display:none">
+  <div id="sbar">
+    <div class="st"><div class="sv" id="sv1">0</div><div class="sl">🔥 استريك</div></div>
+    <div class="st"><div class="sv" id="sv2">0</div><div class="sl">⭐ نقاطي</div></div>
+    <div class="st"><div class="sv" id="sv3">0</div><div class="sl">🏆 أعلى</div></div>
+    <div class="st" id="authArea"><div class="sv" id="authName"></div><div class="sl" id="authBtn"><button class="altbtn" id="btn-signin">تسجيل دخول</button></div></div>
   </div>
-
-  <div id="tabrow" style="display:flex; gap:8px; overflow-x:auto; padding-bottom:8px; margin-bottom:16px; scrollbar-width:none;"></div>
-  
-  <div style="background:var(--c2); border:1px solid var(--br); border-radius:12px; padding:12px; margin-bottom:16px; display:flex; justify-content:space-between; align-items:center; gap:12px;">
-    <div style="flex:1;">
-      <div id="ptxt" style="font-size:0.85rem; font-weight:700; margin-bottom:4px;">0/0 مهمة (0%)</div>
-      <div style="background:var(--c); height:6px; border-radius:3px; overflow:hidden;">
-        <div id="pfill" style="background:linear-gradient(90deg, var(--ac), var(--gr)); width:0%; height:100%; transition:width 0.3s ease;"></div>
-      </div>
+  <div class="pw">
+    <div class="pb">
+      <div class="ph"><span id="ptxt">٠/٠ مهمة</span><span id="ppts">٠ نقطة</span></div>
+      <div class="pbg"><div class="pfx" id="pfill" style="width:0"></div></div>
     </div>
-    <div id="ppts" style="background:rgba(16,185,129,0.1); color:var(--gr); font-weight:900; padding:6px 12px; border-radius:8px; font-size:0.9rem;">0 نقطة اليوم</div>
+    <div style="margin-top:8px;display:flex;gap:8px;align-items:center;flex-wrap:wrap"></div>
   </div>
-
+  <div class="tw"><div class="tabs" id="tabrow"></div></div>
   <div id="panels"></div>
-</div>
-
-<div id="toast" style="position:fixed; bottom:24px; left:50%; transform:translateX(-50%); background:rgba(26,34,53,0.95); border:1px solid var(--br); color:var(--tx); padding:12px 24px; border-radius:30px; font-size:0.9rem; font-weight:700; z-index:2000; box-shadow:0 10px 25px rgba(0,0,0,0.5); pointer-events:none; opacity:0; transition:opacity 0.3s, transform 0.3s; text-align:center; white-space:pre-line;"></div>
+</main>
+<div id="toast"></div>
 
 <script type="module">
 'use strict';
 
+// ===== Firebase (kept, but app works fully local even if sign-in fails) =====
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
-import { getAuth, GoogleAuthProvider, signInWithPopup, signInWithRedirect, getRedirectResult, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
+import { getAuth, GoogleAuthProvider, signInWithPopup, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
 import { getFirestore, doc, setDoc, getDoc, onSnapshot } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
 
 const firebaseConfig = {
@@ -96,6 +147,7 @@ const fbApp = initializeApp(firebaseConfig);
 const fbAuth = getAuth(fbApp);
 const fbDb = getFirestore(fbApp);
 
+// ===== Helpers / Time =====
 const KUWAIT_TZ = 'Asia/Kuwait';
 const p2 = (n)=>String(n).padStart(2,'0');
 
@@ -138,13 +190,7 @@ function todayJD(){
   return ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'].indexOf(weekday);
 }
 
-function getDateStrForDayIndex(jd) {
-  const currentJD = todayJD();
-  const diff = jd - currentJD;
-  const d = new Date();
-  d.setDate(d.getDate() + diff);
-  return `${d.getFullYear()}-${p2(d.getMonth()+1)}-${p2(d.getDate())}`;
-}
+const TODAY=todayStr();
 
 function cleanTimeStr(s){
   if(!s) return '';
@@ -155,8 +201,7 @@ function cleanTimeStr(s){
 function fmt24(t){
   const s=cleanTimeStr(t);
   if(!s) return '';
-  let [h,m]=s.split(':').map(Number);
-  if(h >= 24) h -= 24; 
+  const [h,m]=s.split(':').map(Number);
   const pm=h>=12;
   const dh=h>12?h-12:(h===0?12:h);
   return `${dh}:${p2(m)} ${pm?'م':'ص'}`;
@@ -178,36 +223,9 @@ function toMin(s){
   return h*60+(m||0);
 }
 
-function getSortMinutes(task) {
-  const id = task[0];
-  const timeStr = task[10] || task[1];
-  let min = toMin(timeStr);
-  
-  if (id.includes('-sl') || id.includes('-dn') || id.includes('-pm')) {
-    if (min < 240) { 
-      return 1440 + min; 
-    }
-    return min + 720; 
-  }
-  return min;
-}
-
 function taskIsPassed(task){
-  const currentMin = getKuwaitNowMinutes();
   const t24 = task[10] || task[1];
-  const taskMin = toMin(t24);
-
-  if (isPrayerTask(task)) {
-    const pk = task[0].split('-')[2];
-    if (pk === 'Fajr') return currentMin >= toMin(PRYT.Fajr || FALLBK.Fajr);
-    if (pk === 'Dhuhr') return currentMin >= toMin(PRYT.Dhuhr || FALLBK.Dhuhr);
-    if (pk === 'Asr') return currentMin >= toMin(PRYT.Asr || FALLBK.Asr);
-    if (pk === 'Maghrib') return currentMin >= toMin(PRYT.Maghrib || FALLBK.Maghrib);
-    if (pk === 'Isha') return currentMin >= toMin(PRYT.Isha || FALLBK.Isha);
-    return currentMin > taskMin;
-  }
-
-  return currentMin > (taskMin + 180);
+  return getKuwaitNowMinutes() > toMin(t24);
 }
 
 function isPrayerTask(task){
@@ -218,7 +236,7 @@ function floatPts(x,y,n){
   const e=document.createElement('div');
   e.className='floatpts';
   e.textContent=`+${n}⭐`;
-  e.style.cssText=`position:fixed; left:${x}px; top:${y}px; color:var(--ye); font-weight:900; pointer-events:none; z-index:1500; animation:up 0.9s ease-out forwards;`;
+  e.style.cssText=`left:${x}px;top:${y}px`;
   document.body.appendChild(e);
   setTimeout(()=>e.remove(),900);
 }
@@ -228,104 +246,104 @@ function showToast(msg,ms=3500){
   const t=document.getElementById('toast');
   if(!t) return;
   t.textContent=msg;
-  t.style.opacity='1';
-  t.style.transform='translateX(-50%) translateY(-10px)';
+  t.className='show';
   clearTimeout(toastTmr);
-  toastTmr=setTimeout(()=>{
-    t.style.opacity='0';
-    t.style.transform='translateX(-50%) translateY(0)';
-  },ms);
+  toastTmr=setTimeout(()=>t.className='',ms);
 }
 
-const mkBk=(p,t='9:15 ص')=>[p+'-bk',t,'food','🧀','الفطار المتوازن','جبنة قريش (١٥٠جم) + زيت زيتون + رغيفين أسمر + طماطم + خيار',5,[
-  'لبنة ٤ ملاعق كبيرة + بيضتين مسلوقتين + رغيف أسمر',
-  'جبنة بيضاء خفيفة + بيضة مسلوقة + خبز أسمر'
+// ===== Schedule =====
+const mkBk=(p,t='9:15 ص')=>[p+'-bk',t,'food','🧀','الفطار','جبنة قريش ١٥٠جم + زيت زيتون + رغيفين أسمر + طماطم + خيار',5,[
+  'لبنة ٤ ملاعق + بيضتين مسلوقتين + رغيف أسمر',
+  'جبنة دمياطي ١٠٠جم + بيضة + خبز أسمر'
 ],null,false];
 
-const mkWd=(p,t='10:00 ص')=>[p+'-wd',t,'quran','📿','الورد اليومي','١٥ دقيقة قراءة قرآن مركزة لمنع التشتت',10,null,null,false];
-const mkMidSnack=(p,t='1:00 م')=>[p+'-msn',t,'food','🥔','سناك طاقة سريع (مانع العك)','حبة بطاطس مسلوقة متوسطة مع رشة ملح وكمون أو ٢ توست أسمر بمسحة جبنة خفيفة وخيار لقطع الجوع',5,null,null,false];
-const mkProgSnack=(p,t='4:30 م')=>[p+'-psn',t,'food','🥪','سناك شحن جليكوجين العضلات','٢ توست أسمر + ملعقة كبيرة زبدة فول سوداني + موزة (قنبلة طاقة ثابتة للسباحة)',5,null,null,false];
-const mkDn=(p,t='10:15 م')=>[p+'-dn',t,'food','🧀','العشا الخفيف لظبط الهرمونات','جبنة قريش (٤ ملاعق) أو لبنة + خيار + طماطم (بدون خبز أو كارب ثقيل لحرق أسرع أثناء النوم)',5,[
-  '٢ بيضة مسلوقة + سلطة خضراء خفيفة',
-  'علبة زبادي يوناني كبير + خيار'
+const mkWd=(p,t='9:30 ص')=>[p+'-wd',t,'quran','📿','الورد اليومي','١٥ دقيقة قراءة قرآن يومياً',10,null,null,false];
+
+const mkDn=(p,t='8:00 م')=>[p+'-dn',t,'food','🧀','العشا','جبنة قريش ١٥٠جم + جبنة دمياطي ٨٠جم + خيار + طماطم',5,[
+  'لبنة ٤ ملاعق + جبنة دمياطي مكعبين + خيار',
+  'بيضتين مسلوقتين + جبنة قريش ١٠٠جم'
 ],null,false];
 
-const mkSl=(p,t='11:00 م')=>[p+'-sl',t,'sleep','🌙','نوم عميق واستشفاء عضلي','النوم المنتظم يقطع رغبة المخ في طلب السكريات والأكل العشوائي نهائياً',10,null,null,false];
-const mkSw=(p,t)=>[p+'-sw',t,'swim','🏊','سباحة مع الكوتش','تكنيك ودريلات مائية ← استثناء ✓',0,null,null,true];
-const mkRc=(p,t,d)=>[p+'-rc',t,'recovery','♨️','جاكوزي + بخار/ساونا',d||'ريكفري وعزل ذهني ← استثناء ✓',0,null,null,true];
+const mkSl=(p,t='11:00 م')=>[p+'-sl',t,'sleep','🌙','نوم على الوقت','نام على الوقت — النوم المنتظم ضروري للعضل والتخسيس',10,null,null,false];
+const mkSw=(p,t)=>[p+'-sw',t,'swim','🏊','سباحة مع الكوتش','تقنية + drills ← استثناء ✓',0,null,null,true];
+const mkRc=(p,t,d)=>[p+'-rc',t,'recovery','♨️','جاكوزي + بخار/ساونا',d||'ريكفري ← استثناء ✓',0,null,null,true];
 const mkGU=(p,t)=>[p+'-gm',t,'gym','🏋️','جيم — Upper Body','صدر · كتف · ترايسبس · ظهر · بايسبس · Negative pull-ups · مشي ٢٠د',25,null,null,false];
 const mkGL=(p,t)=>[p+'-gm',t,'gym','🏋️','جيم — Lower Body','Leg press · Leg curl · Leg extension · Calf · Tibialis · مشي ٢٠د',25,null,null,false];
-const mkPS=(p,t)=>[p+'-ps',t,'food','🍌','سناك ما قبل الجيم السريع','موزة كبيرة + ٣ تمرات (قبل التمرين بـ ٤٥ دقيقة لشحن طاقة الانفجار البدني)',5,null,null,false];
-const mkPM=(p,t)=>[p+'-pm',t,'food','🍳','وجبة إصلاح الألياف العضلية','٣ بيضات مسلوقة كاملة + طماطم + خيار لتثبيت الشبع ومنع الجوع الليلي',5,null,null,false];
+const mkPS=(p,t)=>[p+'-ps',t,'food','🍌','سناك قبل الجيم','موزة + ٣ تمرات (٤٥ دقيقة قبل التمرين)',5,[
+  'تمرتين + كوب عصير طبيعي','خبز أسمر + زبدة فول سوداني'
+],null,false];
+const mkPM=(p,t)=>[p+'-pm',t,'food','🍳','وجبة بعد التمرين','٣ بيضات مسلوقة + خيار + طماطم',5,[
+  'جبنة قريش ١٥٠جم + خبز أسمر','لبنة ٤ ملاعق + بيضتين'
+],null,false];
 const mkBr=(p)=>[p+'-br','7:00 م','recovery','🏊','مع أخوك — جاكوزي + بخار','٧:٠٠ — ١٠:٠٠ م ← استثناء ✓',0,null,null,true];
 
 const PMETA={Fajr:{ar:'الفجر',ic:'🌙',pts:15},Dhuhr:{ar:'الظهر',ic:'☀️',pts:10},Asr:{ar:'العصر',ic:'🌤️',pts:10},Maghrib:{ar:'المغرب',ic:'🌅',pts:10},Isha:{ar:'العشاء',ic:'🌙',pts:10}};
-const FALLBK={Fajr:'04:10',Sunrise:'05:35',Dhuhr:'11:50',Asr:'15:10',Maghrib:'18:00',Isha:'19:20'};
+const FALLBK={Fajr:'03:13',Sunrise:'04:48',Dhuhr:'11:49',Asr:'15:23',Maghrib:'18:50',Isha:'20:23'};
 let PRYT={...FALLBK};
 
+// PM-only free time (no pre-08:00)
 const FREE_TIME={
-  0:[{t:'11:00 ص',d:'وقت حر متاح بعد الورد والترتيب'}],1:[{t:'5:00 م',d:'وقت حر متاح قبل سناك الجيم ثباتك هنا يمنع العك'}],2:[{t:'11:00 ص',d:'وقت حر متاح'}],
-  3:[{t:'5:00 م',d:'وقت حر متاح'}],4:[{t:'11:00 ص',d:'وقت حر متاح'}],5:[{t:'4:00 م',d:'وقت حر متاح مريح'}],6:[{t:'6:00 م',d:'وقت حر متاح بعد إنهاء مهام السبت الجماعية'}]
+  0:[{t:'6:00 م',d:'وقت حر'}],
+  1:[{t:'6:00 م',d:'وقت حر'}],
+  2:[{t:'6:00 م',d:'وقت حر'}],
+  3:[{t:'6:00 م',d:'وقت حر'}],
+  4:[{t:'6:00 م',d:'وقت حر'}],
+  5:[{t:'6:00 م',d:'وقت حر'}],
+  6:[{t:'6:00 م',d:'وقت حر'}]
 };
 
 const SCHED={
   0:{n:'الأحد',  wk:'9:00 ص', bd:'11:00 م',gm:null,ts:[
     mkBk('sun'),mkWd('sun'),
-    ['sun-qp','10:30 ص','quran','📖','تحضير درس الاثنين','حفظ آيات جديدة + مراجعة اللوح — ٤٥ دقيقة',15,null,null,false],
-    mkMidSnack('sun'),
-    ['sun-lu','2:00 م','food','🍽️','الغدا الثابت (معيار العين)','ربع دجاجة كبيرة أو نصف صغيرة ثابتة + صحن أرز متوسط (بحجم قبضة يدك مرتين) + سلطة خضراء خيار وطماطم',5,['سمك مشوي + صحن أرز متوسط + سلطة','كبدة مشوية + رغيف ونصف أسمر + سلطة'],null,false],
+    ['sun-qp','10:00 ص','quran','📖','تحضير درس الاثنين','حفظ آيات جديدة + مراجعة اللوح — ٤٥ دقيقة',15,null,null,false],
+    ['sun-lu','2:30 م','food','🍽️','الغدا','نص كيلو فراخ/لحمة مشوي + سلطة + بطاطس مسلوقة',5,['سمك + سلطة + رغيف أسمر','كبدة مشوية + طماطم + بصل + خبز'],null,false],
     mkDn('sun'),mkSl('sun')
   ]},
   1:{n:'الاثنين',wk:'10:00 ص',bd:'12:00 ص',gm:'lower',ts:[
-    mkBk('mon','10:15 ص'),mkWd('mon','11:00 ص'),
-    ['mon-pp','11:30 ص','prog','💻','تحضير البرمجة','راجع الدرس السابق واكتب نوتس سريعة — ٣٠ دقيقة',10,null,null,false],
-    ['mon-ss','12:00 م','prog','👨‍💻','سيشن البرمجة المكثف','١٢:٠٠ — ١:٠٠ م | أساسيات JavaScript',15,null,null,false],
-    ['mon-hw','1:05 م','prog','📤','تطبيق كود الواجب فورا','ابدأ التطبيق العملي مباشرة قبل الغدا لثبات الفكرة',10,null,'آخر موعد: الأربعاء',false],
-    ['mon-lu','1:40 م','food','🍽️','الغدا الثابت (معيار العين)','ربع دجاجة كبيرة أو نصف صغيرة + صحن بطاطس مسلوقة ومهروسة كبير (كارب نقي) + سلطة خضراء كاملة',5,['سمك مشوي + صحن أرز متوسط','لحم مشوي + خبز أسمر + سلطة عريضة'],null,false],
-    ['mon-ql','3:50 م','quran','🕌','درس مراجعة القرآن','٣:٥٠ — ٤:٣٠ م | مباشرة في المسجد بعد العصر',15,null,null,false],
-    mkProgSnack('mon'),
+    mkBk('mon','10:15 ص'),mkWd('mon','10:30 ص'),
+    ['mon-pp','11:30 ص','prog','💻','تحضير البرمجة','راجع الدرس السابق + اكتب أسئلتك — ٣٠ دقيقة',10,null,null,false],
+    ['mon-ss','12:00 م','prog','👨‍💻','سيشن البرمجة','١٢:٠٠ — ١:٠٠ م | JavaScript',15,null,null,false],
+    ['mon-hw','1:05 م','prog','📤','واجب البرمجة','ابدأ الواجب بعد السيشن',10,null,'آخر موعد: الأربعاء',false],
+    ['mon-lu','1:30 م','food','🍽️','الغدا','نص كيلو فراخ مشوي + سلطة + بطاطس',5,['سمك دنيس + سلطة + رغيف','لحم هبر مشوي + سلطة + خبز'],null,false],
+    ['mon-ql','3:50 م','quran','🕌','درس القرآن','٣:٥٠ — ٤:٣٠ م | مباشرة بعد العصر',15,null,null,false],
     mkPS('mon','6:00 م'),mkGL('mon','7:00 م'),mkSw('mon','8:30 م'),
-    mkRc('mon','9:15 م','جاكوزي + بخار — ريكفري وتصفية ذهن بعد يوم شاق ← استثناء ✓'),
+    mkRc('mon','9:15 م','جاكوزي + بخار — ريكفري ٤٥ دقيقة ← استثناء ✓'),
     mkPM('mon','10:30 م'),mkSl('mon','12:00 ص')
   ]},
   2:{n:'الثلاثاء',wk:'9:00 ص', bd:'11:00 م',gm:null,ts:[
     mkBk('tue'),mkWd('tue'),
-    ['tue-qp','10:30 ص','quran','📖','تحضير درس الأربعاء','حفظ آيات جديدة وتسميع ذاتي — ٤٥ دقيقة',15,null,null,false],
-    mkMidSnack('tue'),
-    ['tue-lu','2:00 م','food','🍽️','الغدا الثابت (معيار العين)','ربع دجاجة كبيرة أو نصف صغيرة + صحن أرز متوسط (قبضة يدك مرتين) + سلطة طازجة',5,['سمك بوري أو دنيس + رز متوسط','كبدة مشوية + خبز أسمر + سلطة'],null,false],
+    ['tue-qp','10:00 ص','quran','📖','تحضير درس الأربعاء','حفظ آيات جديدة + مراجعة اللوح — ٤٥ دقيقة',15,null,null,false],
+    ['tue-lu','2:30 م','food','🍽️','الغدا','نص كيلو فراخ/لحمة مشوي + سلطة',5,['سمك + سلطة + رغيف','كبدة مشوية + سلطة + خبز'],null,false],
     mkBr('tue'),mkDn('tue','10:15 م'),mkSl('tue')
   ]},
   3:{n:'الأربعاء',wk:'10:00 ص',bd:'12:00 ص',gm:'upper',ts:[
-    mkBk('wed','10:15 ص'),mkWd('wed','11:00 ص'),
-    ['wed-lu','1:30 م','food','🍽️','الغدا الثابت (معيار العين)','ربع دجاجة كبيرة أو نصف صغيرة + صحن مكرونة مسلوقة بصلصة خفيفة + سلطة وفيرة لتأخير الجوع',5,['سمك مشوي + أرز خفيف + خضار سوتيه','لحم هبر مشوي + سلطة + خبز'],null,false],
-    ['wed-ql','3:50 م','quran','🕌','درس مراجعة القرآن','٣:٥٠ — ٤:٣٠ م | بعد صلاة العصر',15,null,null,false],
-    mkProgSnack('wed'),
+    mkBk('wed','10:15 ص'),mkWd('wed','10:30 ص'),
+    ['wed-lu','1:00 م','food','🍽️','الغدا','نص كيلو فراخ مشوي + سلطة + بطاطس',5,['سمك + خضار + رز نص طبق','لحم هبر مشوي + سلطة + خبز'],null,false],
+    ['wed-ql','3:50 م','quran','🕌','درس القرآن','٣:٥٠ — ٤:٣٠ م | مباشرة بعد العصر',15,null,null,false],
     mkPS('wed','6:00 م'),mkGU('wed','7:00 م'),mkSw('wed','8:30 م'),
-    mkRc('wed','9:15 م','جاكوزي + بخار — ريكفري المفاصل والعضلات ٤٥ دقيقة ← استثناء ✓'),
+    mkRc('wed','9:15 م','جاكوزي + بخار — ريكفري ٤٥ دقيقة ← استثناء ✓'),
     mkPM('wed','10:30 م'),mkSl('wed','12:00 ص')
   ]},
   4:{n:'الخميس', wk:'9:00 ص', bd:'11:00 م',gm:null,ts:[
     mkBk('thu'),mkWd('thu'),
-    ['thu-pp','11:30 ص','prog','💻','تحضير أكواد البرمجة','مراجعة سريعة قبل السيشن لرفع الاستيعاب — ٣٠ دقيقة',10,null,null,false],
-    ['thu-ss','12:00 م','prog','👨‍💻','سيشن البرمجة الأسبوعي','١٢:٠0 — ١:٠٠ م | تطبيق حي وتصحيح مفاهيم JS',15,null,null,false],
-    ['thu-hw','1:05 م','prog','📤','رفع واجب الخميس والـ Review','كتابة الكود والاحتفاظ به على GitHub مباشرة لمنع التراكم',10,null,'آخر موعد: السبت',false],
-    ['thu-lu','1:40 م','food','🍽️','الغدا الثابت (معيار العين)','ربع دجاجة كبيرة أو نصف صغيرة + صحن أرز أبيض أو بسمتي متوسط + سلطة ألياف',5,['سمك + سلطة + حبة بطاطس مسلوقة','كفتة مشوية في الفرن + سلطة + خبز'],null,false],
+    ['thu-pp','11:30 ص','prog','💻','تحضير البرمجة','راجع الدرس السابق + اكتب أسئلتك — ٣٠ دقيقة',10,null,null,false],
+    ['thu-ss','12:00 م','prog','👨‍💻','سيشن البرمجة','١٢:٠٠ — ١:٠٠ م | JavaScript',15,null,null,false],
+    ['thu-hw','1:05 م','prog','📤','واجب البرمجة','ابدأ الواجب بعد السيشن',10,null,'آخر موعد: السبت',false],
+    ['thu-lu','1:30 م','food','🍽️','الغدا','نص كيلو فراخ/لحمة مشوي + سلطة',5,['سمك + سلطة + بطاطس','كبدة مشوية + سلطة + خبز'],null,false],
     mkBr('thu'),mkDn('thu','10:15 م'),mkSl('thu')
   ]},
   5:{n:'الجمعة', wk:'9:00 ص', bd:'11:00 م',gm:null,ts:[
     mkBk('fri'),mkWd('fri'),
-    ['fri-jm','12:00 م','prayer','🕌','التبكير لصلاة الجمعة','اذهب مبكراً قبل الخطبة واقعد في الصفوف الأولى للهدوء النفسي',15,null,null,false],
-    ['fri-lu','1:30 م','food','🍽️','وجبة الجمعة العائلية (الفري الذكي)','كل من أكل البيت المتاح بحدود المعقول والقبول دون الإفراط في السكريات المصنعة',5,['محشي منوع + دجاج مشوي','وجبة عائلية منوعة مقبولة بذكاء وبدون إفراط 🍗'],null,false],
-    mkMidSnack('fri','4:30 م'),
+    ['fri-jm','12:00 م','prayer','🕌','صلاة الجمعة','اخرج مبكر ← يعادل الظهر',15,null,null,false],
+    ['fri-lu','1:30 م','food','🍽️','الغدا','يوم حر — ما تبالغش في الكارب',5,['محشي + فراخ مشوي','كنتاكي مرة الأسبوع مقبول 🍗'],null,false],
     mkDn('fri'),mkSl('fri')
   ]},
   6:{n:'السبت',  wk:'9:00 ص', bd:'11:00 م',gm:'upper',ts:[
-    mkBk('sat'),mkWd('sat'),mkMidSnack('sat','12:30 م'),
-    mkPS('sat','1:30 م'),mkGU('sat','2:00 م'),
+    mkBk('sat'),mkWd('sat'),mkPS('sat','1:30 م'),mkGU('sat','2:00 م'),
     mkSw('sat','3:00 م'),
-    mkRc('sat','4:00 م','جاكوزي + بخار/ساونا — إنهاء ريكفري الأسبوع الشامل حتى ٥ م ← استثناء ✓'),
+    mkRc('sat','4:00 م','جاكوزي + بخار/ساونا — ريكفري حتى ٥ م ← استثناء ✓'),
     mkPM('sat','5:15 م'),
-    ['sat-di','7:30 م','food','🍽️','العشا الرئيسي (كارب ممتد الطاقة)','ربع دجاجة أو سمكة مشوية + بطاطس مشوية بالفرن (حجم قبضة اليد) + سلطة خضراء',5,['جمبري مشوي + سلطة + خبز أسمر ونصف','كفتة مشوية بصلصة خفيفة + سلطة'],null,false],
+    ['sat-di','7:30 م','food','🍽️','الغدا','نص كيلو سمك/فراخ/لحمة مشوي + سلطة + بطاطس',5,['جمبري ١٥٠جم + سلطة + خبز أسمر','كفتة مشوي + سلطة'],null,false],
     mkSl('sat')
   ]}
 };
@@ -334,7 +352,7 @@ function buildPTasks(jd){
   const k=DKEYS[jd];
   return Object.entries(PMETA).filter(([pk])=>!(jd===5 && pk==='Dhuhr')).map(([pk,pm])=>{
     const t24=PRYT[pk]||FALLBK[pk];
-    const desc=pk==='Fajr'?`${fmt24(t24)} · ارجع نام بعدها فوراً لتوفير طاقة البناء العضلي ✓`:`وقت الصلاة: ${fmt24(t24)}`;
+    const desc=pk==='Fajr'?`${fmt24(t24)} · ارجع نام بعدها ✓`:`وقت الصلاة: ${fmt24(t24)}`;
     return [`pr-${k}-${pk}`,fmt24(t24),'prayer',pm.ic,pm.ar,desc,pm.pts,null,null,false,t24];
   });
 }
@@ -342,40 +360,37 @@ function buildPTasks(jd){
 function getAllTasks(jd){
   const d=SCHED[jd];
   if(!d) return [];
-  const frees=(FREE_TIME[jd]||[]).map((f,i)=>[`fr-${jd}-${i}`,f.t,'free','🎮','وقت مريح وحر لتهدئة الأعصاب',f.d,0,null,null,false]);
-  return [...buildPTasks(jd),...d.ts,...frees].sort((a,b)=>getSortMinutes(a)-getSortMinutes(b));
+  const frees=(FREE_TIME[jd]||[]).map((f,i)=>[`fr-${jd}-${i}`,f.t,'free','🎮','وقت حر',f.d,0,null,null,false]);
+  return [...buildPTasks(jd),...d.ts,...frees].sort((a,b)=>toMin(a[10]||a[1])-toMin(b[10]||b[1]));
 }
 
 function getReqTasks(jd){
   return [...buildPTasks(jd),...(SCHED[jd]?.ts||[])].filter(t=>!t[9] && t[6]>0);
 }
 
+// ===== Persistence (local, with cloud optional) =====
 const LS={
   stats:'sc:stats',
-  progress:'sc:progress',
-  alts:'sc:alts',
-  weekly:(dt)=>`sc:weekly:${dt}`,
-  coords:'sc:coords'
+  done:(dt)=>`sc:day:${dt}:done`,
+  alts:(dt)=>`sc:day:${dt}:alts`,
+  qada:(dt)=>`sc:day:${dt}:qada`,
+  weekly:(dt)=>`sc:weekly:${dt}`
 };
 
 async function sGet(k){try{const r=localStorage.getItem(k);return r?JSON.parse(r):null}catch{return null}}
 async function sSet(k,v){try{localStorage.setItem(k,JSON.stringify(v))}catch{}}
 
-let STATS={cur:0,best:0,pts:0,lc:null,lf:null,lastWeeklyReset:null};
-let PROGRESS={}; 
-let SELECTED_ALTS={}; 
+let STATS={cur:0,best:0,pts:0,lc:null,lf:null};
+let DONE={};
+let SELECTED_ALTS={};
 let WEEKLY_REPORT=[];
 
 function updateDailyRefreshIfNeeded(){
+  // streak reset logic: only if last full day is not yesterday
   if(STATS.lc===TODAY) return;
   const yesterday=dateOff(-1);
   if(STATS.lf && STATS.lf!==TODAY && STATS.lf!==yesterday){
     STATS.cur=0;
-  }
-  if(todayJD() === 0 && STATS.lastWeeklyReset !== TODAY) {
-    STATS.pts = 0; 
-    STATS.lastWeeklyReset = TODAY;
-    showToast("🔄 أسبوع جديد ماليان التزام وتدريب! تم تصفير النقاط الإجمالية.");
   }
   STATS.lc=TODAY;
 }
@@ -387,147 +402,120 @@ function dateOff(n){
 }
 
 async function localLoad(){
-  STATS=(await sGet(LS.stats))||{cur:0,best:0,pts:0,lc:null,lf:null,lastWeeklyReset:null};
-  PROGRESS=(await sGet(LS.progress))||{};
-  SELECTED_ALTS=(await sGet(LS.alts))||{};
+  STATS=(await sGet(LS.stats))||{cur:0,best:0,pts:0,lc:null,lf:null};
+  DONE=(await sGet(LS.done(TODAY)))||{};
+  SELECTED_ALTS=(await sGet(LS.alts(TODAY)))||{};
   WEEKLY_REPORT=(await sGet(LS.weekly(TODAY)))||[];
 }
 
 async function localSave(){
   await sSet(LS.stats,STATS);
-  await sSet(LS.progress,PROGRESS);
-  await sSet(LS.alts,SELECTED_ALTS);
+  await sSet(LS.done(TODAY),DONE);
+  await sSet(LS.alts(TODAY),SELECTED_ALTS);
   await sSet(LS.weekly(TODAY),WEEKLY_REPORT);
 }
 
-function clearLocalData(){
-  localStorage.removeItem(LS.stats);
-  localStorage.removeItem(LS.progress);
-  localStorage.removeItem(LS.alts);
-  STATS={cur:0,best:0,pts:0,lc:null,lf:null,lastWeeklyReset:null};
-  PROGRESS={};
-  SELECTED_ALTS={};
-  WEEKLY_REPORT=[];
-}
-
-function getTaskDisplayDesc(task, jd){
+// ===== UI rendering =====
+function getTaskDisplayDesc(task){
   const id=task[0];
-  const dateStr = getDateStrForDayIndex(jd);
-  const dayAlts = SELECTED_ALTS[dateStr] || {};
-  const chosen = dayAlts[id];
+  const chosen=SELECTED_ALTS[id];
   const desc=task[5];
-  const alts=task[7];
+  const alts=task[8];
   if(alts && chosen && alts.includes(chosen)) return chosen;
   return desc;
 }
 
-function renderCard(task,jd){
+function toggleAlts(id){
+  document.getElementById('al-'+id)?.classList.toggle('open');
+}
+
+function renderCard(task,isToday){
   const [id,arTime,cat,ico,name,desc,pts,alts,hw,isEx]=task;
-  const isToday=jd===todayJD();
-  const dateStr = getDateStrForDayIndex(jd);
-  const dayProgress = PROGRESS[dateStr] || {};
-  const doneState = dayProgress[id];
-  const isDone = doneState !== undefined;
+  const done=DONE[id]||false;
   const passed=taskIsPassed(task);
 
   if(cat==='free'){
-    return `<div class="tc" data-c="free" style="background:var(--c); padding:12px; border-radius:8px; margin-bottom:8px; display:flex; align-items:center; gap:12px;"><div class="tctime" style="font-size:0.8rem; color:var(--mu); min-width:60px;">${arTime}</div><div class="tcico" style="font-size:1.2rem;">${ico}</div><div class="tcbody"><div class="tcname" style="color:#6366f1; font-weight:700;">${name}</div><div class="tcdesc" style="font-size:0.75rem; color:var(--so);">${desc}</div></div></div>`;
+    return `<div class="tc" data-c="free"><div class="tctime">${arTime}</div><div class="tcico">${ico}</div><div class="tcbody"><div class="tcname" style="color:#6366f1">${name}</div><div class="tcdesc">${desc}</div></div></div>`;
   }
 
   let act='';
   if(isEx){
-    act=`<div class="excbadge" style="background:rgba(59,130,246,0.1); color:var(--ac); font-size:0.7rem; padding:4px 8px; border-radius:4px; font-weight:700;">🔓 استثناء</div>`;
+    act=`<div class="excbadge">🔓 استثناء</div>`;
   }else if(isToday){
-    if(isDone){
-      act=`<div class="cbtn done" style="color:var(--gr); font-weight:900;">✅</div>`;
+    if(done){
+      act=`<div class="cbtn done">✅</div>`;
     }else{
       if(isPrayerTask(task) && passed){
         const half=Math.floor(pts/2);
-        act=`<button class="cbtn qada" data-id="${id}" data-pts="${pts}" style="background:rgba(239,68,68,0.1); color:var(--rd); border:1px solid var(--rd); padding:6px 10px; border-radius:6px; font-family:inherit; font-size:0.75rem; cursor:pointer;">قضاء (50%) <span style="font-size:0.6rem;">+${half}⭐</span></button>`;
+        act=`<button class="cbtn qada" data-action="qada" data-id="${id}" data-pts="${pts}">قضاء (50%)<span class="ptslbl">+${half}⭐</span></button>`;
       }else if(pts>0 && passed){
-        act=`<div class="cbtn exp" style="color:var(--mu); font-size:0.75rem;">فات الوقت</div>`;
+        act=`<div class="cbtn exp">فات الوقت</div>`;
       }else{
-        act=`<button class="cbtn confirm-btn" data-id="${id}" data-pts="${pts}" style="background:var(--c2); border:1px solid var(--br); color:var(--tx); padding:6px 12px; border-radius:6px; font-family:inherit; font-size:0.8rem; font-weight:700; cursor:pointer;">تأكيد ✓ <span style="color:var(--ye); font-size:0.65rem;">+${pts}⭐</span></button>`;
+        act=`<button class="cbtn" data-action="confirm" data-id="${id}" data-pts="${pts}">تأكيد ✓<span class="ptslbl">+${pts}⭐</span></button>`;
       }
     }
   }
 
   if(!act){
-    act=isDone?`<div class="cbtn done">✅</div>`:`<div class="ptsbdg" style="font-size:0.75rem; color:var(--ye); font-weight:700;">${pts}⭐</div>`;
+    act=done?`<div class="cbtn done">✅</div>`:`<div class="ptsbdg">${pts}⭐</div>`;
   }
 
-  let altH = '';
-  if(alts && alts.length){
-    altH = `<button class="altbtn" data-id="${id}" style="background:none; border:none; color:var(--ac); font-family:inherit; font-size:0.75rem; cursor:pointer; margin-top:6px; display:block; padding:0;">🔄 بدائل العيْن (${alts.length})</button>
-            <div class="altlist" id="al-${id}" style="display:none; background:var(--c); padding:8px; border-radius:6px; margin-top:6px; gap:6px; flex-direction:column;">`;
-    alts.forEach(a=>{
-      const dayAlts = SELECTED_ALTS[dateStr] || {};
-      const selected = dayAlts[id]===a;
-      altH += `<div style="display:flex; justify-content:space-between; align-items:center; font-size:0.75rem;">
-                <span style="flex:1; line-height:1.4; padding-left:8px; ${selected?'color:var(--gr);font-weight:bold;':''}">${selected?'✓ ':''}${a}</span>
-                <button class="alt-pick-btn" data-id="${id}" data-pts="${pts}" data-alt="${String(a).replace(/"/g,'&quot;')}" style="padding:4px 8px; font-size:0.65rem; border-radius:4px; border:1px solid var(--br); font-family:inherit; background:var(--c2); color:var(--tx); cursor:pointer;">${selected?'تم ✅':'اختيار'}</button>
-              </div>`;
-    });
-    altH += `</div>`;
-  }
+  const altH = (alts && alts.length)
+    ? `<button class="altbtn" data-action="alts" data-id="${id}">🔄 بدائل (${alts.length})</button>`+
+      `<div class="altlist" id="al-${id}">${alts.map(a=>{
+        const selected=SELECTED_ALTS[id]===a;
+        const style=selected?' style="color:var(--gr)"':'';
+        return `<div class="altitem" role="button" tabindex="0" data-action="pickalt" data-id="${id}" data-alt="${String(a).replace(/"/g,'"')}"${style}>${a}</div>`;
+      }).join('')}</div>`
+    : '';
 
-  const hwH=hw?`<div class="hwtag" style="font-size:0.7rem; color:var(--or); margin-top:2px;">⏰ ${hw}</div>`:'';
-  const displayDesc=getTaskDisplayDesc(task, jd);
+  const hwH=hw?`<div class="hwtag">⏰ ${hw}</div>`:'';
+  const displayDesc=getTaskDisplayDesc(task);
 
-  return `<div class="tc ${isDone?'done':''}" data-c="${cat}" id="c-${id}" style="background:var(--c2); border:1px solid ${isDone?'var(--gr)':'var(--br)'}; padding:12px; border-radius:8px; margin-bottom:8px; display:flex; align-items:center; gap:12px; opacity:${isDone?0.75:1};">
-    <div class="tctime" style="font-size:0.8rem; color:var(--mu); min-width:60px;">${arTime}</div>
-    <div class="tcico" style="font-size:1.2rem;">${ico}</div>
-    <div class="tcbody" style="flex:1;">
-      <div class="tcname" style="font-weight:700; font-size:0.9rem;">${name}</div>
-      <div class="tcdesc" style="font-size:0.75rem; color:var(--so); margin-top:1px; line-height:1.4;">displayDesc</div>
-      ${hwH}${altH}
-    </div>
-    <div class="tcaction">${act}</div>
-  </div>`.replace('displayDesc', displayDesc);
+  return `<div class="tc${done?' done':''}${isEx?' excx':''}" data-c="${cat}" id="c-${id}">
+    <div class="tctime">${arTime}</div><div class="tcico">${ico}</div>
+    <div class="tcbody"><div class="tcname">${name}</div><div class="tcdesc">${displayDesc}</div>${hwH}${altH}</div>
+    ${act}
+  </div>`;
 }
 
 function renderPanel(jd){
   const d=SCHED[jd];
   if(!d) return '';
   const k=DKEYS[jd];
-  const dateStr = getDateStrForDayIndex(jd);
-  const dayProgress = PROGRESS[dateStr] || {};
+  const isToday=jd===todayJD();
 
   const gbLabel=d.gm
-    ? `<div class="gbx" style="font-size:0.75rem; font-weight:700; padding:4px 8px; border-radius:6px; background:${d.gm==='upper'?'rgba(59,130,246,0.1)':'rgba(16,185,129,0.1)'}; color:${d.gm==='upper'?'var(--ac)':'var(--gr)'};">${d.gm==='upper'?'Upper Body 💪':'Lower Body 🦵'}</div>`
-    : `<div class="gbx" style="font-size:0.75rem; font-weight:700; padding:4px 8px; border-radius:6px; background:var(--c); color:var(--mu);">يوم راحة ونقاهة 💤</div>`;
+    ? `<div class="gbx ${d.gm==='upper'?'gbu':'gbl'}">${d.gm==='upper'?'Upper Body 💪':'Lower Body 🦵'}</div>`
+    : `<div class="gbx gbr">يوم راحة 💤</div>`;
 
-  const prayerOrder=['Fajr','Sunrise','Dhuhr','Asr','Maghrib','Isha'];
+  const prayerOrder=['Fajr','Dhuhr','Asr','Maghrib','Isha'];
   const pillsArr=[];
   const schedList=d.ts||[];
   const jumahTask=schedList.find(t=>t[2]==='prayer' && (t[4]?.includes('جمعة')||t[0].includes('fri-jm')));
 
   for(const pk of prayerOrder){
-    if(pk==='Sunrise') {
-      pillsArr.push(`<div style="border:1px solid var(--or); background:rgba(245,158,11,0.03); padding:4px 8px; border-radius:6px; text-align:center; min-width:55px;"><div style="font-size:0.6rem; color:var(--or); font-weight:700;">الشروق</div><div style="font-size:0.7rem; color:var(--or); font-weight:900; margin-top:1px;">${fmt24(PRYT.Sunrise||FALLBK.Sunrise)}</div></div>`);
-      continue;
-    }
     if(pk==='Dhuhr' && jd===5){
       if(jumahTask){
         const pid=jumahTask[0];
-        const done=dayProgress[pid]!==undefined;
-        pillsArr.push(`<div style="border:1px solid ${done?'var(--gr)':'var(--br)'}; background:var(--c); padding:4px 8px; border-radius:6px; text-align:center; min-width:55px; opacity:${done?0.6:1};"><div style="font-size:0.6rem; color:var(--so); font-weight:700;">الجمعة</div><div style="font-size:0.7rem; color:var(--tx); font-weight:900; margin-top:1px;">${fmt24(jumahTask[1])}</div></div>`);
+        const done=DONE[pid]&&isToday;
+        pillsArr.push(`<div class="ppill${done?' done':''}" id="pp-${pid}"><div class="pnam">${jumahTask[4]}</div><div class="ptim">${fmt24(jumahTask[1])}</div></div>`);
       }
       continue;
     }
     const pm=PMETA[pk];
     if(!pm) continue;
     const pid=`pr-${k}-${pk}`;
-    const done=dayProgress[pid]!==undefined;
-    pillsArr.push(`<div style="border:1px solid ${done?'var(--gr)':'var(--br)'}; background:var(--c); padding:4px 8px; border-radius:6px; text-align:center; min-width:55px; opacity:${done?0.6:1};"><div style="font-size:0.6rem; color:var(--so); font-weight:700;">${pm.ar}</div><div style="font-size:0.7rem; color:var(--tx); font-weight:900; margin-top:1px;">${fmt24(PRYT[pk]||FALLBK[pk])}</div></div>`);
+    const done=DONE[pid]&&isToday;
+    pillsArr.push(`<div class="ppill${done?' done':''}" id="pp-${pid}"><div class="pnam">${pm.ar}</div><div class="ptim">${fmt24(PRYT[pk]||FALLBK[pk])}</div></div>`);
   }
 
   const tasks=getAllTasks(jd);
 
-  return `<div class="pan" id="pan-${k}" style="display:none; flex-direction:column;">
-    <div class="dh" style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px;"><div><div class="dhn" style="font-size:1.2rem; font-weight:900; line-height:1.2;">${d.n}</div><div class="dhm" style="font-size:0.7rem; color:var(--mu); margin-top:2px;">فجر ${fmt24(PRYT.Fajr||FALLBK.Fajr)} ← صحيان ${d.wk} · نوم ${d.bd}</div></div>${gbLabel}</div>
-    <div class="prow" style="display:flex; gap:6px; overflow-x:auto; padding-bottom:8px; margin-bottom:12px; scrollbar-width:none;">${pillsArr.join('')}</div>
-    <div class="tl">${tasks.map(t=>renderCard(t,jd)).join('')}</div>
+  return `<div class="pan" id="pan-${k}">
+    <div class="dh"><div><div class="dhn">${d.n}</div><div class="dhm">فجر ${fmt24(PRYT.Fajr||FALLBK.Fajr)} ← صحيان ${d.wk} · نوم ${d.bd}</div></div>${gbLabel}</div>
+    <div class="prow">${pillsArr.join('')}</div>
+    <div class="tl">${tasks.map(t=>renderCard(t,isToday)).join('')}</div>
   </div>`;
 }
 
@@ -538,87 +526,55 @@ function renderTabs(){
     const isT=j===todayJD();
     const isG=!!SCHED[j]?.gm;
     const b=document.createElement('button');
-    b.className=`tab ${isT?'tod':''}`;
+    b.className=`tab${isT?' tod':''}`;
     b.id=`tb-${DKEYS[j]}`;
-    b.style.cssText=`background:var(--c2); border:1px solid var(--br); color:var(--tx); padding:8px 16px; border-radius:8px; font-family:inherit; font-size:0.85rem; font-weight:700; cursor:pointer; white-space:nowrap; display:flex; align-items:center; gap:4px;`;
-    if(isT) b.style.borderColor = 'var(--ac)';
-    b.innerHTML=(isG?'<span style="width:6px; height:6px; background:var(--ac); border-radius:50%;"></span>':'')+DSHORT[j];
+    b.innerHTML=(isG?'<div class="gdot"></div>':'')+DSHORT[j];
     b.onclick=()=>switchDay(j);
     c.appendChild(b);
   });
 }
 
 function updateUI(){
-  const jd = todayJD();
-  const dateStr = getDateStrForDayIndex(jd);
-  const req=getReqTasks(jd);
-  const dayProgress = PROGRESS[dateStr] || {};
-  const done=req.filter(t=>dayProgress[t[0]]!==undefined);
+  const req=getReqTasks(todayJD());
+  const done=req.filter(t=>DONE[t[0]]);
   const pct=req.length?Math.round(done.length/req.length*100):0;
-  
-  const todayPts=done.reduce((s,t)=>{
-      const val = dayProgress[t[0]];
-      if(typeof val === 'number') return s + val;
-      if(val === 'qada') return s + Math.floor(t[6]/2);
-      return s + t[6];
-  },0);
-  
   document.getElementById('sv1').textContent=STATS.cur;
-  document.getElementById('sv2').textContent=STATS.pts; 
+  document.getElementById('sv2').textContent=STATS.pts;
   document.getElementById('sv3').textContent=STATS.best;
-  
   document.getElementById('ptxt').textContent=`${done.length}/${req.length} مهمة (${pct}%)`;
+  const todayPts=done.reduce((s,t)=>s+(DONE[t[0]]==='qada'?Math.floor(t[6]/2):t[6]),0);
   document.getElementById('ppts').textContent=`${todayPts} نقطة اليوم`;
   document.getElementById('pfill').style.width=pct+'%';
 }
 
 function switchDay(jd){
-  document.querySelectorAll('.tab').forEach(b=>{
-    b.style.background = 'var(--c2)';
-    b.style.color = 'var(--tx)';
-  });
+  document.querySelectorAll('.tab').forEach(b=>b.classList.remove('act'));
   const tb=document.getElementById(`tb-${DKEYS[jd]}`);
-  if(tb){
-    tb.style.background = 'var(--br)';
-    tb.style.color = 'var(--ac)';
-    tb.scrollIntoView({behavior:'smooth',block:'nearest',inline:'center'});
-  }
-  document.querySelectorAll('.pan').forEach(p=>p.style.display='none');
-  const targetPan = document.getElementById(`pan-${DKEYS[jd]}`);
-  if(targetPan) targetPan.style.display = 'flex';
+  if(tb){tb.classList.add('act');tb.scrollIntoView({behavior:'smooth',block:'nearest',inline:'center'})}
+  document.querySelectorAll('.pan').forEach(p=>p.classList.remove('act'));
+  document.getElementById(`pan-${DKEYS[jd]}`)?.classList.add('act');
   updateUI();
 }
 
+// ===== Task completion (time-lock + qada) =====
 async function saveAndRefresh(){
-  const savedScroll = window.scrollY; 
   await localSave();
-  if(fbAuth && fbAuth.currentUser){
-    try{
-      const uid=fbAuth.currentUser.uid;
-      await setDoc(doc(fbDb,'users',uid),{
-        progress: PROGRESS,
-        alts: SELECTED_ALTS,
-        stats: STATS
-      },{merge:true});
-    }catch(e){console.warn('cloud save failed',e);}
-  }
   renderPanelsForAllDays();
   switchDay(todayJD());
   updateUI();
-  window.scrollTo(0, savedScroll); 
 }
 
 function renderPanelsForAllDays(){
   document.getElementById('panels').innerHTML=[0,1,2,3,4,5,6].map(renderPanel).join('');
-  attachDynamicEvents();
+}
+
+function maybeHandleWeekly(){
+  // weekly report stored locally already; kept for extension
 }
 
 function completeStreakIfDayDone(){
-  const jd = todayJD();
-  const dateStr = getDateStrForDayIndex(jd);
-  const req=getReqTasks(jd);
-  const dayProgress = PROGRESS[dateStr] || {};
-  const isAllDone=req.every(t=>dayProgress[t[0]]!==undefined);
+  const req=getReqTasks(todayJD());
+  const isAllDone=req.every(t=>DONE[t[0]]);
   if(isAllDone && STATS.lf!==TODAY){
     const yesterday=dateOff(-1);
     if(STATS.lf===yesterday){
@@ -628,72 +584,55 @@ function completeStreakIfDayDone(){
     }
     STATS.lf=TODAY;
     STATS.best=Math.max(STATS.best,STATS.cur);
-    showToast(`🎉 التزام كامل بالوجبات والتمرين بدون عك مفاجئ!\nاستريك: ${STATS.cur} يوم 🔥\nنقاطك: ${STATS.pts} ⭐`,4000);
+    showToast(`🎉 يوم كامل!\nاستريك: ${STATS.cur} يوم 🔥\nنقاطك: ${STATS.pts} ⭐`,4000);
   }
 }
 
 async function onConfirm(task, pts, rect){
-  const jd = todayJD();
-  const dateStr = getDateStrForDayIndex(jd);
-  if(!PROGRESS[dateStr]) PROGRESS[dateStr] = {};
-  if(PROGRESS[dateStr][task[0]]!==undefined) return;
+  if(DONE[task[0]]) return;
   if(taskIsPassed(task)){
-    showToast('فات الوقت');
+    showToast('Expired/فات الوقت');
     return;
   }
-  PROGRESS[dateStr][task[0]]=pts;
+  DONE[task[0]]=true;
   STATS.pts+=pts;
-  
-  WEEKLY_REPORT.push({t:new Date().toISOString(),taskId:task[0],day:TODAY,points:pts,label:task[4]});
-  
+  maybeHandleWeekly();
   completeStreakIfDayDone();
   await saveAndRefresh();
   floatPts(rect.left+rect.width/2-20, rect.top-10, pts);
 }
 
 async function onQada(task, pts, rect){
-  const jd = todayJD();
-  const dateStr = getDateStrForDayIndex(jd);
-  if(!PROGRESS[dateStr]) PROGRESS[dateStr] = {};
-  if(PROGRESS[dateStr][task[0]]!==undefined) return;
+  if(DONE[task[0]]) return;
   if(!isPrayerTask(task)) return;
   if(!taskIsPassed(task)) return;
 
   const half=Math.floor(pts/2);
-  PROGRESS[dateStr][task[0]]='qada';
+  DONE[task[0]]=true;
   STATS.pts+=half;
   WEEKLY_REPORT.push({t:new Date().toISOString(),taskId:task[0],day:TODAY,points:half,label:task[4]});
+  maybeHandleWeekly();
   completeStreakIfDayDone();
   await saveAndRefresh();
   floatPts(rect.left+rect.width/2-20, rect.top-10, half);
-  showToast('تم قضاء الصلاة (50%)');
+  showToast('تم قضاء (50%)');
 }
 
+// ===== Prayer timings =====
 async function fetchPrayers(){
-  try {
-    const url = 'https://api.aladhan.com/v1/timingsByCity?city=Kuwait&country=Kuwait&method=4'; 
-    const res = await fetch(url);
-    const data = await res.json();
-    if(data && data.code === 200) {
-      const timings = data.data.timings;
-      PRYT = {
-        Fajr: timings.Fajr,
-        Sunrise: timings.Sunrise,
-        Dhuhr: timings.Dhuhr,
-        Asr: timings.Asr,
-        Maghrib: timings.Maghrib,
-        Isha: timings.Isha
-      };
-      startNextPrayerCountdown(PRYT);
-      return true;
-    }
-    throw new Error('API Error');
-  } catch(e) {
-    console.warn('API Fetch failed', e);
-    PRYT = {...FALLBK};
-    startNextPrayerCountdown(PRYT);
-    return false;
+  try{
+    const res=await fetch('https://api.aladhan.com/v1/timingsByCity?city=Kuwait City&country=Kuwait&method=4');
+    const data=await res.json();
+    if(data&&data.code===200){
+      const t=data.data.timings;
+      PRYT={Fajr:t.Fajr,Sunrise:t.Sunrise,Dhuhr:t.Dhuhr,Asr:t.Asr,Maghrib:t.Maghrib,Isha:t.Isha};
+    }else throw new Error('bad response');
+  }catch(e){
+    console.warn('Prayer API failed, using fallback',e);
+    PRYT={Fajr:'03:13',Sunrise:'04:48',Dhuhr:'11:49',Asr:'15:23',Maghrib:'18:50',Isha:'20:23'};
   }
+  startNextPrayerCountdown(PRYT);
+  return true;
 }
 
 function startNextPrayerCountdown(timings){
@@ -701,7 +640,12 @@ function startNextPrayerCountdown(timings){
   window.prayerInterval=setInterval(()=>{
     const now=new Date();
     const currentMinutes=now.getHours()*60+now.getMinutes();
-    const parseToMinutes=(t)=>{const [h,m]=t.split(':').map(Number);return h*60+m;};
+
+    const parseToMinutes=(t)=>{
+      const [h,m]=t.split(':').map(Number);
+      return h*60+m;
+    };
+
     const prayerKeys=[
       {name:'الفجر',time:timings.Fajr},
       {name:'الشروق',time:timings.Sunrise},
@@ -710,164 +654,173 @@ function startNextPrayerCountdown(timings){
       {name:'المغرب',time:timings.Maghrib},
       {name:'العشاء',time:timings.Isha}
     ];
-    let nextPrayerName='الفجر'; let nextPrayerTime=timings.Fajr; let found=false;
+
+    let nextPrayerName='الفجر';
+    let nextPrayerTime=timings.Fajr;
+    let found=false;
+
     for(const p of prayerKeys){
       if(currentMinutes<parseToMinutes(p.time)){
-        nextPrayerName=p.name; nextPrayerTime=p.time; found=true; break;
+        nextPrayerName=p.name;
+        nextPrayerTime=p.time;
+        found=true;
+        break;
       }
     }
-    if(!found){nextPrayerName='الفجر'; nextPrayerTime=timings.Fajr;}
+
+    if(!found){
+      nextPrayerName='الفجر';
+      nextPrayerTime=timings.Fajr;
+    }
+
     const targetMinutes=parseToMinutes(nextPrayerTime);
     let diffMinutes=targetMinutes-currentMinutes;
     if(diffMinutes<0) diffMinutes+=24*60;
+
     const hoursLeft=Math.floor(diffMinutes/60);
     const minsLeft=diffMinutes%60;
     const secsLeft=59-now.getSeconds();
+
     const countdownStr=`${hoursLeft}:${String(minsLeft).padStart(2,'0')}:${String(secsLeft).padStart(2,'0')}`;
+
     const setIf=(id,val)=>{const el=document.getElementById(id);if(el) el.innerText=val||''};
     setIf('next-prayer-title',`المتبقي لأذان ${nextPrayerName}`);
     setIf('next-prayer-countdown',countdownStr);
   },1000);
 }
 
-function attachDynamicEvents() {
-  document.querySelectorAll('.confirm-btn').forEach(btn => {
-    btn.onclick = (e) => {
-      const id = btn.getAttribute('data-id');
-      const pts = parseInt(btn.getAttribute('data-pts'), 10);
-      const task = getAllTasks(todayJD()).find(t => t[0] === id);
-      if(task) onConfirm(task, pts, btn.getBoundingClientRect());
-    };
-  });
-
-  document.querySelectorAll('.qada').forEach(btn => {
-    btn.onclick = (e) => {
-      const id = btn.getAttribute('data-id');
-      const pts = parseInt(btn.getAttribute('data-pts'), 10);
-      const task = getAllTasks(todayJD()).find(t => t[0] === id);
-      if(task) onQada(task, pts, btn.getBoundingClientRect());
-    };
-  });
-
-  document.querySelectorAll('.altbtn').forEach(btn => {
-    btn.onclick = () => {
-      const id = btn.getAttribute('data-id');
-      const list = document.getElementById(`al-${id}`);
-      if(list) list.style.display = list.style.display === 'none' ? 'flex' : 'none';
-    };
-  });
-
-  document.querySelectorAll('.alt-pick-btn').forEach(btn => {
-    btn.onclick = async () => {
-      const id = btn.getAttribute('data-id');
-      const altVal = btn.getAttribute('data-alt');
-      const dateStr = getDateStrForDayIndex(todayJD());
-      if(!SELECTED_ALTS[dateStr]) SELECTED_ALTS[dateStr] = {};
-      SELECTED_ALTS[dateStr][id] = altVal;
-      await saveAndRefresh();
-    };
-  });
-}
-
+// ===== Auth UI =====
 function initFirebaseAuth(){
   const btn=document.getElementById('btn-signin');
-  if(!btn) return;
+  btn.onclick=async ()=>{
+    try{
+      const provider=new GoogleAuthProvider();
+      await signInWithPopup(fbAuth,provider);
+    }catch(e){
+      showToast(e?.message||'فشل تسجيل الدخول');
+    }
+  };
 
   onAuthStateChanged(fbAuth,(user)=>{
     const nameEl=document.getElementById('authName');
+    if(user){
+      nameEl.textContent=user.displayName||user.email||'';
+      btn.textContent='خروج';
+      btn.onclick=()=>{
+        try{if(window.__sc_unsub) window.__sc_unsub();}catch{}
+        window.__sc_unsub=null;
 
-    if(!user){
-      if(window.__sc_unsub){
-        try{window.__sc_unsub(); window.__sc_unsub = null;}catch(e){}
-      }
-      if(nameEl) nameEl.textContent='';
-      btn.textContent='تسجيل دخول';
-      
-      btn.onclick=async ()=>{
-        try {
-          const provider = new GoogleAuthProvider();
-          // Forces account selection, fixing stuck/cached login loops on phones
-          provider.setCustomParameters({ prompt: 'select_account' }); 
-          
-          // Detect if user is on mobile
-          const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
-          
-          if(isMobile) {
-            // Use Redirect for mobile to bypass Safari popup blockers
-            await signInWithRedirect(fbAuth, provider);
-          } else {
-            // Use Popup for Desktop to bypass tracking blockers
-            await signInWithPopup(fbAuth, provider);
-          }
-        } catch(e) { 
-          console.error("Auth Error:", e);
-          showToast('حدث خطأ أو تم إلغاء تسجيل الدخول'); 
-        }
-      };
-      return;
-    }
-
-    if(nameEl) nameEl.textContent=user.displayName||user.email||'';
-    btn.textContent='خروج';
-    btn.onclick=async ()=>{
-      if(window.__sc_unsub){
-        try{window.__sc_unsub(); window.__sc_unsub = null;}catch(e){}
-      }
-      clearLocalData(); 
-      renderPanelsForAllDays();
-      switchDay(todayJD());
-      updateUI();
-      await signOut(fbAuth);
-      showToast('تم تسجيل الخروج بنجاح.');
-    };
-
-    (async()=>{
-      try{
-        const uid=user.uid;
-        if(window.__sc_unsub){try{window.__sc_unsub(); window.__sc_unsub = null;}catch(e){}}
-
-        const snap=await getDoc(doc(fbDb,'users',uid));
-        if(snap.exists()){
-          const data=snap.data()||{};
-          if(data.stats && typeof data.stats==='object') STATS=data.stats;
-          if(data.progress && typeof data.progress==='object') PROGRESS=data.progress;
-          if(data.alts && typeof data.alts==='object') SELECTED_ALTS=data.alts;
-          await localSave();
-        }
-
-        renderPanelsForAllDays();
-        switchDay(todayJD());
-        updateUI();
-
-        window.__sc_unsub=onSnapshot(doc(fbDb,'users',uid),(snap)=>{
-          if(!fbAuth.currentUser) return; 
-          const data=snap.data()||{};
-          if(data.stats && typeof data.stats==='object') STATS=data.stats;
-          if(data.progress && typeof data.progress==='object') PROGRESS=data.progress;
-          if(data.alts && typeof data.alts==='object') SELECTED_ALTS=data.alts;
-          
-          localSave().then(()=>{
-            renderPanelsForAllDays();
-            switchDay(todayJD());
-            updateUI();
-          });
+        fbAuth.signOut().then(()=>{
+          Object.keys(localStorage).forEach(k=>{if(k.startsWith('sc:'))localStorage.removeItem(k);});
+          STATS={cur:0,best:0,pts:0,lc:null,lf:null};
+          DONE={};
+          SELECTED_ALTS={};
+          document.getElementById('sv1').textContent='0';
+          document.getElementById('sv2').textContent='0';
+          document.getElementById('sv3').textContent='0';
+          document.getElementById('pfill').style.width='0%';
+          document.getElementById('ptxt').textContent='٠/٠ مهمة';
+          document.getElementById('ppts').textContent='٠ نقطة اليوم';
+          renderPanelsForAllDays();
+          switchDay(todayJD());
+          showToast('تم تسجيل الخروج');
         });
-
-      }catch(e){console.warn('Realtime database sync failed',e);}
-    })();
+      };
+    } else {
+      nameEl.textContent='';
+      btn.textContent='تسجيل دخول';
+      btn.onclick=async ()=>{
+        const provider=new GoogleAuthProvider();
+        await signInWithPopup(fbAuth,provider);
+      };
+    }
   });
 }
 
-(async function init(){
-  await localLoad();
-  updateDailyRefreshIfNeeded();
+// ===== Init =====
+async function init(){
+  checkStorageAvailable();
+
   renderTabs();
   renderPanelsForAllDays();
   switchDay(todayJD());
+
+  await localLoad();
+  updateDailyRefreshIfNeeded();
+  await localSave();
+
+  // re-render after load
+  renderPanelsForAllDays();
+  switchDay(todayJD());
   updateUI();
+
+  // delegated click handlers (no inline onclick)
+  document.getElementById('panels').addEventListener('click',async (ev)=>{
+    const el=ev.target.closest('[data-action]');
+    if(!el) return;
+
+    const action=el.dataset.action;
+    const id=el.dataset.id;
+    const pts=parseInt(el.dataset.pts||'0',10);
+
+    const jd=todayJD();
+    const all=getAllTasks(jd);
+    const task=all.find(t=>t[0]===id);
+    if(action==='alts'){
+      toggleAlts(id);
+      return;
+    }
+
+    if(action==='pickalt'){
+      const alt=el.dataset.alt;
+      if(!alt) return;
+      SELECTED_ALTS[id]=alt;
+      await localSave();
+      renderPanelsForAllDays();
+      updateUI();
+      return;
+    }
+
+    if(!task) return;
+
+    if(action==='confirm'){
+      const rect=ev.target.closest('[data-action]')?.getBoundingClientRect()||{left:window.innerWidth/2,top:200,width:0};
+      await onConfirm(task, pts, rect);
+      return;
+    }
+
+    if(action==='qada'){
+      const rect2=ev.target.closest('[data-action]')?.getBoundingClientRect()||{left:window.innerWidth/2,top:200,width:0};
+      await onQada(task, pts, rect2);
+      return;
+    }
+  });
+
+  // start prayer timings in background
+  fetchPrayers().then(()=>{
+    renderPanelsForAllDays();
+    switchDay(todayJD());
+    updateUI();
+  });
+
   initFirebaseAuth();
-  await fetchPrayers();
-})();
+
+  // UI is always visible
+}
+
+function checkStorageAvailable(){
+  try{
+    const k='__sc_test__';
+    localStorage.setItem(k,'1');
+    localStorage.removeItem(k);
+    return true;
+  }catch{
+    showToast('تحذير: تخزين المتصفح غير متاح');
+    return false;
+  }
+}
+
+window.addEventListener('DOMContentLoaded',()=>{init().catch(e=>{console.error(e);showToast('فشل بدء التطبيق')})});
 </script>
 </body>
-</html>
+</html> 
