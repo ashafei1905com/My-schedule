@@ -25,15 +25,49 @@ body{font-family:'Cairo',sans-serif;background:var(--bg);color:var(--tx);directi
 #sv1{color:var(--or)}#sv2{color:var(--ye)}#sv3{color:var(--pu)}
 .pw{padding:10px 16px 0}
 </style>
+</head>
+<body>
 
-<!-- NOTE: style block was previously corrupted by pasted HTML (".pb">"). Keep the existing page layout JS-driven below. -->
+<div id="sbar">
+  <div style="display:flex; gap:16px;">
+    <div class="st"><span class="sv" id="sv1">0</span><span class="sl">الاستريك 🔥</span></div>
+    <div class="st"><span class="sv" id="sv2">0</span><span class="sl">النقاط ⭐</span></div>
+    <div class="st"><span class="sv" id="sv3">0</span><span class="sl">أفضل استريك 🏆</span></div>
+  </div>
+  <div style="display:flex; align-items:center; gap:8px;">
+    <span id="authName" style="font-size:0.85rem; font-weight:700; color:var(--so)"></span>
+    <button id="btn-signin" style="background:var(--ac); color:#fff; border:none; padding:6px 12px; border-radius:6px; font-family:inherit; font-size:0.85rem; font-weight:700; cursor:pointer;">جاري التحميل...</button>
+  </div>
+</div>
 
+<div class="pw">
+  <div style="background:var(--c2); border:1px solid var(--br); border-radius:12px; padding:16px; margin-bottom:16px; text-align:center;">
+    <div id="next-prayer-title" style="font-size:0.85rem; color:var(--so); font-weight:700; margin-bottom:4px;">المتبقي للأذان القادم</div>
+    <div id="next-prayer-countdown" style="font-size:1.8rem; font-weight:900; color:var(--cy); letter-spacing:1px; line-height:1;">00:00:00</div>
+  </div>
+
+  <div id="tabrow" style="display:flex; gap:8px; overflow-x:auto; padding-bottom:8px; margin-bottom:16px; scrollbar-width:none;"></div>
+  
+  <div style="background:var(--c2); border:1px solid var(--br); border-radius:12px; padding:12px; margin-bottom:16px; display:flex; justify-content:between; align-items:center; gap:12px;">
+    <div style="flex:1;">
+      <div id="ptxt" style="font-size:0.85rem; font-weight:700; margin-bottom:4px;">0/0 مهمة (0%)</div>
+      <div style="background:var(--c); height:6px; border-radius:3px; overflow:hidden;">
+        <div id="pfill" style="background:linear-gradient(90deg, var(--ac), var(--gr)); width:0%; height:100%; transition:width 0.3s ease;"></div>
+      </div>
+    </div>
+    <div id="ppts" style="background:rgba(16,185,129,0.1); color:var(--gr); font-weight:900; padding:6px 12px; border-radius:8px; font-size:0.9rem;">0 نقطة اليوم</div>
+  </div>
+
+  <div id="panels"></div>
+</div>
+
+<div id="toast" style="position:fixed; bottom:24px; left:50%; transform:translateX(-50%); background:rgba(26,34,53,0.95); border:1px solid var(--br); color:var(--tx); padding:12px 24px; border-radius:30px; font-size:0.9rem; font-weight:700; z-index:2000; box-shadow:0 10px 25px rgba(0,0,0,0.5); pointer-events:none; opacity:0; transition:opacity 0.3s, transform 0.3s; text-align:center; white-space:pre-line;"></div>
 
 <script type="module">
 'use strict';
 
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
-import { getAuth, GoogleAuthProvider, signInWithRedirect, getRedirectResult, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
+import { getAuth, GoogleAuthProvider, signInWithRedirect, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
 import { getFirestore, doc, setDoc, getDoc, onSnapshot } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
 
 const firebaseConfig = {
@@ -166,7 +200,6 @@ function taskIsPassed(task){
   return currentMin > (taskMin + 180);
 }
 
-
 function isPrayerTask(task){
   return task[2]==='prayer';
 }
@@ -175,7 +208,7 @@ function floatPts(x,y,n){
   const e=document.createElement('div');
   e.className='floatpts';
   e.textContent=`+${n}⭐`;
-  e.style.cssText=`left:${x}px;top:${y}px`;
+  e.style.cssText=`position:fixed; left:${x}px; top:${y}px; color:var(--ye); font-weight:900; pointer-events:none; z-index:1500; animation:up 0.9s ease-out forwards;`;
   document.body.appendChild(e);
   setTimeout(()=>e.remove(),900);
 }
@@ -185,9 +218,13 @@ function showToast(msg,ms=3500){
   const t=document.getElementById('toast');
   if(!t) return;
   t.textContent=msg;
-  t.className='show';
+  t.style.opacity='1';
+  t.style.transform='translateX(-50%) translateY(-10px)';
   clearTimeout(toastTmr);
-  toastTmr=setTimeout(()=>t.className='',ms);
+  toastTmr=setTimeout(()=>{
+    t.style.opacity='0';
+    t.style.transform='translateX(-50%) translateY(0)';
+  },ms);
 }
 
 const mkBk=(p,t='9:15 ص')=>[p+'-bk',t,'food','🧀','الفطار المتوازن','جبنة قريش (٤-٥ ملاعق كبيرة) + زيت زيتون + رغيفين أسمر + طماطم + خيار',5,[
@@ -305,14 +342,8 @@ function getReqTasks(jd){
 
 const LS={
   stats:'sc:stats',
-<<<<<<< HEAD
   progress:'sc:progress',
   alts:'sc:alts',
-=======
-  done:(dt)=>`sc:day:${dt}:done`,
-  alts:(dt)=>`sc:day:${dt}:alts`,
-  qada:(dt)=>`sc:day:${dt}:qada`,
->>>>>>> dc5d04740576236c5529cc0e108d88cbf1568a4e
   weekly:(dt)=>`sc:weekly:${dt}`,
   coords:'sc:coords'
 };
@@ -370,10 +401,6 @@ function getTaskDisplayDesc(task, jd){
   return desc;
 }
 
-function toggleAlts(id){
-  document.getElementById('al-'+id)?.classList.toggle('open');
-}
-
 function renderCard(task,jd){
   const [id,arTime,cat,ico,name,desc,pts,alts,hw,isEx]=task;
   const isToday=jd===todayJD();
@@ -384,64 +411,71 @@ function renderCard(task,jd){
   const passed=taskIsPassed(task);
 
   if(cat==='free'){
-    return `<div class="tc" data-c="free"><div class="tctime">${arTime}</div><div class="tcico">${ico}</div><div class="tcbody"><div class="tcname" style="color:#6366f1">${name}</div><div class="tcdesc">${desc}</div></div></div>`;
+    return `<div class="tc" data-c="free" style="background:var(--c); padding:12px; border-radius:8px; margin-bottom:8px; display:flex; align-items:center; gap:12px;"><div class="tctime" style="font-size:0.8rem; color:var(--mu); min-width:60px;">${arTime}</div><div class="tcico" style="font-size:1.2rem;">${ico}</div><div class="tcbody"><div class="tcname" style="color:#6366f1; font-weight:700;">${name}</div><div class="tcdesc" style="font-size:0.75rem; color:var(--so);">${desc}</div></div></div>`;
   }
 
   let act='';
   if(isEx){
-    act=`<div class="excbadge">🔓 استثناء</div>`;
+    act=`<div class="excbadge" style="background:rgba(59,130,246,0.1); color:var(--ac); font-size:0.7rem; padding:4px 8px; border-radius:4px; font-weight:700;">🔓 استثناء</div>`;
   }else if(isToday){
     if(isDone){
-      act=`<div class="cbtn done">✅</div>`;
+      act=`<div class="cbtn done" style="color:var(--gr); font-weight:900;">✅</div>`;
     }else{
       if(isPrayerTask(task) && passed){
         const half=Math.floor(pts/2);
-        act=`<button class="cbtn qada" data-action="qada" data-id="${id}" data-pts="${pts}">قضاء (50%)<span class="ptslbl">+${half}⭐</span></button>`;
+        act=`<button class="cbtn qada" data-id="${id}" data-pts="${pts}" style="background:rgba(239,68,68,0.1); color:var(--rd); border:1px solid var(--rd); padding:6px 10px; border-radius:6px; font-family:inherit; font-size:0.75rem; cursor:pointer;">قضاء (50%) <span style="font-size:0.6rem;">+${half}⭐</span></button>`;
       }else if(pts>0 && passed){
-        act=`<div class="cbtn exp">فات الوقت</div>`;
+        act=`<div class="cbtn exp" style="color:var(--mu); font-size:0.75rem;">فات الوقت</div>`;
       }else{
-        act=`<button class="cbtn" data-action="confirm" data-id="${id}" data-pts="${pts}">تأكيد ✓<span class="ptslbl">+${pts}⭐</span></button>`;
+        act=`<button class="cbtn confirm-btn" data-id="${id}" data-pts="${pts}" style="background:var(--c2); border:1px solid var(--br); color:var(--tx); padding:6px 12px; border-radius:6px; font-family:inherit; font-size:0.8rem; font-weight:700; cursor:pointer;">تأكيد ✓ <span style="color:var(--ye); font-size:0.65rem;">+${pts}⭐</span></button>`;
       }
     }
   }
 
   if(!act){
-    act=isDone?`<div class="cbtn done">✅</div>`:`<div class="ptsbdg">${pts}⭐</div>`;
+    act=isDone?`<div class="cbtn done">✅</div>`:`<div class="ptsbdg" style="font-size:0.75rem; color:var(--ye); font-weight:700;">${pts}⭐</div>`;
   }
 
-  const altH = (alts && alts.length)
-    ? `<button class="altbtn" data-action="alts" data-id="${id}">🔄 بدائل العيْن (${alts.length})</button>`+
-      `<div class="altlist" id="al-${id}">${alts.map(a=>{
-        const dayAlts = SELECTED_ALTS[dateStr] || {};
-        const selected = dayAlts[id]===a;
-        return `<div class="altitem">
-                  <span style="flex:1; line-height:1.4; padding-left:8px; ${selected?'color:var(--gr);font-weight:bold;':''}">${selected?'✓ ':''}${a}</span>
-                  <button class="cbtn" style="padding:4px 8px; font-size:0.65rem; min-width:65px; ${selected?'background:rgba(16,185,129,.05);color:var(--mu);cursor:default;border-color:transparent':''}" data-action="pickalt" data-id="${id}" data-pts="${pts}" data-alt="${String(a).replace(/"/g,'&quot;')}">${selected?'تم ✅':'اختيار'}</button>
-                </div>`;
-      }).join('')}</div>`
-    : '';
+  let altH = '';
+  if(alts && alts.length){
+    altH = `<button class="altbtn" data-id="${id}" style="background:none; border:none; color:var(--ac); font-family:inherit; font-size:0.75rem; cursor:pointer; margin-top:6px; display:block; padding:0;">🔄 بدائل العيْن (${alts.length})</button>
+            <div class="altlist" id="al-${id}" style="display:none; background:var(--c); padding:8px; border-radius:6px; margin-top:6px; gap:6px; flex-direction:column;">`;
+    alts.forEach(a=>{
+      const dayAlts = SELECTED_ALTS[dateStr] || {};
+      const selected = dayAlts[id]===a;
+      altH += `<div style="display:flex; justify-content:space-between; align-items:center; font-size:0.75rem;">
+                <span style="flex:1; line-height:1.4; padding-left:8px; ${selected?'color:var(--gr);font-weight:bold;':''}">${selected?'✓ ':''}${a}</span>
+                <button class="alt-pick-btn" data-id="${id}" data-pts="${pts}" data-alt="${String(a).replace(/"/g,'&quot;')}" style="padding:4px 8px; font-size:0.65rem; border-radius:4px; border:1px solid var(--br); font-family:inherit; background:var(--c2); color:var(--tx); cursor:pointer;">${selected?'تم ✅':'اختيار'}</button>
+              </div>`;
+    });
+    altH += `</div>`;
+  }
 
-  const hwH=hw?`<div class="hwtag">⏰ ${hw}</div>`:'';
+  const hwH=hw?`<div class="hwtag" style="font-size:0.7rem; color:var(--or); margin-top:2px;">⏰ ${hw}</div>`:'';
   const displayDesc=getTaskDisplayDesc(task, jd);
 
-  return `<div class="tc${isDone?' done':''}${isEx?' excx':''}" data-c="${cat}" id="c-${id}">
-    <div class="tctime">${arTime}</div><div class="tcico">${ico}</div>
-    <div class="tcbody"><div class="tcname">${name}</div><div class="tcdesc">${displayDesc}</div>${hwH}${altH}</div>
-    ${act}
-  </div>`;
+  return `<div class="tc ${isDone?'done':''}" data-c="${cat}" id="c-${id}" style="background:var(--c2); border:1px solid ${isDone?'var(--gr)':'var(--br)'}; padding:12px; border-radius:8px; margin-bottom:8px; display:flex; align-items:center; gap:12px; opacity:${isDone?0.75:1};">
+    <div class="tctime" style="font-size:0.8rem; color:var(--mu); min-width:60px;">${arTime}</div>
+    <div class="tcico" style="font-size:1.2rem;">${ico}</div>
+    <div class="tcbody" style="flex:1;">
+      <div class="tcname" style="font-weight:700; font-size:0.9rem;">${name}</div>
+      <div class="tcdesc" style="font-size:0.75rem; color:var(--so); margin-top:1px; line-height:1.4;">displayDesc</div>
+      ${hwH}${altH}
+    </div>
+    <div class="tcaction">${act}</div>
+  </div>`.replace('displayDesc', displayDesc);
 }
 
 function renderPanel(jd){
   const d=SCHED[jd];
   if(!d) return '';
   const k=DKEYS[jd];
-  const isToday=jd===todayJD();
   const dateStr = getDateStrForDayIndex(jd);
   const dayProgress = PROGRESS[dateStr] || {};
 
   const gbLabel=d.gm
-    ? `<div class="gbx ${d.gm==='upper'?'gbu':'gbl'}">${d.gm==='upper'?'Upper Body 💪':'Lower Body 🦵'}</div>`
-    : `<div class="gbx gbr">يوم راحة ونقاهة 💤</div>`;
+    ? `<div class="gbx" style="font-size:0.75rem; font-weight:700; padding:4px 8px; border-radius:6px; background:${d.gm==='upper'?'rgba(59,130,246,0.1)':'rgba(16,185,129,0.1)'}; color:${d.gm==='upper'?'var(--ac)':'var(--gr)'};">${d.gm==='upper'?'Upper Body 💪':'Lower Body 🦵'}</div>`
+    : `<div class="gbx" style="font-size:0.75rem; font-weight:700; padding:4px 8px; border-radius:6px; background:var(--c); color:var(--mu);">يوم راحة ونقاهة 💤</div>`;
 
   const prayerOrder=['Fajr','Sunrise','Dhuhr','Asr','Maghrib','Isha'];
   const pillsArr=[];
@@ -450,14 +484,14 @@ function renderPanel(jd){
 
   for(const pk of prayerOrder){
     if(pk==='Sunrise') {
-      pillsArr.push(`<div class="ppill" style="border-color:var(--or); background:rgba(245,158,11,0.03)"><div class="pnam" style="color:var(--or)">الشروق</div><div class="ptim" style="color:var(--or)">${fmt24(PRYT.Sunrise||FALLBK.Sunrise)}</div></div>`);
+      pillsArr.push(`<div style="border:1px solid var(--or); background:rgba(245,158,11,0.03); padding:4px 8px; border-radius:6px; text-align:center; min-width:55px;"><div style="font-size:0.6rem; color:var(--or); font-weight:700;">الشروق</div><div style="font-size:0.7rem; color:var(--or); font-weight:900; margin-top:1px;">${fmt24(PRYT.Sunrise||FALLBK.Sunrise)}</div></div>`);
       continue;
     }
     if(pk==='Dhuhr' && jd===5){
       if(jumahTask){
         const pid=jumahTask[0];
         const done=dayProgress[pid]!==undefined;
-        pillsArr.push(`<div class="ppill${done?' done':''}" id="pp-${pid}"><div class="pnam">${jumahTask[4]}</div><div class="ptim">${fmt24(jumahTask[1])}</div></div>`);
+        pillsArr.push(`<div style="border:1px solid ${done?'var(--gr)':'var(--br)'}; background:var(--c); padding:4px 8px; border-radius:6px; text-align:center; min-width:55px; opacity:${done?0.6:1};"><div style="font-size:0.6rem; color:var(--so); font-weight:700;">الجمعة</div><div style="font-size:0.7rem; color:var(--tx); font-weight:900; margin-top:1px;">${fmt24(jumahTask[1])}</div></div>`);
       }
       continue;
     }
@@ -465,14 +499,14 @@ function renderPanel(jd){
     if(!pm) continue;
     const pid=`pr-${k}-${pk}`;
     const done=dayProgress[pid]!==undefined;
-    pillsArr.push(`<div class="ppill${done?' done':''}" id="pp-${pid}"><div class="pnam">${pm.ar}</div><div class="ptim">${fmt24(PRYT[pk]||FALLBK[pk])}</div></div>`);
+    pillsArr.push(`<div style="border:1px solid ${done?'var(--gr)':'var(--br)'}; background:var(--c); padding:4px 8px; border-radius:6px; text-align:center; min-width:55px; opacity:${done?0.6:1};"><div style="font-size:0.6rem; color:var(--so); font-weight:700;">${pm.ar}</div><div style="font-size:0.7rem; color:var(--tx); font-weight:900; margin-top:1px;">${fmt24(PRYT[pk]||FALLBK[pk])}</div></div>`);
   }
 
   const tasks=getAllTasks(jd);
 
-  return `<div class="pan" id="pan-${k}">
-    <div class="dh"><div><div class="dhn">${d.n}</div><div class="dhm">فجر ${fmt24(PRYT.Fajr||FALLBK.Fajr)} ← صحيان ${d.wk} · نوم ${d.bd}</div></div>${gbLabel}</div>
-    <div class="prow">${pillsArr.join('')}</div>
+  return `<div class="pan" id="pan-${k}" style="display:none; flex-direction:column;">
+    <div class="dh" style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px;"><div><div class="dhn" style="font-size:1.2rem; font-weight:900; line-height:1.2;">${d.n}</div><div class="dhm" style="font-size:0.7rem; color:var(--mu); margin-top:2px;">فجر ${fmt24(PRYT.Fajr||FALLBK.Fajr)} ← صحيان ${d.wk} · نوم ${d.bd}</div></div>${gbLabel}</div>
+    <div class="prow" style="display:flex; gap:6px; overflow-x:auto; padding-bottom:8px; margin-bottom:12px; scrollbar-width:none;">${pillsArr.join('')}</div>
     <div class="tl">${tasks.map(t=>renderCard(t,jd)).join('')}</div>
   </div>`;
 }
@@ -484,9 +518,11 @@ function renderTabs(){
     const isT=j===todayJD();
     const isG=!!SCHED[j]?.gm;
     const b=document.createElement('button');
-    b.className=`tab${isT?' tod':''}`;
+    b.className=`tab ${isT?'tod':''}`;
     b.id=`tb-${DKEYS[j]}`;
-    b.innerHTML=(isG?'<div class="gdot"></div>':'')+DSHORT[j];
+    b.style.cssText=`background:var(--c2); border:1px solid var(--br); color:var(--tx); padding:8px 16px; border-radius:8px; font-family:inherit; font-size:0.85rem; font-weight:700; cursor:pointer; white-space:nowrap; display:flex; align-items:center; gap:4px;`;
+    if(isT) b.style.borderColor = 'var(--ac)';
+    b.innerHTML=(isG?'<span style="width:6px; height:6px; background:var(--ac); border-radius:50%;"></span>':'')+DSHORT[j];
     b.onclick=()=>switchDay(j);
     c.appendChild(b);
   });
@@ -517,22 +553,24 @@ function updateUI(){
 }
 
 function switchDay(jd){
-  document.querySelectorAll('.tab').forEach(b=>b.classList.remove('act'));
+  document.querySelectorAll('.tab').forEach(b=>{
+    b.style.background = 'var(--c2)';
+    b.style.color = 'var(--tx)';
+  });
   const tb=document.getElementById(`tb-${DKEYS[jd]}`);
-  if(tb){tb.classList.add('act');tb.scrollIntoView({behavior:'smooth',block:'nearest',inline:'center'})}
-  document.querySelectorAll('.pan').forEach(p=>p.classList.remove('act'));
-  document.getElementById(`pan-${DKEYS[jd]}`)?.classList.add('act');
+  if(tb){
+    tb.style.background = 'var(--br)';
+    tb.style.color = 'var(--ac)';
+    tb.scrollIntoView({behavior:'smooth',block:'nearest',inline:'center'});
+  }
+  document.querySelectorAll('.pan').forEach(p=>p.style.display='none');
+  const targetPan = document.getElementById(`pan-${DKEYS[jd]}`);
+  if(targetPan) targetPan.style.display = 'flex';
   updateUI();
 }
 
-<<<<<<< HEAD
 async function saveAndRefresh(){
   const savedScroll = window.scrollY; 
-=======
-// ===== Task completion (Scroll Lock Applied Here) =====
-async function saveAndRefresh(){
-  const savedScroll = window.scrollY; // تثبيت مكان الشاشة الفعلي
->>>>>>> dc5d04740576236c5529cc0e108d88cbf1568a4e
   await localSave();
   if(fbAuth&&fbAuth.currentUser){
     try{
@@ -547,15 +585,12 @@ async function saveAndRefresh(){
   renderPanelsForAllDays();
   switchDay(todayJD());
   updateUI();
-<<<<<<< HEAD
   window.scrollTo(0, savedScroll); 
-=======
-  window.scrollTo(0, savedScroll); // إعادة إجبار المتصفح على البقاء في مكانه منعاً للقفز لأعلى
->>>>>>> dc5d04740576236c5529cc0e108d88cbf1568a4e
 }
 
 function renderPanelsForAllDays(){
   document.getElementById('panels').innerHTML=[0,1,2,3,4,5,6].map(renderPanel).join('');
+  attachDynamicEvents();
 }
 
 function completeStreakIfDayDone(){
@@ -614,10 +649,6 @@ async function onQada(task, pts, rect){
   showToast('تم قضاء الصلاة (50%)');
 }
 
-<<<<<<< HEAD
-=======
-// ===== Geolocation Caching to stop repeated browser prompts =====
->>>>>>> dc5d04740576236c5529cc0e108d88cbf1568a4e
 function getCoords() {
   return new Promise((resolve) => {
     try {
@@ -625,18 +656,10 @@ function getCoords() {
       if (cachedData) {
         const parsed = JSON.parse(cachedData);
         if (Date.now() - parsed.timestamp < 3 * 24 * 60 * 60 * 1000) {
-<<<<<<< HEAD
           return resolve(parsed.coords);
         }
       }
     } catch(e) { console.warn('خطأ كاش الموقع', e); }
-=======
-          console.log('تم تحميل الموقع الجغرافي من الكاش المحلي بنجاح.');
-          return resolve(parsed.coords);
-        }
-      }
-    } catch(e) { console.warn('خطأ قراءة كاش الموقع', e); }
->>>>>>> dc5d04740576236c5529cc0e108d88cbf1568a4e
 
     if (!navigator.geolocation) return resolve(null);
     navigator.geolocation.getCurrentPosition(
@@ -657,17 +680,8 @@ async function fetchPrayers(){
   try{
     const coords = await getCoords();
     let url = 'https://api.aladhan.com/v1/timingsByCity?city=Salmiya&country=Kuwait&method=9'; 
-<<<<<<< HEAD
     if (coords) {
       url = `https://api.aladhan.com/v1/timings?latitude=${coords.lat}&longitude=${coords.lng}&method=9`;
-=======
-    
-    if (coords) {
-      url = `https://api.aladhan.com/v1/timings?latitude=${coords.lat}&longitude=${coords.lng}&method=9`;
-      console.log(`تم تحديد موقعك بدقة: ${coords.lat}, ${coords.lng}`);
-    } else {
-      console.log('لم يتم منح إذن الموقع الفعلي، تم تفعيل توقيت السالمية الافتراضي (الأوقاف الكويتية).');
->>>>>>> dc5d04740576236c5529cc0e108d88cbf1568a4e
     }
     const res = await fetch(url);
     const data = await res.json();
@@ -726,6 +740,45 @@ function startNextPrayerCountdown(timings){
   },1000);
 }
 
+function attachDynamicEvents() {
+  document.querySelectorAll('.confirm-btn').forEach(btn => {
+    btn.onclick = (e) => {
+      const id = btn.getAttribute('data-id');
+      const pts = parseInt(btn.getAttribute('data-pts'), 10);
+      const task = getAllTasks(todayJD()).find(t => t[0] === id);
+      if(task) onConfirm(task, pts, btn.getBoundingClientRect());
+    };
+  });
+
+  document.querySelectorAll('.qada').forEach(btn => {
+    btn.onclick = (e) => {
+      const id = btn.getAttribute('data-id');
+      const pts = parseInt(btn.getAttribute('data-pts'), 10);
+      const task = getAllTasks(todayJD()).find(t => t[0] === id);
+      if(task) onQada(task, pts, btn.getBoundingClientRect());
+    };
+  });
+
+  document.querySelectorAll('.altbtn').forEach(btn => {
+    btn.onclick = () => {
+      const id = btn.getAttribute('data-id');
+      const list = document.getElementById(`al-${id}`);
+      if(list) list.style.display = list.style.display === 'none' ? 'flex' : 'none';
+    };
+  });
+
+  document.querySelectorAll('.alt-pick-btn').forEach(btn => {
+    btn.onclick = async () => {
+      const id = btn.getAttribute('data-id');
+      const altVal = btn.getAttribute('data-alt');
+      const dateStr = getDateStrForDayIndex(todayJD());
+      if(!SELECTED_ALTS[dateStr]) SELECTED_ALTS[dateStr] = {};
+      SELECTED_ALTS[dateStr][id] = altVal;
+      await saveAndRefresh();
+    };
+  });
+}
+
 function initFirebaseAuth(){
   const btn=document.getElementById('btn-signin');
   if(!btn) return;
@@ -753,20 +806,20 @@ function initFirebaseAuth(){
     }
 
     if(nameEl) nameEl.textContent=user.displayName||user.email||'';
+    btn.textContent='خروج';
+    btn.onclick=()=>fbAuth.signOut();
 
     (async()=>{
       try{
         const uid=user.uid;
         if(window.__sc_unsub){try{window.__sc_unsub();}catch(e){}}
 
-        // Load immediately, then keep in sync via realtime listener.
         const snap=await getDoc(doc(fbDb,'users',uid));
         if(snap.exists()){
           const data=snap.data()||{};
           if(data.stats && typeof data.stats==='object') STATS=data.stats;
           if(data.progress && typeof data.progress==='object') PROGRESS=data.progress;
           if(data.alts && typeof data.alts==='object') SELECTED_ALTS=data.alts;
-          // Weekly report is optional; UI doesn’t rely on it.
           await localSave();
         }
 
@@ -779,114 +832,31 @@ function initFirebaseAuth(){
           if(data.stats && typeof data.stats==='object') STATS=data.stats;
           if(data.progress && typeof data.progress==='object') PROGRESS=data.progress;
           if(data.alts && typeof data.alts==='object') SELECTED_ALTS=data.alts;
-          localSave();
-          renderPanelsForAllDays();
-          switchDay(todayJD());
-          updateUI();
+          
+          localSave().then(()=>{
+            renderPanelsForAllDays();
+            switchDay(todayJD());
+            updateUI();
+          });
         });
-      }catch(e){console.warn('cloud load failed',e);}
-    })();
 
-    btn.textContent='خروج';
-    btn.onclick=()=>{
-      try{if(window.__sc_unsub) window.__sc_unsub();}catch{}
-      window.__sc_unsub=null;
-      fbAuth.signOut().then(()=>{
-        Object.keys(localStorage).forEach(k=>{if(k.startsWith('sc:'))localStorage.removeItem(k);});
-        STATS={cur:0,best:0,pts:0,lc:null,lf:null,lastWeeklyReset:null};
-        PROGRESS={};
-        SELECTED_ALTS={};
-        WEEKLY_REPORT=[];
-        renderPanelsForAllDays();
-        switchDay(todayJD());
-        updateUI();
-        showToast('تم تسجيل الخروج ومسح البيانات المؤقتة');
-      });
-    };
+      }catch(e){console.warn('Realtime database sync failed',e);}
+    })();
   });
 }
 
-
-async function init(){
-  const ld=document.getElementById('ld');
-  const app=document.getElementById('app');
-
+// تشغيل النظام عند التحميل الأساسي
+(async function init(){
+  await localLoad();
+  updateDailyRefreshIfNeeded();
   renderTabs();
   renderPanelsForAllDays();
   switchDay(todayJD());
-
-  await localLoad();
-  updateDailyRefreshIfNeeded();
-  await localSave();
-
-  renderPanelsForAllDays();
-  switchDay(todayJD());
   updateUI();
-
-  getRedirectResult(fbAuth).then((result) => {
-    if (result?.user) {
-      showToast("تم تشغيل المزامنة بنجاح! 🎉");
-    }
-  }).catch((e) => {
-    console.error("Redirect check error", e);
-  });
-
-  document.getElementById('panels').addEventListener('click',async (ev)=>{
-    const el=ev.target.closest('[data-action]');
-    if(!el) return;
-
-    const action=el.dataset.action;
-    const id=el.dataset.id;
-    const pts=parseInt(el.dataset.pts||'0',10);
-
-    const jd=todayJD();
-    const dateStr = getDateStrForDayIndex(jd);
-    const all=getAllTasks(jd);
-    const task=all.find(t=>t[0]===id);
-    if(action==='alts'){
-      toggleAlts(id);
-      return;
-    }
-
-    if(action==='pickalt'){
-      const alt=el.dataset.alt;
-      if(!alt) return;
-      if(task && taskIsPassed(task)){ showToast('فات الوقت'); return; }
-      if(!PROGRESS[dateStr]) PROGRESS[dateStr]={};
-      if(!SELECTED_ALTS[dateStr]) SELECTED_ALTS[dateStr]={};
-      if(task && PROGRESS[dateStr][id]===undefined){
-         SELECTED_ALTS[dateStr][id]=alt;
-         PROGRESS[dateStr][id]=pts;
-         STATS.pts+=pts;
-         WEEKLY_REPORT.push({t:new Date().toISOString(),taskId:id,day:TODAY,points:pts,label:task[4],alt:alt});
-         completeStreakIfDayDone();
-         const rect=ev.currentTarget.getBoundingClientRect();
-         floatPts(rect.left+50, rect.top-10, pts);
-      }
-      await saveAndRefresh();
-      return;
-    }
-
-    if(!task) return;
-    const rect=ev.currentTarget.getBoundingClientRect();
-
-    if(action==='confirm'){ await onConfirm(task, pts, rect); return; }
-    if(action==='qada'){ await onQada(task, pts, rect); return; }
-  });
-
-  fetchPrayers().then(()=>{
-    renderPanelsForAllDays();
-    switchDay(todayJD());
-    updateUI();
-  });
-
   initFirebaseAuth();
+  await fetchPrayers();
+})();
 
-  if(ld) ld.style.display='none';
-  if(app) app.style.display='block';
-}
-
-window.addEventListener('DOMContentLoaded',()=>{init().catch(e=>{console.error(e);})});
 </script>
 </body>
 </html>
