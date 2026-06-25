@@ -305,8 +305,14 @@ function getReqTasks(jd){
 
 const LS={
   stats:'sc:stats',
+<<<<<<< HEAD
   progress:'sc:progress',
   alts:'sc:alts',
+=======
+  done:(dt)=>`sc:day:${dt}:done`,
+  alts:(dt)=>`sc:day:${dt}:alts`,
+  qada:(dt)=>`sc:day:${dt}:qada`,
+>>>>>>> dc5d04740576236c5529cc0e108d88cbf1568a4e
   weekly:(dt)=>`sc:weekly:${dt}`,
   coords:'sc:coords'
 };
@@ -519,8 +525,14 @@ function switchDay(jd){
   updateUI();
 }
 
+<<<<<<< HEAD
 async function saveAndRefresh(){
   const savedScroll = window.scrollY; 
+=======
+// ===== Task completion (Scroll Lock Applied Here) =====
+async function saveAndRefresh(){
+  const savedScroll = window.scrollY; // تثبيت مكان الشاشة الفعلي
+>>>>>>> dc5d04740576236c5529cc0e108d88cbf1568a4e
   await localSave();
   if(fbAuth&&fbAuth.currentUser){
     try{
@@ -535,7 +547,11 @@ async function saveAndRefresh(){
   renderPanelsForAllDays();
   switchDay(todayJD());
   updateUI();
+<<<<<<< HEAD
   window.scrollTo(0, savedScroll); 
+=======
+  window.scrollTo(0, savedScroll); // إعادة إجبار المتصفح على البقاء في مكانه منعاً للقفز لأعلى
+>>>>>>> dc5d04740576236c5529cc0e108d88cbf1568a4e
 }
 
 function renderPanelsForAllDays(){
@@ -598,6 +614,10 @@ async function onQada(task, pts, rect){
   showToast('تم قضاء الصلاة (50%)');
 }
 
+<<<<<<< HEAD
+=======
+// ===== Geolocation Caching to stop repeated browser prompts =====
+>>>>>>> dc5d04740576236c5529cc0e108d88cbf1568a4e
 function getCoords() {
   return new Promise((resolve) => {
     try {
@@ -605,10 +625,18 @@ function getCoords() {
       if (cachedData) {
         const parsed = JSON.parse(cachedData);
         if (Date.now() - parsed.timestamp < 3 * 24 * 60 * 60 * 1000) {
+<<<<<<< HEAD
           return resolve(parsed.coords);
         }
       }
     } catch(e) { console.warn('خطأ كاش الموقع', e); }
+=======
+          console.log('تم تحميل الموقع الجغرافي من الكاش المحلي بنجاح.');
+          return resolve(parsed.coords);
+        }
+      }
+    } catch(e) { console.warn('خطأ قراءة كاش الموقع', e); }
+>>>>>>> dc5d04740576236c5529cc0e108d88cbf1568a4e
 
     if (!navigator.geolocation) return resolve(null);
     navigator.geolocation.getCurrentPosition(
@@ -629,8 +657,17 @@ async function fetchPrayers(){
   try{
     const coords = await getCoords();
     let url = 'https://api.aladhan.com/v1/timingsByCity?city=Salmiya&country=Kuwait&method=9'; 
+<<<<<<< HEAD
     if (coords) {
       url = `https://api.aladhan.com/v1/timings?latitude=${coords.lat}&longitude=${coords.lng}&method=9`;
+=======
+    
+    if (coords) {
+      url = `https://api.aladhan.com/v1/timings?latitude=${coords.lat}&longitude=${coords.lng}&method=9`;
+      console.log(`تم تحديد موقعك بدقة: ${coords.lat}, ${coords.lng}`);
+    } else {
+      console.log('لم يتم منح إذن الموقع الفعلي، تم تفعيل توقيت السالمية الافتراضي (الأوقاف الكويتية).');
+>>>>>>> dc5d04740576236c5529cc0e108d88cbf1568a4e
     }
     const res = await fetch(url);
     const data = await res.json();
