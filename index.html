@@ -79,7 +79,7 @@ body{font-family:'Cairo',sans-serif;background:var(--bg);color:var(--tx);directi
 'use strict';
 
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
-import { getAuth, GoogleAuthProvider, signInWithRedirect, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
+import { getAuth, GoogleAuthProvider, signInWithPopup, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
 import { getFirestore, doc, setDoc, getDoc, onSnapshot } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
 
 const firebaseConfig = {
@@ -671,41 +671,9 @@ async function onQada(task, pts, rect){
   showToast('تم قضاء الصلاة (50%)');
 }
 
-function getCoords() {
-  return new Promise((resolve) => {
-    try {
-      const cachedData = localStorage.getItem(LS.coords);
-      if (cachedData) {
-        const parsed = JSON.parse(cachedData);
-        if (Date.now() - parsed.timestamp < 3 * 24 * 60 * 60 * 1000) {
-          return resolve(parsed.coords);
-        }
-      }
-    } catch(e) { console.warn('خطأ كاش الموقع', e); }
-
-    if (!navigator.geolocation) return resolve(null);
-    navigator.geolocation.getCurrentPosition(
-      (pos) => {
-        const coords = { lat: pos.coords.latitude, lng: pos.coords.longitude };
-        try {
-          localStorage.setItem(LS.coords, JSON.stringify({ coords, timestamp: Date.now() }));
-        } catch(e){}
-        resolve(coords);
-      },
-      () => resolve(null),
-      { timeout: 6000 }
-    );
-  });
-}
-
 async function fetchPrayers(){
-  try{
-    const coords = await getCoords();
-    let url = 'https://api.aladhan.com/v1/timingsByCity?city=Salmiya&country=Kuwait&method=9'; 
-    if (coords) {
-      // إصلاح فوري: قمنا بإجبار الاستدعاء على استخدام الطريقة رقم 9 الخاصة بأوقاف الكويت حتى عند توفر الـ GPS
-      url = `https://api.aladhan.com/v1/timings?latitude=${coords.lat}&longitude=${coords.lng}&method=9`;
-    }
+  try {
+    const url = 'https://api.aladhan.com/v1/timingsByCity?city=Kuwait&country=Kuwait&method=9'; 
     const res = await fetch(url);
     const data = await res.json();
     if(data && data.code === 200) {
@@ -722,7 +690,8 @@ async function fetchPrayers(){
       return true;
     }
     throw new Error('API Error');
-  }catch(e){
+  } catch(e) {
+    console.warn('API Fetch failed', e);
     PRYT = {...FALLBK};
     startNextPrayerCountdown(PRYT);
     return false;
@@ -810,17 +779,20 @@ function initFirebaseAuth(){
     const nameEl=document.getElementById('authName');
 
     if(!user){
-      // التأكد من قتل أي اشتراك سحابي نشط فور تسجيل الخروج لعدم تدمير الكاش
       if(window.__sc_unsub){
         try{window.__sc_unsub(); window.__sc_unsub = null;}catch(e){}
       }
       if(nameEl) nameEl.textContent='';
       btn.textContent='تسجيل دخول';
+      
       btn.onclick=async ()=>{
         try {
-          const provider=new GoogleAuthProvider();
-          await signInWithRedirect(fbAuth,provider);
-        } catch(e) { showToast('فشل إعادة التوجيه لتسجيل الدخول'); }
+          const provider = new GoogleAuthProvider();
+          await signInWithPopup(fbAuth, provider);
+        } catch(e) { 
+          console.error("Auth Error:", e);
+          showToast('حدث خطأ أو تم إلغاء تسجيل الدخول'); 
+        }
       };
       return;
     }
@@ -828,7 +800,6 @@ function initFirebaseAuth(){
     if(nameEl) nameEl.textContent=user.displayName||user.email||'';
     btn.textContent='خروج';
     btn.onclick=async ()=>{
-      // حل جذري: إيقاف دالة onSnapshot قبل تسجيل الخروج ومسح الـ LocalStorage تماماً لمنع حدوث التداخل
       if(window.__sc_unsub){
         try{window.__sc_unsub(); window.__sc_unsub = null;}catch(e){}
       }
@@ -837,7 +808,7 @@ function initFirebaseAuth(){
       switchDay(todayJD());
       updateUI();
       await signOut(fbAuth);
-      showToast('تم تسجيل الخروج وتصفير الكاش المحلي بنجاح.');
+      showToast('تم تسجيل الخروج بنجاح.');
     };
 
     (async()=>{
