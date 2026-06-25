@@ -43,7 +43,7 @@ body{font-family:'Cairo',sans-serif;background:var(--bg);color:var(--tx);directi
 <div id="sbar">
   <div style="display:flex; gap:16px;">
     <div class="st"><span class="sv" id="sv1">0</span><span class="sl">الاستريك 🔥</span></div>
-    <div class="st"><span class="sv" id="sv2">0</span><span class="sl">النقاط ⭐</span></div>
+    <div class="st"><span class="sv" id="sv2">0</span><span class="sl">الالتحام ⭐</span></div>
     <div class="st"><span class="sv" id="sv3">0</span><span class="sl">أفضل استريك 🏆</span></div>
   </div>
   <div style="display:flex; align-items:center; gap:8px;">
@@ -79,7 +79,7 @@ body{font-family:'Cairo',sans-serif;background:var(--bg);color:var(--tx);directi
 'use strict';
 
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
-import { getAuth, GoogleAuthProvider, signInWithRedirect, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
+import { getAuth, GoogleAuthProvider, signInWithRedirect, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
 import { getFirestore, doc, setDoc, getDoc, onSnapshot } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
 
 const firebaseConfig = {
@@ -402,6 +402,16 @@ async function localSave(){
   await sSet(LS.weekly(TODAY),WEEKLY_REPORT);
 }
 
+function clearLocalData(){
+  localStorage.removeItem(LS.stats);
+  localStorage.removeItem(LS.progress);
+  localStorage.removeItem(LS.alts);
+  STATS={cur:0,best:0,pts:0,lc:null,lf:null,lastWeeklyReset:null};
+  PROGRESS={};
+  SELECTED_ALTS={};
+  WEEKLY_REPORT=[];
+}
+
 function getTaskDisplayDesc(task, jd){
   const id=task[0];
   const dateStr = getDateStrForDayIndex(jd);
@@ -584,7 +594,7 @@ function switchDay(jd){
 async function saveAndRefresh(){
   const savedScroll = window.scrollY; 
   await localSave();
-  if(fbAuth&&fbAuth.currentUser){
+  if(fbAuth && fbAuth.currentUser){
     try{
       const uid=fbAuth.currentUser.uid;
       await setDoc(doc(fbDb,'users',uid),{
@@ -694,9 +704,6 @@ async function fetchPrayers(){
     let url = 'https://api.aladhan.com/v1/timingsByCity?city=Salmiya&country=Kuwait&method=9'; 
     if (coords) {
       url = `https://api.aladhan.com/v1/timings?latitude=${coords.lat}&longitude=${coords.lng}&method=9`;
-      console.log(`تم تحديد موقعك الفعلي بنجاح: ${coords.lat}, ${coords.lng}`);
-    } else {
-      console.log('لم يتم منح إذن الموقع الفعلي، تم تفعيل توقيت السالمية الافتراضي');
     }
     const res = await fetch(url);
     const data = await res.json();
@@ -798,36 +805,42 @@ function initFirebaseAuth(){
   const btn=document.getElementById('btn-signin');
   if(!btn) return;
 
-  btn.onclick=async ()=>{
-    try{
-      const provider=new GoogleAuthProvider();
-      await signInWithRedirect(fbAuth,provider);
-    }catch(e){
-      showToast('فشل تسجيل الدخول');
-    }
-  };
-
   onAuthStateChanged(fbAuth,(user)=>{
     const nameEl=document.getElementById('authName');
 
     if(!user){
+      if(window.__sc_unsub){
+        try{window.__sc_unsub(); window.__sc_unsub = null;}catch(e){}
+      }
       if(nameEl) nameEl.textContent='';
       btn.textContent='تسجيل دخول';
       btn.onclick=async ()=>{
-        const provider=new GoogleAuthProvider();
-        await signInWithRedirect(fbAuth,provider);
+        try {
+          const provider=new GoogleAuthProvider();
+          await signInWithRedirect(fbAuth,provider);
+        } catch(e) { showToast('فشل إعادة التوجيه لتسجيل الدخول'); }
       };
       return;
     }
 
     if(nameEl) nameEl.textContent=user.displayName||user.email||'';
     btn.textContent='خروج';
-    btn.onclick=()=>fbAuth.signOut();
+    btn.onclick=async ()=>{
+      if(window.__sc_unsub){
+        try{window.__sc_unsub(); window.__sc_unsub = null;}catch(e){}
+      }
+      clearLocalData(); 
+      renderPanelsForAllDays();
+      switchDay(todayJD());
+      updateUI();
+      await signOut(fbAuth);
+      showToast('تم تسجيل الخروج بنجاح.');
+    };
 
     (async()=>{
       try{
         const uid=user.uid;
-        if(window.__sc_unsub){try{window.__sc_unsub();}catch(e){}}
+        if(window.__sc_unsub){try{window.__sc_unsub(); window.__sc_unsub = null;}catch(e){}}
 
         const snap=await getDoc(doc(fbDb,'users',uid));
         if(snap.exists()){
@@ -843,6 +856,7 @@ function initFirebaseAuth(){
         updateUI();
 
         window.__sc_unsub=onSnapshot(doc(fbDb,'users',uid),(snap)=>{
+          if(!fbAuth.currentUser) return; 
           const data=snap.data()||{};
           if(data.stats && typeof data.stats==='object') STATS=data.stats;
           if(data.progress && typeof data.progress==='object') PROGRESS=data.progress;
