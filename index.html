@@ -79,7 +79,7 @@ body{font-family:'Cairo',sans-serif;background:var(--bg);color:var(--tx);directi
 'use strict';
 
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
-import { getAuth, GoogleAuthProvider, signInWithPopup, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
+import { getAuth, GoogleAuthProvider, signInWithPopup, signInWithRedirect, getRedirectResult, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
 import { getFirestore, doc, setDoc, getDoc, onSnapshot } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
 
 const firebaseConfig = {
@@ -137,8 +137,6 @@ function todayJD(){
   const weekday=getKuwaitDateParts().weekday;
   return ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'].indexOf(weekday);
 }
-
-const TODAY=todayStr();
 
 function getDateStrForDayIndex(jd) {
   const currentJD = todayJD();
@@ -775,6 +773,12 @@ function initFirebaseAuth(){
   const btn=document.getElementById('btn-signin');
   if(!btn) return;
 
+  // Catch mobile redirect results
+  getRedirectResult(fbAuth).catch(e => {
+    console.error("Redirect Auth Error:", e);
+    showToast('فشل تسجيل الدخول عبر التحويل.');
+  });
+
   onAuthStateChanged(fbAuth,(user)=>{
     const nameEl=document.getElementById('authName');
 
@@ -788,7 +792,19 @@ function initFirebaseAuth(){
       btn.onclick=async ()=>{
         try {
           const provider = new GoogleAuthProvider();
-          await signInWithPopup(fbAuth, provider);
+          // Forces account selection, fixing stuck/cached login loops on phones
+          provider.setCustomParameters({ prompt: 'select_account' }); 
+          
+          // Detect if user is on mobile
+          const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
+          
+          if(isMobile) {
+            // Use Redirect for mobile to bypass Safari popup blockers
+            await signInWithRedirect(fbAuth, provider);
+          } else {
+            // Use Popup for Desktop to bypass tracking blockers
+            await signInWithPopup(fbAuth, provider);
+          }
         } catch(e) { 
           console.error("Auth Error:", e);
           showToast('حدث خطأ أو تم إلغاء تسجيل الدخول'); 
