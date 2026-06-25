@@ -83,7 +83,7 @@ body{font-family:'Cairo',sans-serif;background:var(--bg);color:var(--tx);directi
 .altbtn:focus-visible{outline:2px solid var(--ac);outline-offset:1px}
 .altlist{display:none;margin-top:6px;padding:8px;background:rgba(0,0,0,.2);border-radius:6px;border:1px solid var(--br)}
 .altlist.open{display:block}
-.altitem{font-size:.7rem;color:var(--so);padding:3px 0;display:flex;gap:6px}
+.altitem{font-size:.7rem;color:var(--so);padding:3px 0;display:flex;gap:6px;cursor:pointer}
 .altitem::before{content:'←';color:var(--ac)}
 .cbtn{flex-shrink:0;padding:6px 10px;background:rgba(16,185,129,.1);border:1px solid rgba(16,185,129,.4);border-radius:8px;cursor:pointer;font-family:'Cairo',sans-serif;font-size:.73rem;font-weight:700;color:var(--gr);transition:all .2s;display:flex;flex-direction:column;align-items:center;gap:1px}
 .cbtn:hover{background:rgba(16,185,129,.2)}
@@ -106,6 +106,7 @@ input:focus-visible, button:focus-visible{outline:2px solid var(--ac);outline-of
   <div style="width:40px;height:40px;border:3px solid #1e2d45;border-top-color:#3b82f6;border-radius:50%;animation:spin .8s linear infinite"></div>
   <span style="color:#64748b;font-family:Cairo,sans-serif;font-size:.9rem">جاري تحميل جدول عبدالله...</span>
 </div>
+
 <main id="app" style="display:none">
   <div id="sbar">
     <div class="st"><div class="sv" id="sv1">0</div><div class="sl">🔥 استريك</div></div>
@@ -131,7 +132,7 @@ input:focus-visible, button:focus-visible{outline:2px solid var(--ac);outline-of
 // ===== Firebase (kept, but app works fully local even if sign-in fails) =====
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
 import { getAuth, GoogleAuthProvider, signInWithPopup, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
-import { getFirestore, doc, setDoc, getDoc, onSnapshot } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
+import { getFirestore, doc, setDoc, getDoc } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
 
 const firebaseConfig = {
   apiKey: "AIzaSyDevk9uUTTiXaNKA5UrGN7KrbCtWgqAnYk",
@@ -281,7 +282,6 @@ const PMETA={Fajr:{ar:'الفجر',ic:'🌙',pts:15},Dhuhr:{ar:'الظهر',ic:'
 const FALLBK={Fajr:'03:13',Sunrise:'04:48',Dhuhr:'11:49',Asr:'15:23',Maghrib:'18:50',Isha:'20:23'};
 let PRYT={...FALLBK};
 
-// PM-only free time (no pre-08:00)
 const FREE_TIME={
   0:[{t:'6:00 م',d:'وقت حر'}],
   1:[{t:'6:00 م',d:'وقت حر'}],
@@ -386,7 +386,6 @@ let SELECTED_ALTS={};
 let WEEKLY_REPORT=[];
 
 function updateDailyRefreshIfNeeded(){
-  // streak reset logic: only if last full day is not yesterday
   if(STATS.lc===TODAY) return;
   const yesterday=dateOff(-1);
   if(STATS.lf && STATS.lf!==TODAY && STATS.lf!==yesterday){
@@ -413,6 +412,16 @@ async function localSave(){
   await sSet(LS.done(TODAY),DONE);
   await sSet(LS.alts(TODAY),SELECTED_ALTS);
   await sSet(LS.weekly(TODAY),WEEKLY_REPORT);
+
+  const user = fbAuth.currentUser;
+  if(user){
+    try{
+      await setDoc(doc(fbDb, "users", user.uid), { stats: STATS });
+      await setDoc(doc(fbDb, `users/${user.uid}/days`, TODAY), DONE);
+    }catch(e){
+      console.warn("Cloud backup failed", e);
+    }
+  }
 }
 
 // ===== UI rendering =====
@@ -420,7 +429,7 @@ function getTaskDisplayDesc(task){
   const id=task[0];
   const chosen=SELECTED_ALTS[id];
   const desc=task[5];
-  const alts=task[8];
+  const alts=task[7];
   if(alts && chosen && alts.includes(chosen)) return chosen;
   return desc;
 }
@@ -465,7 +474,7 @@ function renderCard(task,isToday){
       `<div class="altlist" id="al-${id}">${alts.map(a=>{
         const selected=SELECTED_ALTS[id]===a;
         const style=selected?' style="color:var(--gr)"':'';
-        return `<div class="altitem" role="button" tabindex="0" data-action="pickalt" data-id="${id}" data-alt="${String(a).replace(/"/g,'"')}"${style}>${a}</div>`;
+        return `<div class="altitem" role="button" tabindex="0" data-action="pickalt" data-id="${id}" data-alt="${String(a).replace(/"/g,'&quot;')}">${a}</div>`;
       }).join('')}</div>`
     : '';
 
@@ -568,10 +577,6 @@ function renderPanelsForAllDays(){
   document.getElementById('panels').innerHTML=[0,1,2,3,4,5,6].map(renderPanel).join('');
 }
 
-function maybeHandleWeekly(){
-  // weekly report stored locally already; kept for extension
-}
-
 function completeStreakIfDayDone(){
   const req=getReqTasks(todayJD());
   const isAllDone=req.every(t=>DONE[t[0]]);
@@ -596,7 +601,6 @@ async function onConfirm(task, pts, rect){
   }
   DONE[task[0]]=true;
   STATS.pts+=pts;
-  maybeHandleWeekly();
   completeStreakIfDayDone();
   await saveAndRefresh();
   floatPts(rect.left+rect.width/2-20, rect.top-10, pts);
@@ -611,7 +615,6 @@ async function onQada(task, pts, rect){
   DONE[task[0]]=true;
   STATS.pts+=half;
   WEEKLY_REPORT.push({t:new Date().toISOString(),taskId:task[0],day:TODAY,points:half,label:task[4]});
-  maybeHandleWeekly();
   completeStreakIfDayDone();
   await saveAndRefresh();
   floatPts(rect.left+rect.width/2-20, rect.top-10, half);
@@ -654,173 +657,100 @@ function startNextPrayerCountdown(timings){
       {name:'المغرب',time:timings.Maghrib},
       {name:'العشاء',time:timings.Isha}
     ];
-
-    let nextPrayerName='الفجر';
-    let nextPrayerTime=timings.Fajr;
-    let found=false;
-
-    for(const p of prayerKeys){
-      if(currentMinutes<parseToMinutes(p.time)){
-        nextPrayerName=p.name;
-        nextPrayerTime=p.time;
-        found=true;
-        break;
-      }
-    }
-
-    if(!found){
-      nextPrayerName='الفجر';
-      nextPrayerTime=timings.Fajr;
-    }
-
-    const targetMinutes=parseToMinutes(nextPrayerTime);
-    let diffMinutes=targetMinutes-currentMinutes;
-    if(diffMinutes<0) diffMinutes+=24*60;
-
-    const hoursLeft=Math.floor(diffMinutes/60);
-    const minsLeft=diffMinutes%60;
-    const secsLeft=59-now.getSeconds();
-
-    const countdownStr=`${hoursLeft}:${String(minsLeft).padStart(2,'0')}:${String(secsLeft).padStart(2,'0')}`;
-
-    const setIf=(id,val)=>{const el=document.getElementById(id);if(el) el.innerText=val||''};
-    setIf('next-prayer-title',`المتبقي لأذان ${nextPrayerName}`);
-    setIf('next-prayer-countdown',countdownStr);
-  },1000);
+  },60000);
 }
 
-// ===== Auth UI =====
-function initFirebaseAuth(){
-  const btn=document.getElementById('btn-signin');
-  btn.onclick=async ()=>{
-    try{
-      const provider=new GoogleAuthProvider();
-      await signInWithPopup(fbAuth,provider);
-    }catch(e){
-      showToast(e?.message||'فشل تسجيل الدخول');
+// ===== Event Listeners & Interaction =====
+document.addEventListener('click', async (e)=>{
+  const btn = e.target.closest('button, .altitem');
+  if(!btn) return;
+
+  const act = btn.getAttribute('data-action');
+  const id = btn.getAttribute('data-id');
+  const pts = parseInt(btn.getAttribute('data-pts')||'0', 10);
+
+  if(act === 'confirm'){
+    const rect = btn.getBoundingClientRect();
+    const task = getAllTasks(todayJD()).find(t => t[0] === id);
+    if(task) await onConfirm(task, pts, rect);
+  } else if(act === 'qada'){
+    const rect = btn.getBoundingClientRect();
+    const task = getAllTasks(todayJD()).find(t => t[0] === id);
+    if(task) await onQada(task, pts, rect);
+  } else if(act === 'alts'){
+    toggleAlts(id);
+  } else if(act === 'pickalt'){
+    const altText = btn.getAttribute('data-alt');
+    SELECTED_ALTS[id] = altText;
+    await saveAndRefresh();
+  } else if(btn.id === 'btn-signin'){
+    const provider = new GoogleAuthProvider();
+    try {
+      await signInWithPopup(fbAuth, provider);
+    } catch(err) {
+      console.error("Sign-in error:", err);
+      showToast("فشل تسجيل الدخول");
     }
-  };
+  } else if(btn.id === 'btn-signout'){
+    await fbAuth.signOut();
+    window.location.reload();
+  }
+});
 
-  onAuthStateChanged(fbAuth,(user)=>{
-    const nameEl=document.getElementById('authName');
-    if(user){
-      nameEl.textContent=user.displayName||user.email||'';
-      btn.textContent='خروج';
-      btn.onclick=()=>{
-        try{if(window.__sc_unsub) window.__sc_unsub();}catch{}
-        window.__sc_unsub=null;
-
-        fbAuth.signOut().then(()=>{
-          Object.keys(localStorage).forEach(k=>{if(k.startsWith('sc:'))localStorage.removeItem(k);});
-          STATS={cur:0,best:0,pts:0,lc:null,lf:null};
-          DONE={};
-          SELECTED_ALTS={};
-          document.getElementById('sv1').textContent='0';
-          document.getElementById('sv2').textContent='0';
-          document.getElementById('sv3').textContent='0';
-          document.getElementById('pfill').style.width='0%';
-          document.getElementById('ptxt').textContent='٠/٠ مهمة';
-          document.getElementById('ppts').textContent='٠ نقطة اليوم';
-          renderPanelsForAllDays();
-          switchDay(todayJD());
-          showToast('تم تسجيل الخروج');
-        });
-      };
-    } else {
-      nameEl.textContent='';
-      btn.textContent='تسجيل دخول';
-      btn.onclick=async ()=>{
-        const provider=new GoogleAuthProvider();
-        await signInWithPopup(fbAuth,provider);
-      };
-    }
-  });
-}
-
-// ===== Init =====
-async function init(){
-  checkStorageAvailable();
-
+// ===== Application Bootstrapper =====
+async function initApp(){
+  await localLoad();
+  updateDailyRefreshIfNeeded();
+  await fetchPrayers();
+  
   renderTabs();
   renderPanelsForAllDays();
   switchDay(todayJD());
 
-  await localLoad();
-  updateDailyRefreshIfNeeded();
-  await localSave();
+  // Safe removal of the layout block loading curtain
+  document.getElementById('ld').style.display = 'none';
+  document.getElementById('app').style.display = 'block';
+}
 
-  // re-render after load
-  renderPanelsForAllDays();
-  switchDay(todayJD());
-  updateUI();
+// ===== Firebase Authentication Observer (Guards against Race Conditions) =====
+onAuthStateChanged(fbAuth, async (user) => {
+  const authName = document.getElementById('authName');
+  const authBtn = document.getElementById('authBtn');
+  if (!authName || !authBtn) return;
 
-  // delegated click handlers (no inline onclick)
-  document.getElementById('panels').addEventListener('click',async (ev)=>{
-    const el=ev.target.closest('[data-action]');
-    if(!el) return;
-
-    const action=el.dataset.action;
-    const id=el.dataset.id;
-    const pts=parseInt(el.dataset.pts||'0',10);
-
-    const jd=todayJD();
-    const all=getAllTasks(jd);
-    const task=all.find(t=>t[0]===id);
-    if(action==='alts'){
-      toggleAlts(id);
-      return;
-    }
-
-    if(action==='pickalt'){
-      const alt=el.dataset.alt;
-      if(!alt) return;
-      SELECTED_ALTS[id]=alt;
-      await localSave();
+  if (user) {
+    authName.textContent = user.displayName || 'عبدالله';
+    authBtn.innerHTML = `<button class="altbtn" id="btn-signout" style="color:var(--rd);border-color:rgba(239,68,68,0.2)">خروج</button>`;
+    
+    // Cloud sync pulls safely down here inside the lifecycle wrapper loop
+    try {
+      const docSnap = await getDoc(doc(fbDb, "users", user.uid));
+      if (docSnap.exists()) {
+        const cloudData = docSnap.data();
+        if (cloudData.stats) STATS = cloudData.stats;
+      }
+      const daySnap = await getDoc(doc(fbDb, `users/${user.uid}/days`, TODAY));
+      if (daySnap.exists()) {
+        DONE = daySnap.data();
+      }
+      updateDailyRefreshIfNeeded();
       renderPanelsForAllDays();
-      updateUI();
-      return;
+      switchDay(todayJD());
+    } catch (e) {
+      console.warn("Cloud pull sync bypass:", e);
     }
-
-    if(!task) return;
-
-    if(action==='confirm'){
-      const rect=ev.target.closest('[data-action]')?.getBoundingClientRect()||{left:window.innerWidth/2,top:200,width:0};
-      await onConfirm(task, pts, rect);
-      return;
-    }
-
-    if(action==='qada'){
-      const rect2=ev.target.closest('[data-action]')?.getBoundingClientRect()||{left:window.innerWidth/2,top:200,width:0};
-      await onQada(task, pts, rect2);
-      return;
-    }
-  });
-
-  // start prayer timings in background
-  fetchPrayers().then(()=>{
-    renderPanelsForAllDays();
-    switchDay(todayJD());
-    updateUI();
-  });
-
-  initFirebaseAuth();
-
-  // UI is always visible
-}
-
-function checkStorageAvailable(){
-  try{
-    const k='__sc_test__';
-    localStorage.setItem(k,'1');
-    localStorage.removeItem(k);
-    return true;
-  }catch{
-    showToast('تحذير: تخزين المتصفح غير متاح');
-    return false;
+  } else {
+    authName.textContent = '';
+    authBtn.innerHTML = `<button class="altbtn" id="btn-signin">تسجيل دخول</button>`;
   }
-}
+});
 
-window.addEventListener('DOMContentLoaded',()=>{init().catch(e=>{console.error(e);showToast('فشل بدء التطبيق')})});
+// Fire up app initialization handler
+initApp().catch(err => {
+  console.error("App boot failed:", err);
+  document.getElementById('ld').style.display = 'none';
+  document.getElementById('app').style.display = 'block';
+});
 </script>
 </body>
-</html> 
+</html>
