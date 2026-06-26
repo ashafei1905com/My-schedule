@@ -806,26 +806,83 @@ async function saveAndRefresh(){
 }
 
 // ===== Prayer timings =====
-async function fetchPrayers(){
-  try{
-    const res=await fetch('https://api.aladhan.com/v1/timingsByCity?city=Kuwait City&country=Kuwait&method=4');
-    const data=await res.json();
-    if(data&&data.code===200){
-      const t=data.data.timings;
-      PRYT={Fajr:t.Fajr,Sunrise:t.Sunrise,Dhuhr:t.Dhuhr,Asr:t.Asr,Maghrib:t.Maghrib,Isha:t.Isha};
-    }else throw new Error('bad response');
-  }catch(e){
-    console.warn('Prayer API failed, using fallback',e);
-    PRYT={Fajr:'03:13',Sunrise:'04:48',Dhuhr:'11:49',Asr:'15:23',Maghrib:'18:50',Isha:'20:23'};
+let PRAYER_GEO = { status: 'unknown', lat: null, lng: null, reason: '' };
+
+function requestLocationPermissionAndGetCoords() {
+  return new Promise((resolve) => {
+    if (!('geolocation' in navigator)) {
+      PRAYER_GEO = { status: 'denied', lat: null, lng: null, reason: 'Geolocation not supported' };
+      return resolve(null);
+    }
+
+    // Permission request flow
+    // (browser will show its own prompt; this explains the why)
+    const explain = 'نحتاج لموقعك التقريبي لحساب أوقات الصلاة بدقة. يمكنك رفض الطلب وسيتم استخدام Salmiya, Kuwait كافتراضي.';
+    // eslint-disable-next-line no-alert
+    const proceed = window.confirm(explain);
+    if (!proceed) {
+      PRAYER_GEO = { status: 'denied', lat: null, lng: null, reason: 'User dismissed permission explanation' };
+      return resolve(null);
+    }
+
+    navigator.geolocation.getCurrentPosition(
+      (pos) => {
+        const lat = pos.coords.latitude;
+        const lng = pos.coords.longitude;
+        PRAYER_GEO = { status: 'granted', lat, lng, reason: '' };
+        resolve({ lat, lng });
+      },
+      (err) => {
+        PRAYER_GEO = { status: 'denied', lat: null, lng: null, reason: String(err && err.message ? err.message : err) };
+        resolve(null);
+      },
+      { enableHighAccuracy: false, timeout: 9000, maximumAge: 10 * 60 * 1000 }
+    );
+  });
+}
+
+async function fetchPrayers() {
+  // Kuwait Method 11 as requested
+  const FALLBACK = { Fajr: '03:13', Sunrise: '04:48', Dhuhr: '11:49', Asr: '15:23', Maghrib: '18:50', Isha: '20:23' };
+
+  try {
+    const coords = await requestLocationPermissionAndGetCoords();
+
+    let url = '';
+    if (!coords) {
+      // Default location
+      url = 'https://api.aladhan.com/v1/timingsByCity?city=Salmiya&country=Kuwait&method=11';
+    } else {
+      const { lat, lng } = coords;
+      // Aladhan: timings endpoint supports lat/lng + method
+      // https://aladhan.com/prayer-times-api#EndPoint-1
+      url = `https://api.aladhan.com/v1/timings?latitude=${lat}&longitude=${lng}&method=11&month=1&year=2000`;
+      // We’ll ignore month/year by using today; safer approach is to omit month/year.
+      url = `https://api.aladhan.com/v1/timings?latitude=${lat}&longitude=${lng}&method=11`;
+    }
+
+    const res = await fetch(url);
+    const data = await res.json();
+    if (data && data.code === 200) {
+      const t = data.data.timings;
+      PRYT = { Fajr: t.Fajr, Sunrise: t.Sunrise, Dhuhr: t.Dhuhr, Asr: t.Asr, Maghrib: t.Maghrib, Isha: t.Isha };
+    } else {
+      throw new Error('bad response');
+    }
+  } catch (e) {
+    console.warn('Prayer API failed, using fallback', e);
+    PRYT = FALLBACK;
   }
-  startNextPrayerCountdown(PRYT);
+
+  startNextPrayerCountdown();
   return true;
 }
 
-function startNextPrayerCountdown(){
-  if(window.prayerInterval) clearInterval(window.prayerInterval);
-  window.prayerInterval=setInterval(()=>{},60000);
+function startNextPrayerCountdown() {
+  if (window.prayerInterval) clearInterval(window.prayerInterval);
+  window.prayerInterval = setInterval(() => {}, 60000);
 }
+
 
 // ===== Event Listeners & Interaction =====
 document.addEventListener('click', async (e)=>{
@@ -862,12 +919,21 @@ document.addEventListener('click', async (e)=>{
     updateUI();
   } else if(btn.id === 'btn-signin'){
     const provider = new GoogleAuthProvider();
-    try{ await signInWithPopup(fbAuth, provider);}catch(err){
+    try{
+      await signInWithPopup(fbAuth, provider);
+    }catch(err){
+      // Firebase popup can be rejected/closed by user; handle gracefully.
+      const msg = (err && (err.code || err.message)) ? String(err.code || err.message) : '';
+      if(msg.includes('popup-closed-by-user')){
+        showToast('تم إغلاق نافذة تسجيل الدخول');
+        return;
+      }
       console.error('Sign-in error:', err);
       showToast('فشل تسجيل الدخول');
     }
   } else if(btn.id === 'btn-signout'){
     await fbAuth.signOut();
+    // UI will reset via onAuthStateChanged
     window.location.reload();
   }
 });
@@ -907,19 +973,61 @@ async function initApp(){
 }
 
 onAuthStateChanged(fbAuth, async (user)=>{
+  const appEl=document.getElementById('app');
+  if(!appEl) return;
+
+  // Always update auth UI first
   if(!user){
+    // SECURITY: clear local runtime state so no personal data is visible
+    try{localStorage.removeItem(LS.history); }catch{}
+    try{localStorage.removeItem(LS.stats); }catch{}
+    try{localStorage.removeItem(LS.lastReport); }catch{}
+
+    data.history={};
+    data.lastReportDate=null;
+    STATS={cur:0,best:0,pts:0,lc:null,lf:null};
+    DONE={};
+    SELECTED_ALTS={};
+    SELECTED_DATE=TODAY;
+    WEEKLY_REPORT=[];
+
+    // Hide progress UI while logged out
     document.getElementById('authName').textContent='';
     document.getElementById('authBtn').innerHTML='<button class="altbtn" id="btn-signin">تسجيل دخول</button>';
+    document.getElementById('pw').style.display='none';
+    document.getElementById('tabrow').innerHTML='';
+    document.getElementById('panels').innerHTML='';
+    document.getElementById('toast').style.display='none';
+    document.getElementById('hist-label').textContent='التاريخ: —';
+
+    // Show sign-in only
     return;
   }
-  document.getElementById('authName').textContent=user.displayName;
+
+  // Logged in
+  document.getElementById('authName').textContent=user.displayName || '';
   document.getElementById('authBtn').innerHTML='<button class="altbtn" id="btn-signout">تسجيل خروج</button>';
+  document.getElementById('pw').style.display='block';
+
   try{
     const docSnap=await getDoc(doc(fbDb,'users',user.uid));
     if(docSnap.exists() && docSnap.data().stats) STATS=docSnap.data().stats;
   }catch(e){ console.warn('stats fetch failed',e); }
-  saveAll();
+
+  // Load per-day from cloud by current selected date (history mode)
+  try{
+    const daySnap=await getDoc(doc(fbDb,`users/${user.uid}/days`, SELECTED_DATE));
+    if(daySnap.exists()) DONE=daySnap.data()||{};
+  }catch(e){ console.warn('day load failed',e); }
+
+  // Now load local history store (used for fast navigation)
+  await loadAll();
+  renderTabs();
+  renderPanelsForAllDays();
+  switchDay(getSelectedJD());
+  updateUI();
 });
+
 
 initApp();
 
