@@ -114,7 +114,7 @@ input:focus-visible, button:focus-visible{outline:2px solid var(--ac);outline-of
     <div class="st"><div class="sv" id="sv3">0</div><div class="sl">🏆 أعلى</div></div>
     <div class="st" id="authArea"><div class="sv" id="authName"></div><div class="sl" id="authBtn"><button class="altbtn" id="btn-signin">تسجيل دخول</button></div></div>
   </div>
-  <div class="pw">
+  <div class="pw" id="pw">
     <div class="pb">
       <div class="ph"><span id="ptxt">٠/٠ مهمة</span><span id="ppts">٠ نقطة</span></div>
       <div class="pbg"><div class="pfx" id="pfill" style="width:0"></div></div>
@@ -211,8 +211,8 @@ function getKuwaitJDFromISO(iso){
   return dt.getUTCDay();
 }
 
-function dateOff(n){
-  const d=new Date();
+function dateOff(n, baseStr){
+  const d = baseStr ? new Date(baseStr + 'T12:00:00') : new Date();
   d.setDate(d.getDate()+n);
   return `${d.getFullYear()}-${p2(d.getMonth()+1)}-${p2(d.getDate())}`;
 }
@@ -742,14 +742,11 @@ function updateUI(){
 }
 
 function switchDay(jd){
-  // change SELECTED_DATE based on desired weekday relative to TODAY using histIndex
-  // Keep same histIndex, only adjust displayed jd by moving date +/- until weekday matches.
   const targetJD=jd;
   const curISO=SELECTED_DATE;
   const curJD=getKuwaitJDFromISO(curISO);
-  const delta=(targetJD - curJD + 7)%7;
-  // choose nearest date in same hist direction: for simplicity move forward delta
-  SELECTED_DATE=dateOff(delta);
+  const delta=targetJD - curJD;
+  SELECTED_DATE=dateOff(delta, curISO);
 
   loadHistoryDay();
   renderTabs();
@@ -830,7 +827,6 @@ function requestLocationPermissionAndGetCoords() {
     }
 
     // Permission request flow
-    // (browser will show its own prompt; this explains the why)
     const explain = 'نحتاج لموقعك التقريبي لحساب أوقات الصلاة بدقة. يمكنك رفض الطلب وسيتم استخدام Salmiya, Kuwait كافتراضي.';
     // eslint-disable-next-line no-alert
     const proceed = window.confirm(explain);
@@ -918,7 +914,6 @@ document.addEventListener('click', async (e)=>{
   const id = btn.getAttribute('data-id');
   const pts = parseInt(btn.getAttribute('data-pts')||'0', 10);
 
-  // Fix Click Handlers: resolve tasks based on SELECTED_DATE (not todayJD)
   const jd=getSelectedJD();
 
   if(act === 'confirm'){
@@ -947,7 +942,6 @@ document.addEventListener('click', async (e)=>{
     try{
       await signInWithPopup(fbAuth, provider);
     }catch(err){
-      // Firebase popup can be rejected/closed by user; handle gracefully.
       const msg = (err && (err.code || err.message)) ? String(err.code || err.message) : '';
       if(msg.includes('popup-closed-by-user')){
         showToast('تم إغلاق نافذة تسجيل الدخول');
@@ -958,15 +952,13 @@ document.addEventListener('click', async (e)=>{
     }
   } else if(btn.id === 'btn-signout'){
     await fbAuth.signOut();
-    // UI will reset via onAuthStateChanged
     window.location.reload();
   }
 });
 
 // history navigation
 document.getElementById('btn-hist-prev').addEventListener('click', ()=>{
-  // older: move back 1 day
-  SELECTED_DATE=dateOff(-1);
+  SELECTED_DATE=dateOff(-1, SELECTED_DATE);
   histIndex--;
   loadHistoryDay();
   renderTabs();
@@ -975,8 +967,7 @@ document.getElementById('btn-hist-prev').addEventListener('click', ()=>{
 });
 
 document.getElementById('btn-hist-next').addEventListener('click', ()=>{
-  // newer: move forward 1 day
-  SELECTED_DATE=dateOff(1);
+  SELECTED_DATE=dateOff(1, SELECTED_DATE);
   histIndex++;
   loadHistoryDay();
   renderTabs();
@@ -1001,9 +992,7 @@ onAuthStateChanged(fbAuth, async (user)=>{
   const appEl=document.getElementById('app');
   if(!appEl) return;
 
-  // Always update auth UI first
   if(!user){
-    // SECURITY: clear local runtime state so no personal data is visible
     try{localStorage.removeItem(LS.history); }catch{}
     try{localStorage.removeItem(LS.stats); }catch{}
     try{localStorage.removeItem(LS.lastReport); }catch{}
@@ -1016,7 +1005,6 @@ onAuthStateChanged(fbAuth, async (user)=>{
     SELECTED_DATE=TODAY;
     WEEKLY_REPORT=[];
 
-  // Hide progress UI while logged out
     const authNameEl=document.getElementById('authName');
     if(authNameEl) authNameEl.textContent='';
     const authBtnEl=document.getElementById('authBtn');
@@ -1028,25 +1016,24 @@ onAuthStateChanged(fbAuth, async (user)=>{
     const panelsEl=document.getElementById('panels');
     if(panelsEl) panelsEl.innerHTML='';
     const toastEl=document.getElementById('toast');
-    if(toastEl) toastEl.style.display='none';
+    if(toastEl) toastEl.className='';
     const histLabelEl=document.getElementById('hist-label');
     if(histLabelEl) histLabelEl.textContent='التاريخ: —';
 
-    // Show sign-in only
     return;
   }
 
-  // Logged in
   document.getElementById('authName').textContent=user.displayName || '';
   document.getElementById('authBtn').innerHTML='<button class="altbtn" id="btn-signout">تسجيل خروج</button>';
-  document.getElementById('pw').style.display='block';
+  
+  const pwEl=document.getElementById('pw');
+  if(pwEl) pwEl.style.display='block';
 
   try{
     const docSnap=await getDoc(doc(fbDb,'users',user.uid));
     if(docSnap.exists() && docSnap.data().stats) STATS=docSnap.data().stats;
   }catch(e){ console.warn('stats fetch failed',e); }
 
-  // Load per-day tasks from Firestore for the selected date
   try{
     const daySnap=await getDoc(doc(fbDb, `users/${user.uid}/tasks/${SELECTED_DATE}`));
     if(daySnap.exists()){
@@ -1056,7 +1043,6 @@ onAuthStateChanged(fbAuth, async (user)=>{
     }
   }catch(e){ console.warn('day load failed',e); }
 
-  // Now load local history store (used for fast navigation)
   await loadAll();
   renderTabs();
   renderPanelsForAllDays();
