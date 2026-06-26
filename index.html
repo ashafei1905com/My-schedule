@@ -98,6 +98,18 @@ body{font-family:'Cairo',sans-serif;background:var(--bg);color:var(--tx);directi
 #toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%);background:var(--c2);border:2px solid var(--gr);border-radius:12px;padding:14px 20px;font-size:.85rem;font-weight:700;color:var(--gr);z-index:9999;display:none;text-align:center;box-shadow:0 4px 20px rgba(0,0,0,.5);max-width:300px;white-space:pre-line}
 #toast.show{display:block;animation:ti .3s ease}
 input:focus-visible, button:focus-visible{outline:2px solid var(--ac);outline-offset:2px}
+
+/* Custom Interactive Modal for Prayers styling matching theme */
+.modal-overlay{position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(10,14,26,.9);display:none;align-items:center;justify-content:center;z-index:10000;padding:20px}
+.modal-overlay.open{display:flex}
+.modal-box{background:var(--c2);border:2px solid var(--br);border-radius:16px;padding:24px;width:100%;max-width:380px;text-align:center;box-shadow:0 10px 30px rgba(0,0,0,.6)}
+.modal-title{font-size:1.1rem;font-weight:900;margin-bottom:16px;color:var(--tx)}
+.modal-btns{display:flex;gap:12px;justify-content:center}
+.modal-btn{padding:8px 24px;border:none;border-radius:8px;font-family:'Cairo',sans-serif;font-size:.9rem;font-weight:700;cursor:pointer;transition:background .2s}
+.modal-btn.y{background:var(--gr);color:#fff}
+.modal-btn.y:hover{background:#0d9488}
+.modal-btn.n{background:var(--rd);color:#fff}
+.modal-btn.n:hover{background:#dc2626}
 </style>
 </head>
 <body>
@@ -131,8 +143,18 @@ input:focus-visible, button:focus-visible{outline:2px solid var(--ac);outline-of
   </div>
   <div id="panels"></div>
 </main>
-<div id="toast"></div>
 
+<div id="prayerModal" class="modal-overlay">
+  <div class="modal-box">
+    <div id="prayerModalQuestion" class="modal-title">السؤال هنا</div>
+    <div class="modal-btns">
+      <button id="prayerModalYes" class="modal-btn y">نعم</button>
+      <button id="prayerModalNo" class="modal-btn n">لا</button>
+    </div>
+  </div>
+</div>
+
+<div id="toast"></div>
 
 <script type="module">
 'use strict';
@@ -174,14 +196,14 @@ function getKuwaitNowMinutes(){
   }
 }
 
-function getKuwaitDateParts(){
+function getKuwaitDateParts(targetDate = new Date()){
   try{
-    const parts=new Intl.DateTimeFormat('en-GB',{timeZone:KUWAIT_TZ,year:'numeric',month:'2-digit',day:'2-digit',weekday:'short'}).formatToParts(new Date());
+    const parts=new Intl.DateTimeFormat('en-GB',{timeZone:KUWAIT_TZ,year:'numeric',month:'2-digit',day:'2-digit',weekday:'short'}).formatToParts(targetDate);
     const out={};
     parts.forEach(p=>{ if(p.type!=='literal') out[p.type]=p.value; });
     return out;
   }catch{
-    const d=new Date();
+    const d=targetDate;
     return {year:`${d.getFullYear()}`,month:p2(d.getMonth()+1),day:p2(d.getDate()),weekday:['Sun','Mon','Tue','Wed','Thu','Fri','Sat'][d.getDay()]};
   }
 }
@@ -260,7 +282,6 @@ function isPrayerTask(task){
   return task[2]==='prayer';
 }
 
-// Determines if task is PENDING, EXPIRED (after 3 hours), or QADA (missed prayer time)
 function getTaskState(task) {
   const now = getKuwaitNowMinutes();
   const start = toMin(task[10] || task[1]);
@@ -317,7 +338,7 @@ const mkWd=(p,t='9:30 ص')=>[p+'-wd',t,'quran','📿','الورد اليومي',
 
 const mkDn=(p,t='8:00 م')=>[p+'-dn',t,'food','🧀','العشا','جبنة قريش ١٥٠جم + جبنة دمياطي ٨٠جم + خيار + طماطم',5,[
   'لبنة ٤ ملاعق + جبنة دمياطي مكعبين + خيار',
-  'بيضتين مسلوقتين + جبنة قريش ١٠٠جم'
+  'بيضتين مسلوقتين + جبنة قريش ١٠0جم'
 ],null,false];
 
 const mkSl=(p,t='11:00 م')=>[p+'-sl',t,'sleep','🌙','نوم على الوقت','نام على الوقت — النوم المنتظم ضروري للعضل والتخسيس',10,null,null,false];
@@ -437,8 +458,6 @@ let STATS={cur:0,best:0,pts:0,lc:null,lf:null};
 let DONE={};
 let SELECTED_ALTS={};
 let SELECTED_DATE = TODAY;
-let WEEKLY_REPORT=[];
-let histIndex = 0;
 
 let data={
   history:{},
@@ -476,16 +495,35 @@ async function loadAll(){
   loadHistoryDay();
 }
 
+async function fetchRemoteDayData() {
+  const user = fbAuth.currentUser;
+  if (!user) return;
+  try {
+    const taskDoc = await getDoc(doc(fbDb, `users/${user.uid}/tasks/${SELECTED_DATE}`));
+    if (taskDoc.exists()) {
+      const tData = taskDoc.data();
+      DONE = tData.done || {};
+      SELECTED_ALTS = tData.alts || {};
+      saveHistoryDay();
+    } else {
+      DONE = {};
+      SELECTED_ALTS = {};
+      saveHistoryDay();
+    }
+  } catch (e) {
+    console.warn('Cloud data fetch failed', e);
+  }
+}
+
 async function saveAll(){
-  await sSet(LS.stats,STATS);
   saveHistoryDay();
+  await sSet(LS.stats,STATS);
   await sSet(LS.history,data.history);
   await sSet(LS.lastReport,data.lastReportDate);
 
   const user = fbAuth.currentUser;
   if(!user) return;
 
-  // Firestore: store stats and per-date tasks under users/{uid}/tasks/{date}
   try{
     await setDoc(doc(fbDb, "users", user.uid), { stats: STATS, lastReportDate: data.lastReportDate }, { merge:true });
     await setDoc(doc(fbDb, `users/${user.uid}/tasks/${SELECTED_DATE}`), {
@@ -501,21 +539,7 @@ function showHistoryReportModal(text){
   alert(text);
 }
 
-function sumPtsFromTasks(tasks){
-  let pts=0;
-  for(const t of tasks){
-    const id=t[0];
-    const v=DONE[id];
-    if(v){
-      if(v==='qada') pts+=Math.floor(t[6]/2);
-      else pts+=t[6];
-    }
-  }
-  return pts;
-}
-
 function getWeekPreviousDaysISO(){
-  // previous 7 days excluding current SELECTED_DATE
   const out=[];
   for(let i=1;i<=7;i++){
     out.push(dateOff(-i));
@@ -523,22 +547,14 @@ function getWeekPreviousDaysISO(){
   return out;
 }
 
-function buildTasksForJD(jd){
-  return getAllTasks(jd);
-}
-
 async function weeklyObserverInit(){
-  // Runs on init. If current date is Sunday and no report generated for prev week.
   const todayJD_=todayJD();
-  const isSunday=todayJD_===0; // Sun=0
+  const isSunday=todayJD_===0; 
   if(!isSunday) return;
 
-  // We report previous week (last 7 days), and prevent duplicates via lastReportDate.
-  // Use lastReportDate as the start date of reported window = TODAY-7.
   const lastWindowStart=dateOff(-7);
   if(data.lastReportDate===lastWindowStart) return;
 
-  // aggregate done/qada from previous 7 days stored in data.history
   let totalPts=0;
   let totalQada=0;
   let lines=[];
@@ -548,7 +564,6 @@ async function weeklyObserverInit(){
     const dk=getDayKey(iso);
     const day=data.history[dk]||{};
     const dayDone=day.done||{};
-    // derive weekday
     const jd=getKuwaitJDFromISO(iso);
     const tasks=getReqTasks(jd);
 
@@ -576,12 +591,31 @@ async function weeklyObserverInit(){
 \n${lines.join('\n')}`;
   showHistoryReportModal(report);
 
-  // reset weekly progress: STATS.pts and current weekly progress.
   STATS.pts=0;
-
-  // update flag
   data.lastReportDate=lastWindowStart;
   await saveAll();
+}
+
+// ===== API Integration =====
+async function fetchPrayerTimesAPI(dateStr) {
+  try {
+    const res = await fetch(`https://api.aladhan.com/v1/timingsByCity/${dateStr}?city=Salmiya&country=Kuwait&method=4`);
+    const json = await res.json();
+    if (json && json.data && json.data.timings) {
+      const t = json.data.timings;
+      PRYT = {
+        Fajr: t.Fajr,
+        Sunrise: t.Sunrise,
+        Dhuhr: t.Dhuhr,
+        Asr: t.Asr,
+        Maghrib: t.Maghrib,
+        Isha: t.Isha
+      };
+    }
+  } catch (e) {
+    console.warn("Using fallback prayer times", e);
+    PRYT = {...FALLBK};
+  }
 }
 
 // ===== UI rendering =====
@@ -599,7 +633,7 @@ function toggleAlts(id){
 }
 
 function renderCard(task,isToday){
-  const [id,arTime,cat,ico,name,desc,pts,alts,hw,isEx]=task;
+  const [id,arTime,cat,ico,name,desc,pts,alts,hw,isEx] = task;
   const done=DONE[id]||false;
   const tState = getTaskState(task);
   const expired = (tState === 'EXPIRED');
@@ -628,10 +662,8 @@ function renderCard(task,isToday){
 
   if(!act){
     if(done){
-      // history view: show finished
       act=`<div class="cbtn done">✅</div>`;
     }else{
-      // history view: show missed if non-completed
       act=`<div class="cbtn exp">مفقود</div>`;
     }
   }
@@ -639,7 +671,6 @@ function renderCard(task,isToday){
   const altH = (alts && alts.length && !expired && !done && isToday)
     ? `<button class="altbtn" data-action="alts" data-id="${id}">🔄 بدائل (${alts.length})</button>`+
       `<div class="altlist" id="al-${id}">${alts.map(a=>{
-        const selected=SELECTED_ALTS[id]===a;
         return `<div class="altitem" role="button" tabindex="0" data-action="pickalt" data-id="${id}" data-alt="${String(a).replace(/"/g,'"')}">${a}</div>`;
       }).join('')}</div>`
     : '';
@@ -658,7 +689,9 @@ function renderPanel(jd){
   const d=SCHED[jd];
   if(!d) return '';
   const k=DKEYS[jd];
-  const isToday = jd===getSelectedJD();
+  
+  // FIX: Lock down view elements if target selected date isn't real today
+  const isToday = (SELECTED_DATE === TODAY) && (jd === todayJD());
 
   const gbLabel=d.gm
     ? `<div class="gbx ${d.gm==='upper'?'gbu':'gbl'}">${d.gm==='upper'?'Upper Body 💪':'Lower Body 🦵'}</div>`
@@ -673,7 +706,7 @@ function renderPanel(jd){
     if(pk==='Dhuhr' && jd===5){
       if(jumahTask){
         const pid=jumahTask[0];
-        const done=DONE[pid]&&isToday;
+        const done=DONE[pid];
         pillsArr.push(`<div class="ppill${done?' done':''}" id="pp-${pid}"><div class="pnam">${jumahTask[4]}</div><div class="ptim">${fmt24(jumahTask[1])}</div></div>`);
       }
       continue;
@@ -681,7 +714,7 @@ function renderPanel(jd){
     const pm=PMETA[pk];
     if(!pm) continue;
     const pid=`pr-${k}-${pk}`;
-    const done=DONE[pid]&&isToday;
+    const done=DONE[pid];
     pillsArr.push(`<div class="ppill${done?' done':''}" id="pp-${pid}"><div class="pnam">${pm.ar}</div><div class="ptim">${fmt24(PRYT[pk]||FALLBK[pk])}</div></div>`);
   }
 
@@ -695,13 +728,14 @@ function renderPanel(jd){
 
 function renderTabs(){
   const c=document.getElementById('tabrow');
+  if(!c) return;
   c.innerHTML='';
   const selJD=getSelectedJD();
   [0,1,2,3,4,5,6].forEach(j=>{
     const isT=j===selJD;
     const isG=!!SCHED[j]?.gm;
     const b=document.createElement('button');
-    b.className=`tab${isT?' tod':''}`;
+    b.className=`tab${isT?' act':''}${j===todayJD()?' tod':''}`;
     b.id=`tb-${DKEYS[j]}`;
     b.innerHTML=(isG?'<div class="gdot"></div>':'')+DSHORT[j];
     b.onclick=()=>switchDay(j);
@@ -731,9 +765,15 @@ function updateUI(){
   const ptxt=document.getElementById('ptxt');
   if(ptxt) ptxt.textContent=`${done.length}/${req.length} مهمة (${pct}%)`;
 
-  const todayPts=done.reduce((s,t)=>s+(DONE[t[0]]==='qada'?Math.floor(t[6]/2):t[6]),0);
+  const todayPts=done.reduce((s,t)=>{
+    const statusVal = DONE[t[0]];
+    if(statusVal === 'qada') return s + Math.floor(t[6]/2);
+    if(typeof statusVal === 'number') return s + statusVal; // Handles customized prayer scores
+    return s + t[6];
+  },0);
+  
   const ppts=document.getElementById('ppts');
-  if(ppts) ppts.textContent=`${todayPts} نقطة Today`;
+  if(ppts) ppts.textContent=`${todayPts} نقطة اليوم`;
   const pfill=document.getElementById('pfill');
   if(pfill) pfill.style.width=pct+'%';
 
@@ -742,316 +782,234 @@ function updateUI(){
 }
 
 function switchDay(jd){
-  const targetJD=jd;
-  const curISO=SELECTED_DATE;
-  const curJD=getKuwaitJDFromISO(curISO);
-  const delta=targetJD - curJD;
-  SELECTED_DATE=dateOff(delta, curISO);
-
-  loadHistoryDay();
-  renderTabs();
-  renderPanelsForAllDays();
-  document.querySelectorAll('.tab').forEach(b=>b.classList.remove('act'));
-  document.getElementById(`tb-${DKEYS[jd]}`)?.classList.add('act');
-  document.querySelectorAll('.pan').forEach(p=>p.classList.remove('act'));
-  document.getElementById(`pan-${DKEYS[jd]}`)?.classList.add('act');
-  updateUI();
+  document.querySelectorAll('.tab').forEach(t => t.classList.remove('act'));
+  document.querySelectorAll('.pan').forEach(p => p.classList.remove('act'));
+  
+  const key = DKEYS[jd];
+  document.getElementById(`tb-${key}`)?.classList.add('act');
+  document.getElementById(`pan-${key}`)?.classList.add('act');
 }
 
-function completeStreakIfDayDone(){
-  // Only update streak when viewing real today
-  if(!isSelectedRealToday()) return;
-  const jd=getSelectedJD();
-  const req=getReqTasks(jd);
-  const isAllDone=req.every(t=>DONE[t[0]]);
-  if(isAllDone && STATS.lf!==TODAY){
-    const yesterday=dateOff(-1);
-    if(STATS.lf===yesterday) STATS.cur=STATS.cur+1;
-    else STATS.cur=1;
-    STATS.lf=TODAY;
-    STATS.best=Math.max(STATS.best,STATS.cur);
-    showToast(`🎉 يوم كامل!\nاستريك: ${STATS.cur} يوم 🔥\nنقاطك: ${STATS.pts} ⭐`,4000);
-  }
-}
+// ===== Interactive Prayer Popups Logic =====
+let activePrayerFlow = null;
 
-async function onConfirm(task, pts, rect){
-  if(!isSelectedRealToday()) return;
-  if(DONE[task[0]]) return;
-  const tState = getTaskState(task);
-  if(tState === 'EXPIRED'){
-    showToast('فات الوقت المخصص لهذه المهمة');
-    return;
-  }
-  DONE[task[0]]=true;
-  STATS.pts+=pts;
-  completeStreakIfDayDone();
-  await saveAll();
-  renderPanelsForAllDays();
-  switchDay(getSelectedJD());
-  floatPts(rect.left+rect.width/2-20, rect.top-10, pts);
-}
+function startPrayerInteractiveFlow(taskId, taskName, basePts, eventX, eventY) {
+  let prayerKey = '';
+  if (taskId.includes('Fajr') || taskName.includes('الفجر')) prayerKey = 'Fajr';
+  else if (taskId.includes('Dhuhr') || taskName.includes('الظهر') || taskId.includes('fri-jm')) prayerKey = 'Dhuhr';
+  else if (taskId.includes('Asr') || taskName.includes('العصر')) prayerKey = 'Asr';
+  else if (taskId.includes('Maghrib') || taskName.includes('المغرب')) prayerKey = 'Maghrib';
+  else if (taskId.includes('Isha') || taskName.includes('العشاء')) prayerKey = 'Isha';
 
-async function onQada(task, pts, rect){
-  if(!isSelectedRealToday()) return;
-  if(DONE[task[0]]) return;
-  if(!isPrayerTask(task)) return;
-  const tState = getTaskState(task);
-  if(tState !== 'QADA') return;
-
-  const half=Math.floor(pts/2);
-  DONE[task[0]]='qada';
-  STATS.pts+=half;
-  WEEKLY_REPORT.push({t:new Date().toISOString(),taskId:task[0],day:SELECTED_DATE,points:half,label:task[4]});
-  completeStreakIfDayDone();
-  await saveAll();
-  renderPanelsForAllDays();
-  switchDay(getSelectedJD());
-  floatPts(rect.left+rect.width/2-20, rect.top-10, half);
-  showToast('تم قضاء الفريضة (50% نقاط)');
-}
-
-async function saveAndRefresh(){
-  await saveAll();
-  renderPanelsForAllDays();
-  updateUI();
-}
-
-// ===== Prayer timings =====
-let PRAYER_GEO = { status: 'unknown', lat: null, lng: null, reason: '' };
-
-function requestLocationPermissionAndGetCoords() {
-  return new Promise((resolve) => {
-    if (!('geolocation' in navigator)) {
-      PRAYER_GEO = { status: 'denied', lat: null, lng: null, reason: 'Geolocation not supported' };
-      return resolve(null);
-    }
-
-    // Permission request flow
-    const explain = 'نحتاج لموقعك التقريبي لحساب أوقات الصلاة بدقة. يمكنك رفض الطلب وسيتم استخدام Salmiya, Kuwait كافتراضي.';
-    // eslint-disable-next-line no-alert
-    const proceed = window.confirm(explain);
-    if (!proceed) {
-      PRAYER_GEO = { status: 'denied', lat: null, lng: null, reason: 'User dismissed permission explanation' };
-      return resolve(null);
-    }
-
-    navigator.geolocation.getCurrentPosition(
-      (pos) => {
-        const lat = pos.coords.latitude;
-        const lng = pos.coords.longitude;
-        PRAYER_GEO = { status: 'granted', lat, lng, reason: '' };
-        resolve({ lat, lng });
-      },
-      (err) => {
-        PRAYER_GEO = { status: 'denied', lat: null, lng: null, reason: String(err && err.message ? err.message : err) };
-        resolve(null);
-      },
-      { enableHighAccuracy: false, timeout: 9000, maximumAge: 10 * 60 * 1000 }
-    );
-  });
-}
-
-async function fetchPrayers() {
-  // Kuwait Method 11 as requested
-  const FALLBACK = { Fajr: '03:13', Sunrise: '04:48', Dhuhr: '11:49', Asr: '15:23', Maghrib: '18:50', Isha: '20:23' };
-
-  const COORDS_KEY = 'user_coords';
-  const parseCoords = (raw) => {
-    try {
-      const v = JSON.parse(raw);
-      if (v && typeof v.lat === 'number' && typeof v.lng === 'number') return v;
-    } catch {}
-    return null;
+  activePrayerFlow = {
+    id: taskId,
+    key: prayerKey,
+    name: taskName,
+    basePts: parseInt(basePts, 10),
+    totalEarned: parseInt(basePts, 10),
+    x: eventX,
+    y: eventY
   };
 
-  try {
-    let coords = parseCoords(localStorage.getItem(COORDS_KEY));
-
-    if (!coords) {
-      coords = await requestLocationPermissionAndGetCoords();
-      if (coords) {
-        try { localStorage.setItem(COORDS_KEY, JSON.stringify(coords)); } catch {}
-      }
-    }
-
-    let url = '';
-    if (!coords) {
-      url = 'https://api.aladhan.com/v1/timingsByCity?city=Salmiya&country=Kuwait&method=11';
-    } else {
-      const { lat, lng } = coords;
-      url = `https://api.aladhan.com/v1/timings?latitude=${lat}&longitude=${lng}&method=11`;
-    }
-
-    const res = await fetch(url);
-    const data = await res.json();
-    if (data && data.code === 200) {
-      const t = data.data.timings;
-      PRYT = { Fajr: t.Fajr, Sunrise: t.Sunrise, Dhuhr: t.Dhuhr, Asr: t.Asr, Maghrib: t.Maghrib, Isha: t.Isha };
-    } else {
-      throw new Error('bad response');
-    }
-  } catch (e) {
-    console.warn('Prayer API failed, using fallback', e);
-    PRYT = FALLBACK;
-  }
-
-  startNextPrayerCountdown();
-  return true;
+  showPrayerModalStep1();
 }
 
-function startNextPrayerCountdown() {
-  if (window.prayerInterval) clearInterval(window.prayerInterval);
-  window.prayerInterval = setInterval(() => {}, 60000);
+function showPrayerModalStep1() {
+  const modal = document.getElementById('prayerModal');
+  const question = document.getElementById('prayerModalQuestion');
+  question.textContent = `هل قلت أذكار الصلاة؟`;
+  modal.classList.add('open');
+
+  document.getElementById('prayerModalYes').onclick = () => {
+    activePrayerFlow.totalEarned += 5; // Extra points for Adhkar
+    goToPrayerModalStep2();
+  };
+  document.getElementById('prayerModalNo').onclick = () => {
+    goToPrayerModalStep2();
+  };
 }
 
-
-// ===== Event Listeners & Interaction =====
-document.addEventListener('click', async (e)=>{
-  const btn = e.target.closest('button, .altitem');
-  if(!btn) return;
-
-  const act = btn.getAttribute('data-action');
-  const id = btn.getAttribute('data-id');
-  const pts = parseInt(btn.getAttribute('data-pts')||'0', 10);
-
-  const jd=getSelectedJD();
-
-  if(act === 'confirm'){
-    const rect = btn.getBoundingClientRect();
-    const task = getAllTasks(jd).find(t => t[0] === id);
-    if(task) await onConfirm(task, pts, rect);
-  } else if(act === 'qada'){
-    const rect = btn.getBoundingClientRect();
-    const task = getAllTasks(jd).find(t => t[0] === id);
-    if(task) await onQada(task, pts, rect);
-  } else if(act === 'alts'){
-    toggleAlts(id);
-  } else if(act === 'pickalt'){
-    const task = getAllTasks(jd).find(t => t[0] === id);
-    if(task && getTaskState(task) === 'EXPIRED'){
-      showToast('لا يمكن اختيار بديل، فات وقت المهمة');
-      return;
-    }
-    const altText = btn.getAttribute('data-alt');
-    SELECTED_ALTS[id] = altText;
-    await saveAndRefresh();
-    renderPanelsForAllDays();
-    updateUI();
-  } else if(btn.id === 'btn-signin'){
-    const provider = new GoogleAuthProvider();
-    try{
-      await signInWithPopup(fbAuth, provider);
-    }catch(err){
-      const msg = (err && (err.code || err.message)) ? String(err.code || err.message) : '';
-      if(msg.includes('popup-closed-by-user')){
-        showToast('تم إغلاق نافذة تسجيل الدخول');
-        return;
-      }
-      console.error('Sign-in error:', err);
-      showToast('فشل تسجيل الدخول');
-    }
-  } else if(btn.id === 'btn-signout'){
-    await fbAuth.signOut();
-    window.location.reload();
-  }
-});
-
-// history navigation
-document.getElementById('btn-hist-prev').addEventListener('click', ()=>{
-  SELECTED_DATE=dateOff(-1, SELECTED_DATE);
-  histIndex--;
-  loadHistoryDay();
-  renderTabs();
-  renderPanelsForAllDays();
-  switchDay(getSelectedJD());
-});
-
-document.getElementById('btn-hist-next').addEventListener('click', ()=>{
-  SELECTED_DATE=dateOff(1, SELECTED_DATE);
-  histIndex++;
-  loadHistoryDay();
-  renderTabs();
-  renderPanelsForAllDays();
-  switchDay(getSelectedJD());
-});
-
-// ===== Application Bootstrapper =====
-async function initApp(){
-  await loadAll();
-  renderTabs();
-  renderPanelsForAllDays();
-  switchDay(getSelectedJD());
-  await fetchPrayers();
-  await weeklyObserverInit();
-  document.getElementById('ld').style.display='none';
-  document.getElementById('app').style.display='block';
-  updateUI();
-}
-
-onAuthStateChanged(fbAuth, async (user)=>{
-  const appEl=document.getElementById('app');
-  if(!appEl) return;
-
-  if(!user){
-    try{localStorage.removeItem(LS.history); }catch{}
-    try{localStorage.removeItem(LS.stats); }catch{}
-    try{localStorage.removeItem(LS.lastReport); }catch{}
-
-    data.history={};
-    data.lastReportDate=null;
-    STATS={cur:0,best:0,pts:0,lc:null,lf:null};
-    DONE={};
-    SELECTED_ALTS={};
-    SELECTED_DATE=TODAY;
-    WEEKLY_REPORT=[];
-
-    const authNameEl=document.getElementById('authName');
-    if(authNameEl) authNameEl.textContent='';
-    const authBtnEl=document.getElementById('authBtn');
-    if(authBtnEl) authBtnEl.innerHTML='<button class="altbtn" id="btn-signin">تسجيل دخول</button>';
-    const pwEl=document.getElementById('pw');
-    if(pwEl) pwEl.style.display='none';
-    const tabrowEl=document.getElementById('tabrow');
-    if(tabrowEl) tabrowEl.innerHTML='';
-    const panelsEl=document.getElementById('panels');
-    if(panelsEl) panelsEl.innerHTML='';
-    const toastEl=document.getElementById('toast');
-    if(toastEl) toastEl.className='';
-    const histLabelEl=document.getElementById('hist-label');
-    if(histLabelEl) histLabelEl.textContent='التاريخ: —';
-
+function goToPrayerModalStep2() {
+  const pk = activePrayerFlow.key;
+  if (pk === 'Asr' || !pk) {
+    // Asr has no Sunnah as requested, wrap up immediately
+    finishPrayerInteractiveFlow();
     return;
   }
 
-  document.getElementById('authName').textContent=user.displayName || '';
-  document.getElementById('authBtn').innerHTML='<button class="altbtn" id="btn-signout">تسجيل خروج</button>';
+  let sunnahDescription = '';
+  if (pk === 'Fajr') sunnahDescription = 'ركعتين قبل الفجر';
+  else if (pk === 'Dhuhr') sunnahDescription = '4 ركعات قبل و ركعتين بعد';
+  else if (pk === 'Maghrib') sunnahDescription = 'ركعتين بعد الصلاة';
+  else if (pk === 'Isha') sunnahDescription = 'ركعتين بعد الصلاة';
+
+  const question = document.getElementById('prayerModalQuestion');
+  question.textContent = `هل صليت سنة ${activePrayerFlow.name} (${sunnahDescription})؟`;
+
+  document.getElementById('prayerModalYes').onclick = () => {
+    activePrayerFlow.totalEarned += 5; // Extra points for Sunnah
+    finishPrayerInteractiveFlow();
+  };
+  document.getElementById('prayerModalNo').onclick = () => {
+    finishPrayerInteractiveFlow();
+  };
+}
+
+async function finishPrayerInteractiveFlow() {
+  document.getElementById('prayerModal').classList.remove('open');
+  const finalScore = activePrayerFlow.totalEarned;
   
-  const pwEl=document.getElementById('pw');
-  if(pwEl) pwEl.style.display='block';
+  DONE[activePrayerFlow.id] = finalScore; 
+  STATS.pts += finalScore;
+  if (STATS.pts > STATS.best) STATS.best = STATS.pts;
 
-  try{
-    const docSnap=await getDoc(doc(fbDb,'users',user.uid));
-    if(docSnap.exists() && docSnap.data().stats) STATS=docSnap.data().stats;
-  }catch(e){ console.warn('stats fetch failed',e); }
+  floatPts(activePrayerFlow.x, activePrayerFlow.y, finalScore);
+  await saveAll();
+  renderPanelsForAllDays();
+  updateUI();
+  switchDay(getSelectedJD());
+}
 
-  try{
-    const daySnap=await getDoc(doc(fbDb, `users/${user.uid}/tasks/${SELECTED_DATE}`));
-    if(daySnap.exists()){
-      const v=daySnap.data()||{};
-      DONE=v.done||{};
-      SELECTED_ALTS=v.alts||{};
+// ===== Global Actions Event Listener =====
+document.body.addEventListener('click', async (e) => {
+  const action = e.target.getAttribute('data-action');
+  const id = e.target.getAttribute('data-id');
+  const ptsAttr = e.target.getAttribute('data-pts');
+
+  if (e.target.id === 'btn-signin') {
+    const provider = new GoogleAuthProvider();
+    try {
+      await signInWithPopup(fbAuth, provider);
+    } catch (err) {
+      showToast("فشل تسجيل الدخول");
     }
-  }catch(e){ console.warn('day load failed',e); }
+    return;
+  }
 
-  await loadAll();
+  if (e.target.id === 'btn-signout') {
+    await fbAuth.signOut();
+    STATS = {cur:0,best:0,pts:0,lc:null,lf:null};
+    DONE = {};
+    SELECTED_ALTS = {};
+    await loadAll();
+    renderTabs();
+    renderPanelsForAllDays();
+    switchDay(getSelectedJD());
+    updateUI();
+    return;
+  }
+
+  if (e.target.id === 'btn-hist-prev') {
+    SELECTED_DATE = dateOff(-1, SELECTED_DATE);
+    loadHistoryDay();
+    document.getElementById('ld').style.display = 'flex';
+    document.getElementById('app').style.display = 'none';
+    await fetchRemoteDayData();
+    await fetchPrayerTimesAPI(SELECTED_DATE);
+    document.getElementById('ld').style.display = 'none';
+    document.getElementById('app').style.display = 'block';
+    renderTabs();
+    renderPanelsForAllDays();
+    switchDay(getSelectedJD());
+    updateUI();
+    return;
+  }
+
+  if (e.target.id === 'btn-hist-next') {
+    SELECTED_DATE = dateOff(1, SELECTED_DATE);
+    loadHistoryDay();
+    document.getElementById('ld').style.display = 'flex';
+    document.getElementById('app').style.display = 'none';
+    await fetchRemoteDayData();
+    await fetchPrayerTimesAPI(SELECTED_DATE);
+    document.getElementById('ld').style.display = 'none';
+    document.getElementById('app').style.display = 'block';
+    renderTabs();
+    renderPanelsForAllDays();
+    switchDay(getSelectedJD());
+    updateUI();
+    return;
+  }
+
+  if (!action) return;
+
+  if (action === 'confirm' || action === 'qada') {
+    const pts = parseInt(ptsAttr || '0', 10);
+    const isPrayer = id.startsWith('pr-') || id.includes('-jm');
+
+    if (isPrayer && action === 'confirm') {
+      const cardTitle = e.target.closest('.tc').querySelector('.tcname').textContent;
+      startPrayerInteractiveFlow(id, cardTitle, pts, e.clientX, e.clientY);
+      return;
+    }
+
+    DONE[id] = action === 'qada' ? 'qada' : true;
+    const reward = action === 'qada' ? Math.floor(pts / 2) : pts;
+
+    STATS.pts += reward;
+    if (STATS.pts > STATS.best) STATS.best = STATS.pts;
+
+    floatPts(e.clientX, e.clientY, reward);
+    await saveAll();
+    renderPanelsForAllDays();
+    updateUI();
+    switchDay(getSelectedJD());
+  }
+
+  if (action === 'alts') {
+    toggleAlts(id);
+  }
+
+  if (action === 'pickalt') {
+    const chosenAltText = e.target.getAttribute('data-alt');
+    SELECTED_ALTS[id] = chosenAltText;
+    await saveAll();
+    renderPanelsForAllDays();
+    switchDay(getSelectedJD());
+  }
+});
+
+// ===== Initialization Logic =====
+onAuthStateChanged(fbAuth, async (user) => {
+  if (user) {
+    document.getElementById('authName').textContent = user.displayName || 'عبدالله';
+    document.getElementById('authBtn').innerHTML = `<button class="altbtn" id="btn-signout">تسجيل خروج</button>`;
+    
+    try {
+      const userDoc = await getDoc(doc(fbDb, "users", user.uid));
+      if (userDoc.exists()) {
+        const uData = userDoc.data();
+        if (uData.stats) STATS = uData.stats;
+        if (uData.lastReportDate) data.lastReportDate = uData.lastReportDate;
+      }
+      
+      const taskDoc = await getDoc(doc(fbDb, `users/${user.uid}/tasks/${SELECTED_DATE}`));
+      if (taskDoc.exists()) {
+        const tData = taskDoc.data();
+        DONE = tData.done || {};
+        SELECTED_ALTS = tData.alts || {};
+        saveHistoryDay();
+      }
+    } catch (e) {
+      console.warn("Cloud data loading skipped/failed", e);
+    }
+  } else {
+    document.getElementById('authName').textContent = '';
+    document.getElementById('authBtn').innerHTML = `<button class="altbtn" id="btn-signin">تسجيل دخول</button>`;
+    await loadAll();
+  }
+
+  await fetchPrayerTimesAPI(SELECTED_DATE);
+  await weeklyObserverInit();
+  
   renderTabs();
   renderPanelsForAllDays();
   switchDay(getSelectedJD());
   updateUI();
+
+  document.getElementById('ld').style.display = 'none';
+  document.getElementById('app').style.display = 'block';
 });
-
-
-initApp();
 
 </script>
 </body>
