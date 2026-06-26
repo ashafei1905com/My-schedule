@@ -121,10 +121,18 @@ input:focus-visible, button:focus-visible{outline:2px solid var(--ac);outline-of
     </div>
     <div style="margin-top:8px;display:flex;gap:8px;align-items:center;flex-wrap:wrap"></div>
   </div>
-  <div class="tw"><div class="tabs" id="tabrow"></div></div>
+  <div class="tw">
+    <div class="tabs" id="tabrow"></div>
+  </div>
+  <div style="padding:0 16px 6px;display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+    <button class="altbtn" id="btn-hist-prev" type="button">← تاريخ أقدم</button>
+    <div class="ptsbdg" id="hist-label">التاريخ: —</div>
+    <button class="altbtn" id="btn-hist-next" type="button">تاريخ أحدث →</button>
+  </div>
   <div id="panels"></div>
 </main>
 <div id="toast"></div>
+
 
 <script type="module">
 'use strict';
@@ -193,6 +201,30 @@ function todayJD(){
 
 const TODAY=todayStr();
 
+function getKuwaitJDFromISO(iso){
+  const m = String(iso).match(/^(\d{4})-(\d{2})-(\d{2})$/);
+  if(!m) return todayJD();
+  const y = parseInt(m[1],10);
+  const mo = parseInt(m[2],10);
+  const d = parseInt(m[3],10);
+  const dt = new Date(Date.UTC(y, mo-1, d));
+  return dt.getUTCDay();
+}
+
+function dateOff(n){
+  const d=new Date();
+  d.setDate(d.getDate()+n);
+  return `${d.getFullYear()}-${p2(d.getMonth()+1)}-${p2(d.getDate())}`;
+}
+
+function getSelectedJD(){
+  return getKuwaitJDFromISO(SELECTED_DATE);
+}
+
+function isSelectedRealToday(){
+  return SELECTED_DATE===TODAY;
+}
+
 function cleanTimeStr(s){
   if(!s) return '';
   const m=String(s).match(/\d{1,2}:\d{2}/);
@@ -234,7 +266,7 @@ function getTaskState(task) {
   const start = toMin(task[10] || task[1]);
   
   if (isPrayerTask(task)) {
-    let end = start + 60; // safe fallback
+    let end = start + 60;
     const parts = task[0].split('-');
     if (parts.length >= 3) {
       const pk = parts[2];
@@ -242,16 +274,14 @@ function getTaskState(task) {
       else if(pk === 'Dhuhr') end = toMin(PRYT.Asr || FALLBK.Asr);
       else if(pk === 'Asr') end = toMin(PRYT.Maghrib || FALLBK.Maghrib);
       else if(pk === 'Maghrib') end = toMin(PRYT.Isha || FALLBK.Isha);
-      else if(pk === 'Isha') end = 24 * 60; // 11:59 PM
+      else if(pk === 'Isha') end = 24 * 60;
     }
-    // Handle Friday prayer
     if (task[0].includes('fri-jm')) {
       end = toMin(PRYT.Asr || FALLBK.Asr);
     }
     if (now > end) return 'QADA';
     return 'PENDING';
   } else {
-    // Normal tasks have exactly 3 hours (180 minutes) to be completed
     const end = start + 180;
     if (now > end) return 'EXPIRED';
     return 'PENDING';
@@ -375,11 +405,13 @@ const SCHED={
 
 function buildPTasks(jd){
   const k=DKEYS[jd];
-  return Object.entries(PMETA).filter(([pk])=>!(jd===5 && pk==='Dhuhr')).map(([pk,pm])=>{
-    const t24=PRYT[pk]||FALLBK[pk];
-    const desc=pk==='Fajr'?`${fmt24(t24)} · ارجع نام بعدها ✓`:`وقت الصلاة: ${fmt24(t24)}`;
-    return [`pr-${k}-${pk}`,fmt24(t24),'prayer',pm.ic,pm.ar,desc,pm.pts,null,null,false,t24];
-  });
+  return Object.entries(PMETA)
+    .filter(([pk])=>!(jd===5 && pk==='Dhuhr'))
+    .map(([pk,pm])=>{
+      const t24=PRYT[pk]||FALLBK[pk];
+      const desc=pk==='Fajr'?`${fmt24(t24)} · ارجع نام بعدها ✓`:`وقت الصلاة: ${fmt24(t24)}`;
+      return [`pr-${k}-${pk}`,fmt24(t24),'prayer',pm.ic,pm.ar,desc,pm.pts,null,null,false,t24];
+    });
 }
 
 function getAllTasks(jd){
@@ -393,60 +425,159 @@ function getReqTasks(jd){
   return [...buildPTasks(jd),...(SCHED[jd]?.ts||[])].filter(t=>!t[9] && t[6]>0);
 }
 
-// ===== Persistence =====
+// ===== History/ Persistence =====
 const LS={
+  key:'sc:data',
+  history:'sc:history',
   stats:'sc:stats',
-  done:(dt)=>`sc:day:${dt}:done`,
-  alts:(dt)=>`sc:day:${dt}:alts`,
-  qada:(dt)=>`sc:day:${dt}:qada`,
-  weekly:(dt)=>`sc:weekly:${dt}`
+  lastReport:'sc:lastReportDate'
 };
-
-async function sGet(k){try{const r=localStorage.getItem(k);return r?JSON.parse(r):null}catch{return null}}
-async function sSet(k,v){try{localStorage.setItem(k,JSON.stringify(v))}catch{}}
 
 let STATS={cur:0,best:0,pts:0,lc:null,lf:null};
 let DONE={};
 let SELECTED_ALTS={};
+let SELECTED_DATE = TODAY;
 let WEEKLY_REPORT=[];
+let histIndex = 0;
 
-function updateDailyRefreshIfNeeded(){
-  if(STATS.lc===TODAY) return;
-  const yesterday=dateOff(-1);
-  if(STATS.lf && STATS.lf!==TODAY && STATS.lf!==yesterday){
-    STATS.cur=0;
-  }
-  STATS.lc=TODAY;
+let data={
+  history:{},
+  lastReportDate:null
+};
+
+function getDayKey(iso){
+  return String(iso);
 }
 
-function dateOff(n){
-  const d=new Date();
-  d.setDate(d.getDate()+n);
-  return `${d.getFullYear()}-${p2(d.getMonth()+1)}-${p2(d.getDate())}`;
+function loadHistoryDay(){
+  const dk=getDayKey(SELECTED_DATE);
+  const day=data.history[dk]||{};
+  DONE=day.done||{};
+  SELECTED_ALTS=day.alts||{};
 }
 
-async function localLoad(){
+function saveHistoryDay(){
+  const dk=getDayKey(SELECTED_DATE);
+  if(!data.history) data.history={};
+  data.history[dk]=data.history[dk]||{};
+  data.history[dk].done=DONE;
+  data.history[dk].alts=SELECTED_ALTS;
+}
+
+async function sGet(k){try{const r=localStorage.getItem(k);return r?JSON.parse(r):null}catch{return null}}
+async function sSet(k,v){try{localStorage.setItem(k,JSON.stringify(v))}catch{}}
+
+async function loadAll(){
   STATS=(await sGet(LS.stats))||{cur:0,best:0,pts:0,lc:null,lf:null};
-  DONE=(await sGet(LS.done(TODAY)))||{};
-  SELECTED_ALTS=(await sGet(LS.alts(TODAY)))||{};
-  WEEKLY_REPORT=(await sGet(LS.weekly(TODAY)))||[];
+  const hd=await sGet(LS.history);
+  data.history=hd||{};
+  const lr=await sGet(LS.lastReport);
+  data.lastReportDate=lr||null;
+  loadHistoryDay();
 }
 
-async function localSave(){
+async function saveAll(){
   await sSet(LS.stats,STATS);
-  await sSet(LS.done(TODAY),DONE);
-  await sSet(LS.alts(TODAY),SELECTED_ALTS);
-  await sSet(LS.weekly(TODAY),WEEKLY_REPORT);
+  saveHistoryDay();
+  await sSet(LS.history,data.history);
+  await sSet(LS.lastReport,data.lastReportDate);
 
   const user = fbAuth.currentUser;
   if(user){
     try{
-      await setDoc(doc(fbDb, "users", user.uid), { stats: STATS });
-      await setDoc(doc(fbDb, `users/${user.uid}/days`, TODAY), DONE);
+      await setDoc(doc(fbDb, "users", user.uid), { stats: STATS, lastReportDate: data.lastReportDate });
+      await setDoc(doc(fbDb, `users/${user.uid}/days`, SELECTED_DATE), DONE);
     }catch(e){
-      console.warn("Cloud backup failed", e);
+      console.warn('Cloud backup failed',e);
     }
   }
+}
+
+function showHistoryReportModal(text){
+  alert(text);
+}
+
+function sumPtsFromTasks(tasks){
+  let pts=0;
+  for(const t of tasks){
+    const id=t[0];
+    const v=DONE[id];
+    if(v){
+      if(v==='qada') pts+=Math.floor(t[6]/2);
+      else pts+=t[6];
+    }
+  }
+  return pts;
+}
+
+function getWeekPreviousDaysISO(){
+  // previous 7 days excluding current SELECTED_DATE
+  const out=[];
+  for(let i=1;i<=7;i++){
+    out.push(dateOff(-i));
+  }
+  return out;
+}
+
+function buildTasksForJD(jd){
+  return getAllTasks(jd);
+}
+
+async function weeklyObserverInit(){
+  // Runs on init. If current date is Sunday and no report generated for prev week.
+  const todayJD_=todayJD();
+  const isSunday=todayJD_===0; // Sun=0
+  if(!isSunday) return;
+
+  // We report previous week (last 7 days), and prevent duplicates via lastReportDate.
+  // Use lastReportDate as the start date of reported window = TODAY-7.
+  const lastWindowStart=dateOff(-7);
+  if(data.lastReportDate===lastWindowStart) return;
+
+  // aggregate done/qada from previous 7 days stored in data.history
+  let totalPts=0;
+  let totalQada=0;
+  let lines=[];
+
+  const prevISOs=getWeekPreviousDaysISO();
+  for(const iso of prevISOs){
+    const dk=getDayKey(iso);
+    const day=data.history[dk]||{};
+    const dayDone=day.done||{};
+    // derive weekday
+    const jd=getKuwaitJDFromISO(iso);
+    const tasks=getReqTasks(jd);
+
+    let pts=0;
+    let qada=0;
+    for(const t of tasks){
+      const id=t[0];
+      const v=dayDone[id];
+      if(!v) continue;
+      if(v==='qada'){
+        qada++;
+        pts+=Math.floor(t[6]/2);
+      }else{
+        pts+=t[6];
+      }
+    }
+    totalPts+=pts;
+    totalQada+=qada;
+    lines.push(`${iso}: ${pts}⭐${qada?` (قضاء x${qada})`:''}`);
+  }
+
+  const report=`📊 تقرير أسبوع (آخر 7 أيام)
+المجموع: ${totalPts}⭐
+القضاء: ${totalQada} مهمة قضاء
+\n${lines.join('\n')}`;
+  showHistoryReportModal(report);
+
+  // reset weekly progress: STATS.pts and current weekly progress.
+  STATS.pts=0;
+
+  // update flag
+  data.lastReportDate=lastWindowStart;
+  await saveAll();
 }
 
 // ===== UI rendering =====
@@ -466,7 +597,6 @@ function toggleAlts(id){
 function renderCard(task,isToday){
   const [id,arTime,cat,ico,name,desc,pts,alts,hw,isEx]=task;
   const done=DONE[id]||false;
-  
   const tState = getTaskState(task);
   const expired = (tState === 'EXPIRED');
 
@@ -493,16 +623,20 @@ function renderCard(task,isToday){
   }
 
   if(!act){
-    act=done?`<div class="cbtn done">✅</div>`:`<div class="ptsbdg">${pts}⭐</div>`;
+    if(done){
+      // history view: show finished
+      act=`<div class="cbtn done">✅</div>`;
+    }else{
+      // history view: show missed if non-completed
+      act=`<div class="cbtn exp">مفقود</div>`;
+    }
   }
 
-  // Hide alternatives completely if 3 hours have passed or it's already done
-  const altH = (alts && alts.length && !expired && !done)
+  const altH = (alts && alts.length && !expired && !done && isToday)
     ? `<button class="altbtn" data-action="alts" data-id="${id}">🔄 بدائل (${alts.length})</button>`+
       `<div class="altlist" id="al-${id}">${alts.map(a=>{
         const selected=SELECTED_ALTS[id]===a;
-        const style=selected?' style="color:var(--gr)"':'';
-        return `<div class="altitem" role="button" tabindex="0" data-action="pickalt" data-id="${id}" data-alt="${String(a).replace(/"/g,'&quot;')}">${a}</div>`;
+        return `<div class="altitem" role="button" tabindex="0" data-action="pickalt" data-id="${id}" data-alt="${String(a).replace(/"/g,'"')}">${a}</div>`;
       }).join('')}</div>`
     : '';
 
@@ -520,7 +654,7 @@ function renderPanel(jd){
   const d=SCHED[jd];
   if(!d) return '';
   const k=DKEYS[jd];
-  const isToday=jd===todayJD();
+  const isToday = jd===getSelectedJD();
 
   const gbLabel=d.gm
     ? `<div class="gbx ${d.gm==='upper'?'gbu':'gbl'}">${d.gm==='upper'?'Upper Body 💪':'Lower Body 🦵'}</div>`
@@ -548,7 +682,6 @@ function renderPanel(jd){
   }
 
   const tasks=getAllTasks(jd);
-
   return `<div class="pan" id="pan-${k}">
     <div class="dh"><div><div class="dhn">${d.n}</div><div class="dhm">فجر ${fmt24(PRYT.Fajr||FALLBK.Fajr)} ← صحيان ${d.wk} · نوم ${d.bd}</div></div>${gbLabel}</div>
     <div class="prow">${pillsArr.join('')}</div>
@@ -559,8 +692,9 @@ function renderPanel(jd){
 function renderTabs(){
   const c=document.getElementById('tabrow');
   c.innerHTML='';
+  const selJD=getSelectedJD();
   [0,1,2,3,4,5,6].forEach(j=>{
-    const isT=j===todayJD();
+    const isT=j===selJD;
     const isG=!!SCHED[j]?.gm;
     const b=document.createElement('button');
     b.className=`tab${isT?' tod':''}`;
@@ -571,50 +705,58 @@ function renderTabs(){
   });
 }
 
+function renderPanelsForAllDays(){
+  document.getElementById('panels').innerHTML=[0,1,2,3,4,5,6].map(renderPanel).join('');
+}
+
 function updateUI(){
-  const req=getReqTasks(todayJD());
+  const jd=getSelectedJD();
+  const req=getReqTasks(jd);
   const done=req.filter(t=>DONE[t[0]]);
+
   const pct=req.length?Math.round(done.length/req.length*100):0;
   document.getElementById('sv1').textContent=STATS.cur;
   document.getElementById('sv2').textContent=STATS.pts;
   document.getElementById('sv3').textContent=STATS.best;
   document.getElementById('ptxt').textContent=`${done.length}/${req.length} مهمة (${pct}%)`;
+
   const todayPts=done.reduce((s,t)=>s+(DONE[t[0]]==='qada'?Math.floor(t[6]/2):t[6]),0);
-  document.getElementById('ppts').textContent=`${todayPts} نقطة اليوم`;
+  document.getElementById('ppts').textContent=`${todayPts} نقطة Today`;
   document.getElementById('pfill').style.width=pct+'%';
+
+  document.getElementById('hist-label').textContent=`التاريخ: ${SELECTED_DATE}`;
 }
 
 function switchDay(jd){
+  // change SELECTED_DATE based on desired weekday relative to TODAY using histIndex
+  // Keep same histIndex, only adjust displayed jd by moving date +/- until weekday matches.
+  const targetJD=jd;
+  const curISO=SELECTED_DATE;
+  const curJD=getKuwaitJDFromISO(curISO);
+  const delta=(targetJD - curJD + 7)%7;
+  // choose nearest date in same hist direction: for simplicity move forward delta
+  SELECTED_DATE=dateOff(delta);
+
+  loadHistoryDay();
+  renderTabs();
+  renderPanelsForAllDays();
   document.querySelectorAll('.tab').forEach(b=>b.classList.remove('act'));
-  const tb=document.getElementById(`tb-${DKEYS[jd]}`);
-  if(tb){tb.classList.add('act');tb.scrollIntoView({behavior:'smooth',block:'nearest',inline:'center'})}
+  document.getElementById(`tb-${DKEYS[jd]}`)?.classList.add('act');
   document.querySelectorAll('.pan').forEach(p=>p.classList.remove('act'));
   document.getElementById(`pan-${DKEYS[jd]}`)?.classList.add('act');
   updateUI();
 }
 
-// ===== Task completion =====
-async function saveAndRefresh(){
-  await localSave();
-  renderPanelsForAllDays();
-  switchDay(todayJD());
-  updateUI();
-}
-
-function renderPanelsForAllDays(){
-  document.getElementById('panels').innerHTML=[0,1,2,3,4,5,6].map(renderPanel).join('');
-}
-
 function completeStreakIfDayDone(){
-  const req=getReqTasks(todayJD());
+  // Only update streak when viewing real today
+  if(!isSelectedRealToday()) return;
+  const jd=getSelectedJD();
+  const req=getReqTasks(jd);
   const isAllDone=req.every(t=>DONE[t[0]]);
   if(isAllDone && STATS.lf!==TODAY){
     const yesterday=dateOff(-1);
-    if(STATS.lf===yesterday){
-      STATS.cur=STATS.cur+1;
-    }else{
-      STATS.cur=1;
-    }
+    if(STATS.lf===yesterday) STATS.cur=STATS.cur+1;
+    else STATS.cur=1;
     STATS.lf=TODAY;
     STATS.best=Math.max(STATS.best,STATS.cur);
     showToast(`🎉 يوم كامل!\nاستريك: ${STATS.cur} يوم 🔥\nنقاطك: ${STATS.pts} ⭐`,4000);
@@ -622,6 +764,7 @@ function completeStreakIfDayDone(){
 }
 
 async function onConfirm(task, pts, rect){
+  if(!isSelectedRealToday()) return;
   if(DONE[task[0]]) return;
   const tState = getTaskState(task);
   if(tState === 'EXPIRED'){
@@ -631,11 +774,14 @@ async function onConfirm(task, pts, rect){
   DONE[task[0]]=true;
   STATS.pts+=pts;
   completeStreakIfDayDone();
-  await saveAndRefresh();
+  await saveAll();
+  renderPanelsForAllDays();
+  switchDay(getSelectedJD());
   floatPts(rect.left+rect.width/2-20, rect.top-10, pts);
 }
 
 async function onQada(task, pts, rect){
+  if(!isSelectedRealToday()) return;
   if(DONE[task[0]]) return;
   if(!isPrayerTask(task)) return;
   const tState = getTaskState(task);
@@ -644,11 +790,19 @@ async function onQada(task, pts, rect){
   const half=Math.floor(pts/2);
   DONE[task[0]]='qada';
   STATS.pts+=half;
-  WEEKLY_REPORT.push({t:new Date().toISOString(),taskId:task[0],day:TODAY,points:half,label:task[4]});
+  WEEKLY_REPORT.push({t:new Date().toISOString(),taskId:task[0],day:SELECTED_DATE,points:half,label:task[4]});
   completeStreakIfDayDone();
-  await saveAndRefresh();
+  await saveAll();
+  renderPanelsForAllDays();
+  switchDay(getSelectedJD());
   floatPts(rect.left+rect.width/2-20, rect.top-10, half);
   showToast('تم قضاء الفريضة (50% نقاط)');
+}
+
+async function saveAndRefresh(){
+  await saveAll();
+  renderPanelsForAllDays();
+  updateUI();
 }
 
 // ===== Prayer timings =====
@@ -668,11 +822,9 @@ async function fetchPrayers(){
   return true;
 }
 
-function startNextPrayerCountdown(timings){
+function startNextPrayerCountdown(){
   if(window.prayerInterval) clearInterval(window.prayerInterval);
-  window.prayerInterval=setInterval(()=>{
-    // Minimal background check mapping
-  },60000);
+  window.prayerInterval=setInterval(()=>{},60000);
 }
 
 // ===== Event Listeners & Interaction =====
@@ -684,33 +836,35 @@ document.addEventListener('click', async (e)=>{
   const id = btn.getAttribute('data-id');
   const pts = parseInt(btn.getAttribute('data-pts')||'0', 10);
 
+  // Fix Click Handlers: resolve tasks based on SELECTED_DATE (not todayJD)
+  const jd=getSelectedJD();
+
   if(act === 'confirm'){
     const rect = btn.getBoundingClientRect();
-    const task = getAllTasks(todayJD()).find(t => t[0] === id);
+    const task = getAllTasks(jd).find(t => t[0] === id);
     if(task) await onConfirm(task, pts, rect);
   } else if(act === 'qada'){
     const rect = btn.getBoundingClientRect();
-    const task = getAllTasks(todayJD()).find(t => t[0] === id);
+    const task = getAllTasks(jd).find(t => t[0] === id);
     if(task) await onQada(task, pts, rect);
   } else if(act === 'alts'){
     toggleAlts(id);
   } else if(act === 'pickalt'){
-    const task = getAllTasks(todayJD()).find(t => t[0] === id);
-    // Double safeguard incase someone attempts to click while expired
-    if(task && getTaskState(task) === 'EXPIRED') {
+    const task = getAllTasks(jd).find(t => t[0] === id);
+    if(task && getTaskState(task) === 'EXPIRED'){
       showToast('لا يمكن اختيار بديل، فات وقت المهمة');
       return;
     }
     const altText = btn.getAttribute('data-alt');
     SELECTED_ALTS[id] = altText;
     await saveAndRefresh();
+    renderPanelsForAllDays();
+    updateUI();
   } else if(btn.id === 'btn-signin'){
     const provider = new GoogleAuthProvider();
-    try {
-      await signInWithPopup(fbAuth, provider);
-    } catch(err) {
-      console.error("Sign-in error:", err);
-      showToast("فشل تسجيل الدخول");
+    try{ await signInWithPopup(fbAuth, provider);}catch(err){
+      console.error('Sign-in error:', err);
+      showToast('فشل تسجيل الدخول');
     }
   } else if(btn.id === 'btn-signout'){
     await fbAuth.signOut();
@@ -718,41 +872,53 @@ document.addEventListener('click', async (e)=>{
   }
 });
 
-// ===== Application Bootstrapper =====
-async function initApp(){
-  await localLoad();
-  updateDailyRefreshIfNeeded();
-  await fetchPrayers();
-  
+// history navigation
+document.getElementById('btn-hist-prev').addEventListener('click', ()=>{
+  // older: move back 1 day
+  SELECTED_DATE=dateOff(-1);
+  histIndex--;
+  loadHistoryDay();
   renderTabs();
   renderPanelsForAllDays();
-  switchDay(todayJD());
+  switchDay(getSelectedJD());
+});
 
-  document.getElementById('ld').style.display = 'none';
-  document.getElementById('app').style.display = 'block';
+document.getElementById('btn-hist-next').addEventListener('click', ()=>{
+  // newer: move forward 1 day
+  SELECTED_DATE=dateOff(1);
+  histIndex++;
+  loadHistoryDay();
+  renderTabs();
+  renderPanelsForAllDays();
+  switchDay(getSelectedJD());
+});
+
+// ===== Application Bootstrapper =====
+async function initApp(){
+  await loadAll();
+  renderTabs();
+  renderPanelsForAllDays();
+  switchDay(getSelectedJD());
+  await fetchPrayers();
+  await weeklyObserverInit();
+  document.getElementById('ld').style.display='none';
+  document.getElementById('app').style.display='block';
+  updateUI();
 }
 
-onAuthStateChanged(fbAuth, async (user) => {
-  if (user) {
-    document.getElementById('authName').textContent = user.displayName;
-    document.getElementById('authBtn').innerHTML = '<button class="altbtn" id="btn-signout">تسجيل خروج</button>';
-    try {
-      const docSnap = await getDoc(doc(fbDb, "users", user.uid));
-      if (docSnap.exists() && docSnap.data().stats) {
-        STATS = docSnap.data().stats;
-      }
-      const daySnap = await getDoc(doc(fbDb, `users/${user.uid}/days`, TODAY));
-      if (daySnap.exists()) {
-        DONE = daySnap.data();
-      }
-      saveAndRefresh();
-    } catch (e) {
-      console.warn("Error fetching cloud data:", e);
-    }
-  } else {
-    document.getElementById('authName').textContent = '';
-    document.getElementById('authBtn').innerHTML = '<button class="altbtn" id="btn-signin">تسجيل دخول</button>';
+onAuthStateChanged(fbAuth, async (user)=>{
+  if(!user){
+    document.getElementById('authName').textContent='';
+    document.getElementById('authBtn').innerHTML='<button class="altbtn" id="btn-signin">تسجيل دخول</button>';
+    return;
   }
+  document.getElementById('authName').textContent=user.displayName;
+  document.getElementById('authBtn').innerHTML='<button class="altbtn" id="btn-signout">تسجيل خروج</button>';
+  try{
+    const docSnap=await getDoc(doc(fbDb,'users',user.uid));
+    if(docSnap.exists() && docSnap.data().stats) STATS=docSnap.data().stats;
+  }catch(e){ console.warn('stats fetch failed',e); }
+  saveAll();
 });
 
 initApp();
@@ -760,3 +926,4 @@ initApp();
 </script>
 </body>
 </html>
+
