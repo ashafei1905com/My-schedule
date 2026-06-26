@@ -304,7 +304,7 @@ function showToast(msg,ms=3500){
   t.textContent=msg;
   t.className='show';
   clearTimeout(toastTmr);
-  toastTmr=setTimeout(()=>t.className='',ms);
+  toastTmr=setTimeout(()=>{ if(t){ t.className=''; } },ms);
 }
 
 // ===== Schedule =====
@@ -483,13 +483,17 @@ async function saveAll(){
   await sSet(LS.lastReport,data.lastReportDate);
 
   const user = fbAuth.currentUser;
-  if(user){
-    try{
-      await setDoc(doc(fbDb, "users", user.uid), { stats: STATS, lastReportDate: data.lastReportDate });
-      await setDoc(doc(fbDb, `users/${user.uid}/days`, SELECTED_DATE), DONE);
-    }catch(e){
-      console.warn('Cloud backup failed',e);
-    }
+  if(!user) return;
+
+  // Firestore: store stats and per-date tasks under users/{uid}/tasks/{date}
+  try{
+    await setDoc(doc(fbDb, "users", user.uid), { stats: STATS, lastReportDate: data.lastReportDate }, { merge:true });
+    await setDoc(doc(fbDb, `users/${user.uid}/tasks/${SELECTED_DATE}`), {
+      done: DONE,
+      alts: SELECTED_ALTS
+    }, { merge:true });
+  }catch(e){
+    console.warn('Cloud backup failed',e);
   }
 }
 
@@ -706,7 +710,9 @@ function renderTabs(){
 }
 
 function renderPanelsForAllDays(){
-  document.getElementById('panels').innerHTML=[0,1,2,3,4,5,6].map(renderPanel).join('');
+  const panelsEl=document.getElementById('panels');
+  if(!panelsEl) return;
+  panelsEl.innerHTML=[0,1,2,3,4,5,6].map(renderPanel).join('');
 }
 
 function updateUI(){
@@ -715,16 +721,24 @@ function updateUI(){
   const done=req.filter(t=>DONE[t[0]]);
 
   const pct=req.length?Math.round(done.length/req.length*100):0;
-  document.getElementById('sv1').textContent=STATS.cur;
-  document.getElementById('sv2').textContent=STATS.pts;
-  document.getElementById('sv3').textContent=STATS.best;
-  document.getElementById('ptxt').textContent=`${done.length}/${req.length} مهمة (${pct}%)`;
+
+  const sv1=document.getElementById('sv1');
+  if(sv1) sv1.textContent=STATS.cur;
+  const sv2=document.getElementById('sv2');
+  if(sv2) sv2.textContent=STATS.pts;
+  const sv3=document.getElementById('sv3');
+  if(sv3) sv3.textContent=STATS.best;
+  const ptxt=document.getElementById('ptxt');
+  if(ptxt) ptxt.textContent=`${done.length}/${req.length} مهمة (${pct}%)`;
 
   const todayPts=done.reduce((s,t)=>s+(DONE[t[0]]==='qada'?Math.floor(t[6]/2):t[6]),0);
-  document.getElementById('ppts').textContent=`${todayPts} نقطة Today`;
-  document.getElementById('pfill').style.width=pct+'%';
+  const ppts=document.getElementById('ppts');
+  if(ppts) ppts.textContent=`${todayPts} نقطة Today`;
+  const pfill=document.getElementById('pfill');
+  if(pfill) pfill.style.width=pct+'%';
 
-  document.getElementById('hist-label').textContent=`التاريخ: ${SELECTED_DATE}`;
+  const hist=document.getElementById('hist-label');
+  if(hist) hist.textContent=`التاريخ: ${SELECTED_DATE}`;
 }
 
 function switchDay(jd){
@@ -845,19 +859,30 @@ async function fetchPrayers() {
   // Kuwait Method 11 as requested
   const FALLBACK = { Fajr: '03:13', Sunrise: '04:48', Dhuhr: '11:49', Asr: '15:23', Maghrib: '18:50', Isha: '20:23' };
 
+  const COORDS_KEY = 'user_coords';
+  const parseCoords = (raw) => {
+    try {
+      const v = JSON.parse(raw);
+      if (v && typeof v.lat === 'number' && typeof v.lng === 'number') return v;
+    } catch {}
+    return null;
+  };
+
   try {
-    const coords = await requestLocationPermissionAndGetCoords();
+    let coords = parseCoords(localStorage.getItem(COORDS_KEY));
+
+    if (!coords) {
+      coords = await requestLocationPermissionAndGetCoords();
+      if (coords) {
+        try { localStorage.setItem(COORDS_KEY, JSON.stringify(coords)); } catch {}
+      }
+    }
 
     let url = '';
     if (!coords) {
-      // Default location
       url = 'https://api.aladhan.com/v1/timingsByCity?city=Salmiya&country=Kuwait&method=11';
     } else {
       const { lat, lng } = coords;
-      // Aladhan: timings endpoint supports lat/lng + method
-      // https://aladhan.com/prayer-times-api#EndPoint-1
-      url = `https://api.aladhan.com/v1/timings?latitude=${lat}&longitude=${lng}&method=11&month=1&year=2000`;
-      // We’ll ignore month/year by using today; safer approach is to omit month/year.
       url = `https://api.aladhan.com/v1/timings?latitude=${lat}&longitude=${lng}&method=11`;
     }
 
@@ -991,14 +1016,21 @@ onAuthStateChanged(fbAuth, async (user)=>{
     SELECTED_DATE=TODAY;
     WEEKLY_REPORT=[];
 
-    // Hide progress UI while logged out
-    document.getElementById('authName').textContent='';
-    document.getElementById('authBtn').innerHTML='<button class="altbtn" id="btn-signin">تسجيل دخول</button>';
-    document.getElementById('pw').style.display='none';
-    document.getElementById('tabrow').innerHTML='';
-    document.getElementById('panels').innerHTML='';
-    document.getElementById('toast').style.display='none';
-    document.getElementById('hist-label').textContent='التاريخ: —';
+  // Hide progress UI while logged out
+    const authNameEl=document.getElementById('authName');
+    if(authNameEl) authNameEl.textContent='';
+    const authBtnEl=document.getElementById('authBtn');
+    if(authBtnEl) authBtnEl.innerHTML='<button class="altbtn" id="btn-signin">تسجيل دخول</button>';
+    const pwEl=document.getElementById('pw');
+    if(pwEl) pwEl.style.display='none';
+    const tabrowEl=document.getElementById('tabrow');
+    if(tabrowEl) tabrowEl.innerHTML='';
+    const panelsEl=document.getElementById('panels');
+    if(panelsEl) panelsEl.innerHTML='';
+    const toastEl=document.getElementById('toast');
+    if(toastEl) toastEl.style.display='none';
+    const histLabelEl=document.getElementById('hist-label');
+    if(histLabelEl) histLabelEl.textContent='التاريخ: —';
 
     // Show sign-in only
     return;
@@ -1014,10 +1046,14 @@ onAuthStateChanged(fbAuth, async (user)=>{
     if(docSnap.exists() && docSnap.data().stats) STATS=docSnap.data().stats;
   }catch(e){ console.warn('stats fetch failed',e); }
 
-  // Load per-day from cloud by current selected date (history mode)
+  // Load per-day tasks from Firestore for the selected date
   try{
-    const daySnap=await getDoc(doc(fbDb,`users/${user.uid}/days`, SELECTED_DATE));
-    if(daySnap.exists()) DONE=daySnap.data()||{};
+    const daySnap=await getDoc(doc(fbDb, `users/${user.uid}/tasks/${SELECTED_DATE}`));
+    if(daySnap.exists()){
+      const v=daySnap.data()||{};
+      DONE=v.done||{};
+      SELECTED_ALTS=v.alts||{};
+    }
   }catch(e){ console.warn('day load failed',e); }
 
   // Now load local history store (used for fast navigation)
