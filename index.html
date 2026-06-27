@@ -101,6 +101,7 @@ body{font-family:'Cairo',sans-serif;background:var(--bg);color:var(--tx);directi
 #toast.show{display:block;animation:ti .3s ease}
 input:focus-visible, button:focus-visible{outline:2px solid var(--ac);outline-offset:2px}
 
+/* Custom Interactive Modal for Prayers styling matching theme */
 .modal-overlay{position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(10,14,26,.9);display:none;align-items:center;justify-content:center;z-index:10000;padding:20px}
 .modal-overlay.open{display:flex}
 .modal-box{background:var(--c2);border:2px solid var(--br);border-radius:16px;padding:24px;width:100%;max-width:380px;text-align:center;box-shadow:0 10px 30px rgba(0,0,0,.6)}
@@ -125,9 +126,14 @@ input:focus-visible, button:focus-visible{outline:2px solid var(--ac);outline-of
     <div class="st"><div class="sv" id="sv1">0</div><div class="sl">🔥 استريك</div></div>
     <div class="st"><div class="sv" id="sv2">0</div><div class="sl">⭐ نقاطي</div></div>
     <div class="st"><div class="sv" id="sv3">0</div><div class="sl">🏆 أعلى</div></div>
-    <div class="st" id="authArea"><div class="sv" id="authName"></div><div class="sl" id="authBtn"><button class="altbtn" id="btn-signin">تسجيل دخول</button></div></div>
+    <div class="st" id="authArea">
+        <div class="sv" id="authName"></div>
+        <div class="sl" id="authBtn" style="display:flex; gap:6px; align-items:center">
+            <button class="altbtn" id="btn-signin">تسجيل دخول</button>
+            <button class="altbtn danger" id="btn-reset">تصفير</button>
+        </div>
+    </div>
   </div>
-
   <div class="pw" id="pw">
     <div class="pb">
       <div class="ph"><span id="ptxt">٠/٠ مهمة</span><span id="ppts">٠ نقطة</span></div>
@@ -135,15 +141,14 @@ input:focus-visible, button:focus-visible{outline:2px solid var(--ac);outline-of
     </div>
     <div style="margin-top:8px;display:flex;gap:8px;align-items:center;flex-wrap:wrap"></div>
   </div>
-
-  <div class="tw"><div class="tabs" id="tabrow"></div></div>
-
+  <div class="tw">
+    <div class="tabs" id="tabrow"></div>
+  </div>
   <div style="padding:0 16px 6px;display:flex;gap:8px;align-items:center;flex-wrap:wrap">
     <button class="altbtn" id="btn-hist-prev" type="button">← تاريخ أقدم</button>
     <div class="ptsbdg" id="hist-label">التاريخ: —</div>
     <button class="altbtn" id="btn-hist-next" type="button">تاريخ أحدث →</button>
   </div>
-
   <div id="panels"></div>
 </main>
 
@@ -242,6 +247,14 @@ function dateOff(n, baseStr){
   return `${d.getFullYear()}-${p2(d.getMonth()+1)}-${p2(d.getDate())}`;
 }
 
+function getSelectedJD(){
+  return getKuwaitJDFromISO(SELECTED_DATE);
+}
+
+function isSelectedRealToday(){
+  return SELECTED_DATE===TODAY;
+}
+
 function cleanTimeStr(s){
   if(!s) return '';
   const m=String(s).match(/\d{1,2}:\d{2}/);
@@ -280,6 +293,7 @@ function isPrayerTask(task){
 function getTaskState(task) {
   const now = getKuwaitNowMinutes();
   const start = toMin(task[10] || task[1]);
+  
   if (isPrayerTask(task)) {
     let end = start + 60;
     const parts = task[0].split('-');
@@ -291,13 +305,16 @@ function getTaskState(task) {
       else if(pk === 'Maghrib') end = toMin(PRYT.Isha || FALLBK.Isha);
       else if(pk === 'Isha') end = 24 * 60;
     }
-    if (task[0].includes('fri-jm')) end = toMin(PRYT.Asr || FALLBK.Asr);
+    if (task[0].includes('fri-jm')) {
+      end = toMin(PRYT.Asr || FALLBK.Asr);
+    }
     if (now > end) return 'QADA';
     return 'PENDING';
+  } else {
+    const end = start + 180;
+    if (now > end) return 'EXPIRED';
+    return 'PENDING';
   }
-  const end = start + 180;
-  if (now > end) return 'EXPIRED';
-  return 'PENDING';
 }
 
 function floatPts(x,y,n){
@@ -324,11 +341,14 @@ const mkBk=(p,t='9:15 ص')=>[p+'-bk',t,'food','🧀','الفطار','جبنة ق
   'لبنة ٤ ملاعق + بيضتين مسلوقتين + رغيف أسمر',
   'جبنة دمياطي ١٠٠جم + بيضة + خبز أسمر'
 ],null,false];
+
 const mkWd=(p,t='9:30 ص')=>[p+'-wd',t,'quran','📿','الورد اليومي','١٥ دقيقة قراءة قرآن يومياً',10,null,null,false];
+
 const mkDn=(p,t='8:00 م')=>[p+'-dn',t,'food','🧀','العشا','جبنة قريش ١٥٠جم + جبنة دمياطي ٨٠جم + خيار + طماطم',5,[
   'لبنة ٤ ملاعق + جبنة دمياطي مكعبين + خيار',
   'بيضتين مسلوقتين + جبنة قريش ١٠0جم'
 ],null,false];
+
 const mkSl=(p,t='11:00 م')=>[p+'-sl',t,'sleep','🌙','نوم على الوقت','نام على الوقت — النوم المنتظم ضروري للعضل والتخسيس',10,null,null,false];
 const mkSw=(p,t)=>[p+'-sw',t,'swim','🏊','سباحة مع الكوتش','تقنية + drills ← استثناء ✓',0,null,null,true];
 const mkRc=(p,t,d)=>[p+'-rc',t,'recovery','♨️','جاكوزي + بخار/ساونا',d||'ريكفري ← استثناء ✓',0,null,null,true];
@@ -529,13 +549,15 @@ function showHistoryReportModal(text){
 
 function getWeekPreviousDaysISO(){
   const out=[];
-  for(let i=1;i<=7;i++) out.push(dateOff(-i));
+  for(let i=1;i<=7;i++){
+    out.push(dateOff(-i));
+  }
   return out;
 }
 
 async function weeklyObserverInit(){
   const todayJD_=todayJD();
-  const isSunday=todayJD_===0;
+  const isSunday=todayJD_===0; 
   if(!isSunday) return;
 
   const lastWindowStart=dateOff(-7);
@@ -545,7 +567,8 @@ async function weeklyObserverInit(){
   let totalQada=0;
   let lines=[];
 
-  for(const iso of getWeekPreviousDaysISO()){
+  const prevISOs=getWeekPreviousDaysISO();
+  for(const iso of prevISOs){
     const dk=getDayKey(iso);
     const day=data.history[dk]||{};
     const dayDone=day.done||{};
@@ -570,10 +593,7 @@ async function weeklyObserverInit(){
     lines.push(`${iso}: ${pts}⭐${qada?` (قضاء x${qada})`:''}`);
   }
 
-  const report=`📊 تقرير أسبوع (آخر 7 أيام)
-المجموع: ${totalPts}⭐
-القضاء: ${totalQada} مهمة قضاء
-\n${lines.join('\n')}`;
+  const report=`📊 تقرير أسبوع (آخر 7 أيام)\nالمجموع: ${totalPts}⭐\nالقضاء: ${totalQada} مهمة قضاء\n\n${lines.join('\n')}`;
   showHistoryReportModal(report);
 
   STATS.pts=0;
@@ -586,14 +606,52 @@ async function fetchPrayerTimesAPI(dateStr) {
   try {
     const res = await fetch(`https://api.aladhan.com/v1/timingsByCity/${dateStr}?city=Salmiya&country=Kuwait&method=4`);
     const json = await res.json();
-    if (json?.data?.timings) {
-      const t=json.data.timings;
-      PRYT={Fajr:t.Fajr,Sunrise:t.Sunrise,Dhuhr:t.Dhuhr,Asr:t.Asr,Maghrib:t.Maghrib,Isha:t.Isha};
+    if (json && json.data && json.data.timings) {
+      const t = json.data.timings;
+      PRYT = {
+        Fajr: t.Fajr,
+        Sunrise: t.Sunrise,
+        Dhuhr: t.Dhuhr,
+        Asr: t.Asr,
+        Maghrib: t.Maghrib,
+        Isha: t.Isha
+      };
     }
   } catch (e) {
     console.warn("Using fallback prayer times", e);
     PRYT = {...FALLBK};
   }
+}
+
+// ===== Punishment System =====
+async function applyPunishments() {
+  const yesterday = dateOff(-1);
+  const yk = getDayKey(yesterday);
+  const yDay = data.history[yk] || {};
+  
+  if (yDay.penalized) return;
+
+  const jd = getKuwaitJDFromISO(yesterday);
+  const tasks = getReqTasks(jd);
+  const dayDone = yDay.done || {};
+  
+  let deduction = 0;
+  for (const t of tasks) {
+    const id = t[0];
+    const pts = t[6];
+    if (!dayDone[id] && pts > 0) {
+      deduction += Math.floor(pts / 2);
+    }
+  }
+
+  if (deduction > 0) {
+    STATS.pts = Math.max(0, STATS.pts - deduction);
+    showToast(`تم خصم ${deduction}⭐ بسبب مهام غير منجزة بالأمس`);
+  }
+  
+  if(!data.history[yk]) data.history[yk] = {};
+  data.history[yk].penalized = true;
+  await saveAll();
 }
 
 // ===== UI rendering =====
@@ -623,31 +681,37 @@ function renderCard(task,isToday){
   let act='';
   if(isEx){
     act=`<div class="excbadge">🔓 استثناء</div>`;
-  } else if(isToday){
+  }else if(isToday){
     if(done){
       act=`<div class="cbtn done">✅</div>`;
-    } else {
+    }else{
       if(tState === 'QADA'){
         const half=Math.floor(pts/2);
         act=`<button class="cbtn qada" data-action="qada" data-id="${id}" data-pts="${pts}">قضاء (50%)<span class="ptslbl">+${half}⭐</span></button>`;
-      } else if(tState === 'EXPIRED'){
+      }else if(tState === 'EXPIRED'){
         act=`<div class="cbtn exp">فات الوقت</div>`;
-      } else {
+      }else{
         act=`<button class="cbtn" data-action="confirm" data-id="${id}" data-pts="${pts}">تأكيد ✓<span class="ptslbl">+${pts}⭐</span></button>`;
       }
     }
   }
 
   if(!act){
-    act = done ? `<div class="cbtn done">✅</div>` : `<div class="cbtn exp">مفقود</div>`;
+    if(done){
+      act=`<div class="cbtn done">✅</div>`;
+    }else{
+      act=`<div class="cbtn exp">مفقود</div>`;
+    }
   }
 
   const altH = (alts && alts.length && !expired && !done && isToday)
     ? `<button class="altbtn" data-action="alts" data-id="${id}">🔄 بدائل (${alts.length})</button>`+
-      `<div class="altlist" id="al-${id}">${alts.map(a=>`<div class="altitem" role="button" tabindex="0" data-action="pickalt" data-id="${id}" data-alt="${String(a).replace(/"/g,'\"')}">${a}</div>`).join('')}</div>`
+      `<div class="altlist" id="al-${id}">${alts.map(a=>{
+        return `<div class="altitem" role="button" tabindex="0" data-action="pickalt" data-id="${id}" data-alt="${String(a).replace(/"/g,'"')}">${a}</div>`;
+      }).join('')}</div>`
     : '';
 
-  const hwH = hw ? `<div class="hwtag">⏰ ${hw}</div>` : '';
+  const hwH=hw?`<div class="hwtag">⏰ ${hw}</div>`:'';
   const displayDesc=getTaskDisplayDesc(task);
 
   return `<div class="tc${done?' done':''}${isEx?' excx':''}" data-c="${cat}" id="c-${id}">
@@ -661,6 +725,7 @@ function renderPanel(jd){
   const d=SCHED[jd];
   if(!d) return '';
   const k=DKEYS[jd];
+  
   const isToday = (SELECTED_DATE === TODAY) && (jd === todayJD());
 
   const gbLabel=d.gm
@@ -669,7 +734,6 @@ function renderPanel(jd){
 
   const prayerOrder=['Fajr','Dhuhr','Asr','Maghrib','Isha'];
   const pillsArr=[];
-
   const schedList=d.ts||[];
   const jumahTask=schedList.find(t=>t[2]==='prayer' && (t[4]?.includes('جمعة')||t[0].includes('fri-jm')));
 
@@ -705,70 +769,60 @@ function renderTabs(){
   [0,1,2,3,4,5,6].forEach(j=>{
     const isT=j===selJD;
     const isG=!!SCHED[j]?.gm;
-    const b=document.createElement('button');
+    const b=document.createElement('div');
     b.className=`tab${isT?' act':''}${j===todayJD()?' tod':''}`;
-    b.id=`tb-${DKEYS[j]}`;
-    b.innerHTML=(isG?'<div class="gdot"></div>':'')+DSHORT[j];
+    b.innerHTML=`<div>${SCHED[j].n}</div>${isG?'<div class="gdot"></div>':''}`;
     b.onclick=()=>switchDay(j);
     c.appendChild(b);
   });
 }
 
+function switchDay(jd){
+  document.querySelectorAll('.tab').forEach((t,i)=> {
+    if(i===jd) t.classList.add('act');
+    else t.classList.remove('act');
+  });
+  document.querySelectorAll('.pan').forEach(p=>p.classList.remove('act'));
+  const p=document.getElementById(`pan-${DKEYS[jd]}`);
+  if(p) p.classList.add('act');
+}
+
 function renderPanelsForAllDays(){
-  const panelsEl=document.getElementById('panels');
-  if(!panelsEl) return;
-  panelsEl.innerHTML=[0,1,2,3,4,5,6].map(renderPanel).join('');
+  const c = document.getElementById('panels');
+  if(!c) return;
+  c.innerHTML = [0,1,2,3,4,5,6].map(j=>renderPanel(j)).join('');
 }
 
 function updateUI(){
+  document.getElementById('sv1').textContent=STATS.cur;
+  document.getElementById('sv2').textContent=STATS.pts;
+  document.getElementById('sv3').textContent=STATS.best;
+  
   const jd=getSelectedJD();
   const req=getReqTasks(jd);
-  const done=req.filter(t=>DONE[t[0]]);
-
-  const pct=req.length?Math.round(done.length/req.length*100):0;
-
-  const sv1=document.getElementById('sv1');
-  if(sv1) sv1.textContent=STATS.cur;
-  const sv2=document.getElementById('sv2');
-  if(sv2) sv2.textContent=STATS.pts;
-  const sv3=document.getElementById('sv3');
-  if(sv3) sv3.textContent=STATS.best;
-
-  const ptxt=document.getElementById('ptxt');
-  if(ptxt) ptxt.textContent=`${done.length}/${req.length} مهمة (${pct}%)`;
-
-  const todayPts=done.reduce((s,t)=>{
-    const statusVal=DONE[t[0]];
-    if(statusVal==='qada') return s+Math.floor(t[6]/2);
-    if(typeof statusVal==='number') return s+statusVal;
-    return s+t[6];
-  },0);
-
-  const ppts=document.getElementById('ppts');
-  if(ppts) ppts.textContent=`${todayPts} نقطة اليوم`;
-
-  const pfill=document.getElementById('pfill');
-  if(pfill) pfill.style.width=pct+'%';
-
-  const hist=document.getElementById('hist-label');
-  if(hist) hist.textContent=`التاريخ: ${SELECTED_DATE}`;
+  let d=0, p=0;
+  
+  for(let t of req){
+    const st=DONE[t[0]];
+    if(st){
+      d++;
+      if(st==='qada') p+=Math.floor(t[6]/2);
+      else if(typeof st==='number') p+=st;
+      else p+=t[6];
+    }
+  }
+  
+  document.getElementById('ptxt').textContent=`${d}/${req.length} مهمة`;
+  document.getElementById('ppts').textContent=`${p} نقطة`;
+  document.getElementById('pfill').style.width=req.length?`${(d/req.length)*100}%`:'0%';
+  document.getElementById('hist-label').textContent=`التاريخ: ${SELECTED_DATE === TODAY ? 'اليوم' : SELECTED_DATE}`;
 }
 
-function switchDay(jd){
-  document.querySelectorAll('.tab').forEach(t => t.classList.remove('act'));
-  document.querySelectorAll('.pan').forEach(p => p.classList.remove('act'));
-  const key=DKEYS[jd];
-  document.getElementById(`tb-${key}`)?.classList.add('act');
-  document.getElementById(`pan-${key}`)?.classList.add('act');
-}
-
-// ===== Interactive Prayer Popups Logic =====
 let activePrayerFlow = null;
-
-function startPrayerInteractiveFlow(taskId, taskName, basePts, eventX, eventY) {
+function startPrayerInteractiveFlow(taskId, taskName, basePts, eventX, eventY){
   let prayerKey = null;
   if (taskId.includes('Fajr') || taskName.includes('الفجر')) prayerKey = 'Fajr';
-  else if (taskId.includes('Dhuhr') || taskName.includes('الظهر') || taskId.includes('fri-jm')) prayerKey = 'Dhuhr';
+  else if (taskId.includes('Dhuhr') || taskName.includes('الظهر')) prayerKey = 'Dhuhr';
   else if (taskId.includes('Asr') || taskName.includes('العصر')) prayerKey = 'Asr';
   else if (taskId.includes('Maghrib') || taskName.includes('المغرب')) prayerKey = 'Maghrib';
   else if (taskId.includes('Isha') || taskName.includes('العشاء')) prayerKey = 'Isha';
@@ -793,7 +847,7 @@ function showPrayerModalStep1() {
   modal.classList.add('open');
 
   document.getElementById('prayerModalYes').onclick = () => {
-    activePrayerFlow.totalEarned += 5;
+    activePrayerFlow.totalEarned += 5; // Extra points for Adhkar
     goToPrayerModalStep2();
   };
   document.getElementById('prayerModalNo').onclick = () => {
@@ -804,6 +858,7 @@ function showPrayerModalStep1() {
 function goToPrayerModalStep2() {
   const pk = activePrayerFlow.key;
   if (pk === 'Asr' || !pk) {
+    // Asr has no Sunnah as requested, wrap up immediately
     finishPrayerInteractiveFlow();
     return;
   }
@@ -814,10 +869,11 @@ function goToPrayerModalStep2() {
   else if (pk === 'Maghrib') sunnahDescription = 'ركعتين بعد الصلاة';
   else if (pk === 'Isha') sunnahDescription = 'ركعتين بعد الصلاة';
 
-  document.getElementById('prayerModalQuestion').textContent = `هل صليت سنة ${activePrayerFlow.name} (${sunnahDescription})؟`;
+  const question = document.getElementById('prayerModalQuestion');
+  question.textContent = `هل صليت سنة ${activePrayerFlow.name} (${sunnahDescription})؟`;
 
   document.getElementById('prayerModalYes').onclick = () => {
-    activePrayerFlow.totalEarned += 5;
+    activePrayerFlow.totalEarned += 5; // Extra points for Sunnah
     finishPrayerInteractiveFlow();
   };
   document.getElementById('prayerModalNo').onclick = () => {
@@ -828,8 +884,8 @@ function goToPrayerModalStep2() {
 async function finishPrayerInteractiveFlow() {
   document.getElementById('prayerModal').classList.remove('open');
   const finalScore = activePrayerFlow.totalEarned;
-
-  DONE[activePrayerFlow.id] = finalScore;
+  
+  DONE[activePrayerFlow.id] = finalScore; 
   STATS.pts += finalScore;
   if (STATS.pts > STATS.best) STATS.best = STATS.pts;
 
@@ -846,6 +902,7 @@ document.body.addEventListener('click', async (e) => {
   const id = e.target.getAttribute('data-id');
   const ptsAttr = e.target.getAttribute('data-pts');
 
+  // Full Reset Action
   if (e.target.id === 'btn-reset') {
     if (confirm("هل أنت متأكد من مسح جميع البيانات وتصفير النقاط؟ لا يمكن التراجع عن هذا الإجراء.")) {
       STATS = {cur:0, best:0, pts:0, lc:null, lf:null};
@@ -861,8 +918,11 @@ document.body.addEventListener('click', async (e) => {
 
   if (e.target.id === 'btn-signin') {
     const provider = new GoogleAuthProvider();
-    try { await signInWithPopup(fbAuth, provider); }
-    catch { showToast('فشل تسجيل الدخول'); }
+    try {
+      await signInWithPopup(fbAuth, provider);
+    } catch (err) {
+      showToast("فشل تسجيل الدخول");
+    }
     return;
   }
 
@@ -954,7 +1014,7 @@ onAuthStateChanged(fbAuth, async (user) => {
   if (user) {
     document.getElementById('authName').textContent = user.displayName || 'عبدالله';
     document.getElementById('authBtn').innerHTML = `<button class="altbtn" id="btn-signout">تسجيل خروج</button><button class="altbtn danger" id="btn-reset">تصفير</button>`;
-
+    
     try {
       const userDoc = await getDoc(doc(fbDb, "users", user.uid));
       if (userDoc.exists()) {
@@ -962,7 +1022,7 @@ onAuthStateChanged(fbAuth, async (user) => {
         if (uData.stats) STATS = uData.stats;
         if (uData.lastReportDate) data.lastReportDate = uData.lastReportDate;
       }
-
+      
       const taskDoc = await getDoc(doc(fbDb, `users/${user.uid}/tasks/${SELECTED_DATE}`));
       if (taskDoc.exists()) {
         const tData = taskDoc.data();
@@ -971,7 +1031,7 @@ onAuthStateChanged(fbAuth, async (user) => {
         saveHistoryDay();
       }
     } catch (e) {
-      console.warn('Cloud data loading skipped/failed', e);
+      console.warn("Cloud data loading skipped/failed", e);
     }
   } else {
     document.getElementById('authName').textContent = '';
@@ -981,7 +1041,8 @@ onAuthStateChanged(fbAuth, async (user) => {
 
   await fetchPrayerTimesAPI(SELECTED_DATE);
   await weeklyObserverInit();
-
+  await applyPunishments();
+  
   renderTabs();
   renderPanelsForAllDays();
   switchDay(getSelectedJD());
@@ -990,6 +1051,7 @@ onAuthStateChanged(fbAuth, async (user) => {
   document.getElementById('ld').style.display = 'none';
   document.getElementById('app').style.display = 'block';
 });
+
 </script>
 </body>
 </html>
