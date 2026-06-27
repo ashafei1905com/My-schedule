@@ -33,7 +33,6 @@ body{font-family:'Cairo',sans-serif;background:var(--bg);color:var(--tx);directi
 .tabs{display:flex;gap:6px;width:max-content}
 .tab{flex-shrink:0;padding:8px 13px;background:var(--c);border:1px solid var(--br);border-radius:8px;cursor:pointer;font-family:'Cairo',sans-serif;font-size:.82rem;font-weight:700;color:var(--so);transition:all .2s;display:flex;flex-direction:column;align-items:center;gap:2px}
 .tab:hover{border-color:var(--ac);color:var(--tx)}
-.tab:focus-visible{outline:2px solid #2563eb;outline-offset:2px;border-color:#2563eb}
 .tab.act{background:#2563eb;border-color:#2563eb;color:#fff}
 .tab.tod:not(.act){border-color:var(--gr);color:var(--gr)}
 .gdot{width:5px;height:5px;border-radius:50%;background:var(--or)}
@@ -50,14 +49,13 @@ body{font-family:'Cairo',sans-serif;background:var(--bg);color:var(--tx);directi
 .prow{display:flex;gap:5px;margin-bottom:10px;overflow-x:auto;scrollbar-width:none}
 .prow::-webkit-scrollbar{display:none}
 .ppill{flex-shrink:0;padding:6px 10px;background:var(--c);border:2px solid var(--br);border-radius:8px;text-align:center;min-width:60px;transition:all .2s}
-.ppill:focus-within{border-color:var(--ac);outline:2px solid var(--ac);outline-offset:1px}
 .ppill.done{border-color:var(--gr);background:rgba(16,185,129,.1)}
+.ppill.sunrise{border-color:var(--or);background:rgba(245,158,11,.06)}
 .pnam{font-size:.6rem;color:var(--so);font-weight:700}
 .ptim{font-size:.72rem;font-weight:700}
 .tl{position:relative;padding-right:20px}
 .tl::before{content:'';position:absolute;right:7px;top:0;bottom:0;width:2px;background:linear-gradient(to bottom,var(--ac),transparent);border-radius:2px}
 .tc{position:relative;margin-bottom:8px;padding:12px 14px;background:var(--c);border:1px solid var(--br);border-radius:12px;display:flex;align-items:flex-start;gap:10px;transition:border-color .2s,background .2s}
-.tc:focus-within{border-color:var(--ac);box-shadow:0 0 0 2px rgba(59,130,246,.2)}
 .tc::before{content:'';position:absolute;right:-24px;top:16px;width:10px;height:10px;border-radius:50%;background:var(--c2);border:2px solid var(--br)}
 .tc.done{background:rgba(16,185,129,.05);border-color:rgba(16,185,129,.3)}
 .tc.done::before{border-color:var(--gr);background:var(--gr)}
@@ -70,7 +68,7 @@ body{font-family:'Cairo',sans-serif;background:var(--bg);color:var(--tx);directi
 .tc[data-c="quran"]{border-right:3px solid var(--ye)}
 .tc[data-c="prog"]{border-right:3px solid var(--pk)}
 .tc[data-c="sleep"]{border-right:3px solid var(--pu)}
-.tc[data-c="free"]{border-right:3px dashed #6366f1;border-style:dashed}
+.tc[data-c="free"]{border-right:3px dashed #6366f1}
 .tctime{font-size:.67rem;color:var(--mu);font-weight:700;min-width:60px;text-align:left;padding-top:2px;direction:ltr;flex-shrink:0}
 .tcico{font-size:1.1rem;width:32px;height:32px;display:flex;align-items:center;justify-content:center;border-radius:8px;background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.1);flex-shrink:0}
 .tcbody{flex:1;min-width:0}
@@ -79,18 +77,14 @@ body{font-family:'Cairo',sans-serif;background:var(--bg);color:var(--tx);directi
 .hwtag{display:inline-block;margin-top:4px;padding:2px 7px;background:rgba(239,68,68,.15);border:1px solid rgba(239,68,68,.3);border-radius:4px;font-size:.62rem;color:#ef4444;font-weight:700}
 .excbadge{display:inline-flex;align-items:center;gap:3px;padding:3px 8px;background:rgba(6,182,212,.1);border:1px solid rgba(6,182,212,.3);border-radius:6px;font-size:.67rem;color:var(--cy);font-weight:700;flex-shrink:0}
 .altbtn{margin-top:5px;padding:3px 8px;background:rgba(59,130,246,.08);border:1px solid rgba(59,130,246,.2);border-radius:5px;font-size:.63rem;color:var(--ac);cursor:pointer;display:inline-flex;align-items:center;gap:4px;font-family:'Cairo',sans-serif;transition:all .2s}
-.altbtn:hover:not(:disabled){background:rgba(59,130,246,.15);border-color:rgba(59,130,246,.4)}
-.altbtn:focus-visible{outline:2px solid var(--ac);outline-offset:1px}
-.altbtn.danger{color:var(--rd);border-color:rgba(239,68,68,.3);background:rgba(239,68,68,.08)}
-.altbtn.danger:hover:not(:disabled){background:rgba(239,68,68,.15);border-color:rgba(239,68,68,.5)}
-.altbtn:disabled { opacity: 0.5; cursor: not-allowed; border-color: var(--br); background: rgba(255,255,255,0.05); color: var(--mu); }
+.altbtn:hover{background:rgba(59,130,246,.15);border-color:rgba(59,130,246,.4)}
+.altbtn:disabled{opacity:.5;cursor:not-allowed}
 .altlist{display:none;margin-top:6px;padding:8px;background:rgba(0,0,0,.2);border-radius:6px;border:1px solid var(--br)}
 .altlist.open{display:block}
 .altitem{font-size:.7rem;color:var(--so);padding:3px 0;display:flex;gap:6px;cursor:pointer}
 .altitem::before{content:'←';color:var(--ac)}
 .cbtn{flex-shrink:0;padding:6px 10px;background:rgba(16,185,129,.1);border:1px solid rgba(16,185,129,.4);border-radius:8px;cursor:pointer;font-family:'Cairo',sans-serif;font-size:.73rem;font-weight:700;color:var(--gr);transition:all .2s;display:flex;flex-direction:column;align-items:center;gap:1px}
 .cbtn:hover{background:rgba(16,185,129,.2)}
-.cbtn:focus-visible{outline:2px solid var(--gr);outline-offset:1px;border-color:var(--gr)}
 .cbtn.done{background:rgba(16,185,129,.06);border-color:rgba(16,185,129,.2);color:var(--mu);cursor:default}
 .cbtn.exp{background:rgba(100,116,139,.08);border-color:rgba(100,116,139,.4);color:var(--mu);cursor:not-allowed}
 .cbtn.qada{background:rgba(245,158,11,.08);border-color:rgba(245,158,11,.35);color:var(--or)}
@@ -100,19 +94,20 @@ body{font-family:'Cairo',sans-serif;background:var(--bg);color:var(--tx);directi
 .floatpts{position:fixed;pointer-events:none;z-index:9999;font-size:1.1rem;font-weight:900;color:var(--ye);font-family:'Cairo',sans-serif;animation:up .8s ease-out forwards}
 #toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%);background:var(--c2);border:2px solid var(--gr);border-radius:12px;padding:14px 20px;font-size:.85rem;font-weight:700;color:var(--gr);z-index:9999;display:none;text-align:center;box-shadow:0 4px 20px rgba(0,0,0,.5);max-width:300px;white-space:pre-line}
 #toast.show{display:block;animation:ti .3s ease}
-input:focus-visible, button:focus-visible{outline:2px solid var(--ac);outline-offset:2px}
 
-/* Custom Interactive Modal for Prayers styling matching theme */
-.modal-overlay{position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(10,14,26,.9);display:none;align-items:center;justify-content:center;z-index:10000;padding:20px}
+/* Prayer Modal */
+.modal-overlay{position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(10,14,26,.92);display:none;align-items:center;justify-content:center;z-index:10000;padding:20px}
 .modal-overlay.open{display:flex}
-.modal-box{background:var(--c2);border:2px solid var(--br);border-radius:16px;padding:24px;width:100%;max-width:380px;text-align:center;box-shadow:0 10px 30px rgba(0,0,0,.6)}
-.modal-title{font-size:1.1rem;font-weight:900;margin-bottom:16px;color:var(--tx);line-height:1.4}
-.modal-btns{display:flex;gap:12px;justify-content:center}
-.modal-btn{padding:8px 24px;border:none;border-radius:8px;font-family:'Cairo',sans-serif;font-size:.9rem;font-weight:700;cursor:pointer;transition:background .2s}
-.modal-btn.y{background:var(--gr);color:#fff}
-.modal-btn.y:hover{background:#0d9488}
-.modal-btn.n{background:var(--rd);color:#fff}
-.modal-btn.n:hover{background:#dc2626}
+.modal-box{background:var(--c2);border:2px solid var(--br);border-radius:20px;padding:28px 20px;width:100%;max-width:400px;text-align:center;box-shadow:0 16px 40px rgba(0,0,0,.7)}
+.modal-title{font-size:1rem;font-weight:900;margin-bottom:6px;color:var(--tx);line-height:1.5}
+.modal-subtitle{font-size:.75rem;color:var(--so);margin-bottom:20px}
+.modal-opts{display:flex;flex-direction:column;gap:10px}
+.modal-opt{padding:12px 16px;border-radius:12px;cursor:pointer;font-family:'Cairo',sans-serif;font-size:.88rem;font-weight:700;border:2px solid var(--br);background:var(--c);color:var(--tx);transition:all .2s;text-align:right;display:flex;align-items:center;justify-content:space-between}
+.modal-opt:hover{border-color:var(--ac);background:rgba(59,130,246,.08)}
+.modal-opt.gold{border-color:#d4af37;background:rgba(212,175,55,.08);color:#f5d060;box-shadow:0 0 12px rgba(212,175,55,.25)}
+.modal-opt.gold:hover{background:rgba(212,175,55,.16);box-shadow:0 0 20px rgba(212,175,55,.4)}
+.modal-opt .opt-pts{font-size:.7rem;opacity:.8;direction:ltr}
+.modal-step{font-size:.65rem;color:var(--mu);margin-bottom:12px;text-align:center}
 </style>
 </head>
 <body>
@@ -126,40 +121,37 @@ input:focus-visible, button:focus-visible{outline:2px solid var(--ac);outline-of
   <div id="sbar">
     <div class="st"><div class="sv" id="sv1">0</div><div class="sl">🔥 استريك</div></div>
     <div class="st"><div class="sv" id="sv2">0</div><div class="sl">⭐ نقاطي</div></div>
-    <div class="st"><div class="sv" id="sv3">0</div><div class="sl">🏆 أعلى</div></div>
+    <div class="st"><div class="sv" id="sv3">0</div><div class="sl">🏆 أعلى استريك</div></div>
     <div class="st" id="authArea">
-        <div class="sv" id="authName"></div>
-        <div class="sl" id="authBtn" style="display:flex; gap:6px; align-items:center">
-            <button class="altbtn" id="btn-signin">تسجيل دخول</button>
-            <button class="altbtn" id="btn-report" disabled>📊 تقرير الأسبوع</button>
-        </div>
+      <div class="sv" id="authName" style="font-size:.85rem"></div>
+      <div class="sl" id="authBtn" style="display:flex;gap:6px;align-items:center">
+        <button class="altbtn" id="btn-signin">تسجيل دخول</button>
+        <button class="altbtn" id="btn-report" disabled>📊 تقرير</button>
+      </div>
     </div>
   </div>
-  <div class="pw" id="pw">
+  <div class="pw">
     <div class="pb">
-      <div class="ph"><span id="ptxt">٠/٠ مهمة</span><span id="ppts">٠ نقطة</span></div>
+      <div class="ph"><span id="ptxt">٠/٠ مهمة</span><span id="ppts">٠ نقطة اليوم</span></div>
       <div class="pbg"><div class="pfx" id="pfill" style="width:0"></div></div>
     </div>
-    <div style="margin-top:8px;display:flex;gap:8px;align-items:center;flex-wrap:wrap"></div>
   </div>
-  <div class="tw">
-    <div class="tabs" id="tabrow"></div>
+  <div style="padding:6px 16px;display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+    <button class="altbtn" id="btn-hist-prev" type="button">← يوم سابق</button>
+    <div class="ptsbdg" id="hist-label">اليوم</div>
+    <button class="altbtn" id="btn-hist-next" type="button">يوم تالٍ →</button>
   </div>
-  <div style="padding:0 16px 6px;display:flex;gap:8px;align-items:center;flex-wrap:wrap">
-    <button class="altbtn" id="btn-hist-prev" type="button">← تاريخ أقدم</button>
-    <div class="ptsbdg" id="hist-label">التاريخ: —</div>
-    <button class="altbtn" id="btn-hist-next" type="button">تاريخ أحدث →</button>
-  </div>
+  <div class="tw"><div class="tabs" id="tabrow"></div></div>
   <div id="panels"></div>
 </main>
 
+<!-- Prayer Modal -->
 <div id="prayerModal" class="modal-overlay">
   <div class="modal-box">
-    <div id="prayerModalQuestion" class="modal-title">السؤال هنا</div>
-    <div class="modal-btns">
-      <button id="prayerModalYes" class="modal-btn y">نعم</button>
-      <button id="prayerModalNo" class="modal-btn n">لا</button>
-    </div>
+    <div class="modal-step" id="modalStep"></div>
+    <div class="modal-title" id="modalQuestion"></div>
+    <div class="modal-subtitle" id="modalSubtitle"></div>
+    <div class="modal-opts" id="modalOpts"></div>
   </div>
 </div>
 
@@ -168,7 +160,6 @@ input:focus-visible, button:focus-visible{outline:2px solid var(--ac);outline-of
 <script type="module">
 'use strict';
 
-// ===== Firebase =====
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
 import { getAuth, GoogleAuthProvider, signInWithPopup, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
 import { getFirestore, doc, setDoc, getDoc } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
@@ -187,29 +178,25 @@ const fbApp = initializeApp(firebaseConfig);
 const fbAuth = getAuth(fbApp);
 const fbDb = getFirestore(fbApp);
 
-// ===== Helpers / Time =====
 const KUWAIT_TZ = 'Asia/Kuwait';
-const p2 = (n)=>String(n).padStart(2,'0');
+const p2 = n => String(n).padStart(2,'0');
 
 function getKuwaitNowMinutes(){
   try{
-    const parts = new Intl.DateTimeFormat('en-GB',{timeZone:KUWAIT_TZ,hour:'2-digit',minute:'2-digit',second:'2-digit',hour12:false}).formatToParts(new Date());
+    const parts = new Intl.DateTimeFormat('en-GB',{timeZone:KUWAIT_TZ,hour:'2-digit',minute:'2-digit',hour12:false}).formatToParts(new Date());
     const out={};
     parts.forEach(p=>{if(p.type!=='literal') out[p.type]=p.value});
-    const h=parseInt(out.hour||'0',10);
-    const m=parseInt(out.minute||'0',10);
-    return h*60+m;
+    return parseInt(out.hour||'0',10)*60+parseInt(out.minute||'0',10);
   }catch{
-    const d=new Date();
-    return d.getHours()*60+d.getMinutes();
+    const d=new Date(); return d.getHours()*60+d.getMinutes();
   }
 }
 
-function getKuwaitDateParts(targetDate = new Date()){
+function getKuwaitDateParts(targetDate=new Date()){
   try{
     const parts=new Intl.DateTimeFormat('en-GB',{timeZone:KUWAIT_TZ,year:'numeric',month:'2-digit',day:'2-digit',weekday:'short'}).formatToParts(targetDate);
     const out={};
-    parts.forEach(p=>{ if(p.type!=='literal') out[p.type]=p.value; });
+    parts.forEach(p=>{if(p.type!=='literal') out[p.type]=p.value});
     return out;
   }catch{
     const d=targetDate;
@@ -218,6 +205,7 @@ function getKuwaitDateParts(targetDate = new Date()){
 }
 
 const DKEYS=['sun','mon','tue','wed','thu','fri','sat'];
+const DSHORT=['الأحد','الاثنين','الثلاثاء','الأربعاء','الخميس','الجمعة','السبت'];
 
 function todayStr(){
   const d=getKuwaitDateParts();
@@ -225,31 +213,22 @@ function todayStr(){
 }
 
 function todayJD(){
-  const weekday=getKuwaitDateParts().weekday;
-  return ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'].indexOf(weekday);
+  return ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'].indexOf(getKuwaitDateParts().weekday);
 }
 
-const TODAY=todayStr();
-
-function getKuwaitJDFromISO(iso){
-  const m = String(iso).match(/^(\d{4})-(\d{2})-(\d{2})$/);
+function getJDFromISO(iso){
+  const m=String(iso).match(/^(\d{4})-(\d{2})-(\d{2})$/);
   if(!m) return todayJD();
-  const y = parseInt(m[1],10);
-  const mo = parseInt(m[2],10);
-  const d = parseInt(m[3],10);
-  const dt = new Date(Date.UTC(y, mo-1, d));
-  return dt.getUTCDay();
+  return new Date(Date.UTC(+m[1],+m[2]-1,+m[3])).getUTCDay();
 }
 
 function dateOff(n, baseStr){
-  const d = baseStr ? new Date(baseStr + 'T12:00:00') : new Date();
+  const d = baseStr ? new Date(baseStr+'T12:00:00') : new Date();
   d.setDate(d.getDate()+n);
   return `${d.getFullYear()}-${p2(d.getMonth()+1)}-${p2(d.getDate())}`;
 }
 
-function getSelectedJD(){
-  return getKuwaitJDFromISO(SELECTED_DATE);
-}
+const TODAY = todayStr();
 
 function cleanTimeStr(s){
   if(!s) return '';
@@ -282,35 +261,25 @@ function toMin(s){
   return h*60+(m||0);
 }
 
-function isPrayerTask(task){
-  return task[2]==='prayer';
-}
+function isPrayerTask(task){ return task[2]==='prayer'; }
 
-function getTaskState(task) {
-  const now = getKuwaitNowMinutes();
-  const start = toMin(task[10] || task[1]);
-  
-  if (isPrayerTask(task)) {
-    let end = start + 60;
-    const parts = task[0].split('-');
-    if (parts.length >= 3) {
-      const pk = parts[2];
-      if(pk === 'Fajr') end = toMin(PRYT.Sunrise || FALLBK.Sunrise);
-      else if(pk === 'Dhuhr') end = toMin(PRYT.Asr || FALLBK.Asr);
-      else if(pk === 'Asr') end = toMin(PRYT.Maghrib || FALLBK.Maghrib);
-      else if(pk === 'Maghrib') end = toMin(PRYT.Isha || FALLBK.Isha);
-      else if(pk === 'Isha') end = 24 * 60;
-    }
-    if (task[0].includes('fri-jm')) {
-      end = toMin(PRYT.Asr || FALLBK.Asr);
-    }
-    if (now > end) return 'QADA';
-    return 'PENDING';
-  } else {
-    const end = start + 180;
-    if (now > end) return 'EXPIRED';
+function getTaskState(task){
+  const now=getKuwaitNowMinutes();
+  const start=toMin(task[10]||task[1]);
+  if(isPrayerTask(task)){
+    const pk=(task[0].split('-')[2])||'';
+    let end=start+60;
+    if(pk==='Fajr') end=toMin(PRYT.Sunrise||FALLBK.Sunrise);
+    else if(pk==='Dhuhr') end=toMin(PRYT.Asr||FALLBK.Asr);
+    else if(pk==='Asr') end=toMin(PRYT.Maghrib||FALLBK.Maghrib);
+    else if(pk==='Maghrib') end=toMin(PRYT.Isha||FALLBK.Isha);
+    else if(pk==='Isha') end=24*60;
+    if(task[0].includes('fri-jm')) end=toMin(PRYT.Asr||FALLBK.Asr);
+    if(now>end) return 'QADA';
     return 'PENDING';
   }
+  if(now>start+180) return 'EXPIRED';
+  return 'PENDING';
 }
 
 function floatPts(x,y,n){
@@ -329,53 +298,40 @@ function showToast(msg,ms=3500){
   t.textContent=msg;
   t.className='show';
   clearTimeout(toastTmr);
-  toastTmr=setTimeout(()=>{ if(t){ t.className=''; } },ms);
+  toastTmr=setTimeout(()=>{if(t) t.className='';},ms);
 }
 
 // ===== Schedule =====
-const mkBk=(p,t='9:15 ص')=>[p+'-bk',t,'food','🧀','الفطار','جبنة قريش ١٥٠جم + زيت زيتون + رغيفين أسمر + طماطم + خيار',5,[
-  'لبنة ٤ ملاعق + بيضتين مسلوقتين + رغيف أسمر',
-  'جبنة دمياطي ١٠٠جم + بيضة + خبز أسمر'
-],null,false];
-
+const mkBk=(p,t='9:15 ص')=>[p+'-bk',t,'food','🧀','الفطار','جبنة قريش ١٥٠جم + زيت زيتون + رغيفين أسمر + طماطم + خيار',5,['لبنة ٤ ملاعق + بيضتين مسلوقتين + رغيف أسمر','جبنة دمياطي ١٠٠جم + بيضة + خبز أسمر'],null,false];
 const mkWd=(p,t='9:30 ص')=>[p+'-wd',t,'quran','📿','الورد اليومي','١٥ دقيقة قراءة قرآن يومياً',10,null,null,false];
-
-const mkDn=(p,t='8:00 م')=>[p+'-dn',t,'food','🧀','العشا','جبنة قريش ١٥٠جم + جبنة دمياطي ٨٠جم + خيار + طماطم',5,[
-  'لبنة ٤ ملاعق + جبنة دمياطي مكعبين + خيار',
-  'بيضتين مسلوقتين + جبنة قريش ١٠0جم'
-],null,false];
-
+const mkDn=(p,t='8:00 م')=>[p+'-dn',t,'food','🧀','العشا','جبنة قريش ١٥٠جم + جبنة دمياطي ٨٠جم + خيار + طماطم',5,['لبنة ٤ ملاعق + جبنة دمياطي مكعبين + خيار','بيضتين مسلوقتين + جبنة قريش ١٠٠جم'],null,false];
 const mkSl=(p,t='11:00 م')=>[p+'-sl',t,'sleep','🌙','نوم على الوقت','نام على الوقت — النوم المنتظم ضروري للعضل والتخسيس',10,null,null,false];
 const mkSw=(p,t)=>[p+'-sw',t,'swim','🏊','سباحة مع الكوتش','تقنية + drills ← استثناء ✓',0,null,null,true];
 const mkRc=(p,t,d)=>[p+'-rc',t,'recovery','♨️','جاكوزي + بخار/ساونا',d||'ريكفري ← استثناء ✓',0,null,null,true];
 const mkGU=(p,t)=>[p+'-gm',t,'gym','🏋️','جيم — Upper Body','صدر · كتف · ترايسبس · ظهر · بايسبس · Negative pull-ups · مشي ٢٠د',25,null,null,false];
 const mkGL=(p,t)=>[p+'-gm',t,'gym','🏋️','جيم — Lower Body','Leg press · Leg curl · Leg extension · Calf · Tibialis · مشي ٢٠د',25,null,null,false];
-const mkPS=(p,t)=>[p+'-ps',t,'food','🍌','سناك قبل الجيم','موزة + ٣ تمرات (٤٥ دقيقة قبل التمرين)',5,[
-  'تمرتين + كوب عصير طبيعي','خبز أسمر + زبدة فول سوداني'
-],null,false];
-const mkPM=(p,t)=>[p+'-pm',t,'food','🍳','وجبة بعد التمرين','٣ بيضات مسلوقة + خيار + طماطم',5,[
-  'جبنة قريش ١٥٠جم + خبز أسمر','لبنة ٤ ملاعق + بيضتين'
-],null,false];
+const mkPS=(p,t)=>[p+'-ps',t,'food','🍌','سناك قبل الجيم','موزة + ٣ تمرات (٤٥ دقيقة قبل التمرين)',5,['تمرتين + كوب عصير طبيعي','خبز أسمر + زبدة فول سوداني'],null,false];
+const mkPM=(p,t)=>[p+'-pm',t,'food','🍳','وجبة بعد التمرين','٣ بيضات مسلوقة + خيار + طماطم',5,['جبنة قريش ١٥٠جم + خبز أسمر','لبنة ٤ ملاعق + بيضتين'],null,false];
 const mkBr=(p)=>[p+'-br','7:00 م','recovery','🏊','مع أخوك — جاكوزي + بخار','٧:٠٠ — ١٠:٠٠ م ← استثناء ✓',0,null,null,true];
 
-const PMETA={Fajr:{ar:'الفجر',ic:'🌙',pts:10},Dhuhr:{ar:'الظهر',ic:'☀️',pts:10},Asr:{ar:'العصر',ic:'🌤️',pts:10},Maghrib:{ar:'المغرب',ic:'🌅',pts:10},Isha:{ar:'العشاء',ic:'🌙',pts:10}};
+const PMETA={
+  Fajr:{ar:'الفجر',ic:'🌙',pts:10,sunnah:'سنة الفجر (ركعتان)'},
+  Dhuhr:{ar:'الظهر',ic:'☀️',pts:10,sunnah:'سنة الظهر (٤ ركعات قبل + ٢ بعد)'},
+  Asr:{ar:'العصر',ic:'🌤️',pts:10,sunnah:null},
+  Maghrib:{ar:'المغرب',ic:'🌅',pts:10,sunnah:'سنة المغرب (ركعتان بعد)'},
+  Isha:{ar:'العشاء',ic:'🌙',pts:10,sunnah:'سنة العشاء (ركعتان بعد)'}
+};
 
-// UPDATED TO MATCH YOUR EXACT TIMINGS AS FALLBACK
 const FALLBK={Fajr:'03:13',Sunrise:'04:50',Dhuhr:'11:51',Asr:'15:25',Maghrib:'18:51',Isha:'20:26'};
 let PRYT={...FALLBK};
 
 const FREE_TIME={
-  0:[{t:'6:00 م',d:'وقت حر'}],
-  1:[{t:'6:00 م',d:'وقت حر'}],
-  2:[{t:'6:00 م',d:'وقت حر'}],
-  3:[{t:'6:00 م',d:'وقت حر'}],
-  4:[{t:'6:00 م',d:'وقت حر'}],
-  5:[{t:'6:00 م',d:'وقت حر'}],
-  6:[{t:'6:00 م',d:'وقت حر'}]
+  0:[{t:'6:00 م',d:'وقت حر'}],1:[{t:'6:00 م',d:'وقت حر'}],2:[{t:'6:00 م',d:'وقت حر'}],
+  3:[{t:'6:00 م',d:'وقت حر'}],4:[{t:'6:00 م',d:'وقت حر'}],5:[{t:'6:00 م',d:'وقت حر'}],6:[{t:'6:00 م',d:'وقت حر'}]
 };
 
 const SCHED={
-  0:{n:'الأحد',  wk:'9:00 ص', bd:'11:00 م',gm:null,ts:[
+  0:{n:'الأحد',wk:'9:00 ص',bd:'11:00 م',gm:null,ts:[
     mkBk('sun'),mkWd('sun'),
     ['sun-qp','10:00 ص','quran','📖','تحضير درس الاثنين','حفظ آيات جديدة + مراجعة اللوح — ٤٥ دقيقة',15,null,null,false],
     ['sun-lu','2:30 م','food','🍽️','الغدا','نص كيلو فراخ/لحمة مشوي + سلطة + بطاطس مسلوقة',5,['سمك + سلطة + رغيف أسمر','كبدة مشوية + طماطم + بصل + خبز'],null,false],
@@ -392,7 +348,7 @@ const SCHED={
     mkRc('mon','9:15 م','جاكوزي + بخار — ريكفري ٤٥ دقيقة ← استثناء ✓'),
     mkPM('mon','10:30 م'),mkSl('mon','12:00 ص')
   ]},
-  2:{n:'الثلاثاء',wk:'9:00 ص', bd:'11:00 م',gm:null,ts:[
+  2:{n:'الثلاثاء',wk:'9:00 ص',bd:'11:00 م',gm:null,ts:[
     mkBk('tue'),mkWd('tue'),
     ['tue-qp','10:00 ص','quran','📖','تحضير درس الأربعاء','حفظ آيات جديدة + مراجعة اللوح — ٤٥ دقيقة',15,null,null,false],
     ['tue-lu','2:30 م','food','🍽️','الغدا','نص كيلو فراخ/لحمة مشوي + سلطة',5,['سمك + سلطة + رغيف','كبدة مشوية + سلطة + خبز'],null,false],
@@ -406,7 +362,7 @@ const SCHED={
     mkRc('wed','9:15 م','جاكوزي + بخار — ريكفري ٤٥ دقيقة ← استثناء ✓'),
     mkPM('wed','10:30 م'),mkSl('wed','12:00 ص')
   ]},
-  4:{n:'الخميس', wk:'9:00 ص', bd:'11:00 م',gm:null,ts:[
+  4:{n:'الخميس',wk:'9:00 ص',bd:'11:00 م',gm:null,ts:[
     mkBk('thu'),mkWd('thu'),
     ['thu-pp','11:30 ص','prog','💻','تحضير البرمجة','راجع الدرس السابق + اكتب أسئلتك — ٣٠ دقيقة',10,null,null,false],
     ['thu-ss','12:00 م','prog','👨‍💻','سيشن البرمجة','١٢:٠٠ — ١:٠٠ م | JavaScript',15,null,null,false],
@@ -414,13 +370,13 @@ const SCHED={
     ['thu-lu','1:30 م','food','🍽️','الغدا','نص كيلو فراخ/لحمة مشوي + سلطة',5,['سمك + سلطة + بطاطس','كبدة مشوية + سلطة + خبز'],null,false],
     mkBr('thu'),mkDn('thu','10:15 م'),mkSl('thu')
   ]},
-  5:{n:'الجمعة', wk:'9:00 ص', bd:'11:00 م',gm:null,ts:[
+  5:{n:'الجمعة',wk:'9:00 ص',bd:'11:00 م',gm:null,ts:[
     mkBk('fri'),mkWd('fri'),
     ['fri-jm','12:00 م','prayer','🕌','صلاة الجمعة','اخرج مبكر ← يعادل الظهر',15,null,null,false],
     ['fri-lu','1:30 م','food','🍽️','الغدا','يوم حر — ما تبالغش في الكارب',5,['محشي + فراخ مشوي','كنتاكي مرة الأسبوع مقبول 🍗'],null,false],
     mkDn('fri'),mkSl('fri')
   ]},
-  6:{n:'السبت',  wk:'9:00 ص', bd:'11:00 م',gm:'upper',ts:[
+  6:{n:'السبت',wk:'9:00 ص',bd:'11:00 م',gm:'upper',ts:[
     mkBk('sat'),mkWd('sat'),mkPS('sat','1:30 م'),mkGU('sat','2:00 م'),
     mkSw('sat','3:00 م'),
     mkRc('sat','4:00 م','جاكوزي + بخار/ساونا — ريكفري حتى ٥ م ← استثناء ✓'),
@@ -432,13 +388,11 @@ const SCHED={
 
 function buildPTasks(jd){
   const k=DKEYS[jd];
-  return Object.entries(PMETA)
-    .filter(([pk])=>!(jd===5 && pk==='Dhuhr'))
-    .map(([pk,pm])=>{
-      const t24=PRYT[pk]||FALLBK[pk];
-      const desc=pk==='Fajr'?`${fmt24(t24)} · ارجع نام بعدها ✓`:`وقت الصلاة: ${fmt24(t24)}`;
-      return [`pr-${k}-${pk}`,fmt24(t24),'prayer',pm.ic,pm.ar,desc,pm.pts,null,null,false,t24];
-    });
+  return Object.entries(PMETA).filter(([pk])=>!(jd===5&&pk==='Dhuhr')).map(([pk,pm])=>{
+    const t24=PRYT[pk]||FALLBK[pk];
+    const desc=pk==='Fajr'?`${fmt24(t24)} · ارجع نام بعدها ✓`:`وقت الصلاة: ${fmt24(t24)}`;
+    return [`pr-${k}-${pk}`,fmt24(t24),'prayer',pm.ic,pm.ar,desc,pm.pts,null,null,false,t24];
+  });
 }
 
 function getAllTasks(jd){
@@ -449,205 +403,249 @@ function getAllTasks(jd){
 }
 
 function getReqTasks(jd){
-  return [...buildPTasks(jd),...(SCHED[jd]?.ts||[])].filter(t=>!t[9] && t[6]>0);
+  return [...buildPTasks(jd),...(SCHED[jd]?.ts||[])].filter(t=>!t[9]&&t[6]>0);
 }
 
-// ===== History/ Persistence =====
-const LS={
-  key:'sc:data',
-  history:'sc:history',
-  stats:'sc:stats',
-  lastReport:'sc:lastReportDate'
-};
+// ===== State =====
+const LS={stats:'sc:stats',history:'sc:history',lastReport:'sc:lastReport',penalized:'sc:penalized'};
 
 let STATS={cur:0,best:0,pts:0,lc:null,lf:null};
 let DONE={};
 let SELECTED_ALTS={};
-let SELECTED_DATE = TODAY;
-
-let data={
-  history:{},
-  lastReportDate:null
-};
-
-function getDayKey(iso){
-  return String(iso);
-}
-
-function loadHistoryDay(){
-  const dk=getDayKey(SELECTED_DATE);
-  const day=data.history[dk]||{};
-  DONE=day.done||{};
-  SELECTED_ALTS=day.alts||{};
-}
-
-function saveHistoryDay(){
-  const dk=getDayKey(SELECTED_DATE);
-  if(!data.history) data.history={};
-  data.history[dk]=data.history[dk]||{};
-  data.history[dk].done=DONE;
-  data.history[dk].alts=SELECTED_ALTS;
-}
+let SELECTED_DATE=TODAY;
+let historyData={};
+let savedReports=[];
 
 async function sGet(k){try{const r=localStorage.getItem(k);return r?JSON.parse(r):null}catch{return null}}
 async function sSet(k,v){try{localStorage.setItem(k,JSON.stringify(v))}catch{}}
 
-async function loadAll(){
-  STATS=(await sGet(LS.stats))||{cur:0,best:0,pts:0,lc:null,lf:null};
-  const hd=await sGet(LS.history);
-  data.history=hd||{};
-  const lr=await sGet(LS.lastReport);
-  data.lastReportDate=lr||null;
-  loadHistoryDay();
+function getDayKey(iso){ return String(iso); }
+
+function loadDayFromHistory(){
+  const day=historyData[getDayKey(SELECTED_DATE)]||{};
+  DONE=day.done||{};
+  SELECTED_ALTS=day.alts||{};
 }
 
-async function fetchRemoteDayData() {
-  const user = fbAuth.currentUser;
-  if (!user) return;
-  try {
-    const taskDoc = await getDoc(doc(fbDb, `users/${user.uid}/tasks/${SELECTED_DATE}`));
-    if (taskDoc.exists()) {
-      const tData = taskDoc.data();
-      DONE = tData.done || {};
-      SELECTED_ALTS = tData.alts || {};
-      saveHistoryDay();
-    } else {
-      DONE = {};
-      SELECTED_ALTS = {};
-      saveHistoryDay();
-    }
-  } catch (e) {
-    console.warn('Cloud data fetch failed', e);
-  }
+function saveDayToHistory(){
+  if(!historyData[getDayKey(SELECTED_DATE)]) historyData[getDayKey(SELECTED_DATE)]={};
+  historyData[getDayKey(SELECTED_DATE)].done={...DONE};
+  historyData[getDayKey(SELECTED_DATE)].alts={...SELECTED_ALTS};
+}
+
+async function loadAll(){
+  STATS=(await sGet(LS.stats))||{cur:0,best:0,pts:0,lc:null,lf:null};
+  historyData=(await sGet(LS.history))||{};
+  savedReports=(await sGet(LS.lastReport))||[];
+  loadDayFromHistory();
 }
 
 async function saveAll(){
-  saveHistoryDay();
+  saveDayToHistory();
   await sSet(LS.stats,STATS);
-  await sSet(LS.history,data.history);
-  await sSet(LS.lastReport,data.lastReportDate);
+  await sSet(LS.history,historyData);
+  await sSet(LS.lastReport,savedReports);
 
-  const user = fbAuth.currentUser;
+  const user=fbAuth.currentUser;
   if(!user) return;
-
   try{
-    await setDoc(doc(fbDb, "users", user.uid), { stats: STATS, lastReportDate: data.lastReportDate }, { merge:true });
-    await setDoc(doc(fbDb, `users/${user.uid}/tasks/${SELECTED_DATE}`), {
-      done: DONE,
-      alts: SELECTED_ALTS
-    }, { merge:true });
-  }catch(e){
-    console.warn('Cloud backup failed',e);
-  }
+    await setDoc(doc(fbDb,'users',user.uid),{stats:STATS,lastReport:savedReports},{merge:true});
+    await setDoc(doc(fbDb,`users/${user.uid}/tasks/${SELECTED_DATE}`),{done:DONE,alts:SELECTED_ALTS},{merge:true});
+  }catch(e){console.warn('Cloud save failed',e);}
 }
 
-function getWeekPreviousDaysISO(){
-  const out=[];
+// ===== Punishment — only once per day =====
+async function applyPunishmentsOnce(){
+  const yesterday=dateOff(-1);
+  const penKey=getDayKey(yesterday);
+  const penalized=(await sGet(LS.penalized))||{};
+  if(penalized[penKey]) return; // already penalized for yesterday
+
+  const jd=getJDFromISO(yesterday);
+  const tasks=getReqTasks(jd);
+  const yDay=historyData[penKey]||{};
+  const dayDone=yDay.done||{};
+
+  let deduction=0;
+  for(const t of tasks){
+    if(!dayDone[t[0]]&&t[6]>0) deduction+=Math.floor(t[6]/2);
+  }
+
+  if(deduction>0){
+    STATS.pts=Math.max(0,STATS.pts-deduction);
+    showToast(`⚠️ تم خصم ${deduction}⭐ بسبب مهام مفقودة بالأمس`);
+  }
+
+  penalized[penKey]=true;
+  await sSet(LS.penalized,penalized);
+}
+
+// ===== Weekly Report =====
+async function showWeeklyReport(){
+  let totalPts=0, totalQada=0;
+  const lines=[];
   for(let i=1;i<=7;i++){
-    out.push(dateOff(-i));
-  }
-  return out;
-}
-
-// Replaced automatic report with manual button bound function
-async function showWeeklyReport() {
-  let totalPts=0;
-  let totalQada=0;
-  let lines=[];
-
-  const prevISOs=getWeekPreviousDaysISO();
-  for(const iso of prevISOs){
+    const iso=dateOff(-i);
     const dk=getDayKey(iso);
-    const day=data.history[dk]||{};
+    const day=historyData[dk]||{};
     const dayDone=day.done||{};
-    const jd=getKuwaitJDFromISO(iso);
+    const jd=getJDFromISO(iso);
     const tasks=getReqTasks(jd);
-
-    let pts=0;
-    let qada=0;
+    let pts=0,qada=0;
     for(const t of tasks){
-      const id=t[0];
-      const v=dayDone[id];
+      const v=dayDone[t[0]];
       if(!v) continue;
-      if(v==='qada'){
-        qada++;
-        pts+=Math.floor(t[6]/2);
-      }else if (typeof v === 'number') {
-        pts+=v;
-      }else{
-        pts+=t[6];
-      }
+      if(v==='qada'){qada++;pts+=Math.floor(t[6]/2);}
+      else if(typeof v==='number') pts+=v;
+      else pts+=t[6];
     }
-    totalPts+=pts;
-    totalQada+=qada;
-    lines.push(`${iso}: ${pts}⭐${qada?` (قضاء x${qada})`:''}`);
+    totalPts+=pts; totalQada+=qada;
+    lines.push(`${iso}: ${pts}⭐${qada?` (قضاء ×${qada})`:''}`);
   }
 
-  const report=`📊 تقرير أسبوع (آخر 7 أيام)\nالمجموع: ${totalPts}⭐\nالقضاء: ${totalQada} مهمة قضاء\n\n${lines.join('\n')}`;
-  alert(report);
-}
-
-// ===== API Integration =====
-async function fetchPrayerTimesAPI(dateStr) {
-  try {
-    const res = await fetch(`https://api.aladhan.com/v1/timingsByCity/${dateStr}?city=Salmiya&country=Kuwait&method=4`);
-    const json = await res.json();
-    if (json && json.data && json.data.timings) {
-      const t = json.data.timings;
-      // We will override API values entirely with fallback if they drift, but this keeps API logic intact if needed
-      PRYT = {
-        Fajr: FALLBK.Fajr, // Using exact fallback forced for precision based on feedback
-        Sunrise: FALLBK.Sunrise,
-        Dhuhr: FALLBK.Dhuhr,
-        Asr: FALLBK.Asr,
-        Maghrib: FALLBK.Maghrib,
-        Isha: FALLBK.Isha
-      };
-    }
-  } catch (e) {
-    PRYT = {...FALLBK};
-  }
-}
-
-// ===== Punishment System =====
-async function applyPunishments() {
-  const yesterday = dateOff(-1);
-  const yk = getDayKey(yesterday);
-  const yDay = data.history[yk] || {};
-  
-  if (yDay.penalized) return;
-
-  const jd = getKuwaitJDFromISO(yesterday);
-  const tasks = getReqTasks(jd);
-  const dayDone = yDay.done || {};
-  
-  let deduction = 0;
-  for (const t of tasks) {
-    const id = t[0];
-    const pts = t[6];
-    if (!dayDone[id] && pts > 0) {
-      deduction += Math.floor(pts / 2);
-    }
-  }
-
-  if (deduction > 0) {
-    STATS.pts = Math.max(0, STATS.pts - deduction);
-    showToast(`تم خصم ${deduction}⭐ بسبب مهام غير منجزة بالأمس`);
-  }
-  
-  if(!data.history[yk]) data.history[yk] = {};
-  data.history[yk].penalized = true;
+  // Save report
+  const reportEntry={date:TODAY,totalPts,totalQada,lines};
+  savedReports.unshift(reportEntry);
+  if(savedReports.length>4) savedReports=savedReports.slice(0,4);
   await saveAll();
+
+  const msg=`📊 تقرير الأسبوع\nالمجموع: ${totalPts}⭐\nالقضاء: ${totalQada} مهمة\n\n${lines.join('\n')}`;
+  alert(msg);
 }
 
-// ===== UI rendering =====
+// ===== Prayer Times API =====
+async function fetchPrayers(){
+  try{
+    const res=await fetch(`https://api.aladhan.com/v1/timingsByCity?city=Kuwait City&country=Kuwait&method=4`);
+    const json=await res.json();
+    if(json&&json.code===200){
+      const t=json.data.timings;
+      PRYT={Fajr:t.Fajr,Sunrise:t.Sunrise,Dhuhr:t.Dhuhr,Asr:t.Asr,Maghrib:t.Maghrib,Isha:t.Isha};
+    }else throw new Error();
+  }catch{PRYT={...FALLBK};}
+}
+
+// ===== Prayer Modal =====
+let activePrayer=null;
+
+function getPrayerSunnahText(pk){
+  return PMETA[pk]?.sunnah||null;
+}
+
+function startPrayerFlow(id, name, basePts, x, y){
+  const parts=id.split('-');
+  const pk=parts[2]||'';
+  activePrayer={id,name,pk,basePts:parseInt(basePts,10),bonus:0,x,y,step:0};
+  showPrayerStep();
+}
+
+function showPrayerStep(){
+  const {pk,name,step}=activePrayer;
+  const modal=document.getElementById('prayerModal');
+  const qEl=document.getElementById('modalQuestion');
+  const subEl=document.getElementById('modalSubtitle');
+  const stepEl=document.getElementById('modalStep');
+  const optsEl=document.getElementById('modalOpts');
+
+  // steps: 0=location, 1=style, 2=dhikr, 3=sunnah (skip for Asr)
+  const totalSteps=pk==='Asr'?3:4;
+
+  if(step>=totalSteps){
+    finishPrayerFlow(); return;
+  }
+
+  modal.classList.add('open');
+  stepEl.textContent=`السؤال ${step+1} من ${totalSteps}`;
+
+  if(step===0){
+    qEl.textContent='أين صليت؟';
+    subEl.textContent='اختر مكان الصلاة';
+    renderModalOpts([
+      {label:'المسجد 🕌',pts:4,gold:true},
+      {label:'البيت 🏠',pts:2,gold:false},
+      {label:'الجيم 🏋️',pts:1,gold:false},
+      {label:'أخرى 📍',pts:0,gold:false},
+    ]);
+  }else if(step===1){
+    qEl.textContent=`كيف أديت صلاة ${name}؟`;
+    subEl.textContent='اختر طريقة الأداء';
+    renderModalOpts([
+      {label:'جماعة 👥',pts:3,gold:true},
+      {label:'منفرد 🧍',pts:0,gold:false},
+    ]);
+  }else if(step===2){
+    qEl.textContent='هل قلت أذكار الصلاة؟';
+    subEl.textContent='سبحان الله، الحمد لله، الله أكبر...';
+    renderModalOpts([
+      {label:'نعم ✅',pts:2,gold:true},
+      {label:'لا ❌',pts:0,gold:false},
+    ]);
+  }else if(step===3){
+    const sunnahText=getPrayerSunnahText(pk)||`سنة ${name}`;
+    qEl.textContent=`هل صليت ${sunnahText}؟`;
+    subEl.textContent='السنة الراتبة';
+    renderModalOpts([
+      {label:'نعم ✅',pts:2,gold:true},
+      {label:'لا ❌',pts:0,gold:false},
+    ]);
+  }
+}
+
+function renderModalOpts(opts){
+  const el=document.getElementById('modalOpts');
+  el.innerHTML='';
+  opts.forEach(o=>{
+    const btn=document.createElement('button');
+    btn.className='modal-opt'+(o.gold?' gold':'');
+    btn.innerHTML=`<span>${o.label}</span><span class="opt-pts">+${o.pts}⭐</span>`;
+    btn.onclick=()=>{
+      activePrayer.bonus+=o.pts;
+      activePrayer.step++;
+      showPrayerStep();
+    };
+    el.appendChild(btn);
+  });
+}
+
+async function finishPrayerFlow(){
+  document.getElementById('prayerModal').classList.remove('open');
+  const total=activePrayer.basePts+activePrayer.bonus;
+  DONE[activePrayer.id]=total;
+  STATS.pts+=total;
+  if(STATS.pts>STATS.best) STATS.best=STATS.pts; // best pts not streak — fixed separately
+  floatPts(activePrayer.x,activePrayer.y,total);
+  checkStreak();
+  await saveAll();
+  renderPanelsForAllDays();
+  switchDay(getJDFromISO(SELECTED_DATE));
+  updateUI();
+  activePrayer=null;
+}
+
+// ===== Streak Logic =====
+function checkStreak(){
+  if(STATS.lc===TODAY) return;
+  const yesterday=dateOff(-1);
+  if(STATS.lf&&STATS.lf!==TODAY&&STATS.lf!==yesterday) STATS.cur=0;
+  STATS.lc=TODAY;
+
+  const jd=todayJD();
+  const req=getReqTasks(jd);
+  const todayDone=historyData[getDayKey(TODAY)]?.done||{};
+  const allDone=req.every(t=>todayDone[t[0]]);
+  if(allDone&&STATS.lf!==TODAY){
+    STATS.cur=STATS.lf===yesterday?STATS.cur+1:1;
+    STATS.lf=TODAY;
+    STATS.best=Math.max(STATS.best,STATS.cur); // best = highest STREAK
+    showToast(`🎉 يوم كامل!\nاستريك: ${STATS.cur} يوم 🔥`,4000);
+  }
+}
+
+// ===== UI =====
 function getTaskDisplayDesc(task){
-  const id=task[0];
-  const chosen=SELECTED_ALTS[id];
-  const desc=task[5];
-  const alts=task[7];
-  if(alts && chosen && alts.includes(chosen)) return chosen;
-  return desc;
+  const chosen=SELECTED_ALTS[task[0]];
+  if(task[7]&&chosen&&task[7].includes(chosen)) return chosen;
+  return task[5];
 }
 
 function toggleAlts(id){
@@ -655,13 +653,12 @@ function toggleAlts(id){
 }
 
 function renderCard(task,isToday){
-  const [id,arTime,cat,ico,name,desc,pts,alts,hw,isEx] = task;
+  const [id,arTime,cat,ico,name,,pts,alts,hw,isEx]=task;
   const done=DONE[id]||false;
-  const tState = getTaskState(task);
-  const expired = (tState === 'EXPIRED');
+  const tState=getTaskState(task);
 
   if(cat==='free'){
-    return `<div class="tc" data-c="free"><div class="tctime">${arTime}</div><div class="tcico">${ico}</div><div class="tcbody"><div class="tcname" style="color:#6366f1">${name}</div><div class="tcdesc">${desc}</div></div></div>`;
+    return `<div class="tc" data-c="free"><div class="tctime">${arTime}</div><div class="tcico">${ico}</div><div class="tcbody"><div class="tcname" style="color:#6366f1">${name}</div><div class="tcdesc">${task[5]}</div></div></div>`;
   }
 
   let act='';
@@ -669,33 +666,23 @@ function renderCard(task,isToday){
     act=`<div class="excbadge">🔓 استثناء</div>`;
   }else if(isToday){
     if(done){
-      act=`<div class="cbtn done">✅</div>`;
+      const label=typeof done==='number'?`✅ +${done}⭐`:'✅';
+      act=`<div class="cbtn done">${label}</div>`;
+    }else if(tState==='QADA'){
+      const half=Math.floor(pts/2);
+      act=`<button class="cbtn qada" data-action="qada" data-id="${id}" data-pts="${pts}">قضاء (50%)<span class="ptslbl">+${half}⭐</span></button>`;
+    }else if(tState==='EXPIRED'){
+      act=`<div class="cbtn exp">فات الوقت</div>`;
     }else{
-      if(tState === 'QADA'){
-        const half=Math.floor(pts/2);
-        act=`<button class="cbtn qada" data-action="qada" data-id="${id}" data-pts="${pts}">قضاء (50%)<span class="ptslbl">+${half}⭐</span></button>`;
-      }else if(tState === 'EXPIRED'){
-        act=`<div class="cbtn exp">فات الوقت</div>`;
-      }else{
-        act=`<button class="cbtn" data-action="confirm" data-id="${id}" data-pts="${pts}">تأكيد ✓<span class="ptslbl">+${pts}⭐</span></button>`;
-      }
+      act=`<button class="cbtn" data-action="confirm" data-id="${id}" data-pts="${pts}">تأكيد ✓<span class="ptslbl">+${pts}⭐</span></button>`;
     }
+  }else{
+    act=done?`<div class="cbtn done">✅</div>`:`<div class="ptsbdg">${pts}⭐</div>`;
   }
 
-  if(!act){
-    if(done){
-      act=`<div class="cbtn done">✅</div>`;
-    }else{
-      act=`<div class="cbtn exp">مفقود</div>`;
-    }
-  }
-
-  const altH = (alts && alts.length && !expired && !done && isToday)
-    ? `<button class="altbtn" data-action="alts" data-id="${id}">🔄 بدائل (${alts.length})</button>`+
-      `<div class="altlist" id="al-${id}">${alts.map(a=>{
-        return `<div class="altitem" role="button" tabindex="0" data-action="pickalt" data-id="${id}" data-alt="${String(a).replace(/"/g,'"')}">${a}</div>`;
-      }).join('')}</div>`
-    : '';
+  const altH=(alts&&alts.length&&isToday&&!done)?
+    `<button class="altbtn" data-action="alts" data-id="${id}">🔄 بدائل (${alts.length})</button>`+
+    `<div class="altlist" id="al-${id}">${alts.map(a=>`<div class="altitem" data-action="pickalt" data-id="${id}" data-alt="${String(a).replace(/"/g,'&quot;')}">${a}</div>`).join('')}</div>`:'';
 
   const hwH=hw?`<div class="hwtag">⏰ ${hw}</div>`:'';
   const displayDesc=getTaskDisplayDesc(task);
@@ -711,23 +698,25 @@ function renderPanel(jd){
   const d=SCHED[jd];
   if(!d) return '';
   const k=DKEYS[jd];
-  
-  const isToday = (SELECTED_DATE === TODAY) && (jd === todayJD());
+  const isToday=(SELECTED_DATE===TODAY)&&(jd===todayJD());
 
   const gbLabel=d.gm
-    ? `<div class="gbx ${d.gm==='upper'?'gbu':'gbl'}">${d.gm==='upper'?'Upper Body 💪':'Lower Body 🦵'}</div>`
-    : `<div class="gbx gbr">يوم راحة 💤</div>`;
+    ?`<div class="gbx ${d.gm==='upper'?'gbu':'gbl'}">${d.gm==='upper'?'Upper Body 💪':'Lower Body 🦵'}</div>`
+    :`<div class="gbx gbr">يوم راحة 💤</div>`;
+
+  // Prayer pills including Sunrise
+  const pillsArr=[];
+  // Sunrise pill
+  pillsArr.push(`<div class="ppill sunrise"><div class="pnam" style="color:var(--or)">الشروق ☀️</div><div class="ptim" style="color:var(--or)">${fmt24(PRYT.Sunrise||FALLBK.Sunrise)}</div></div>`);
 
   const prayerOrder=['Fajr','Dhuhr','Asr','Maghrib','Isha'];
-  const pillsArr=[];
   const schedList=d.ts||[];
-  const jumahTask=schedList.find(t=>t[2]==='prayer' && (t[4]?.includes('جمعة')||t[0].includes('fri-jm')));
-
+  const jumahTask=schedList.find(t=>t[2]==='prayer'&&(t[4]?.includes('جمعة')||t[0].includes('fri-jm')));
   for(const pk of prayerOrder){
-    if(pk==='Dhuhr' && jd===5){
+    if(pk==='Dhuhr'&&jd===5){
       if(jumahTask){
         const pid=jumahTask[0];
-        const done=DONE[pid];
+        const done=!!DONE[pid];
         pillsArr.push(`<div class="ppill${done?' done':''}" id="pp-${pid}"><div class="pnam">${jumahTask[4]}</div><div class="ptim">${fmt24(jumahTask[1])}</div></div>`);
       }
       continue;
@@ -735,13 +724,13 @@ function renderPanel(jd){
     const pm=PMETA[pk];
     if(!pm) continue;
     const pid=`pr-${k}-${pk}`;
-    const done=DONE[pid];
+    const done=!!DONE[pid];
     pillsArr.push(`<div class="ppill${done?' done':''}" id="pp-${pid}"><div class="pnam">${pm.ar}</div><div class="ptim">${fmt24(PRYT[pk]||FALLBK[pk])}</div></div>`);
   }
 
   const tasks=getAllTasks(jd);
   return `<div class="pan" id="pan-${k}">
-    <div class="dh"><div><div class="dhn">${d.n}</div><div class="dhm">فجر ${fmt24(PRYT.Fajr||FALLBK.Fajr)} ← صحيان ${d.wk} · نوم ${d.bd}</div></div>${gbLabel}</div>
+    <div class="dh"><div><div class="dhn">${d.n}</div><div class="dhm">فجر ${fmt24(PRYT.Fajr||FALLBK.Fajr)} · شروق ${fmt24(PRYT.Sunrise||FALLBK.Sunrise)} ← صحيان ${d.wk} · نوم ${d.bd}</div></div>${gbLabel}</div>
     <div class="prow">${pillsArr.join('')}</div>
     <div class="tl">${tasks.map(t=>renderCard(t,isToday)).join('')}</div>
   </div>`;
@@ -751,22 +740,28 @@ function renderTabs(){
   const c=document.getElementById('tabrow');
   if(!c) return;
   c.innerHTML='';
-  const selJD=getSelectedJD();
+  const selJD=getJDFromISO(SELECTED_DATE);
   [0,1,2,3,4,5,6].forEach(j=>{
     const isT=j===selJD;
     const isG=!!SCHED[j]?.gm;
     const b=document.createElement('div');
     b.className=`tab${isT?' act':''}${j===todayJD()?' tod':''}`;
-    b.innerHTML=`<div>${SCHED[j].n}</div>${isG?'<div class="gdot"></div>':''}`;
-    b.onclick=()=>switchDay(j);
+    b.innerHTML=`<div>${DSHORT[j]}</div>${isG?'<div class="gdot"></div>':''}`;
+    b.onclick=()=>{
+      SELECTED_DATE=dateOff(j-todayJD());
+      loadDayFromHistory();
+      renderTabs();
+      renderPanelsForAllDays();
+      switchDay(j);
+      updateUI();
+    };
     c.appendChild(b);
   });
 }
 
 function switchDay(jd){
-  document.querySelectorAll('.tab').forEach((t,i)=> {
-    if(i===jd) t.classList.add('act');
-    else t.classList.remove('act');
+  document.querySelectorAll('.tab').forEach((t,i)=>{
+    if(i===jd) t.classList.add('act'); else t.classList.remove('act');
   });
   document.querySelectorAll('.pan').forEach(p=>p.classList.remove('act'));
   const p=document.getElementById(`pan-${DKEYS[jd]}`);
@@ -774,282 +769,205 @@ function switchDay(jd){
 }
 
 function renderPanelsForAllDays(){
-  const c = document.getElementById('panels');
+  const c=document.getElementById('panels');
   if(!c) return;
-  c.innerHTML = [0,1,2,3,4,5,6].map(j=>renderPanel(j)).join('');
-}
-
-function updateAuthUI(user) {
-    const isSaturday = (todayJD() === 6);
-    const reportBtnHtml = `<button class="altbtn" id="btn-report" ${isSaturday ? '' : 'disabled'}>📊 تقرير الأسبوع</button>`;
-    
-    if (user) {
-        document.getElementById('authName').textContent = user.displayName || 'عبدالله';
-        document.getElementById('authBtn').innerHTML = `<button class="altbtn" id="btn-signout">تسجيل خروج</button>${reportBtnHtml}`;
-    } else {
-        document.getElementById('authName').textContent = '';
-        document.getElementById('authBtn').innerHTML = `<button class="altbtn" id="btn-signin">تسجيل دخول</button>${reportBtnHtml}`;
-    }
+  c.innerHTML=[0,1,2,3,4,5,6].map(j=>renderPanel(j)).join('');
 }
 
 function updateUI(){
+  // FIX: sv3 shows best STREAK not best points
   document.getElementById('sv1').textContent=STATS.cur;
   document.getElementById('sv2').textContent=STATS.pts;
-  document.getElementById('sv3').textContent=STATS.best;
-  
-  const jd=getSelectedJD();
+  document.getElementById('sv3').textContent=STATS.best; // best streak
+
+  const jd=getJDFromISO(SELECTED_DATE);
   const req=getReqTasks(jd);
-  let d=0, p=0;
-  
-  for(let t of req){
+  let d=0,p=0;
+  for(const t of req){
     const st=DONE[t[0]];
     if(st){
       d++;
-      if(st==='qada') p+=Math.floor(t[6]/2);
-      else if(typeof st==='number') p+=st;
+      if(typeof st==='number') p+=st;
+      else if(st==='qada') p+=Math.floor(t[6]/2);
       else p+=t[6];
     }
   }
-  
-  document.getElementById('ptxt').textContent=`${d}/${req.length} مهمة`;
-  document.getElementById('ppts').textContent=`${p} نقطة`;
+  const pct=req.length?Math.round(d/req.length*100):0;
+  document.getElementById('ptxt').textContent=`${d}/${req.length} مهمة (${pct}%)`;
+  document.getElementById('ppts').textContent=`${p} نقطة اليوم`;
   document.getElementById('pfill').style.width=req.length?`${(d/req.length)*100}%`:'0%';
-  document.getElementById('hist-label').textContent=`التاريخ: ${SELECTED_DATE === TODAY ? 'اليوم' : SELECTED_DATE}`;
+  document.getElementById('hist-label').textContent=`التاريخ: ${SELECTED_DATE===TODAY?'اليوم':SELECTED_DATE}`;
+
+  // Report button only on Saturday
+  const reportBtn=document.getElementById('btn-report');
+  if(reportBtn) reportBtn.disabled=(todayJD()!==6);
 }
 
-
-// ===== 4-Step Interactive Prayer Modal =====
-const PRAYER_QUESTIONS = [
-  "هل صليت في المسجد؟ (+2⭐)",
-  "هل صليت في الصف الأول؟ (+2⭐)",
-  "هل قلت أذكار الصلاة؟ (+2⭐)",
-  "هل صليت السنة الراتبة؟ (+2⭐)"
-];
-
-let activePrayerFlow = null;
-
-function startPrayerInteractiveFlow(taskId, taskName, basePts, eventX, eventY){
-  let prayerKey = null;
-  if (taskId.includes('Fajr') || taskName.includes('الفجر')) prayerKey = 'Fajr';
-  else if (taskId.includes('Dhuhr') || taskName.includes('الظهر')) prayerKey = 'Dhuhr';
-  else if (taskId.includes('Asr') || taskName.includes('العصر')) prayerKey = 'Asr';
-  else if (taskId.includes('Maghrib') || taskName.includes('المغرب')) prayerKey = 'Maghrib';
-  else if (taskId.includes('Isha') || taskName.includes('العشاء')) prayerKey = 'Isha';
-  else if (taskId.includes('jm') || taskName.includes('جمعة')) prayerKey = 'Jumah';
-
-  activePrayerFlow = {
-    id: taskId,
-    key: prayerKey,
-    name: taskName,
-    basePts: parseInt(basePts, 10),
-    totalEarned: parseInt(basePts, 10),
-    step: 0,
-    x: eventX,
-    y: eventY
-  };
-
-  showPrayerModalStep();
+function updateAuthUI(user){
+  const nameEl=document.getElementById('authName');
+  const btnEl=document.getElementById('authBtn');
+  if(!nameEl||!btnEl) return;
+  const isSat=todayJD()===6;
+  if(user){
+    nameEl.textContent=(user.displayName||user.email||'').split('@')[0];
+    btnEl.innerHTML=`<button class="altbtn" id="btn-signout">خروج</button><button class="altbtn" id="btn-report" ${isSat?'':'disabled'}>📊 تقرير</button>`;
+  }else{
+    nameEl.textContent='';
+    btnEl.innerHTML=`<button class="altbtn" id="btn-signin">تسجيل دخول</button><button class="altbtn" id="btn-report" ${isSat?'':'disabled'}>📊 تقرير</button>`;
+  }
 }
 
-function showPrayerModalStep() {
-  const step = activePrayerFlow.step;
-  
-  if (step >= PRAYER_QUESTIONS.length) {
-    finishPrayerInteractiveFlow();
+// ===== Event Listener =====
+document.body.addEventListener('click', async e=>{
+  const id=e.target.closest('[data-id]')?.getAttribute('data-id');
+  const action=e.target.closest('[data-action]')?.getAttribute('data-action');
+  const ptsAttr=e.target.closest('[data-pts]')?.getAttribute('data-pts');
+  const tgt=e.target;
+
+  if(tgt.id==='btn-signin'){
+    try{ await signInWithPopup(fbAuth,new GoogleAuthProvider()); }
+    catch(err){ showToast('فشل تسجيل الدخول'); }
     return;
   }
 
-  // Skip Sunnah question for Asr
-  if (step === 3 && activePrayerFlow.key === 'Asr') {
-    finishPrayerInteractiveFlow();
+  if(tgt.id==='btn-signout'){
+    // FIX: properly clear everything on sign out
+    if(window.__sc_unsub){try{window.__sc_unsub();}catch(e){} window.__sc_unsub=null;}
+    await fbAuth.signOut();
+    STATS={cur:0,best:0,pts:0,lc:null,lf:null};
+    DONE={};
+    SELECTED_ALTS={};
+    historyData={};
+    savedReports=[];
+    SELECTED_DATE=TODAY;
+    localStorage.removeItem(LS.stats);
+    localStorage.removeItem(LS.history);
+    localStorage.removeItem(LS.lastReport);
+    localStorage.removeItem(LS.penalized);
+    updateAuthUI(null);
+    renderTabs();
+    renderPanelsForAllDays();
+    switchDay(todayJD());
+    updateUI();
     return;
   }
 
-  const modal = document.getElementById('prayerModal');
-  const question = document.getElementById('prayerModalQuestion');
-  question.textContent = PRAYER_QUESTIONS[step];
-  modal.classList.add('open');
-
-  document.getElementById('prayerModalYes').onclick = () => {
-    activePrayerFlow.totalEarned += 2; // +2 points for every 'yes'
-    activePrayerFlow.step++;
-    showPrayerModalStep();
-  };
-  
-  document.getElementById('prayerModalNo').onclick = () => {
-    activePrayerFlow.step++;
-    showPrayerModalStep();
-  };
-}
-
-async function finishPrayerInteractiveFlow() {
-  document.getElementById('prayerModal').classList.remove('open');
-  const finalScore = activePrayerFlow.totalEarned;
-  
-  DONE[activePrayerFlow.id] = finalScore; 
-  STATS.pts += finalScore;
-  if (STATS.pts > STATS.best) STATS.best = STATS.pts;
-
-  floatPts(activePrayerFlow.x, activePrayerFlow.y, finalScore);
-  await saveAll();
-  renderPanelsForAllDays();
-  updateUI();
-  switchDay(getSelectedJD());
-}
-
-// ===== Global Actions Event Listener =====
-document.body.addEventListener('click', async (e) => {
-  const action = e.target.getAttribute('data-action');
-  const id = e.target.getAttribute('data-id');
-  const ptsAttr = e.target.getAttribute('data-pts');
-
-  // Weekly Report Action
-  if (e.target.id === 'btn-report') {
-    if (todayJD() !== 6) return; // Only allow on Saturday
+  if(tgt.id==='btn-report'){
+    if(todayJD()!==6){ showToast('التقرير متاح يوم السبت فقط'); return; }
     await showWeeklyReport();
     return;
   }
 
-  if (e.target.id === 'btn-signin') {
-    const provider = new GoogleAuthProvider();
-    try {
-      await signInWithPopup(fbAuth, provider);
-    } catch (err) {
-      showToast("فشل تسجيل الدخول");
-    }
-    return;
-  }
-
-  if (e.target.id === 'btn-signout') {
-    await fbAuth.signOut();
-    
-    // Explicitly wipe all local storage data so the UI resets completely
-    localStorage.removeItem(LS.stats);
-    localStorage.removeItem(LS.history);
-    localStorage.removeItem(LS.lastReport);
-    
-    STATS = {cur:0,best:0,pts:0,lc:null,lf:null};
-    DONE = {};
-    SELECTED_ALTS = {};
-    data.history = {};
-    
-    updateAuthUI(null);
+  if(tgt.id==='btn-hist-prev'){
+    SELECTED_DATE=dateOff(-1,SELECTED_DATE);
+    saveDayToHistory();
+    loadDayFromHistory();
     renderTabs();
     renderPanelsForAllDays();
-    switchDay(getSelectedJD());
+    switchDay(getJDFromISO(SELECTED_DATE));
     updateUI();
     return;
   }
 
-  if (e.target.id === 'btn-hist-prev') {
-    SELECTED_DATE = dateOff(-1, SELECTED_DATE);
-    loadHistoryDay();
-    document.getElementById('ld').style.display = 'flex';
-    document.getElementById('app').style.display = 'none';
-    await fetchRemoteDayData();
-    await fetchPrayerTimesAPI(SELECTED_DATE);
-    document.getElementById('ld').style.display = 'none';
-    document.getElementById('app').style.display = 'block';
+  if(tgt.id==='btn-hist-next'){
+    const next=dateOff(1,SELECTED_DATE);
+    if(next>TODAY){ showToast('لا يمكن عرض أيام مستقبلية'); return; }
+    SELECTED_DATE=next;
+    saveDayToHistory();
+    loadDayFromHistory();
     renderTabs();
     renderPanelsForAllDays();
-    switchDay(getSelectedJD());
+    switchDay(getJDFromISO(SELECTED_DATE));
     updateUI();
     return;
   }
 
-  if (e.target.id === 'btn-hist-next') {
-    SELECTED_DATE = dateOff(1, SELECTED_DATE);
-    loadHistoryDay();
-    document.getElementById('ld').style.display = 'flex';
-    document.getElementById('app').style.display = 'none';
-    await fetchRemoteDayData();
-    await fetchPrayerTimesAPI(SELECTED_DATE);
-    document.getElementById('ld').style.display = 'none';
-    document.getElementById('app').style.display = 'block';
-    renderTabs();
+  if(!action||!id) return;
+
+  if(action==='alts'){ toggleAlts(id); return; }
+
+  if(action==='pickalt'){
+    const alt=e.target.closest('[data-alt]')?.getAttribute('data-alt');
+    if(!alt) return;
+    SELECTED_ALTS[id]=alt;
+    await saveAll();
     renderPanelsForAllDays();
-    switchDay(getSelectedJD());
-    updateUI();
+    switchDay(getJDFromISO(SELECTED_DATE));
     return;
   }
 
-  if (!action) return;
-
-  if (action === 'confirm' || action === 'qada') {
-    const pts = parseInt(ptsAttr || '0', 10);
-    const isPrayer = id.startsWith('pr-') || id.includes('-jm');
-
-    if (isPrayer && action === 'confirm') {
-      const cardTitle = e.target.closest('.tc').querySelector('.tcname').textContent;
-      startPrayerInteractiveFlow(id, cardTitle, pts, e.clientX, e.clientY);
+  if(action==='confirm'){
+    const pts=parseInt(ptsAttr||'0',10);
+    const isPrayer=id.startsWith('pr-')||id.includes('-jm');
+    if(isPrayer){
+      const cardName=e.target.closest('.tc')?.querySelector('.tcname')?.textContent||'';
+      startPrayerFlow(id,cardName,pts,e.clientX,e.clientY);
       return;
     }
-
-    DONE[id] = action === 'qada' ? 'qada' : true;
-    const reward = action === 'qada' ? Math.floor(pts / 2) : pts;
-
-    STATS.pts += reward;
-    if (STATS.pts > STATS.best) STATS.best = STATS.pts;
-
-    floatPts(e.clientX, e.clientY, reward);
+    if(DONE[id]) return;
+    DONE[id]=pts;
+    STATS.pts+=pts;
+    floatPts(e.clientX,e.clientY,pts);
+    checkStreak();
     await saveAll();
     renderPanelsForAllDays();
+    switchDay(getJDFromISO(SELECTED_DATE));
     updateUI();
-    switchDay(getSelectedJD());
+    return;
   }
 
-  if (action === 'alts') {
-    toggleAlts(id);
-  }
-
-  if (action === 'pickalt') {
-    const chosenAltText = e.target.getAttribute('data-alt');
-    SELECTED_ALTS[id] = chosenAltText;
+  if(action==='qada'){
+    const pts=parseInt(ptsAttr||'0',10);
+    if(DONE[id]) return;
+    const half=Math.floor(pts/2);
+    DONE[id]='qada';
+    STATS.pts+=half;
+    floatPts(e.clientX,e.clientY,half);
+    checkStreak();
     await saveAll();
     renderPanelsForAllDays();
-    switchDay(getSelectedJD());
+    switchDay(getJDFromISO(SELECTED_DATE));
+    updateUI();
+    showToast('تم تسجيل القضاء (50%)');
+    return;
   }
 });
 
-// ===== Initialization Logic =====
-onAuthStateChanged(fbAuth, async (user) => {
+// ===== Init =====
+onAuthStateChanged(fbAuth, async user=>{
   updateAuthUI(user);
 
-  if (user) {
-    try {
-      const userDoc = await getDoc(doc(fbDb, "users", user.uid));
-      if (userDoc.exists()) {
-        const uData = userDoc.data();
-        if (uData.stats) STATS = uData.stats;
-        if (uData.lastReportDate) data.lastReportDate = uData.lastReportDate;
+  if(user){
+    try{
+      const userDoc=await getDoc(doc(fbDb,'users',user.uid));
+      if(userDoc.exists()){
+        const uData=userDoc.data();
+        if(uData.stats) STATS=uData.stats;
+        if(uData.lastReport) savedReports=uData.lastReport;
       }
-      
-      const taskDoc = await getDoc(doc(fbDb, `users/${user.uid}/tasks/${SELECTED_DATE}`));
-      if (taskDoc.exists()) {
-        const tData = taskDoc.data();
-        DONE = tData.done || {};
-        SELECTED_ALTS = tData.alts || {};
-        saveHistoryDay();
+      const taskDoc=await getDoc(doc(fbDb,`users/${user.uid}/tasks/${SELECTED_DATE}`));
+      if(taskDoc.exists()){
+        const tData=taskDoc.data();
+        DONE=tData.done||{};
+        SELECTED_ALTS=tData.alts||{};
+        saveDayToHistory();
       }
-    } catch (e) {
-      console.warn("Cloud data loading skipped/failed", e);
-    }
-  } else {
+    }catch(e){console.warn('Cloud load failed',e);}
+  }else{
     await loadAll();
   }
 
-  await fetchPrayerTimesAPI(SELECTED_DATE);
-  await applyPunishments();
-  
+  await fetchPrayers();
+  await applyPunishmentsOnce();
+
   renderTabs();
   renderPanelsForAllDays();
-  switchDay(getSelectedJD());
+  switchDay(todayJD());
   updateUI();
 
-  document.getElementById('ld').style.display = 'none';
-  document.getElementById('app').style.display = 'block';
+  document.getElementById('ld').style.display='none';
+  document.getElementById('app').style.display='block';
 });
-
 </script>
 </body>
 </html>
