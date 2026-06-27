@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+<! DOCTYPE html>
 <html lang="ar" dir="rtl">
 <head>
 <meta charset="UTF-8">
@@ -66,6 +66,7 @@ body{font-family:'Cairo',sans-serif;background:var(--bg);color:var(--tx);directi
 .tc[data-c="prog"]{border-right:3px solid var(--pk)}
 .tc[data-c="sleep"]{border-right:3px solid var(--pu)}
 .tc[data-c="free"]{border-right:3px dashed #6366f1}
+.tc[data-c="sunrise"]{border-right:3px solid var(--or)}
 .tctime{font-size:.67rem;color:var(--mu);font-weight:700;min-width:60px;text-align:left;padding-top:2px;direction:ltr;flex-shrink:0}
 .tcico{font-size:1.1rem;width:32px;height:32px;display:flex;align-items:center;justify-content:center;border-radius:8px;background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.1);flex-shrink:0}
 .tcbody{flex:1;min-width:0}
@@ -106,25 +107,27 @@ body{font-family:'Cairo',sans-serif;background:var(--bg);color:var(--tx);directi
 .modal-opt.gold:hover{background:rgba(212,175,55,.14);box-shadow:0 0 22px rgba(212,175,55,.35)}
 .opt-pts{font-size:.72rem;direction:ltr;opacity:.9;white-space:nowrap}
 
-/* Weekly Report Modal */
-.report-overlay{position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(10,14,26,.95);display:none;align-items:flex-start;justify-content:center;z-index:10001;padding:20px;overflow-y:auto}
+/* Weekly Report Modal - Made it Good & Big */
+.report-overlay{position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(10,14,26,.95);display:none;align-items:flex-start;justify-content:center;z-index:10001;padding:40px 20px;overflow-y:auto}
 .report-overlay.open{display:flex}
-.report-box{background:var(--c2);border:2px solid var(--br);border-radius:20px;padding:24px 20px;width:100%;max-width:500px;margin:auto}
-.report-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:20px}
-.report-title{font-size:1.2rem;font-weight:900;color:var(--ye)}
-.report-close{background:none;border:1px solid var(--br);color:var(--mu);border-radius:8px;padding:4px 12px;cursor:pointer;font-family:'Cairo',sans-serif;font-size:.8rem}
-.report-summary{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:20px}
-.report-stat{background:var(--c);border:1px solid var(--br);border-radius:10px;padding:12px;text-align:center}
-.report-stat-val{font-size:1.5rem;font-weight:900;color:var(--ye)}
-.report-stat-lbl{font-size:.65rem;color:var(--so);margin-top:2px}
-.report-day{background:var(--c);border:1px solid var(--br);border-radius:10px;padding:12px;margin-bottom:8px}
-.report-day-title{font-size:.85rem;font-weight:700;color:var(--ac);margin-bottom:8px}
-.report-day-row{font-size:.72rem;color:var(--so);padding:3px 0;border-bottom:1px solid rgba(30,45,69,.4);display:flex;justify-content:space-between;align-items:center}
-.report-day-row:last-child{border-bottom:none}
-.report-prayer-detail{font-size:.68rem;color:var(--mu);margin-top:4px;padding:6px 8px;background:rgba(0,0,0,.2);border-radius:6px;line-height:1.8}
-.badge-green{color:var(--gr);font-weight:700}
-.badge-red{color:var(--rd);font-weight:700}
+.report-box{background:var(--c2);border:2px solid var(--br);border-radius:20px;padding:24px 24px;width:100%;max-width:650px;margin:auto;box-shadow:0 10px 40px rgba(0,0,0,0.8)}
+.report-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:24px;padding-bottom:12px;border-bottom:2px solid var(--br)}
+.report-title{font-size:1.4rem;font-weight:900;color:var(--ye)}
+.report-close{background:rgba(239,68,68,.1);border:1px solid rgba(239,68,68,.3);color:#ef4444;border-radius:8px;padding:6px 16px;cursor:pointer;font-family:'Cairo',sans-serif;font-size:.9rem;font-weight:700;transition:all .2s}
+.report-close:hover{background:rgba(239,68,68,.2)}
+.report-summary{display:grid;grid-template-columns:repeat(4, 1fr);gap:12px;margin-bottom:24px}
+.report-stat{background:var(--c);border:1px solid var(--br);border-radius:12px;padding:16px 12px;text-align:center;box-shadow:0 4px 10px rgba(0,0,0,0.3)}
+.report-stat-val{font-size:1.8rem;font-weight:900;color:var(--ye)}
+.report-stat-lbl{font-size:.75rem;color:var(--so);margin-top:4px;font-weight:700}
+.report-day{background:var(--c);border:1px solid var(--br);border-radius:12px;padding:16px;margin-bottom:12px}
+.report-day-title{font-size:1rem;font-weight:900;color:var(--ac);margin-bottom:12px;border-bottom:1px solid rgba(59,130,246,.2);padding-bottom:6px}
+.report-day-row{font-size:.85rem;color:var(--tx);padding:4px 0;display:flex;justify-content:space-between;align-items:center;font-weight:700}
+.report-prayer-detail{font-size:.75rem;color:var(--tx);margin-top:6px;padding:8px 12px;background:rgba(10,14,26,.6);border:1px solid var(--br);border-radius:8px;line-height:1.8;display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+.badge-green{color:#10b981;font-weight:900;background:rgba(16,185,129,.15);padding:2px 8px;border-radius:4px}
+.badge-red{color:#ef4444;font-weight:900;background:rgba(239,68,68,.15);padding:2px 8px;border-radius:4px}
 .badge-or{color:var(--or);font-weight:700}
+.badge-gray{color:var(--so);font-weight:700;background:rgba(148,163,184,.1);padding:2px 8px;border-radius:4px}
+@media(max-width:500px){.report-summary{grid-template-columns:1fr 1fr;}}
 </style>
 </head>
 <body>
@@ -178,8 +181,8 @@ body{font-family:'Cairo',sans-serif;background:var(--bg);color:var(--tx);directi
 <div id="reportModal" class="report-overlay">
   <div class="report-box">
     <div class="report-header">
-      <div class="report-title">📊 تقرير الأسبوع</div>
-      <button class="report-close" id="closeReport">✕ إغلاق</button>
+      <div class="report-title">📊 التقرير الأسبوعي المفصل</div>
+      <button class="report-close" id="closeReport" onclick="document.getElementById('reportModal').classList.remove('open')">✕ إغلاق</button>
     </div>
     <div id="reportContent"></div>
   </div>
@@ -279,8 +282,10 @@ const mkPS=(p,t)=>[p+'-ps',t,'food','🍌','سناك قبل الجيم','موز�
 const mkPM=(p,t)=>[p+'-pm',t,'food','🍳','وجبة بعد التمرين','٣ بيضات مسلوقة + خيار + طماطم',5,['جبنة قريش ١٥٠جم + خبز أسمر','لبنة ٤ ملاعق + بيضتين'],null,false];
 const mkBr=(p)=>[p+'-br','7:00 م','recovery','🏊','مع أخوك — جاكوزي + بخار','٧:٠٠ — ١٠:٠٠ م ← استثناء ✓',0,null,null,true];
 
+// FIX: Added Sunrise (Shuruq) explicitly here so it generates naturally between Fajr and Dhuhr in the list!
 const PMETA={
   Fajr:{ar:'الفجر',ic:'🌙',pts:10,sunnah:'سنة الفجر (ركعتان قبل)'},
+  Sunrise:{ar:'الشروق',ic:'🌅',pts:5,sunnah:null}, // Added Shuruq marker
   Dhuhr:{ar:'الظهر',ic:'☀️',pts:10,sunnah:'سنة الظهر (٤ قبل + ٢ بعد)'},
   Asr:{ar:'العصر',ic:'🌤️',pts:10,sunnah:null},
   Maghrib:{ar:'المغرب',ic:'🌅',pts:10,sunnah:'سنة المغرب (ركعتان بعد)'},
@@ -305,8 +310,9 @@ function buildPTasks(jd){
   const k=DKEYS[jd];
   return Object.entries(PMETA).filter(([pk])=>!(jd===5&&pk==='Dhuhr')).map(([pk,pm])=>{
     const t24=PRYT[pk]||FALLBK[pk];
-    const desc=pk==='Fajr'?`${fmt24(t24)} · ارجع نام بعدها ✓`:`وقت الصلاة: ${fmt24(t24)}`;
-    return[`pr-${k}-${pk}`,fmt24(t24),'prayer',pm.ic,pm.ar,desc,pm.pts,null,null,false,t24];
+    // Fix: Made Sunrise act uniquely so it doesn't prompt you like a normal prayer.
+    const desc=pk==='Fajr'?`${fmt24(t24)} · ارجع نام بعدها ✓`:pk==='Sunrise'?'وقت الشروق - لا تصلِ فيه':`وقت الصلاة: ${fmt24(t24)}`;
+    return[`pr-${k}-${pk}`,fmt24(t24),pk==='Sunrise'?'sunrise':'prayer',pm.ic,pm.ar,desc,pm.pts,null,null,false,t24];
   });
 }
 function getAllTasks(jd){const d=SCHED[jd];if(!d)return[];const frees=(FREE_TIME[jd]||[]).map((f,i)=>[`fr-${jd}-${i}`,f.t,'free','🎮','وقت حر',f.d,0,null,null,false]);return[...buildPTasks(jd),...d.ts,...frees].sort((a,b)=>toMin(a[10]||a[1])-toMin(b[10]||b[1]));}
@@ -329,6 +335,11 @@ function saveDay(){const dk=SELECTED_DATE;if(!historyData[dk])historyData[dk]={}
 
 async function loadAll(){
   STATS=(await sGet(LS.stats))||{cur:0,best:0,pts:0,lc:null,lf:null};
+  
+  // FIX: Force reset the streak so you can start from the beginning tracking the streak section, NOT points!
+  STATS.best = 0; 
+  STATS.cur = 0;
+  
   historyData=(await sGet(LS.history))||{};
   savedReports=(await sGet(LS.reports))||[];
   loadDay();
@@ -346,6 +357,128 @@ async function saveAll(){
     await setDoc(doc(fbDb,`users/${user.uid}/tasks/${SELECTED_DATE}`),{done:DONE,alts:SELECTED_ALTS},{merge:true});
   }catch(e){console.warn('cloud save failed',e);}
 }
+
+// =========================================================================
+// INJECTED CONFIGURATION FOR THE REST OF YOUR SCRIPT TO USE
+// =========================================================================
+
+// 1. PRAYER POINTS FIX: This configuration should be used by your prayer modal logic. 
+// It guarantees that all options give points (+2) but are still less than the highest glowy option (+4/+3).
+window.PRAYER_QUESTIONS_CONFIG = [
+    {
+        q: 'أين صليت؟',
+        sub: 'اختر مكان الصلاة',
+        opts: [
+            { t: 'المسجد', pts: 4, gold: true, ic: '🕌' },
+            { t: 'البيت', pts: 2, ic: '🏠' }, 
+            { t: 'الجيم', pts: 2, ic: '🏋️' },
+            { t: 'أخرى', pts: 2, ic: '📍' }
+        ]
+    },
+    {
+        q: 'كيف صليت؟',
+        sub: 'جماعة أم منفرد؟',
+        opts: [
+            { t: 'جماعة', pts: 4, gold: true, ic: '👥' },
+            { t: 'منفرد', pts: 2, ic: '👤' } 
+        ]
+    },
+    {
+        q: 'السنن والرواتب',
+        sub: 'هل صليت السنة؟',
+        opts: [
+            { t: 'صليت السنة', pts: 3, gold: true, ic: '✅' },
+            { t: 'لم أصلِ', pts: 1, ic: '❌' } 
+        ]
+    },
+    {
+        q: 'الأذكار',
+        sub: 'أذكار ما بعد الصلاة',
+        opts: [
+            { t: 'قرأت الأذكار', pts: 3, gold: true, ic: '📿' },
+            { t: 'لم أقرأ', pts: 1, ic: '❌' }
+        ]
+    }
+];
+
+// 2. BIG & DETAILED WEEKLY REPORT FIX: Use this function to generate your report popup. 
+// It calculates points lost, missed tasks, delayed prayers, and maps every specific modal answer.
+window.generateDetailedWeeklyReport = function() {
+    const rc = document.getElementById('reportContent');
+    if(!rc) return;
+    
+    let totalTasks = 0, doneTasks = 0, missedTasks = 0;
+    let totalPointsLost = 0, totalPointsEarned = 0, delayedPrayers = 0;
+    let daysHtml = '';
+    
+    for(let i=0; i<7; i++) {
+        const dDate = new Date();
+        dDate.setDate(dDate.getDate() - i);
+        const dStr = `${dDate.getFullYear()}-${p2(dDate.getMonth()+1)}-${p2(dDate.getDate())}`;
+        const dayData = historyData[dStr] || { done: {} };
+        const jd = getJDfromISO(dStr);
+        const dayTasks = getAllTasks(jd);
+        
+        let dayDone = 0, dayTotal = 0;
+        let prayerDetailsHtml = '';
+        
+        dayTasks.forEach(t => {
+            if(t[9]) return; 
+            dayTotal++;
+            const tid = t[0];
+            const tPts = t[6] || 0;
+            const dInf = dayData.done[tid];
+            
+            if(dInf) {
+                dayDone++;
+                totalPointsEarned += (dInf.pts || 0);
+                if((dInf.pts || 0) < tPts) totalPointsLost += (tPts - (dInf.pts || 0));
+                
+                if(t[2] === 'prayer') {
+                    if(dInf.qada) delayedPrayers++;
+                    let pDet = [];
+                    if(dInf.qada) pDet.push('<span class="badge-red">قضاء متأخر</span>');
+                    else pDet.push('<span class="badge-green">صُليت في وقتها</span>');
+                    
+                    if(dInf.opts && dInf.opts.length) {
+                        dInf.opts.forEach(opt => pDet.push(`<span class="badge-gray">· ${opt.a}</span>`));
+                    } else {
+                        pDet.push(`<span class="badge-gray">· بدون تفاصيل إضافية</span>`);
+                    }
+                    prayerDetailsHtml += `<div class="report-prayer-detail"><strong>${t[4]}</strong>: ${pDet.join(' ')}</div>`;
+                }
+            } else {
+                missedTasks++;
+                totalPointsLost += tPts;
+            }
+        });
+        
+        totalTasks += dayTotal;
+        doneTasks += dayDone;
+        
+        if(dayTotal > 0) {
+            daysHtml += `
+                <div class="report-day">
+                    <div class="report-day-title">${DSHORT[jd]} - ${dStr}</div>
+                    <div class="report-day-row"><span>إنجاز المهام:</span> <span>${dayDone} / ${dayTotal}</span></div>
+                    ${prayerDetailsHtml}
+                </div>
+            `;
+        }
+    }
+    
+    rc.innerHTML = `
+        <div class="report-summary">
+            <div class="report-stat"><div class="report-stat-val">${doneTasks}/${totalTasks}</div><div class="report-stat-lbl">المهام المنجزة</div></div>
+            <div class="report-stat"><div class="report-stat-val" style="color:#ef4444">${missedTasks}</div><div class="report-stat-lbl">مهام مفقودة</div></div>
+            <div class="report-stat"><div class="report-stat-val" style="color:#ef4444">${totalPointsLost}</div><div class="report-stat-lbl">نقاط ضائعة</div></div>
+            <div class="report-stat"><div class="report-stat-val" style="color:var(--or)">${delayedPrayers}</div><div class="report-stat-lbl">صلوات قضاء</div></div>
+        </div>
+        <div style="max-height: 450px; overflow-y: auto; padding-right: 8px;">
+            ${daysHtml}
+        </div>
+    `;
+};
 
 // ===== Punishment — once per day =====
 async function applyPunishmentOnce(){
@@ -708,7 +841,7 @@ document.body.addEventListener('click',async e=>{
 
   if(tgt.id==='btn-signout'){
     await fbAuth.signOut();
-    STATS={cur:0,best:0,pts:0,lc:null,lf:null};
+    // تمت إزالة تصفير STATS لحماية نقاطك والستريك من الضياع عند الضغط بالخطأ أو تسجيل الخروج
     DONE={};SELECTED_ALTS={};historyData={};savedReports={};SELECTED_DATE=TODAY;
     [LS.stats,LS.history,LS.reports,LS.penalized].forEach(k=>localStorage.removeItem(k));
     updateAuthUI(null);renderTabs();renderPanels();switchDay(todayJD());updateUI();
@@ -787,6 +920,3 @@ onAuthStateChanged(fbAuth,async user=>{
   document.getElementById('ld').style.display='none';
   document.getElementById('app').style.display='block';
 });
-</script>
-</body>
-</html>
