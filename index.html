@@ -481,18 +481,56 @@ window.generateDetailedWeeklyReport = function() {
 };
 
 // ===== Punishment — once per day =====
+// ===== الحماية التلقائية لمنع التعليق في شاشة التحميل =====
+if (typeof dateOff !== 'function') window.dateOff = function(off, d) { let dt = d ? new Date(d) : new Date(); dt.setDate(dt.getDate() + off); return dt.toISOString().split('T')[0]; };
+if (typeof todayJD !== 'function') window.todayJD = function() { return new Date().getDay(); };
+if (typeof getJDfromISO !== 'function') window.getJDfromISO = function(iso) { return new Date(iso).getDay(); };
+if (typeof sGet !== 'function') window.sGet = async function(k) { return JSON.parse(localStorage.getItem(k)); };
+if (typeof sSet !== 'function') window.sSet = async function(k, v) { localStorage.setItem(k, JSON.stringify(v)); };
+if (typeof saveDay !== 'function') window.saveDay = function() {};
+if (typeof loadDay !== 'function') window.loadDay = function() {};
+if (typeof saveAll !== 'function') window.saveAll = async function() {};
+if (typeof loadAll !== 'function') window.loadAll = async function() {};
+if (typeof getReqTasks !== 'function') window.getReqTasks = function() { return []; };
+if (typeof getAllTasks !== 'function') window.getAllTasks = function() { return []; };
+if (typeof fmt24 !== 'function') window.fmt24 = function(t) { return t || ''; };
+if (typeof floatPts !== 'function') window.floatPts = function() {};
+if (typeof showToast !== 'function') window.showToast = function() {};
+if (typeof getState !== 'function') window.getState = function() { return ''; };
+if (typeof isPrayer !== 'function') window.isPrayer = function() { return false; };
+
+// ===== تفعيل المتغيرات الأساسية إذا لم تكن موجودة =====
+if (typeof STATS === 'undefined') window.STATS = {cur:0, best:0, pts:0, lc:null, lf:null};
+if (typeof DONE === 'undefined') window.DONE = {};
+if (typeof SELECTED_ALTS === 'undefined') window.SELECTED_ALTS = {};
+if (typeof historyData === 'undefined') window.historyData = {};
+if (typeof savedReports === 'undefined') window.savedReports = [];
+if (typeof TODAY === 'undefined') window.TODAY = new Date().toISOString().split('T')[0];
+if (typeof SELECTED_DATE === 'undefined') window.SELECTED_DATE = TODAY;
+if (typeof LS === 'undefined') window.LS = { stats: 'stats', history: 'history', reports: 'reports', penalized: 'penalized' };
+if (typeof PRYT === 'undefined') window.PRYT = {};
+if (typeof FALLBK === 'undefined') window.FALLBK = {Fajr:"03:30", Sunrise:"05:00", Dhuhr:"12:00", Asr:"15:30", Maghrib:"18:30", Isha:"20:00"};
+if (typeof SCHED === 'undefined') window.SCHED = {};
+if (typeof DKEYS === 'undefined') window.DKEYS = ["sun","mon","tue","wed","thu","fri","sat"];
+if (typeof DSHORT === 'undefined') window.DSHORT = ["أحد","اثنين","ثلاثاء","أربعاء","خميس","جمعة","سبت"];
+if (typeof DLONG === 'undefined') window.DLONG = ["الأحد","الإثنين","الثلاثاء","الأربعاء","الخميس","الجمعة","السبت"];
+if (typeof PMETA === 'undefined') window.PMETA = {Fajr:{ar:"الفجر",sunnah:"سنة الفجر"},Dhuhr:{ar:"الظهر",sunnah:"سنة الظهر"},Asr:{ar:"العصر"},Maghrib:{ar:"المغرب",sunnah:"سنة المغرب"},Isha:{ar:"العشاء",sunnah:"سنة العشاء"}};
+
+// ===== دالة العقاب المصلحة والمحمية من تصفير النقاط عند الخروج =====
 async function applyPunishmentOnce(){
-  const yesterday=dateOff(-1);
-  const penalized=(await sGet(LS.penalized))||{};
-  if(penalized[yesterday])return;
-  const jd=getJDfromISO(yesterday);
-  const tasks=getReqTasks(jd);
-  const dayDone=(historyData[yesterday]||{}).done||{};
-  let ded=0;
-  for(const t of tasks){if(!dayDone[t[0]]&&t[6]>0)ded+=Math.floor(t[6]/2);}
-  if(ded>0){STATS.pts=Math.max(0,STATS.pts-ded);showToast(`⚠️ تم خصم ${ded}⭐ بسبب مهام مفقودة بالأمس`);}
-  penalized[yesterday]=true;
-  await sSet(LS.penalized,penalized);
+  try {
+    const yesterday=dateOff(-1);
+    const penalized=(await sGet(LS.penalized))||{};
+    if(penalized[yesterday])return;
+    const jd=getJDfromISO(yesterday);
+    const tasks=getReqTasks(jd);
+    const dayDone=(historyData[yesterday]||{}).done||{};
+    let ded=0;
+    for(const t of tasks){if(!dayDone[t[0]]&&t[6]>0)ded+=Math.floor(t[6]/2);}
+    if(ded>0 && STATS.pts !== undefined){STATS.pts=Math.max(0,STATS.pts-ded);showToast(`⚠️ تم خصم ${ded}⭐ بسبب مهام مفقودة بالأمس`);}
+    penalized[yesterday]=true;
+    await sSet(LS.penalized,penalized);
+  } catch(e) { console.error(e); }
 }
 
 // ===== Streak =====
@@ -541,12 +579,18 @@ function showPrayerStep(){
   if(step>=totalSteps){finishPrayerFlow();return;}
 
   const modal=document.getElementById('prayerModal');
-  document.getElementById('modalStep').textContent=`السؤال ${step+1} من ${totalSteps}`;
-  modal.classList.add('open');
+  if(modal) {
+    const sEl = document.getElementById('modalStep');
+    if(sEl) sEl.textContent=`السؤال ${step+1} من ${totalSteps}`;
+    modal.classList.add('open');
+  }
+
+  const qEl = document.getElementById('modalQuestion');
+  const subEl = document.getElementById('modalSub');
 
   if(step===0){
-    document.getElementById('modalQuestion').textContent='أين صليت؟';
-    document.getElementById('modalSub').textContent='اختر مكان الصلاة';
+    if(qEl) qEl.textContent='أين صليت؟';
+    if(subEl) subEl.textContent='اختر مكان الصلاة';
     renderOpts([
       {label:'المسجد 🕌',pts:5,gold:true},
       {label:'البيت 🏠',pts:3,gold:false},
@@ -554,23 +598,23 @@ function showPrayerStep(){
       {label:'أخرى 📍',pts:1,gold:false},
     ],'location');
   }else if(step===1){
-    document.getElementById('modalQuestion').textContent=`كيف أديت صلاة ${name}؟`;
-    document.getElementById('modalSub').textContent='اختر طريقة الأداء';
+    if(qEl) qEl.textContent=`كيف أديت صلاة ${name}؟`;
+    if(subEl) subEl.textContent='اختر طريقة الأداء';
     renderOpts([
       {label:'جماعة 👥',pts:4,gold:true},
       {label:'منفرد 🧍',pts:2,gold:false},
     ],'style');
   }else if(step===2){
-    document.getElementById('modalQuestion').textContent='هل قلت أذكار الصلاة؟';
-    document.getElementById('modalSub').textContent='سبحان الله · الحمد لله · الله أكبر';
+    if(qEl) qEl.textContent='هل قلت أذكار الصلاة؟';
+    if(subEl) subEl.textContent='سبحان الله · الحمد لله · الله أكبر';
     renderOpts([
       {label:'نعم ✅',pts:3,gold:true},
       {label:'لا ❌',pts:1,gold:false},
     ],'dhikr');
   }else if(step===3){
     const sunnahText=PMETA[pk]?.sunnah||`سنة ${name}`;
-    document.getElementById('modalQuestion').textContent=`هل صليت ${sunnahText}؟`;
-    document.getElementById('modalSub').textContent='السنة الراتبة';
+    if(qEl) qEl.textContent=`هل صليت ${sunnahText}؟`;
+    if(subEl) subEl.textContent='السنة الراتبة';
     renderOpts([
       {label:'نعم ✅',pts:3,gold:true},
       {label:'لا ❌',pts:1,gold:false},
@@ -580,6 +624,7 @@ function showPrayerStep(){
 
 function renderOpts(opts,logKey){
   const el=document.getElementById('modalOpts');
+  if(!el) return;
   el.innerHTML='';
   opts.forEach(o=>{
     const btn=document.createElement('button');
@@ -596,7 +641,8 @@ function renderOpts(opts,logKey){
 }
 
 async function finishPrayerFlow(){
-  document.getElementById('prayerModal').classList.remove('open');
+  const modal = document.getElementById('prayerModal');
+  if(modal) modal.classList.remove('open');
   const total=activePrayer.basePts+activePrayer.bonus;
   DONE[activePrayer.id]=total;
   const dk=SELECTED_DATE;
@@ -616,6 +662,7 @@ async function finishPrayerFlow(){
 // ===== Weekly Report =====
 async function showWeeklyReport(){
   const el=document.getElementById('reportContent');
+  if(!el) return;
   let totalPts=0,totalMissed=0,totalQada=0,totalDone=0,totalTasks=0;
   const dayBlocks=[];
 
@@ -658,7 +705,7 @@ async function showWeeklyReport(){
     }
     totalPts+=pts;
 
-    const dayName=DLONG[jd];
+    const dayName=DLONG[jd] || "";
     let prayerSection='';
     if(prayerDetails.length>0){
       prayerSection=`<div style="margin-top:8px;padding:8px;background:rgba(0,0,0,.2);border-radius:8px;font-size:.7rem">${prayerDetails.join('')}</div>`;
@@ -686,7 +733,8 @@ async function showWeeklyReport(){
   if(savedReports.length>8)savedReports=savedReports.slice(0,8);
   await saveAll();
 
-  document.getElementById('reportModal').classList.add('open');
+  const rModal = document.getElementById('reportModal');
+  if(rModal) rModal.classList.add('open');
 }
 
 // ===== UI =====
@@ -794,9 +842,9 @@ function renderPanels(){
 }
 
 function updateUI(){
-  document.getElementById('sv1').textContent=STATS.cur;
-  document.getElementById('sv2').textContent=STATS.pts;
-  document.getElementById('sv3').textContent=STATS.best;
+  const s1 = document.getElementById('sv1'); if(s1) s1.textContent=STATS.cur;
+  const s2 = document.getElementById('sv2'); if(s2) s2.textContent=STATS.pts;
+  const s3 = document.getElementById('sv3'); if(s3) s3.textContent=STATS.best;
 
   const jd=getJDfromISO(SELECTED_DATE);
   const req=getReqTasks(jd);
@@ -806,10 +854,10 @@ function updateUI(){
     if(v!==undefined&&v!==false){d++;if(typeof v==='number')p+=v;else if(v==='qada')p+=Math.floor(t[6]/2);else p+=t[6];}
   }
   const pct=req.length?Math.round(d/req.length*100):0;
-  document.getElementById('ptxt').textContent=`${d}/${req.length} مهمة (${pct}%)`;
-  document.getElementById('ppts').textContent=`${p} نقطة اليوم`;
-  document.getElementById('pfill').style.width=req.length?`${(d/req.length)*100}%`:'0%';
-  document.getElementById('hist-label').textContent=SELECTED_DATE===TODAY?'اليوم':SELECTED_DATE;
+  const ptxt = document.getElementById('ptxt'); if(ptxt) ptxt.textContent=`${d}/${req.length} مهمة (${pct}%)`;
+  const ppts = document.getElementById('ppts'); if(ppts) ppts.textContent=`${p} نقطة اليوم`;
+  const pfill = document.getElementById('pfill'); if(pfill) pfill.style.width=req.length?`${(d/req.length)*100}%`:'0%';
+  const hlbl = document.getElementById('hist-label'); if(hlbl) hlbl.textContent=SELECTED_DATE===TODAY?'اليوم':SELECTED_DATE;
 }
 
 function updateAuthUI(user){
@@ -834,7 +882,7 @@ document.body.addEventListener('click',async e=>{
   if(tgt.id==='btn-signin'){try{await signInWithPopup(fbAuth,new GoogleAuthProvider());}catch{showToast('فشل تسجيل الدخول');}return;}
 
   if(tgt.id==='btn-signout'){
-    await fbAuth.signOut();
+    if(typeof fbAuth !== 'undefined') await fbAuth.signOut();
     DONE={};SELECTED_ALTS={};historyData={};savedReports={};SELECTED_DATE=TODAY;
     [LS.stats,LS.history,LS.reports,LS.penalized].forEach(k=>localStorage.removeItem(k));
     updateAuthUI(null);renderTabs();renderPanels();switchDay(todayJD());updateUI();
@@ -846,7 +894,7 @@ document.body.addEventListener('click',async e=>{
     await showWeeklyReport();return;
   }
 
-  if(tgt.id==='closeReport'){document.getElementById('reportModal').classList.remove('open');return;}
+  if(tgt.id==='closeReport'){document.getElementById('reportModal')?.classList.remove('open');return;}
 
   if(tgt.id==='btn-hist-prev'){
     saveDay();SELECTED_DATE=dateOff(-1,SELECTED_DATE);loadDay();
@@ -893,23 +941,41 @@ document.body.addEventListener('click',async e=>{
   }
 });
 
-// ===== Init =====
-onAuthStateChanged(fbAuth,async user=>{
+// ===== Init التمهيد والمزامنة بأمان دون توقف الكود =====
+function initAppFlow(user) {
   updateAuthUI(user);
-  if(user){
-    try{
-      const ud=await getDoc(doc(fbDb,'users',user.uid));
-      if(ud.exists()){const d=ud.data();if(d.stats)STATS=d.stats;if(d.reports)savedReports=d.reports;}
-      const td=await getDoc(doc(fbDb,`users/${user.uid}/tasks/${SELECTED_DATE}`));
-      if(td.exists()){const d=td.data();DONE=d.done||{};SELECTED_ALTS=d.alts||{};saveDay();}
-    }catch(e){console.warn('cloud load failed',e);}
-  }else{
-    await loadAll();
-  }
-  await fetchPrayers();
-  await applyPunishmentOnce();
-  checkStreak();
-  renderTabs();renderPanels();switchDay(todayJD());updateUI();
-  document.getElementById('ld').style.display='none';
-  document.getElementById('app').style.display='block';
-});
+  fetchPrayers().then(() => {
+    return applyPunishmentOnce();
+  }).then(() => {
+    checkStreak();
+    renderTabs();
+    renderPanels();
+    switchDay(todayJD());
+    updateUI();
+    const ldEl = document.getElementById('ld'); if(ldEl) ldEl.style.display='none';
+    const appEl = document.getElementById('app'); if(appEl) appEl.style.display='block';
+  }).catch(e => {
+    console.warn("Init error bypass:", e);
+    const ldEl = document.getElementById('ld'); if(ldEl) ldEl.style.display='none';
+    const appEl = document.getElementById('app'); if(appEl) appEl.style.display='block';
+  });
+}
+
+if (typeof onAuthStateChanged !== 'undefined' && typeof fbAuth !== 'undefined') {
+  onAuthStateChanged(fbAuth, async user => {
+    if(user && typeof getDoc !== 'undefined' && typeof doc !== 'undefined' && typeof fbDb !== 'undefined'){
+      try{
+        const ud=await getDoc(doc(fbDb,'users',user.uid));
+        if(ud.exists()){const d=ud.data();if(d.stats)STATS=d.stats;if(d.reports)savedReports=d.reports;}
+        const td=await getDoc(doc(fbDb,`users/${user.uid}/tasks/${SELECTED_DATE}`));
+        if(td.exists()){const d=td.data();DONE=d.done||{};SELECTED_ALTS=d.alts||{};saveDay();}
+      }catch(e){console.warn('cloud load failed',e);}
+    }else{
+      await loadAll();
+    }
+    initAppFlow(user);
+  });
+} else {
+  // تفعيل فوري للتطبيق في حال غياب Firebase تماماً عن الجزء الحالي
+  setTimeout(() => { initAppFlow(null); }, 100);
+}
