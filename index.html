@@ -599,7 +599,6 @@ async function finishPrayerFlow(){
   document.getElementById('prayerModal').classList.remove('open');
   const total=activePrayer.basePts+activePrayer.bonus;
   DONE[activePrayer.id]=total;
-  // Save prayer log for report
   const dk=SELECTED_DATE;
   if(!historyData[dk])historyData[dk]={};
   if(!historyData[dk].prayerLogs)historyData[dk].prayerLogs={};
@@ -644,7 +643,6 @@ async function showWeeklyReport(){
       }else{
         done++;totalDone++;
         const earned=typeof v==='number'?v:t[6];pts+=earned;
-        // Prayer detail
         if(isPrayer(t)&&prayerLogs[t[0]]){
           const pl=prayerLogs[t[0]];
           const details=pl.log.map(l=>{
@@ -684,7 +682,6 @@ async function showWeeklyReport(){
     ${dayBlocks.join('')}
   `;
 
-  // Save report
   savedReports.unshift({date:TODAY,totalPts,totalMissed,totalQada,pct});
   if(savedReports.length>8)savedReports=savedReports.slice(0,8);
   await saveAll();
@@ -741,7 +738,6 @@ function renderPanel(jd){
   const isToday=(SELECTED_DATE===TODAY)&&(jd===todayJD());
   const gbLabel=d.gm?`<div class="gbx ${d.gm==='upper'?'gbu':'gbl'}">${d.gm==='upper'?'Upper Body 💪':'Lower Body 🦵'}</div>`:`<div class="gbx gbr">يوم راحة 💤</div>`;
 
-  // Pills: Sunrise first (between Fajr and Dhuhr in position)
   const pills=[];
   const schedList=d.ts||[];
   const jumahTask=schedList.find(t=>t[2]==='prayer'&&(t[4]?.includes('جمعة')||t[0].includes('fri-jm')));
@@ -749,7 +745,6 @@ function renderPanel(jd){
   const prayerOrder=['Fajr','Dhuhr','Asr','Maghrib','Isha'];
   for(const pk of prayerOrder){
     if(pk==='Dhuhr'){
-      // Add sunrise pill right before Dhuhr
       pills.push(`<div class="ppill sunrise-pill"><div class="pnam" style="color:var(--or)">الشروق ☀️</div><div class="ptim" style="color:var(--or)">${fmt24(PRYT.Sunrise||FALLBK.Sunrise)}</div></div>`);
     }
     if(pk==='Dhuhr'&&jd===5){
@@ -799,7 +794,6 @@ function renderPanels(){
 }
 
 function updateUI(){
-  // sv3 = best STREAK (not points)
   document.getElementById('sv1').textContent=STATS.cur;
   document.getElementById('sv2').textContent=STATS.pts;
   document.getElementById('sv3').textContent=STATS.best;
@@ -841,7 +835,6 @@ document.body.addEventListener('click',async e=>{
 
   if(tgt.id==='btn-signout'){
     await fbAuth.signOut();
-    // تمت إزالة تصفير STATS لحماية نقاطك والستريك من الضياع عند الضغط بالخطأ أو تسجيل الخروج
     DONE={};SELECTED_ALTS={};historyData={};savedReports={};SELECTED_DATE=TODAY;
     [LS.stats,LS.history,LS.reports,LS.penalized].forEach(k=>localStorage.removeItem(k));
     updateAuthUI(null);renderTabs();renderPanels();switchDay(todayJD());updateUI();
