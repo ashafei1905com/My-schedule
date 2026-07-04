@@ -17,11 +17,21 @@ body{font-family:'Cairo',sans-serif;background:var(--bg);color:var(--tx);directi
 @keyframes ti{from{opacity:0;transform:translateX(-50%) translateY(16px)}to{opacity:1;transform:translateX(-50%) translateY(0)}}
 @keyframes shakeX{0%,100%{transform:translateX(0)}20%{transform:translateX(-6px)}40%{transform:translateX(6px)}60%{transform:translateX(-4px)}80%{transform:translateX(4px)}}
 @keyframes flashRed{0%{background:rgba(239,68,68,.35)}100%{background:rgba(10,14,26,.96)}}
-@keyframes streakPulse{0%{transform:scale(1)}50%{transform:scale(1.4);color:#fbbf24}100%{transform:scale(1)}}
+@keyframes streakPulse{0%{transform:scale(1)}50%{transform:scale(1.5);color:#fbbf24;text-shadow:0 0 18px #fbbf24}100%{transform:scale(1)}}
+@keyframes milestoneGlow{0%{box-shadow:0 0 0 rgba(251,191,36,0)}50%{box-shadow:0 0 30px 8px rgba(251,191,36,.6)}100%{box-shadow:0 0 0 rgba(251,191,36,0)}}
+@keyframes ontimeGlow{0%{box-shadow:0 0 0 rgba(16,185,129,0);border-color:var(--br)}40%{box-shadow:0 0 18px 3px rgba(16,185,129,.55);border-color:var(--gr)}100%{box-shadow:0 0 0 rgba(16,185,129,0)}}
+@keyframes lateGlow{0%{box-shadow:0 0 0 rgba(245,158,11,0);border-color:var(--br)}40%{box-shadow:0 0 18px 3px rgba(245,158,11,.55);border-color:var(--or)}100%{box-shadow:0 0 0 rgba(245,158,11,0)}}
+@keyframes qadaGlow{0%{box-shadow:0 0 0 rgba(148,163,184,0)}40%{box-shadow:0 0 14px 2px rgba(148,163,184,.4)}100%{box-shadow:0 0 0 rgba(148,163,184,0)}}
+@keyframes barGold{0%{filter:brightness(1)}50%{filter:brightness(1.6) saturate(1.4)}100%{filter:brightness(1)}}
 #sbar{position:sticky;top:0;z-index:100;background:rgba(10,14,26,.96);backdrop-filter:blur(12px);border-bottom:1px solid var(--br);padding:12px 16px;display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap}
 .penalty-flash{animation:flashRed 1s ease}
 .streak-broke{animation:shakeX .5s ease}
-.streak-win{display:inline-block;animation:streakPulse .6s ease}
+.streak-win{display:inline-block;animation:streakPulse .7s ease}
+.milestone-hit{display:inline-block;animation:streakPulse 1s ease 2}
+.card-ontime{animation:ontimeGlow 1s ease}
+.card-late{animation:lateGlow 1s ease}
+.card-qada{animation:qadaGlow 1s ease}
+.bar-gold{animation:barGold .9s ease}
 .st{display:flex;flex-direction:column;align-items:center;gap:1px}
 .sv{font-size:1.5rem;font-weight:900;line-height:1}
 .sl{font-size:.6rem;color:var(--so);font-weight:700}
@@ -96,10 +106,12 @@ body{font-family:'Cairo',sans-serif;background:var(--bg);color:var(--tx);directi
 .ptslbl{font-size:.58rem;color:var(--mu)}
 .ptsbdg{padding:4px 8px;background:rgba(100,116,139,.1);border:1px solid var(--br);border-radius:6px;font-size:.67rem;color:var(--mu);flex-shrink:0}
 .floatpts{position:fixed;pointer-events:none;z-index:9999;font-size:1.1rem;font-weight:900;color:var(--ye);font-family:'Cairo',sans-serif;animation:up .8s ease-out forwards}
-#toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%);background:var(--c2);border:2px solid var(--gr);border-radius:12px;padding:14px 20px;font-size:.85rem;font-weight:700;color:var(--gr);z-index:9999;display:none;text-align:center;box-shadow:0 4px 20px rgba(0,0,0,.5);max-width:320px;white-space:pre-line}
+#toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%);background:var(--c2);border:2px solid var(--gr);border-radius:12px;padding:14px 20px;font-size:.85rem;font-weight:700;color:var(--gr);z-index:9999;display:none;text-align:center;box-shadow:0 4px 20px rgba(0,0,0,.5);max-width:340px;white-space:pre-line}
 #toast.show{display:block;animation:ti .3s ease}
 #toast.toast-warn{border-color:#ef4444;color:#ef4444}
-#toast.toast-qada{border-color:var(--or);color:var(--or)}
+#toast.toast-qada{border-color:var(--so);color:var(--so)}
+#toast.toast-late{border-color:var(--or);color:var(--or)}
+#toast.toast-gold{border-color:#fbbf24;color:#fbbf24;box-shadow:0 0 24px rgba(251,191,36,.4)}
 
 /* Prayer Modal */
 .modal-overlay{position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(10,14,26,.92);display:none;align-items:center;justify-content:center;z-index:10000;padding:20px}
@@ -117,7 +129,7 @@ body{font-family:'Cairo',sans-serif;background:var(--bg);color:var(--tx);directi
 .modal-back-btn{margin-top:16px;padding:9px 18px;background:rgba(239,68,68,.12);border:2px solid rgba(239,68,68,.45);border-radius:10px;color:#ef4444;font-family:'Cairo',sans-serif;font-weight:800;font-size:.82rem;cursor:pointer;transition:all .2s}
 .modal-back-btn:hover{background:rgba(239,68,68,.22)}
 
-/* Weekly Report Modal - Made it Good & Big */
+/* Weekly Report Modal */
 .report-overlay{position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(10,14,26,.95);display:none;align-items:flex-start;justify-content:center;z-index:10001;padding:40px 20px;overflow-y:auto}
 .report-overlay.open{display:flex}
 .report-box{background:var(--c2);border:2px solid var(--br);border-radius:20px;padding:24px 24px;width:100%;max-width:650px;margin:auto;box-shadow:0 10px 40px rgba(0,0,0,0.8)}
@@ -131,16 +143,21 @@ body{font-family:'Cairo',sans-serif;background:var(--bg);color:var(--tx);directi
 .report-stat-lbl{font-size:.75rem;color:var(--so);margin-top:4px;font-weight:700}
 .report-day{background:var(--c);border:1px solid var(--br);border-radius:12px;padding:16px;margin-bottom:12px}
 .report-day-title{font-size:1rem;font-weight:900;color:var(--ac);margin-bottom:12px;border-bottom:1px solid rgba(59,130,246,.2);padding-bottom:6px}
-.report-day-row{font-size:.85rem;color:var(--tx);padding:4px 0;display:flex;justify-content:space-between;align-items:center;font-weight:700}
+.report-day-row{font-size:.85rem;color:var(--tx);padding:4px 0;display:flex;justify-content:space-between;align-items:center;font-weight:700;gap:8px}
 .report-prayer-detail{font-size:.75rem;color:var(--tx);margin-top:6px;padding:8px 12px;background:rgba(10,14,26,.6);border:1px solid var(--br);border-radius:8px;line-height:1.8;display:flex;flex-wrap:wrap;gap:8px;align-items:center}
 .badge-green{color:#10b981;font-weight:900;background:rgba(16,185,129,.15);padding:2px 8px;border-radius:4px}
 .badge-red{color:#ef4444;font-weight:900;background:rgba(239,68,68,.15);padding:2px 8px;border-radius:4px}
 .badge-or{color:var(--or);font-weight:700}
 .badge-gray{color:var(--so);font-weight:700;background:rgba(148,163,184,.1);padding:2px 8px;border-radius:4px}
+.badge-alt{color:#60a5fa;font-weight:700;background:rgba(59,130,246,.12);padding:2px 8px;border-radius:4px;font-size:.68rem}
+.report-day-enc{margin-top:10px;padding:8px 12px;background:rgba(251,191,36,.08);border:1px solid rgba(251,191,36,.25);border-radius:8px;font-size:.75rem;color:var(--ye);font-weight:700;text-align:center}
 .report-history{margin-top:18px;padding-top:14px;border-top:2px solid var(--br)}
 .report-history-title{font-size:1rem;font-weight:900;color:var(--ac);margin-bottom:10px}
-.report-history-item{display:flex;justify-content:space-between;align-items:center;padding:10px 12px;background:rgba(0,0,0,.15);border:1px solid rgba(30,45,69,.6);border-radius:12px;margin-bottom:10px}
+.report-history-item{display:flex;justify-content:space-between;align-items:center;padding:10px 12px;background:rgba(0,0,0,.15);border:1px solid rgba(30,45,69,.6);border-radius:12px;margin-bottom:10px;cursor:pointer;transition:all .2s}
+.report-history-item:hover{background:rgba(59,130,246,.12);border-color:rgba(59,130,246,.4)}
 .report-history-item b{color:var(--ye)}
+.report-back-btn{margin-bottom:16px;padding:8px 16px;background:rgba(59,130,246,.12);border:1px solid rgba(59,130,246,.4);border-radius:8px;color:#60a5fa;font-family:'Cairo',sans-serif;font-weight:700;font-size:.82rem;cursor:pointer}
+.report-back-btn:hover{background:rgba(59,130,246,.22)}
 @media(max-width:500px){.report-summary{grid-template-columns:1fr 1fr;}}
 </style>
 </head>
@@ -165,7 +182,7 @@ body{font-family:'Cairo',sans-serif;background:var(--bg);color:var(--tx);directi
   </div>
 
   <div class="pw">
-    <div class="pb">
+    <div class="pb" id="progBox">
       <div class="ph"><span id="ptxt">٠/٠ مهمة</span><span id="ppts">٠ نقطة اليوم</span></div>
       <div class="pbg"><div class="pfx" id="pfill" style="width:0"></div></div>
     </div>
@@ -193,11 +210,11 @@ body{font-family:'Cairo',sans-serif;background:var(--bg);color:var(--tx);directi
 </div>
 
 
-<!-- Weekly Report Modal -->
+<!-- Weekly Report Modal (also used for history list/detail) -->
 <div id="reportModal" class="report-overlay">
   <div class="report-box">
     <div class="report-header">
-      <div class="report-title">📊 التقرير الأسبوعي المفصل</div>
+      <div class="report-title" id="reportTitle">📊 التقرير الأسبوعي المفصل</div>
       <button class="report-close" id="closeReport" onclick="document.getElementById('reportModal').classList.remove('open')">✕ إغلاق</button>
     </div>
     <div id="reportContent"></div>
@@ -247,7 +264,6 @@ function getKuwaitDateParts(dt=new Date()){
 
 const DKEYS=['sun','mon','tue','wed','thu','fri','sat'];
 const DSHORT=['الأحد','الاثنين','الثلاثاء','الأربعاء','الخميس','الجمعة','السبت'];
-const DLONG=['الأحد','الاثنين','الثلاثاء','الأربعاء','الخميس','الجمعة','السبت'];
 const WEEK_ORDER=[6,0,1,2,3,4,5]; // Saturday first, Friday last — display order only
 
 function todayStr(){const d=getKuwaitDateParts();return `${d.year}-${d.month}-${d.day}`;}
@@ -281,13 +297,25 @@ function getState(task){
   return'PENDING';
 }
 
+function isLateNonPrayer(task){
+  const now=getKuwaitNow();
+  const start=toMin(task[10]||task[1]);
+  return (now-start)>120 && (now-start)<=180;
+}
+function isLatePrayer(task,startOverride){
+  const now=getKuwaitNow();
+  const start=startOverride!=null?startOverride:toMin(task[10]||task[1]);
+  return (now-start)>45;
+}
+
 function floatPts(x,y,n){const e=document.createElement('div');e.className='floatpts';e.textContent=`+${n}⭐`;e.style.cssText=`left:${x}px;top:${y}px`;document.body.appendChild(e);setTimeout(()=>e.remove(),900);}
 
 let toastT;
 function showToast(msg,ms=3500,type='ok'){
   const t=document.getElementById('toast');if(!t)return;
   t.textContent=msg;
-  t.className='show'+(type==='warn'?' toast-warn':type==='qada'?' toast-qada':'');
+  const cls={warn:' toast-warn',qada:' toast-qada',late:' toast-late',gold:' toast-gold',ok:''}[type]||'';
+  t.className='show'+cls;
   clearTimeout(toastT);toastT=setTimeout(()=>{if(t)t.className='';},ms);
 }
 
@@ -302,7 +330,13 @@ function pulseStreakWin(){
   const el=document.getElementById('sv1');
   if(!el)return;
   el.classList.add('streak-win');
-  setTimeout(()=>el.classList.remove('streak-win'),700);
+  setTimeout(()=>el.classList.remove('streak-win'),800);
+}
+function hitMilestone(){
+  const el=document.getElementById('sv1');
+  if(!el)return;
+  el.classList.add('milestone-hit');
+  setTimeout(()=>el.classList.remove('milestone-hit'),2200);
 }
 function shakeStreakBroken(){
   const el=document.getElementById('sv1');
@@ -310,6 +344,27 @@ function shakeStreakBroken(){
   el.classList.add('streak-broke');
   setTimeout(()=>el.classList.remove('streak-broke'),600);
 }
+function cardEffect(id,kind){
+  const el=document.getElementById(`c-${id}`);
+  if(!el)return;
+  const cls=kind==='ontime'?'card-ontime':kind==='late'?'card-late':'card-qada';
+  el.classList.add(cls);
+  setTimeout(()=>el.classList.remove(cls),1100);
+}
+function barGoldFlash(){
+  const el=document.getElementById('progBox');
+  if(!el)return;
+  el.classList.add('bar-gold');
+  setTimeout(()=>el.classList.remove('bar-gold'),1000);
+}
+
+const ENCOURAGE_WIN=[
+  '🎉 يوم كامل! أنت وحش اليوم','💪 استمرار رهيب، كمّل كذا','🔥 كل يوم بتقوى أكثر','⚡ الانضباط ده هو الفرق','🏅 يوم موثق بالكامل، فخور فيك'
+];
+const ENCOURAGE_MISS=[
+  'بكرة نرجع أقوى، ما تستسلمش 💪','يوم واحد مش نهاية الطريق، كمّل 🔥','خصم اليوم مش نهاية الاستريك، ثبّت بكرة ✊','خد نفس وابدأ من جديد النهاردة 🌱'
+];
+function pickRandom(arr){return arr[Math.floor(Math.random()*arr.length)];}
 
 // ===== Schedule =====
 const mkBk=(p,t='9:15 ص')=>[p+'-bk',t,'food','🧀','الفطار','جبنة قريش ١٥٠جم + زيت زيتون + رغيفين أسمر + طماطم + خيار',5,['لبنة ٤ ملاعق + بيضتين مسلوقتين + رغيف أسمر','جبنة دمياطي ١٠٠جم + بيضة + خبز أسمر'],null,false];
@@ -335,7 +390,6 @@ const PMETA={
 const FALLBK={Fajr:'03:13',Sunrise:'04:50',Dhuhr:'11:51',Asr:'15:25',Maghrib:'18:51',Isha:'20:26'};
 let PRYT={...FALLBK};
 
-// Mon/Wed free time moved off 6:00 م to stop colliding with the 6:00 م pre-workout snack.
 const FREE_TIME={
   0:[{t:'6:00 م',d:'وقت حر'}],
   1:[{t:'4:40 م',d:'وقت حر (قبل سناك الجيم)'}],
@@ -348,18 +402,18 @@ const FREE_TIME={
 
 const SCHED={
   0:{n:'الأحد',wk:'9:00 ص',bd:'11:00 م',gm:null,ts:[mkBk('sun'),mkWd('sun'),['sun-qp','10:00 ص','quran','📖','تحضير درس الاثنين','حفظ آيات جديدة + مراجعة اللوح — ٤٥ دقيقة',15,null,null,false],['sun-lu','2:30 م','food','🍽️','الغدا','نص كيلو فراخ/لحمة مشوي + سلطة + بطاطس مسلوقة',5,['سمك + سلطة + رغيف أسمر','كبدة مشوية + طماطم + بصل + خبز'],null,false],mkDn('sun'),mkSl('sun')]},
-  1:{n:'الاثنين',wk:'10:00 ص',bd:'12:00 ص',gm:'lower',ts:[mkBk('mon','10:15 ص'),mkWd('mon','10:30 ص'),['mon-pp','11:30 ص','prog','💻','تحضير البرمجة','راجع الدرس السابق + اكتب أسئلتك — ٣٠ دقيقة',10,null,null,false],['mon-ss','12:00 م','prog','👨‍💻','سيشن البرمجة','١٢:٠٠ — ١:٠٠ م | JavaScript',15,null,null,false],['mon-hw','1:05 م','prog','📤','واجب البرمجة','ابدأ الواجب بعد السيشن',10,null,'آخر موعد: الأربعاء',false],['mon-lu','1:30 م','food','🍽️','الغدا','نص كيلو فراخ مشوي + سلطة + بطاطس',5,['سمك دنيس + سلطة + رغيف','لحم هبر مشوي + سلطة + خبز'],null,false],['mon-ql','3:50 م','quran','🕌','درس القرآن','٣:٥٠ — ٤:٣٠ م | مباشرة بعد العصر',15,null,null,false],mkPS('mon','6:00 م'),mkGL('mon','7:00 م'),mkSw('mon','8:30 م'),mkRc('mon','9:15 م','جاكوزي + بخار — ريكفري ٤٥ دقيقة ← استثناء ✓'),mkPM('mon','10:30 م'),mkSl('mon','12:00 ص')]},
+  1:{n:'الاثنين',wk:'10:00 ص',bd:'12:00 ص',gm:'lower',ts:[mkBk('mon','10:15 ص'),mkWd('mon','10:30 ص'),['mon-pp','11:30 ص','prog','💻','تحضير البرمجة','راجع الدرس السابق + اكتب أسئلتك — ٣٠ دقيقة',10,null,null,false],['mon-ss','12:00 م','prog','👨‍💻','سيشن البرمجة','١٢:٠٠ — ١:٠٠ م | JavaScript',15,null,null,false],['mon-hw','1:05 م','prog','📤','واجب البرمجة','ابدأ الواجب — آخر موعد الأربعاء (٢٤-٤٨ ساعة بعد السيشن)',10,null,'آخر موعد: الأربعاء',false],['mon-lu','1:30 م','food','🍽️','الغدا','نص كيلو فراخ مشوي + سلطة + بطاطس',5,['سمك دنيس + سلطة + رغيف','لحم هبر مشوي + سلطة + خبز'],null,false],['mon-ql','3:50 م','quran','🕌','درس القرآن','٣:٥٠ — ٤:٣٠ م | مباشرة بعد العصر',15,null,null,false],mkPS('mon','6:00 م'),mkGL('mon','7:00 م'),mkSw('mon','8:30 م'),mkRc('mon','9:15 م','جاكوزي + بخار — ريكفري ٤٥ دقيقة ← استثناء ✓'),mkPM('mon','10:30 م'),mkSl('mon','12:00 ص')]},
   2:{n:'الثلاثاء',wk:'9:00 ص',bd:'11:00 م',gm:null,ts:[mkBk('tue'),mkWd('tue'),['tue-qp','10:00 ص','quran','📖','تحضير درس الأربعاء','حفظ آيات جديدة + مراجعة اللوح — ٤٥ دقيقة',15,null,null,false],['tue-lu','2:30 م','food','🍽️','الغدا','نص كيلو فراخ/لحمة مشوي + سلطة',5,['سمك + سلطة + رغيف','كبدة مشوية + سلطة + خبز'],null,false],mkBr('tue'),mkDn('tue','10:15 م'),mkSl('tue')]},
   3:{n:'الأربعاء',wk:'10:00 ص',bd:'12:00 ص',gm:'upper',ts:[mkBk('wed','10:15 ص'),mkWd('wed','10:30 ص'),['wed-lu','1:00 م','food','🍽️','الغدا','نص كيلو فراخ مشوي + سلطة + بطاطس',5,['سمك + خضار + رز نص طبق','لحم هبر مشوي + سلطة + خبز'],null,false],['wed-ql','3:50 م','quran','🕌','درس القرآن','٣:٥٠ — ٤:٣٠ م | مباشرة بعد العصر',15,null,null,false],mkPS('wed','6:00 م'),mkGU('wed','7:00 م'),mkSw('wed','8:30 م'),mkRc('wed','9:15 م','جاكوزي + بخار — ريكفري ٤٥ دقيقة ← استثناء ✓'),mkPM('wed','10:30 م'),mkSl('wed','12:00 ص')]},
-  4:{n:'الخميس',wk:'9:00 ص',bd:'11:00 م',gm:null,ts:[mkBk('thu'),mkWd('thu'),['thu-pp','11:30 ص','prog','💻','تحضير البرمجة','راجع الدرس السابق + اكتب أسئلتك — ٣٠ دقيقة',10,null,null,false],['thu-ss','12:00 م','prog','👨‍💻','سيشن البرمجة','١٢:٠٠ — ١:٠٠ م | JavaScript',15,null,null,false],['thu-hw','1:05 م','prog','📤','واجب البرمجة','ابدأ الواجب بعد السيشن',10,null,'آخر موعد: السبت',false],['thu-lu','1:30 م','food','🍽️','الغدا','نص كيلو فراخ/لحمة مشوي + سلطة',5,['سمك + سلطة + بطاطس','كبدة مشوية + سلطة + خبز'],null,false],mkBr('thu'),mkDn('thu','10:15 م'),mkSl('thu')]},
+  4:{n:'الخميس',wk:'9:00 ص',bd:'11:00 م',gm:null,ts:[mkBk('thu'),mkWd('thu'),['thu-pp','11:30 ص','prog','💻','تحضير البرمجة','راجع الدرس السابق + اكتب أسئلتك — ٣٠ دقيقة',10,null,null,false],['thu-ss','12:00 م','prog','👨‍💻','سيشن البرمجة','١٢:٠٠ — ١:٠٠ م | JavaScript',15,null,null,false],['thu-hw','1:05 م','prog','📤','واجب البرمجة','ابدأ الواجب — آخر موعد السبت (٢٤-٤٨ ساعة بعد السيشن)',10,null,'آخر موعد: السبت',false],['thu-lu','1:30 م','food','🍽️','الغدا','نص كيلو فراخ/لحمة مشوي + سلطة',5,['سمك + سلطة + بطاطس','كبدة مشوية + سلطة + خبز'],null,false],mkBr('thu'),mkDn('thu','10:15 م'),mkSl('thu')]},
   5:{n:'الجمعة',wk:'9:00 ص',bd:'11:00 م',gm:null,ts:[mkBk('fri'),mkWd('fri'),['fri-jm','12:00 م','prayer','🕌','صلاة الجمعة','اخرج مبكر ← يعادل الظهر',15,null,null,false],['fri-lu','1:30 م','food','🍽️','الغدا','يوم حر — ما تبالغش في الكارب',5,['محشي + فراخ مشوي','كنتاكي مرة الأسبوع مقبول 🍗'],null,false],mkDn('fri'),mkSl('fri')]},
-  6:{n:'السبت',wk:'9:00 ص',bd:'11:00 م',gm:'upper',ts:[mkBk('sat'),mkWd('sat'),mkPS('sat','1:30 م'),mkGU('sat','2:00 م'),mkSw('sat','3:00 م'),mkRc('sat','4:00 م','جاكوزي + بخار/ساونا — ريكفري حتى ٥ م ← استثناء ✓'),mkPM('sat','5:15 م'),['sat-di','7:30 م','food','🍽️','الغدا','نص كيلو سمك/فراخ/لحمة مشوي + سلطة + بطاطس',5,['جمبري ١٥٠جم + سلطة + خبز أسمر','كفتة مشوي + سلطة'],null,false],mkSl('sat')]}
+  6:{n:'السبت',wk:'9:00 ص',bd:'11:00 م',gm:'upper',ts:[mkBk('sat'),mkWd('sat'),mkPS('sat','1:30 م'),mkGU('sat','3:00 م'),mkSw('sat','4:00 م'),mkRc('sat','4:45 م','جاكوزي + بخار/ساونا — ريكفري حتى ٥:٣٠ م ← استثناء ✓'),mkPM('sat','5:45 م'),['sat-di','7:30 م','food','🍽️','الغدا','نص كيلو سمك/فراخ/لحمة مشوي + سلطة + بطاطس',5,['جمبري ١٥٠جم + سلطة + خبز أسمر','كفتة مشوي + سلطة'],null,false],mkSl('sat')]}
 };
 
 function buildPTasks(jd){
   const k=DKEYS[jd];
   return Object.entries(PMETA)
-    .filter(([pk])=>pk!=='Sunrise') // sunrise is display-only (pill), never a clickable task
+    .filter(([pk])=>pk!=='Sunrise')
     .filter(([pk])=>!(jd===5&&pk==='Dhuhr'))
     .map(([pk,pm])=>{
       const t24=PRYT[pk]||FALLBK[pk];
@@ -369,7 +423,7 @@ function buildPTasks(jd){
 }
 function sortKey(t){
   const base=toMin(t[10]||t[1]);
-  return t[2]==='sleep'?base+1440:base; // sleep always sorts last, regardless of literal clock value
+  return t[2]==='sleep'?base+1440:base;
 }
 function getAllTasks(jd){const d=SCHED[jd];if(!d)return[];const frees=(FREE_TIME[jd]||[]).map((f,i)=>[`fr-${jd}-${i}`,f.t,'free','🎮','وقت حر',f.d,0,null,null,false]);return[...buildPTasks(jd),...d.ts,...frees].sort((a,b)=>sortKey(a)-sortKey(b));}
 function getReqTasks(jd){return[...buildPTasks(jd),...(SCHED[jd]?.ts||[])].filter(t=>!t[9]&&t[6]>0);}
@@ -391,14 +445,9 @@ function saveDay(){const dk=SELECTED_DATE;if(!historyData[dk])historyData[dk]={}
 
 async function loadAll(){
   STATS=(await sGet(LS.stats))||{cur:0,best:0,pts:0,lc:null,lf:null};
-
-  // Ensure current streak is recalculated from day-completion state.
-  STATS.cur = 0;
-
   historyData=(await sGet(LS.history))||{};
   savedReports=(await sGet(LS.reports))||[];
   loadDay();
-  await sanitizeStats();
 }
 
 async function saveAll(){
@@ -415,99 +464,17 @@ async function saveAll(){
   }catch(e){console.warn('cloud save failed',e);}
 }
 
-// ===== Injected config =====
-window.PRAYER_QUESTIONS_CONFIG=[
-  {q:'أين صليت؟',sub:'اختر مكان الصلاة',opts:[{t:'المسجد',pts:4,gold:true,ic:'🕌'},{t:'البيت',pts:2,ic:'🏠'},{t:'الجيم',pts:2,ic:'🏋️'},{t:'أخرى',pts:2,ic:'📍'}]},
-  {q:'كيف صليت؟',sub:'جماعة أم منفرد؟',opts:[{t:'جماعة',pts:4,gold:true,ic:'👥'},{t:'منفرد',pts:2,ic:'👤'}]},
-  {q:'السنن والرواتب',sub:'هل صليت السنة؟',opts:[{t:'صليت السنة',pts:3,gold:true,ic:'✅'},{t:'لم أصلِ',pts:1,ic:'❌'}]},
-  {q:'الأذكار',sub:'أذكار ما بعد الصلاة',opts:[{t:'قرأت الأذكار',pts:3,gold:true,ic:'📿'},{t:'لم أقرأ',pts:1,ic:'❌'}]}
-];
-
-window.generateDetailedWeeklyReport=function(){
-  const rc=document.getElementById('reportContent');
-  if(!rc) return;
-  let totalTasks=0,doneTasks=0,missedTasks=0;
-  let totalPointsLost=0,totalPointsEarned=0,delayedPrayers=0;
-  let daysHtml='';
-  for(let i=0;i<7;i++){
-    const dDate=new Date();
-    dDate.setDate(dDate.getDate()-i);
-    const dStr=`${dDate.getFullYear()}-${p2(dDate.getMonth()+1)}-${p2(dDate.getDate())}`;
-    const dayData=historyData[dStr]||{done:{}};
-    const jd=getJDfromISO(dStr);
-    const dayTasks=getAllTasks(jd);
-    let dayDone=0,dayTotal=0;
-    let prayerDetailsHtml='';
-    dayTasks.forEach(t=>{
-      if(t[9]) return;
-      dayTotal++;
-      const tid=t[0];
-      const tPts=t[6]||0;
-      const dInf=dayData.done[tid];
-      if(dInf){
-        dayDone++; totalPointsEarned+=(dInf.pts||0);
-        if((dInf.pts||0)<tPts) totalPointsLost+=(tPts-(dInf.pts||0));
-        if(t[2]==='prayer'){
-          if(dInf.qada) delayedPrayers++;
-          let pDet=[];
-          if(dInf.qada) pDet.push('<span class="badge-red">قضاء متأخر</span>');
-          else pDet.push('<span class="badge-green">صُليت في وقتها</span>');
-          if(dInf.opts&&dInf.opts.length){
-            dInf.opts.forEach(opt=>pDet.push(`<span class="badge-gray">· ${opt.a}</span>`));
-          } else {
-            pDet.push('<span class="badge-gray">· بدون تفاصيل إضافية</span>');
-          }
-          prayerDetailsHtml+=`<div class="report-prayer-detail"><strong>${t[4]}</strong>: ${pDet.join(' ')}</div>`;
-        }
-      } else {
-        missedTasks++; totalPointsLost+=tPts;
-      }
-    });
-    totalTasks+=dayTotal; doneTasks+=dayDone;
-    if(dayTotal>0){
-      daysHtml+=`
-        <div class="report-day">
-          <div class="report-day-title">${DSHORT[jd]} - ${dStr}</div>
-          <div class="report-day-row"><span>إنجاز المهام:</span> <span>${dayDone} / ${dayTotal}</span></div>
-          ${prayerDetailsHtml}
-        </div>
-      `;
-    }
-  }
-  rc.innerHTML=`
-    <div class="report-summary">
-      <div class="report-stat"><div class="report-stat-val">${doneTasks}/${totalTasks}</div><div class="report-stat-lbl">المهام المنجزة</div></div>
-      <div class="report-stat"><div class="report-stat-val" style="color:#ef4444">${missedTasks}</div><div class="report-stat-lbl">مهام مفقودة</div></div>
-      <div class="report-stat"><div class="report-stat-val" style="color:#ef4444">${totalPointsLost}</div><div class="report-stat-lbl">نقاط ضائعة</div></div>
-      <div class="report-stat"><div class="report-stat-val" style="color:var(--or)">${delayedPrayers}</div><div class="report-stat-lbl">صلوات قضاء</div></div>
-    </div>
-    <div style="max-height: 450px; overflow-y: auto; padding-right: 8px;">
-      ${daysHtml}
-    </div>
-  `;
-};
-
 // ===== Helpers =====
 if (typeof dateOff !== 'function') window.dateOff=function(off,d){let dt=d?new Date(d):new Date();dt.setDate(dt.getDate()+off);return dt.toISOString().split('T')[0];};
 if (typeof todayJD !== 'function') window.todayJD=function(){return new Date().getDay();};
 if (typeof getJDfromISO !== 'function') window.getJDfromISO=function(iso){return new Date(iso).getDay();};
-if (typeof sGet !== 'function') window.sGet=async function(k){return JSON.parse(localStorage.getItem(k));};
-if (typeof sSet !== 'function') window.sSet=async function(k,v){localStorage.setItem(k,JSON.stringify(v));};
-if (typeof saveDay !== 'function') window.saveDay=function(){};
-if (typeof loadDay !== 'function') window.loadDay=function(){};
-if (typeof saveAll !== 'function') window.saveAll=async function(){};
-if (typeof loadAll !== 'function') window.loadAll=async function(){};
-if (typeof getReqTasks !== 'function') window.getReqTasks=function(){return [];};
-if (typeof getAllTasks !== 'function') window.getAllTasks=function(){return [];};
-if (typeof fmt24 !== 'function') window.fmt24=function(t){return t||'';};
-if (typeof floatPts !== 'function') window.floatPts=function(){};
-if (typeof showToast !== 'function') window.showToast=function(){};
-if (typeof getState !== 'function') window.getState=function(){return '';};
-if (typeof isPrayer !== 'function') window.isPrayer=function(){return false;};
 
-// ===== Punishment =====
-const PUNISH_RATE=0.25; // reduced from 50% — a missed task now costs 25% of its points, not half
+// ===== Punishment (dynamic: harsher when off-track, gentler when on a streak) =====
 let PENALTY_FLASH_PENDING=false;
+
+function getPunishRate(){
+  return (STATS.cur||0)>=3 ? 0.15 : 0.35;
+}
 
 async function applyPunishmentOnce(){
   try{
@@ -517,19 +484,25 @@ async function applyPunishmentOnce(){
     const jd=getJDfromISO(yesterday);
     const tasks=getReqTasks(jd);
     const dayDone=(historyData[yesterday]||{}).done||{};
-    let ded=0;
-    for(const t of tasks){if(!dayDone[t[0]]&&t[6]>0)ded+=Math.round(t[6]*PUNISH_RATE);}
+    const rate=getPunishRate();
+    let ded=0,missedCount=0;
+    for(const t of tasks){if(!dayDone[t[0]]&&t[6]>0){ded+=Math.round(t[6]*rate);missedCount++;}}
     if(ded>0 && STATS.pts!==undefined){
-      STATS.pts=STATS.pts-ded; // negative balance (debt) is now allowed intentionally
-      showToast(`⚠️ خصم ${ded}⭐ بسبب مهام مفقودة بالأمس\nرصيدك الآن: ${STATS.pts}⭐`,4000,'warn');
+      STATS.pts=STATS.pts-ded;
+      const rateLabel=rate<0.2?'مخفف (إنت مستمر على استريك)':'أعلى (مش على استريك حالياً)';
+      showToast(`⚠️ خصم ${ded}⭐ عن ${missedCount} مهمة مفقودة أمس\nمعدل الخصم: ${rateLabel}\nرصيدك الآن: ${STATS.pts}⭐\n\n${pickRandom(ENCOURAGE_MISS)}`,5000,'warn');
       PENALTY_FLASH_PENDING=true;
+      if(!historyData[yesterday])historyData[yesterday]={};
+      historyData[yesterday].penalty={rate,ded,missedCount};
     }
     penalized[yesterday]=true;
     await sSet(LS.penalized,penalized);
   }catch(e){console.error(e);}
 }
 
-// ===== Streak (FIXED) =====
+// ===== Streak =====
+const MILESTONES=[5,10,15,20,25,30,40,50];
+
 function checkStreak(){
   const jd=todayJD();
   const req=getReqTasks(jd);
@@ -537,12 +510,11 @@ function checkStreak(){
   const allDone=req.length>0 && req.every(t=>todayDone[t[0]]);
   const yesterday=dateOff(-1);
 
-  // If the new day started and yesterday streak was active but today isn't complete => streak broken.
   if(STATS.lc!==TODAY){
     if(STATS.lf===yesterday && !allDone){
       STATS.best=Math.max(STATS.best,STATS.cur);
       if(STATS.cur>0){
-        showToast(`💔 انكسر الاستريك بعد ${STATS.cur} يوم`,3500,'warn');
+        showToast(`💔 انكسر الاستريك بعد ${STATS.cur} يوم\n${pickRandom(ENCOURAGE_MISS)}`,3800,'warn');
         shakeStreakBroken();
       }
       STATS.cur=0;
@@ -550,20 +522,25 @@ function checkStreak(){
     STATS.lc=TODAY;
   }
 
-  // Extend streak for completed days.
   if(allDone && STATS.lf!==TODAY){
     STATS.cur = (STATS.lf===yesterday) ? (STATS.cur+1) : 1;
     STATS.lf=TODAY;
     STATS.best=Math.max(STATS.best,STATS.cur);
-    showToast(`🎉 يوم كامل!\nاستريك: ${STATS.cur} يوم 🔥`,4000);
+    if(MILESTONES.includes(STATS.cur)){
+      showToast(`🏆 ${STATS.cur} يوم متواصل! إنجاز كبير جداً 🎊`,5000,'gold');
+      hitMilestone();
+      barGoldFlash();
+    }else{
+      showToast(`${pickRandom(ENCOURAGE_WIN)}\nاستريك: ${STATS.cur} يوم 🔥`,4000);
+    }
     pulseStreakWin();
+    barGoldFlash();
   }
 
-  // If today isn't complete but we had completed streak ending yesterday, keep best and reset.
   if(!allDone && STATS.lf===yesterday){
     STATS.best=Math.max(STATS.best,STATS.cur);
     if(STATS.cur>0){
-      showToast(`💔 انكسر الاستريك بعد ${STATS.cur} يوم`,3500,'warn');
+      showToast(`💔 انكسر الاستريك بعد ${STATS.cur} يوم\n${pickRandom(ENCOURAGE_MISS)}`,3800,'warn');
       shakeStreakBroken();
     }
     STATS.cur=0;
@@ -571,7 +548,6 @@ function checkStreak(){
   }
 }
 
-// ===== One-time correction: STATS.best used to store leftover points data, not streak days =====
 function computeHistoricalBestStreak(){
   const dates=Object.keys(historyData).sort();
   let best=0,cur=0,prevDate=null;
@@ -612,10 +588,10 @@ async function fetchPrayers(){
 // ===== Prayer Modal =====
 let activePrayer=null;
 
-function startPrayerFlow(id,name,basePts,x,y){
+function startPrayerFlow(id,name,basePts,x,y,late){
   const parts=id.split('-');
   const pk=parts[2]||'';
-  activePrayer={id,name,pk,basePts:parseInt(basePts,10),bonus:0,x,y,step:0,log:[]};
+  activePrayer={id,name,pk,basePts:parseInt(basePts,10),bonus:0,x,y,step:0,log:[],late:!!late};
   showPrayerStep();
 }
 
@@ -629,14 +605,8 @@ function showPrayerStep(){
   if(modal){
     const sEl=document.getElementById('modalStep');
     if(sEl) sEl.textContent=`السؤال ${step+1} من ${totalSteps}`;
-
-    // Back button (رجوع) is always active — on the first question it cancels the confirmation.
     const backBtn=document.getElementById('btn-prayer-back');
-    if(backBtn){
-      backBtn.disabled=false;
-      backBtn.style.opacity='1';
-    }
-
+    if(backBtn){backBtn.disabled=false;backBtn.style.opacity='1';}
     modal.classList.add('open');
   }
 
@@ -689,9 +659,16 @@ async function finishPrayerFlow(){
   const dk=SELECTED_DATE;
   if(!historyData[dk]) historyData[dk]={};
   if(!historyData[dk].prayerLogs) historyData[dk].prayerLogs={};
-  historyData[dk].prayerLogs[activePrayer.id]={name:activePrayer.name,total,log:activePrayer.log};
+  historyData[dk].prayerLogs[activePrayer.id]={name:activePrayer.name,total,log:activePrayer.log,late:activePrayer.late};
   STATS.pts+=total;
   floatPts(activePrayer.x,activePrayer.y,total);
+  if(activePrayer.late){
+    showToast(`⏰ صليت متأخر شوي بس صليت — كمّل كذا`,3200,'late');
+    cardEffect(activePrayer.id,'late');
+  }else{
+    showToast(`🕌 صلاة في وقتها، الله يتقبل`,3000);
+    cardEffect(activePrayer.id,'ontime');
+  }
   checkStreak();
   await saveAll();
   renderPanels();
@@ -700,21 +677,17 @@ async function finishPrayerFlow(){
   activePrayer=null;
 }
 
-// ===== Weekly Report + History =====
-async function showWeeklyReport(){
-  const el=document.getElementById('reportContent');
-  if(!el) return;
-
-  // Saturday -> Friday
+// ===== Weekly Report =====
+// Builds the report for the week that just ENDED (Saturday..Friday), never including
+// the day currently in progress. This is the fix for the "shows next week" bug:
+// the range now starts at yesterday, not today.
+function buildWeekReportData(){
   const order=['sat','sun','mon','tue','wed','thu','fri'];
   const mapJD={sat:6,sun:0,mon:1,tue:2,wed:3,thu:4,fri:5};
 
-  // pick the week that ends with Friday (index 5), based on last 7 days
-  // We compute actual dates for each day label by using dateOff offsets from TODAY.
-  const all7=[...Array(7)].map((_,i)=>dateOff(-i)); // today, yesterday ...
-  // For each needed weekday, find the date within all7 that matches it.
+  const past7=[...Array(7)].map((_,i)=>dateOff(-1-i)); // yesterday .. 7 days ago
   const wantedDates={};
-  for(const iso of all7){
+  for(const iso of past7){
     const jd=getJDfromISO(iso);
     wantedDates[jd]=iso;
   }
@@ -729,6 +702,7 @@ async function showWeeklyReport(){
 
     const day=historyData[iso]||{};
     const dayDone=day.done||{};
+    const dayAlts=day.alts||{};
     const prayerLogs=day.prayerLogs||{};
     const tasks=getReqTasks(jd);
 
@@ -741,7 +715,7 @@ async function showWeeklyReport(){
       totalTasks++;
       if(!v){
         missed++;totalMissed++;
-        taskRows.push(`<div class="report-day-row"><span>${t[4]}</span><span class="badge-red">❌ مفقود (خصم ${Math.round(t[6]*PUNISH_RATE)}⭐)</span></div>`);
+        taskRows.push(`<div class="report-day-row"><span>${t[4]}</span><span class="badge-red">❌ لم تُنجز</span></div>`);
       }else if(v==='qada'){
         qada++;totalQada++;done++;totalDone++;
         const earned=Math.floor(t[6]/2);pts+=earned;
@@ -749,16 +723,19 @@ async function showWeeklyReport(){
       }else{
         done++;totalDone++;
         const earned=typeof v==='number'?v:t[6];pts+=earned;
+        const altChoice=dayAlts[t[0]];
+        const altBadge=(t[7]&&altChoice&&t[7].includes(altChoice))?`<span class="badge-alt">🔄 ${altChoice}</span>`:'';
         if(isPrayer(t)&&prayerLogs[t[0]]){
           const pl=prayerLogs[t[0]];
           const details=pl.log.map(l=>{
             const icon=l.gold?'🥇':'✓';
             return `${icon} ${l.key==='location'?'المكان':l.key==='style'?'الأداء':l.key==='dhikr'?'الأذكار':'السنة'}: ${l.choice} (+${l.pts}⭐)`;
           }).join(' · ');
-          prayerDetails.push(`<div style="margin-bottom:4px"><span style="color:var(--ye);font-weight:700">${t[4]}</span>: <span>+${earned}⭐</span><div class="report-prayer-detail">${details}</div></div>`);
+          const timingBadge=pl.late?'<span class="badge-or">⏰ متأخر</span>':'<span class="badge-green">✅ في وقتها</span>';
+          prayerDetails.push(`<div style="margin-bottom:4px"><span style="color:var(--ye);font-weight:700">${t[4]}</span> ${timingBadge}: <span>+${earned}⭐</span><div class="report-prayer-detail">${details}</div></div>`);
           taskRows.push(`<div class="report-day-row"><span>${t[4]}</span><span class="badge-green">✅ +${earned}⭐</span></div>`);
         }else{
-          taskRows.push(`<div class="report-day-row"><span>${t[4]}</span><span class="badge-green">✅ +${earned}⭐</span></div>`);
+          taskRows.push(`<div class="report-day-row"><span>${t[4]} ${altBadge}</span><span class="badge-green">✅ +${earned}⭐</span></div>`);
         }
       }
     }
@@ -766,54 +743,97 @@ async function showWeeklyReport(){
     totalPts+=pts;
 
     const dayName=DSHORT[jd]||'';
+    const dayPct=tasks.length?Math.round(done/tasks.length*100):0;
     let prayerSection='';
     if(prayerDetails.length>0){
       prayerSection=`<div style="margin-top:8px;padding:8px;background:rgba(0,0,0,.2);border-radius:8px;font-size:.7rem">${prayerDetails.join('')}</div>`;
     }
+    const encLine=dayPct===100
+      ?`<div class="report-day-enc">🎉 يوم كامل! ${dayName} كان يوم ممتاز</div>`
+      :(missed>0?`<div class="report-day-enc">فاتك ${missed} مهمة ${dayName} — حاول تعوضهم بكرة 💪</div>`:'');
 
     dayBlocks.push(`<div class="report-day">
       <div class="report-day-title">${dayName} — ${iso} — <span style="color:var(--ye)">${pts}⭐</span> <span style="color:var(--mu);font-size:.7rem">(${done}/${tasks.length} مهمة${missed>0?` · ${missed} مفقود`:''}${qada>0?` · ${qada} قضاء`:''})</span></div>
       ${taskRows.join('')}
       ${prayerSection}
+      ${encLine}
     </div>`);
   }
 
   const pct=totalTasks>0?Math.round(totalDone/totalTasks*100):0;
+  return{totalPts,totalMissed,totalQada,totalDone,totalTasks,pct,dayBlocksHtml:dayBlocks.join('')};
+}
 
-  // History list from savedReports (most recent first)
-  const hist=savedReports||[];
-  let histHtml='';
-  if(hist.length){
-    histHtml=hist.map(r=>{
-      return `<div class="report-history-item">
-        <span style="color:var(--so);font-weight:700">${r.date}</span>
-        <span><b>${r.totalPts}⭐</b> <span style="color:var(--mu);font-weight:800">(${r.pct||0}%)</span></span>
-      </div>`;
-    }).join('');
-  }else{
-    histHtml='<div style="color:var(--mu);font-weight:700">لا يوجد تقارير سابقة</div>';
-  }
-
-  el.innerHTML=`
+function renderReportSummaryHtml(data){
+  return `
     <div class="report-summary">
-      <div class="report-stat"><div class="report-stat-val" style="color:var(--ye)">${totalPts}⭐</div><div class="report-stat-lbl">إجمالي النقاط</div></div>
-      <div class="report-stat"><div class="report-stat-val" style="color:var(--gr)">${pct}%</div><div class="report-stat-lbl">نسبة الإنجاز</div></div>
-      <div class="report-stat"><div class="report-stat-val" style="color:var(--rd)">${totalMissed}</div><div class="report-stat-lbl">مهام مفقودة</div></div>
-      <div class="report-stat"><div class="report-stat-val" style="color:var(--or)">${totalQada}</div><div class="report-stat-lbl">قضاء صلوات</div></div>
+      <div class="report-stat"><div class="report-stat-val" style="color:var(--ye)">${data.totalPts}⭐</div><div class="report-stat-lbl">إجمالي النقاط</div></div>
+      <div class="report-stat"><div class="report-stat-val" style="color:var(--gr)">${data.pct}%</div><div class="report-stat-lbl">نسبة الإنجاز</div></div>
+      <div class="report-stat"><div class="report-stat-val" style="color:var(--rd)">${data.totalMissed}</div><div class="report-stat-lbl">مهام مفقودة</div></div>
+      <div class="report-stat"><div class="report-stat-val" style="color:var(--or)">${data.totalQada}</div><div class="report-stat-lbl">قضاء صلوات</div></div>
     </div>
-    ${dayBlocks.join('')}
+    ${data.dayBlocksHtml}
+  `;
+}
+
+async function showWeeklyReport(){
+  const el=document.getElementById('reportContent');
+  const titleEl=document.getElementById('reportTitle');
+  if(!el) return;
+  if(titleEl) titleEl.textContent='📊 التقرير الأسبوعي المفصل';
+
+  const data=buildWeekReportData();
+
+  el.innerHTML=renderReportSummaryHtml(data)+`
     <div class="report-history">
-      <div class="report-history-title">🗂️ تاريخ تقارير الأسابيع</div>
-      ${histHtml}
+      <div class="report-history-title">🗂️ عرض كل التقارير السابقة</div>
+      <button class="report-back-btn" id="btn-view-history-list" type="button">📁 فتح سجل التقارير</button>
     </div>
   `;
 
-  savedReports.unshift({date:TODAY,totalPts,totalMissed,totalQada,pct});
-  if(savedReports.length>8) savedReports=savedReports.slice(0,8);
-  await saveAll();
+  // Store a full, permanent snapshot — not just summary numbers — so history can
+  // re-open this exact week later without recomputation.
+  const alreadySaved=savedReports.some(r=>r.date===TODAY);
+  if(!alreadySaved){
+    savedReports.unshift({date:TODAY,totalPts:data.totalPts,totalMissed:data.totalMissed,totalQada:data.totalQada,pct:data.pct,snapshotHtml:renderReportSummaryHtml(data)});
+    if(savedReports.length>52) savedReports=savedReports.slice(0,52); // keep up to a year of weeks
+    await saveAll();
+  }
 
   const rModal=document.getElementById('reportModal');
   if(rModal) rModal.classList.add('open');
+}
+
+// Permanent history button — available every day, shows every saved week.
+function showReportHistoryList(){
+  const el=document.getElementById('reportContent');
+  const titleEl=document.getElementById('reportTitle');
+  if(!el) return;
+  if(titleEl) titleEl.textContent='🗂️ سجل التقارير الأسبوعية';
+
+  if(!savedReports.length){
+    el.innerHTML='<div style="color:var(--mu);font-weight:700;text-align:center;padding:20px">لا يوجد تقارير محفوظة بعد</div>';
+  }else{
+    el.innerHTML=savedReports.map((r,i)=>`
+      <div class="report-history-item" data-hist-idx="${i}">
+        <span style="color:var(--so);font-weight:700">تقرير أسبوع ${r.date}</span>
+        <span><b>${r.totalPts}⭐</b> <span style="color:var(--mu);font-weight:800">(${r.pct||0}%)</span></span>
+      </div>
+    `).join('');
+  }
+
+  const rModal=document.getElementById('reportModal');
+  if(rModal) rModal.classList.add('open');
+}
+
+function showReportHistoryDetail(idx){
+  const r=savedReports[idx];
+  if(!r) return;
+  const el=document.getElementById('reportContent');
+  const titleEl=document.getElementById('reportTitle');
+  if(!el) return;
+  if(titleEl) titleEl.textContent=`📊 تقرير أسبوع ${r.date}`;
+  el.innerHTML=`<button class="report-back-btn" id="btn-back-to-history-list" type="button">← رجوع للسجل</button>${r.snapshotHtml||'<div style="color:var(--mu)">لا توجد تفاصيل محفوظة لهذا التقرير القديم</div>'}`;
 }
 
 // ===== UI =====
@@ -834,7 +854,6 @@ function renderCard(task,isToday){
     if(isDone){
       const lbl=typeof done==='number'?`✅ +${done}⭐`:'✅';
       act=`<div class="cbtn done">${lbl}</div>`;
-
     }else if(state==='QADA'){
       const half=Math.floor(pts/2);
       act=`<button class="cbtn qada" data-action="qada" data-id="${id}" data-pts="${pts}">قضاء (50%)<span class="ptslbl">+${half}⭐</span></button>`;
@@ -952,12 +971,13 @@ function updateAuthUI(user){
   const btnEl=document.getElementById('authBtn');
   if(!nameEl||!btnEl)return;
   const isSat=todayJD()===6;
+  const historyBtn=`<button class="altbtn" id="btn-report-history">🗂️ سجل التقارير</button>`;
   if(user){
     nameEl.textContent=(user.displayName||user.email||'').split('@')[0];
-    btnEl.innerHTML=`<button class="altbtn" id="btn-signout">خروج</button><button class="altbtn" id="btn-report" ${isSat?'':'disabled'}>📊 تقرير الأسبوع</button>`;
+    btnEl.innerHTML=`<button class="altbtn" id="btn-signout">خروج</button><button class="altbtn" id="btn-report" ${isSat?'':'disabled'}>📊 تقرير الأسبوع</button>${historyBtn}`;
   }else{
     nameEl.textContent='';
-    btnEl.innerHTML=`<button class="altbtn" id="btn-signin">تسجيل دخول</button><button class="altbtn" id="btn-report" ${isSat?'':'disabled'}>📊 تقرير الأسبوع</button>`;
+    btnEl.innerHTML=`<button class="altbtn" id="btn-signin">تسجيل دخول</button><button class="altbtn" id="btn-report" ${isSat?'':'disabled'}>📊 تقرير الأسبوع</button>${historyBtn}`;
   }
 }
 
@@ -982,6 +1002,25 @@ document.body.addEventListener('click',async e=>{
   if(tgt.id==='btn-report'){
     if(todayJD()!==6){showToast('التقرير متاح يوم السبت فقط 📅');return;}
     await showWeeklyReport();return;
+  }
+
+  if(tgt.id==='btn-report-history'){
+    showReportHistoryList();return;
+  }
+
+  if(tgt.id==='btn-view-history-list'){
+    showReportHistoryList();return;
+  }
+
+  if(tgt.id==='btn-back-to-history-list'){
+    showReportHistoryList();return;
+  }
+
+  const histItem=closest('.report-history-item');
+  if(histItem){
+    const idx=parseInt(histItem.getAttribute('data-hist-idx'),10);
+    showReportHistoryDetail(idx);
+    return;
   }
 
   if(tgt.id==='closeReport'){document.getElementById('reportModal')?.classList.remove('open');return;}
@@ -1020,19 +1059,32 @@ document.body.addEventListener('click',async e=>{
   if(action==='alts'){toggleAlts(id);return;}
   if(action==='pickalt'){
     const alt=actionEl.getAttribute('data-alt');if(!alt)return;
-    SELECTED_ALTS[id]=alt;await saveAll();renderPanels();switchDay(getJDfromISO(SELECTED_DATE));return;
+    SELECTED_ALTS[id]=alt;await saveAll();renderPanels();switchDay(getJDfromISO(SELECTED_DATE));
+    showToast('🔄 تم اختيار البديل',2200);
+    return;
   }
 
   if(action==='confirm'){
     if(DONE[id]!==undefined)return;
     const pts=parseInt(ptsAttr||'0',10);
     const isPr=id.startsWith('pr-')||id.includes('-jm');
+    const jd=getJDfromISO(SELECTED_DATE);
+    const taskObj=getAllTasks(jd).find(t=>t[0]===id);
     if(isPr){
       const cardName=tgt.closest('.tc')?.querySelector('.tcname')?.textContent||'';
-      startPrayerFlow(id,cardName,pts,e.clientX,e.clientY);return;
+      const late=taskObj?isLatePrayer(taskObj):false;
+      startPrayerFlow(id,cardName,pts,e.clientX,e.clientY,late);return;
     }
+    const late=taskObj?isLateNonPrayer(taskObj):false;
     DONE[id]=pts;STATS.pts+=pts;
     floatPts(e.clientX,e.clientY,pts);
+    if(late){
+      showToast('⏰ متأخر شوي بس تم — استمر كذا 💪',3000,'late');
+      cardEffect(id,'late');
+    }else{
+      showToast('✅ في الوقت المثالي، أحسنت',2200);
+      cardEffect(id,'ontime');
+    }
     checkStreak();
     await saveAll();renderPanels();switchDay(getJDfromISO(SELECTED_DATE));updateUI();
     return;
@@ -1044,9 +1096,10 @@ document.body.addEventListener('click',async e=>{
     const half=Math.floor(pts/2);
     DONE[id]='qada';STATS.pts+=half;
     floatPts(e.clientX,e.clientY,half);
+    cardEffect(id,'qada');
     checkStreak();
     await saveAll();renderPanels();switchDay(getJDfromISO(SELECTED_DATE));updateUI();
-    showToast('تم تسجيل القضاء (50%)',3500,'qada');return;
+    showToast('تم تسجيل القضاء — حاول تصلي بدري بكرة 🌙',3500,'qada');return;
   }
 });
 
@@ -1071,6 +1124,7 @@ function initAppFlow(user){
 
 if (typeof onAuthStateChanged !== 'undefined' && typeof fbAuth !== 'undefined') {
   onAuthStateChanged(fbAuth, async user => {
+    await loadAll();
     if(user && typeof getDoc !== 'undefined' && typeof doc !== 'undefined' && typeof fbDb !== 'undefined'){
       try{
         const ud=await getDoc(doc(fbDb,'users',user.uid));
@@ -1087,14 +1141,12 @@ if (typeof onAuthStateChanged !== 'undefined' && typeof fbAuth !== 'undefined') 
           saveDay();
         }
       }catch(e){console.warn('cloud load failed',e);}
-    }else{
-      await loadAll();
     }
     await sanitizeStats();
     initAppFlow(user);
   });
 } else {
-  setTimeout(async ()=>{await loadAll();initAppFlow(null);},100);
+  setTimeout(async ()=>{await loadAll();await sanitizeStats();initAppFlow(null);},100);
 }
 </script>
 </body>
