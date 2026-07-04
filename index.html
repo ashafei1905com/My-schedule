@@ -1193,8 +1193,30 @@ document.body.addEventListener('click',async e=>{
 
   if(tgt.id==='btn-signout'){
     if(typeof fbAuth!=='undefined') await fbAuth.signOut();
-    // Simply reload the page for a clean state. This is more robust than
-    // trying to manually reset all state variables, which can lead to race conditions.
+
+    // Reset everything locally so it's like a brand-new schedule again.
+    // This also ensures that if you log in with a different user, you won't see
+    // previous user's progress before cloud load finishes (or if cloud is empty).
+    try{
+      // Clear app-local state
+      localStorage.removeItem(LS.stats);
+      localStorage.removeItem(LS.history);
+      localStorage.removeItem(LS.reports);
+      localStorage.removeItem(LS.penalized);
+      localStorage.removeItem(LS.firstSeen);
+
+      // Clear any in-memory state
+      STATS={cur:0,best:0,pts:0,lc:null,lf:null};
+      DONE={};
+      SELECTED_ALTS={};
+      historyData={};
+      savedReports=[];
+      penalizedDates={};
+      FIRST_SEEN=null;
+      IS_BRAND_NEW_SESSION=false;
+      SELECTED_DATE=TODAY;
+    }catch(e){console.warn('local reset failed',e);}
+
     window.location.reload();
     return;
   }
