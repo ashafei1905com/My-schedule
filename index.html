@@ -423,7 +423,7 @@ const SCHED={
 };
 
 function buildPTasks(jd){
-  const k=DKEYS[jd];
+  const k=DKEYS ? DKEYS[jd] : ['sun','mon','tue','wed','thu','fri','sat'][jd];
   return Object.entries(PMETA)
     .filter(([pk])=>pk!=='Sunrise')
     .filter(([pk])=>!(jd===5&&pk==='Dhuhr'))
