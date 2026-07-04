@@ -305,7 +305,22 @@ const TODAY = todayStr();
 
 function cleanTime(s){if(!s)return'';const m=String(s).match(/\d{1,2}:\d{2}/);return m?m[0]:String(s);}
 function fmt24(t){const s=cleanTime(t);if(!s)return'';const[h,m]=s.split(':').map(Number);const pm=h>=12;const dh=h>12?h-12:(h===0?12:h);return`${dh}:${p2(m)} ${pm?'م':'ص'}`;}
-function toMin(s){if(!s)return 0;const s0=cleanTime(s);const raw=String(s);if(raw.includes('ص')||raw.includes('م')){const pm=raw.includes('م');const[h,m]=s0.split(':').map(Number);let hr=h;if(pm&&h!==12)hr+=12;if(!pm&&h===12)hr=0;return hr*60+(m||0);}const[h,m]=s0.split(':').map(Number);return h*60+(m||0);}
+function toMin(s){if(!s)return 0;const s0=cleanTime(s);const raw=String(s);if(raw.includes('ص')||raw.includes('م')){const pm=raw.includes('م');const[h,m]=s0.split(':').map(Number);let hr=h;if(pm&&h!==12)hr+=12;if(!pm&&h===12)hr=0;return hr*60+(m||0);}const[h,m]=s0.split(':').map(Number);return h*60+(m||0);} 
+
+function getKuwaitNow(){
+  // minutes since midnight in Asia/Kuwait
+  try{
+    const parts = new Intl.DateTimeFormat('en-GB',{timeZone:'Asia/Kuwait',hour:'2-digit',minute:'2-digit',hour12:false}).formatToParts(new Date());
+    const hh = parseInt(parts.find(p=>p.type==='hour')?.value || '0',10);
+    const mm = parseInt(parts.find(p=>p.type==='minute')?.value || '0',10);
+    return hh*60+mm;
+  }catch{
+    // fallback: UTC
+    const d=new Date();
+    return d.getUTCHours()*60+d.getUTCMinutes();
+  }
+}
+
 function isPrayer(task){return task[2]==='prayer';}
 
 function getState(task){
