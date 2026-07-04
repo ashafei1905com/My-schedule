@@ -257,33 +257,51 @@ const fbDb=getFirestore(fbApp);
 const KUWAIT_TZ='Asia/Kuwait';
 const p2=n=>String(n).padStart(2,'0');
 
-function getKuwaitNow(){
-  try{
-    const pts=new Intl.DateTimeFormat('en-GB',{timeZone:KUWAIT_TZ,hour:'2-digit',minute:'2-digit',hour12:false}).formatToParts(new Date());
-    const o={};pts.forEach(p=>{if(p.type!=='literal')o[p.type]=p.value});
-    return parseInt(o.hour||'0',10)*60+parseInt(o.minute||'0',10);
-  }catch{const d=new Date();return d.getHours()*60+d.getMinutes();}
+// --- UTC-Based Date Utility Functions ---
+// All date logic now uses UTC to prevent any timezone-related bugs.
+
+function getKuwaitDateParts(dt = new Date()) {
+    // This remains for display purposes but not for logic.
+    try {
+        const pts = new Intl.DateTimeFormat('en-GB', { timeZone: KUWAIT_TZ, year: 'numeric', month: '2-digit', day: '2-digit', weekday: 'short' }).formatToParts(dt);
+        const o = {}; pts.forEach(p => { if (p.type !== 'literal') o[p.type] = p.value }); return o;
+    } catch {
+        const d = dt; return { year: `${d.getFullYear()}`, month: p2(d.getMonth() + 1), day: p2(d.getDate()), weekday: ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'][d.getDay()] };
+    }
 }
 
-function getKuwaitDateParts(dt=new Date()){
-  try{
-    const pts=new Intl.DateTimeFormat('en-GB',{timeZone:KUWAIT_TZ,year:'numeric',month:'2-digit',day:'2-digit',weekday:'short'}).formatToParts(dt);
-    const o={};pts.forEach(p=>{if(p.type!=='literal')o[p.type]=p.value});return o;
-  }catch{
-    const d=dt;return{year:`${d.getFullYear()}`,month:p2(d.getMonth()+1),day:p2(d.getDate()),weekday:['Sun','Mon','Tue','Wed','Thu','Fri','Sat'][d.getDay()]};
-  }
+function dateToUTC(date) {
+    // Creates a UTC date object from a local date, preserving the year, month, and day.
+    return new Date(Date.UTC(date.getFullYear(), date.getMonth(), date.getDate()));
 }
 
-const DKEYS=['sun','mon','tue','wed','thu','fri','sat'];
-const DSHORT=['الأحد','الاثنين','الثلاثاء','الأربعاء','الخميس','الجمعة','السبت'];
-const WEEK_ORDER=[6,0,1,2,3,4,5];
+function todayStr() {
+    // Returns today's date as a 'YYYY-MM-DD' string based on UTC.
+    const today = dateToUTC(new Date());
+    return today.toISOString().split('T')[0];
+}
 
-function todayStr(){const d=getKuwaitDateParts();return `${d.year}-${d.month}-${d.day}`;}
-function todayJD(){return['Sun','Mon','Tue','Wed','Thu','Fri','Sat'].indexOf(getKuwaitDateParts().weekday);}
-function getJDfromISO(iso){const m=String(iso).match(/^(\d{4})-(\d{2})-(\d{2})$/);if(!m)return todayJD();return new Date(Date.UTC(+m[1],+m[2]-1,+m[3])).getUTCDay();}
-function dateOff(n,base){const d=base?new Date(base+'T12:00:00'):new Date();d.setDate(d.getDate()+n);return`${d.getFullYear()}-${p2(d.getMonth()+1)}-${p2(d.getDate())}`;}
+function dateOff(n, base) {
+    // Returns a 'YYYY-MM-DD' string for a date `n` days away from `base`.
+    // Consistently uses UTC for calculations.
+    const baseDate = base ? new Date(base + 'T12:00:00Z') : dateToUTC(new Date());
+    baseDate.setUTCDate(baseDate.getUTCDate() + n);
+    return baseDate.toISOString().split('T')[0];
+}
 
-const TODAY=todayStr();
+function todayJD() {
+    // Returns the UTC day of the week for today.
+    return dateToUTC(new Date()).getUTCDay();
+}
+
+function getJDfromISO(iso) {
+    // Returns the UTC day of the week for a given 'YYYY-MM-DD' string.
+    if (!iso) return todayJD();
+    const d = new Date(iso + 'T12:00:00Z');
+    return d.getUTCDay();
+}
+
+const TODAY = todayStr();
 
 function cleanTime(s){if(!s)return'';const m=String(s).match(/\d{1,2}:\d{2}/);return m?m[0]:String(s);}
 function fmt24(t){const s=cleanTime(t);if(!s)return'';const[h,m]=s.split(':').map(Number);const pm=h>=12;const dh=h>12?h-12:(h===0?12:h);return`${dh}:${p2(m)} ${pm?'م':'ص'}`;}
