@@ -1192,13 +1192,14 @@ document.body.addEventListener('click',async e=>{
   }
 
   if(tgt.id==='btn-signout'){
-    if(typeof fbAuth!=='undefined') await fbAuth.signOut();
+    // Important: only clear localStorage AFTER Firebase finishes signing out,
+    // otherwise Firebase can crash ("Pending promise was never set").
+    if(typeof fbAuth!=='undefined'){
+      try{ await fbAuth.signOut(); }catch(e){ console.warn('signOut failed',e); }
+    }
 
-    // Reset everything locally so it's like a brand-new schedule again.
-    // This also ensures that if you log in with a different user, you won't see
-    // previous user's progress before cloud load finishes (or if cloud is empty).
     try{
-      // Clear app-local state
+      // Clear app-local state so next anonymous visit looks brand-new.
       localStorage.removeItem(LS.stats);
       localStorage.removeItem(LS.history);
       localStorage.removeItem(LS.reports);
