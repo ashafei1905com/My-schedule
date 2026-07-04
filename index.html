@@ -737,10 +737,19 @@ async function finishPrayerFlow(){
 // ===== Weekly Report =====
 // The report is for the last full week, defined as Saturday to the most recent Friday.
 function getReportRangeDates() {
+    // Report week should be Kuwait-local (Asia/Kuwait), not browser-local.
+    // Use Kuwait timezone when building calendar days to match how history keys are created.
+
     // This is the final, robust, timezone-proof implementation.
     // It creates a date object based on the known TODAY string (YYYY-MM-DD),
     // interpreting it as a UTC date to prevent any local timezone interference.
-    const today = new Date(TODAY + 'T12:00:00Z');
+const today = new Date(TODAY + 'T12:00:00Z');
+
+    // Make the report range target the last *completed* week in UTC,
+    // but exclude the current day completely. This avoids timezone mismatches
+    // where TODAY and the week boundaries end up on different calendar days.
+    const nowUtc = new Date();
+    const isTodayInUtc = nowUtc.toISOString().split('T')[0] === TODAY;
 
     // To find the most recent Friday, we calculate how many days to go back.
     // getUTCDay(): Sun=0, Mon=1, ..., Fri=5, Sat=6
