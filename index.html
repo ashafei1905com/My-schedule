@@ -420,25 +420,56 @@ function saveDay(){const dk=SELECTED_DATE;if(!historyData[dk])historyData[dk]={}
 // Legacy savedReports entries (pre-weekStart schema) get deduplicated by content signature,
 // since the old code appended a new entry every time the modal was opened.
 function migrateSavedReports() {
-    const seen = new Set();
-    const cleaned = [];
-    // Filter out any invalid or empty report entries first
-    const validReports = savedReports.filter(r => r && (r.weekStart || r.date));
+    // This is the final, most robust version of the migration. It ensures that
+    // even if multiple reports for the same week exist due to previous bugs,
+    // only the single most recent and relevant one is kept.
 
-    for (const r of validReports) {
-        // Prioritize weekStart as the key, fall back to a composite key for legacy data
-        const key = r.weekStart || `legacy|${r.date}|${r.totalPts}|${r.totalMissed}|${r.totalQada}|${r.pct}`;
-        if (seen.has(key)) continue;
-        
-        seen.add(key);
-        // Ensure weekStart is populated for legacy entries
-        if (!r.weekStart) {
-            r.weekStart = r.date;
-        }
-        cleaned.push(r);
+    if (!Array.isArray(savedReports)) {
+        savedReports = [];
+        return;
     }
-    // Sort reports by the start of the week, ensuring newest is first
-    savedReports = cleaned.sort((a, b) => b.weekStart.localeCompare(a.weekStart));
+
+    const reportMap = new Map();
+
+    // Process all reports, including legacy ones without a proper weekStart.
+    for (const report of savedReports) {
+        if (!report || (!report.weekStart && !report.date)) {
+            continue; // Skip invalid report objects
+        }
+
+        // Determine the canonical start of the week (the Saturday) for the report.
+        // This is the key to correct de-duplication.
+        const reportDate = new Date((report.weekStart || report.date) + 'T12:00:00Z');
+        let canonicalWeekStart = new Date(reportDate.getTime());
+        // Find the preceding Saturday (day 6). The formula is (day + 1) % 7.
+        const dayOfWeek = canonicalWeekStart.getUTCDay();
+        const daysToSubtract = (dayOfWeek + 1) % 7;
+        canonicalWeekStart.setUTCDate(canonicalWeekStart.getUTCDate() - daysToSubtract);
+        
+        const canonicalKey = canonicalWeekStart.toISOString().split('T')[0];
+
+        // If we've already stored a report for this week, we only replace it if the new
+        // one has more points, indicating it's a more up-to-date version.
+        if (reportMap.has(canonicalKey)) {
+            const existingReport = reportMap.get(canonicalKey);
+            // A simple heuristic: the report with more data is likely the correct one.
+            // A "better" heuristic might be the one with the later `weekEnd` date, but totalPts is a good proxy.
+            if (report.totalPts >= existingReport.totalPts) {
+                reportMap.set(canonicalKey, report);
+            }
+        } else {
+            reportMap.set(canonicalKey, report);
+        }
+    }
+
+    const cleanedReports = Array.from(reportMap.values());
+    
+    // Sort the cleaned reports by date, newest first.
+    savedReports = cleanedReports.sort((a, b) => {
+        const dateA = a.weekStart || a.date;
+        const dateB = b.weekStart || b.date;
+        return dateB.localeCompare(dateA);
+    });
 }
 
 async function loadAll() {
@@ -670,34 +701,34 @@ async function finishPrayerFlow(){
 // ===== Weekly Report =====
 // The report is for the last full week, defined as Saturday to the most recent Friday.
 function getReportRangeDates() {
-    const today = new Date(TODAY + 'T12:00:00'); // Use a neutral time
-    const currentJD = today.getUTCDay(); // 0 (Sun) to 6 (Sat)
-    
-    // Days to go back to find the most recent Friday.
-    // If today is Saturday (6), Friday is 1 day ago.
-    // If today is Sunday (0), Friday was 2 days ago.
-    // Formula: (currentJD - 5 + 7) % 7. But day-of-week logic is tricky.
-    // Let's use a simpler, more direct method.
-    let lastFriday = new Date(today);
-    // Go back day by day until we hit a Friday (5)
-    while (lastFriday.getUTCDay() !== 5) {
-        lastFriday.setDate(lastFriday.getDate() - 1);
-    }
-    
-    const rangeEnd = `${lastFriday.getFullYear()}-${p2(lastFriday.getMonth() + 1)}-${p2(lastFriday.getDate())}`;
-    
-    // The week starts 6 days before the last Friday (which is a Saturday).
-    let firstDayOfWeek = new Date(lastFriday);
-    firstDayOfWeek.setDate(firstDayOfWeek.getDate() - 6);
-    const rangeStart = `${firstDayOfWeek.getFullYear()}-${p2(firstDayOfWeek.getMonth() + 1)}-${p2(firstDayOfWeek.getDate())}`;
+    // This is the final, robust, timezone-proof implementation.
+    // It creates a date object based on the known TODAY string (YYYY-MM-DD),
+    // interpreting it as a UTC date to prevent any local timezone interference.
+    const today = new Date(TODAY + 'T12:00:00Z');
 
-    // Now, generate all dates in this [Saturday, Friday] range.
+    // To find the most recent Friday, we calculate how many days to go back.
+    // getUTCDay(): Sun=0, Mon=1, ..., Fri=5, Sat=6
+    // If today is Sunday (0), we need to go back 2 days to get to Friday.
+    // If today is Saturday (6), we need to go back 1 day.
+    // The formula is: (today's day of week - 5 (Friday) + 7) % 7
+    // But a simpler way is: (today's day of week + 2) % 7.
+    // Sun(0): (0+2)%7=2. Correct.
+    // Sat(6): (6+2)%7=1. Correct.
+    const daysToLastFriday = (today.getUTCDay() + 2) % 7;
+    
+    let lastFriday = new Date(today.getTime());
+    lastFriday.setUTCDate(lastFriday.getUTCDate() - daysToLastFriday);
+
+    // The week starts 6 days before this Friday, which is a Saturday.
+    let firstDayOfWeek = new Date(lastFriday.getTime());
+    firstDayOfWeek.setUTCDate(firstDayOfWeek.getUTCDate() - 6);
+
     const wantedDates = {};
-    let currentDay = new Date(firstDayOfWeek);
     for (let i = 0; i < 7; i++) {
-        const iso = `${currentDay.getFullYear()}-${p2(currentDay.getMonth() + 1)}-${p2(currentDay.getDate())}`;
+        let currentDay = new Date(firstDayOfWeek.getTime());
+        currentDay.setUTCDate(currentDay.getUTCDate() + i);
+        const iso = currentDay.toISOString().split('T')[0];
         wantedDates[currentDay.getUTCDay()] = iso;
-        currentDay.setDate(currentDay.getDate() + 1);
     }
     
     return wantedDates;
