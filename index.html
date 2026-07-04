@@ -419,30 +419,46 @@ function saveDay(){const dk=SELECTED_DATE;if(!historyData[dk])historyData[dk]={}
 
 // Legacy savedReports entries (pre-weekStart schema) get deduplicated by content signature,
 // since the old code appended a new entry every time the modal was opened.
-function migrateSavedReports(){
-  const seen=new Set();
-  const cleaned=[];
-  for(const r of savedReports){
-    const key=r.weekStart||`legacy|${r.date}|${r.totalPts}|${r.totalMissed}|${r.totalQada}|${r.pct}`;
-    if(seen.has(key)) continue;
-    seen.add(key);
-    if(!r.weekStart) r.weekStart=r.date;
-    cleaned.push(r);
-  }
-  savedReports=cleaned;
+function migrateSavedReports() {
+    const seen = new Set();
+    const cleaned = [];
+    // Filter out any invalid or empty report entries first
+    const validReports = savedReports.filter(r => r && (r.weekStart || r.date));
+
+    for (const r of validReports) {
+        // Prioritize weekStart as the key, fall back to a composite key for legacy data
+        const key = r.weekStart || `legacy|${r.date}|${r.totalPts}|${r.totalMissed}|${r.totalQada}|${r.pct}`;
+        if (seen.has(key)) continue;
+        
+        seen.add(key);
+        // Ensure weekStart is populated for legacy entries
+        if (!r.weekStart) {
+            r.weekStart = r.date;
+        }
+        cleaned.push(r);
+    }
+    // Sort reports by the start of the week, ensuring newest is first
+    savedReports = cleaned.sort((a, b) => b.weekStart.localeCompare(a.weekStart));
 }
 
-async function loadAll(){
-  STATS=(await sGet(LS.stats))||{cur:0,best:0,pts:0,lc:null,lf:null};
-  historyData=(await sGet(LS.history))||{};
-  savedReports=(await sGet(LS.reports))||[];
-  penalizedDates=(await sGet(LS.penalized))||{};
-  migrateSavedReports();
-  loadDay();
+async function loadAll() {
+    STATS = (await sGet(LS.stats)) || { cur: 0, best: 0, pts: 0, lc: null, lf: null };
+    historyData = (await sGet(LS.history)) || {};
+    savedReports = (await sGet(LS.reports)) || [];
+    penalizedDates = (await sGet(LS.penalized)) || {};
+    
+    // Perform migration immediately after loading from storage
+    migrateSavedReports();
+    
+    loadDay();
 }
 
 async function saveAll(){
   saveDay();
+  
+  // Ensure migration/cleanup is run before saving, preventing duplicates.
+  migrateSavedReports();
+
   await sSet(LS.stats,STATS);
   await sSet(LS.history,historyData);
   await sSet(LS.reports,savedReports);
@@ -652,12 +668,39 @@ async function finishPrayerFlow(){
 }
 
 // ===== Weekly Report =====
-// Range is fixed at "the 7 days ending yesterday" — never includes the day in progress.
-function getReportRangeDates(){
-  const past7=[...Array(7)].map((_,i)=>dateOff(-1-i)); // yesterday .. 7 days ago
-  const wantedDates={};
-  for(const iso of past7){wantedDates[getJDfromISO(iso)]=iso;}
-  return wantedDates; // wantedDates[6] is LAST Saturday, never today's
+// The report is for the last full week, defined as Saturday to the most recent Friday.
+function getReportRangeDates() {
+    const today = new Date(TODAY + 'T12:00:00'); // Use a neutral time
+    const currentJD = today.getUTCDay(); // 0 (Sun) to 6 (Sat)
+    
+    // Days to go back to find the most recent Friday.
+    // If today is Saturday (6), Friday is 1 day ago.
+    // If today is Sunday (0), Friday was 2 days ago.
+    // Formula: (currentJD - 5 + 7) % 7. But day-of-week logic is tricky.
+    // Let's use a simpler, more direct method.
+    let lastFriday = new Date(today);
+    // Go back day by day until we hit a Friday (5)
+    while (lastFriday.getUTCDay() !== 5) {
+        lastFriday.setDate(lastFriday.getDate() - 1);
+    }
+    
+    const rangeEnd = `${lastFriday.getFullYear()}-${p2(lastFriday.getMonth() + 1)}-${p2(lastFriday.getDate())}`;
+    
+    // The week starts 6 days before the last Friday (which is a Saturday).
+    let firstDayOfWeek = new Date(lastFriday);
+    firstDayOfWeek.setDate(firstDayOfWeek.getDate() - 6);
+    const rangeStart = `${firstDayOfWeek.getFullYear()}-${p2(firstDayOfWeek.getMonth() + 1)}-${p2(firstDayOfWeek.getDate())}`;
+
+    // Now, generate all dates in this [Saturday, Friday] range.
+    const wantedDates = {};
+    let currentDay = new Date(firstDayOfWeek);
+    for (let i = 0; i < 7; i++) {
+        const iso = `${currentDay.getFullYear()}-${p2(currentDay.getMonth() + 1)}-${p2(currentDay.getDate())}`;
+        wantedDates[currentDay.getUTCDay()] = iso;
+        currentDay.setDate(currentDay.getDate() + 1);
+    }
+    
+    return wantedDates;
 }
 
 function buildWeekReportData(){
@@ -681,6 +724,11 @@ function buildWeekReportData(){
     const dayAlts=day.alts||{};
     const prayerLogs=day.prayerLogs||{};
     const tasks=getReqTasks(jd);
+
+    // If there are no tasks for a day, there's nothing to report.
+    if (!tasks.length) {
+        continue;
+    }
 
     let pts=0,missed=0,qada=0,done=0;
     const taskRows=[];
@@ -757,6 +805,13 @@ async function showWeeklyReport(){
   if(titleEl) titleEl.textContent='📊 تقرير آخر أسبوع مكتمل';
 
   const data=buildWeekReportData();
+  if (!data.rangeStart || !data.rangeEnd) {
+      el.innerHTML = '<div class="history-empty">لا توجد بيانات كافية لإنشاء تقرير. أكمل بضعة أيام أولاً.</div>';
+      const rModal = document.getElementById('reportModal');
+      if (rModal) rModal.classList.add('open');
+      return;
+  }
+  
   if(rangeEl) rangeEl.textContent=`من ${data.rangeStart} إلى ${data.rangeEnd} — لا يشمل اليوم الحالي`;
 
   el.innerHTML=renderReportSummaryHtml(data);
@@ -767,11 +822,20 @@ async function showWeeklyReport(){
   const weekStart=data.rangeStart;
   const existingIdx=savedReports.findIndex(r=>r.weekStart===weekStart);
   const entry={weekStart,weekEnd:data.rangeEnd,totalPts:data.totalPts,totalMissed:data.totalMissed,totalQada:data.totalQada,pct:data.pct,snapshotHtml:renderReportSummaryHtml(data)};
-  if(existingIdx>=0) savedReports[existingIdx]=entry;
-  else{
-    savedReports.unshift(entry);
-    if(savedReports.length>52) savedReports=savedReports.slice(0,52);
+  
+  if(existingIdx>=0) {
+    savedReports[existingIdx]=entry;
+  } else {
+    savedReports.unshift(entry); // Add to the beginning of the array
   }
+  
+  // Sort by weekStart date to ensure consistency, newest first.
+  savedReports.sort((a, b) => b.weekStart.localeCompare(a.weekStart));
+
+  if(savedReports.length > 52) {
+    savedReports = savedReports.slice(0, 52);
+  }
+
   await saveAll();
 
   const rModal=document.getElementById('reportModal');
@@ -785,6 +849,10 @@ function showReportHistoryList(){
   const rangeEl=document.getElementById('reportRange');
   if(!el) return;
   if(titleEl) titleEl.textContent='🗂️ سجل كل التقارير الأسبوعية';
+  
+  // Clean up any duplicates before rendering
+  migrateSavedReports();
+
   if(rangeEl) rangeEl.textContent=savedReports.length?`${savedReports.length} تقرير محفوظ`:'';
 
   if(!savedReports.length){
