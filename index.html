@@ -387,6 +387,12 @@ const mkGL=(p,t)=>[p+'-gm',t,'gym','🏋️','جيم — Lower Body','Leg press 
 const mkPS=(p,t)=>[p+'-ps',t,'food','🍌','سناك قبل الجيم','موزة + ٣ تمرات (٤٥ دقيقة قبل التمرين)',5,['تمرتين + كوب عصير طبيعي','خبز أسمر + زبدة فول سوداني'],null,false];
 const mkPM=(p,t)=>[p+'-pm',t,'food','🍳','وجبة بعد التمرين','٣ بيضات مسلوقة + خيار + طماطم',5,['جبنة قريش ١٥٠جم + خبز أسمر','لبنة ٤ ملاعق + بيضتين'],null,false];
 const mkBr=(p)=>[p+'-br','7:00 م','recovery','🏊','مع أخوك — جاكوزي + بخار','٧:٠٠ — ١٠:٠٠ م ← استثناء ✓',0,null,null,true];
+// Between-meal snacks — three fixed slots per day (mid-morning, mid-afternoon, evening) so
+// hunger between main meals is covered. Optional (0 pts, isEx=true) so they never trigger
+// punishment or block streak completion — you eat them if/when you're hungry.
+const mkSnackA=(p,t='11:15 ص')=>[p+'-sn1',t,'food','🥜','سناك ١ (بين الفطار والغدا)','حفنة مكسرات (لوز/جوز) + تفاحة — لو جعت',0,['زبادي يوناني + عسل','جزر + حمص'],null,true];
+const mkSnackB=(p,t='4:30 م')=>[p+'-sn2',t,'food','🥤','سناك ٢ (بعد الظهر)','بروتين شيك أو زبادي + موزة — لو جعت',0,['تمر + لبن','بيضة مسلوقة + خيار'],null,true];
+const mkSnackC=(p,t='9:30 م')=>[p+'-sn3',t,'food','🍇','سناك ٣ (مسائي خفيف)','فاكهة خفيفة أو حفنة مكسرات — لو جعت قبل النوم',0,['زبادي قليل الدسم','قطعة جبنة قريش صغيرة'],null,true];
 
 const PMETA={
   Fajr:{ar:'الفجر',ic:'🌙',pts:10,sunnah:'سنة الفجر (ركعتان قبل)'},
@@ -413,13 +419,13 @@ const FREE_TIME={
 };
 
 const SCHED={
-  0:{n:'الأحد',wk:'9:00 ص',bd:'11:00 م',gm:null,ts:[mkBk('sun'),mkWd('sun'),['sun-qp','10:00 ص','quran','📖','تحضير درس الاثنين','حفظ آيات جديدة + مراجعة اللوح — ٤٥ دقيقة',15,null,null,false],['sun-lu','2:30 م','food','🍽️','الغدا','نص كيلو فراخ/لحمة مشوي + سلطة + بطاطس مسلوقة',5,['سمك + سلطة + رغيف أسمر','كبدة مشوية + طماطم + بصل + خبز'],null,false],mkDn('sun'),mkSl('sun')]},
-  1:{n:'الاثنين',wk:'10:00 ص',bd:'12:00 ص',gm:'lower',ts:[mkBk('mon','10:15 ص'),mkWd('mon','10:30 ص'),['mon-pp','11:30 ص','prog','💻','تحضير البرمجة','راجع الدرس السابق + اكتب أسئلتك — ٣٠ دقيقة',10,null,null,false],['mon-ss','12:00 م','prog','👨‍💻','سيشن البرمجة','١٢:٠٠ — ١:٠٠ م | JavaScript',15,null,null,false],['mon-hw','1:05 م','prog','📤','واجب البرمجة','ابدأ الواجب — آخر موعد الأربعاء (٢٤-٤٨ ساعة بعد السيشن)',10,null,'آخر موعد: الأربعاء',false],['mon-lu','1:30 م','food','🍽️','الغدا','نص كيلو فراخ مشوي + سلطة + بطاطس',5,['سمك دنيس + سلطة + رغيف','لحم هبر مشوي + سلطة + خبز'],null,false],['mon-ql','3:50 م','quran','🕌','درس القرآن','٣:٥٠ — ٤:٣٠ م | مباشرة بعد العصر',15,null,null,false],mkPS('mon','6:00 م'),mkGL('mon','7:00 م'),mkSw('mon','8:30 م'),mkRc('mon','9:15 م','جاكوزي + بخار — ريكفري ٤٥ دقيقة ← استثناء ✓'),mkPM('mon','10:30 م'),mkSl('mon','12:00 ص')]},
-  2:{n:'الثلاثاء',wk:'9:00 ص',bd:'11:00 م',gm:null,ts:[mkBk('tue'),mkWd('tue'),['tue-qp','10:00 ص','quran','📖','تحضير درس الأربعاء','حفظ آيات جديدة + مراجعة اللوح — ٤٥ دقيقة',15,null,null,false],['tue-lu','2:30 م','food','🍽️','الغدا','نص كيلو فراخ/لحمة مشوي + سلطة',5,['سمك + سلطة + رغيف','كبدة مشوية + سلطة + خبز'],null,false],mkBr('tue'),mkDn('tue','10:15 م'),mkSl('tue')]},
-  3:{n:'الأربعاء',wk:'10:00 ص',bd:'12:00 ص',gm:'upper',ts:[mkBk('wed','10:15 ص'),mkWd('wed','10:30 ص'),['wed-lu','1:00 م','food','🍽️','الغدا','نص كيلو فراخ مشوي + سلطة + بطاطس',5,['سمك + خضار + رز نص طبق','لحم هبر مشوي + سلطة + خبز'],null,false],['wed-ql','3:50 م','quran','🕌','درس القرآن','٣:٥٠ — ٤:٣٠ م | مباشرة بعد العصر',15,null,null,false],mkPS('wed','6:00 م'),mkGU('wed','7:00 م'),mkSw('wed','8:30 م'),mkRc('wed','9:15 م','جاكوزي + بخار — ريكفري ٤٥ دقيقة ← استثناء ✓'),mkPM('wed','10:30 م'),mkSl('wed','12:00 ص')]},
-  4:{n:'الخميس',wk:'9:00 ص',bd:'11:00 م',gm:null,ts:[mkBk('thu'),mkWd('thu'),['thu-pp','11:30 ص','prog','💻','تحضير البرمجة','راجع الدرس السابق + اكتب أسئلتك — ٣٠ دقيقة',10,null,null,false],['thu-ss','12:00 م','prog','👨‍💻','سيشن البرمجة','١٢:٠٠ — ١:٠٠ م | JavaScript',15,null,null,false],['thu-hw','1:05 م','prog','📤','واجب البرمجة','ابدأ الواجب — آخر موعد السبت (٢٤-٤٨ ساعة بعد السيشن)',10,null,'آخر موعد: السبت',false],['thu-lu','1:30 م','food','🍽️','الغدا','نص كيلو فراخ/لحمة مشوي + سلطة',5,['سمك + سلطة + بطاطس','كبدة مشوية + سلطة + خبز'],null,false],mkBr('thu'),mkDn('thu','10:15 م'),mkSl('thu')]},
-  5:{n:'الجمعة',wk:'9:00 ص',bd:'11:00 م',gm:null,ts:[mkBk('fri'),mkWd('fri'),['fri-jm','12:00 م','prayer','🕌','صلاة الجمعة','اخرج مبكر ← يعادل الظهر',15,null,null,false],['fri-lu','1:30 م','food','🍽️','الغدا','يوم حر — ما تبالغش في الكارب',5,['محشي + فراخ مشوي','كنتاكي مرة الأسبوع مقبول 🍗'],null,false],mkDn('fri'),mkSl('fri')]},
-  6:{n:'السبت',wk:'9:00 ص',bd:'11:00 م',gm:'upper',ts:[mkBk('sat'),mkWd('sat'),mkPS('sat','1:30 م'),mkGU('sat','3:00 م'),mkSw('sat','4:00 م'),mkRc('sat','4:45 م','جاكوزي + بخار/ساونا — ريكفري حتى ٥:٣٠ م ← استثناء ✓'),mkPM('sat','5:45 م'),['sat-di','7:30 م','food','🍽️','الغدا','نص كيلو سمك/فراخ/لحمة مشوي + سلطة + بطاطس',5,['جمبري ١٥٠جم + سلطة + خبز أسمر','كفتة مشوي + سلطة'],null,false],mkSl('sat')]}
+  0:{n:'الأحد',wk:'9:00 ص',bd:'11:00 م',gm:null,ts:[mkBk('sun'),mkWd('sun'),['sun-qp','10:00 ص','quran','📖','تحضير درس الاثنين','حفظ آيات جديدة + مراجعة اللوح — ٤٥ دقيقة',15,null,null,false],mkSnackA('sun'),['sun-lu','2:30 م','food','🍽️','الغدا','نص كيلو فراخ/لحمة مشوي + سلطة + بطاطس مسلوقة',5,['سمك + سلطة + رغيف أسمر','كبدة مشوية + طماطم + بصل + خبز'],null,false],mkSnackB('sun'),mkDn('sun'),mkSnackC('sun'),mkSl('sun')]},
+  1:{n:'الاثنين',wk:'10:00 ص',bd:'12:00 ص',gm:'lower',ts:[mkBk('mon','10:15 ص'),mkWd('mon','10:30 ص'),['mon-pp','11:30 ص','prog','💻','تحضير البرمجة','راجع الدرس السابق + اكتب أسئلتك — ٣٠ دقيقة',10,null,null,false],['mon-ss','12:00 م','prog','👨‍💻','سيشن البرمجة','١٢:٠٠ — ١:٠٠ م | JavaScript',15,null,null,false],['mon-hw','1:05 م','prog','📤','واجب البرمجة','ابدأ الواجب — آخر موعد الأربعاء (٢٤-٤٨ ساعة بعد السيشن)',10,null,'آخر موعد: الأربعاء',false],['mon-lu','1:30 م','food','🍽️','الغدا','نص كيلو فراخ مشوي + سلطة + بطاطس',5,['سمك دنيس + سلطة + رغيف','لحم هبر مشوي + سلطة + خبز'],null,false],['mon-ql','3:50 م','quran','🕌','درس القرآن','٣:٥٠ — ٤:٣٠ م | مباشرة بعد العصر',15,null,null,false],mkPS('mon','6:00 م'),mkGL('mon','7:00 م'),mkSw('mon','8:30 م'),mkRc('mon','9:15 م','جاكوزي + بخار — ريكفري ٤٥ دقيقة ← استثناء ✓'),mkPM('mon','10:30 م'),mkSnackC('mon','11:15 م'),mkSl('mon','12:00 ص')]},
+  2:{n:'الثلاثاء',wk:'9:00 ص',bd:'11:00 م',gm:null,ts:[mkBk('tue'),mkWd('tue'),['tue-qp','10:00 ص','quran','📖','تحضير درس الأربعاء','حفظ آيات جديدة + مراجعة اللوح — ٤٥ دقيقة',15,null,null,false],mkSnackA('tue'),['tue-lu','2:30 م','food','🍽️','الغدا','نص كيلو فراخ/لحمة مشوي + سلطة',5,['سمك + سلطة + رغيف','كبدة مشوية + سلطة + خبز'],null,false],mkSnackB('tue'),mkBr('tue'),mkDn('tue','10:15 م'),mkSl('tue')]},
+  3:{n:'الأربعاء',wk:'10:00 ص',bd:'12:00 ص',gm:'upper',ts:[mkBk('wed','10:15 ص'),mkWd('wed','10:30 ص'),['wed-lu','1:00 م','food','🍽️','الغدا','نص كيلو فراخ مشوي + سلطة + بطاطس',5,['سمك + خضار + رز نص طبق','لحم هبر مشوي + سلطة + خبز'],null,false],['wed-ql','3:50 م','quran','🕌','درس القرآن','٣:٥٠ — ٤:٣٠ م | مباشرة بعد العصر',15,null,null,false],mkPS('wed','6:00 م'),mkGU('wed','7:00 م'),mkSw('wed','8:30 م'),mkRc('wed','9:15 م','جاكوزي + بخار — ريكفري ٤٥ دقيقة ← استثناء ✓'),mkPM('wed','10:30 م'),mkSnackC('wed','11:15 م'),mkSl('wed','12:00 ص')]},
+  4:{n:'الخميس',wk:'9:00 ص',bd:'11:00 م',gm:null,ts:[mkBk('thu'),mkWd('thu'),['thu-pp','11:30 ص','prog','💻','تحضير البرمجة','راجع الدرس السابق + اكتب أسئلتك — ٣٠ دقيقة',10,null,null,false],['thu-ss','12:00 م','prog','👨‍💻','سيشن البرمجة','١٢:٠٠ — ١:٠٠ م | JavaScript',15,null,null,false],['thu-hw','1:05 م','prog','📤','واجب البرمجة','ابدأ الواجب — آخر موعد السبت (٢٤-٤٨ ساعة بعد السيشن)',10,null,'آخر موعد: السبت',false],['thu-lu','1:30 م','food','🍽️','الغدا','نص كيلو فراخ/لحمة مشوي + سلطة',5,['سمك + سلطة + بطاطس','كبدة مشوية + سلطة + خبز'],null,false],mkSnackB('thu'),mkBr('thu'),mkDn('thu','10:15 م'),mkSl('thu')]},
+  5:{n:'الجمعة',wk:'9:00 ص',bd:'11:00 م',gm:null,ts:[mkBk('fri'),mkWd('fri'),mkSnackA('fri'),['fri-jm','12:00 م','prayer','🕌','صلاة الجمعة','اخرج مبكر ← يعادل الظهر',15,null,null,false],['fri-lu','1:30 م','food','🍽️','الغدا','يوم حر — ما تبالغش في الكارب',5,['محشي + فراخ مشوي','كنتاكي مرة الأسبوع مقبول 🍗'],null,false],mkSnackB('fri'),mkDn('fri'),mkSnackC('fri'),mkSl('fri')]},
+  6:{n:'السبت',wk:'9:00 ص',bd:'11:00 م',gm:'upper',ts:[mkBk('sat'),mkWd('sat'),mkSnackA('sat','12:15 م'),mkPS('sat','2:15 م'),mkGU('sat','3:00 م'),mkSw('sat','4:00 م'),mkRc('sat','4:45 م','جاكوزي + بخار/ساونا — ريكفري حتى ٥:٣٠ م ← استثناء ✓'),mkPM('sat','5:45 م'),['sat-di','7:30 م','food','🍽️','الغدا','نص كيلو سمك/فراخ/لحمة مشوي + سلطة + بطاطس',5,['جمبري ١٥٠جم + سلطة + خبز أسمر','كفتة مشوي + سلطة'],null,false],mkSnackC('sat','9:45 م'),mkSl('sat')]}
 };
 
 function buildPTasks(jd){
@@ -438,7 +444,7 @@ function getAllTasks(jd){const d=SCHED[jd];if(!d)return[];const frees=(FREE_TIME
 function getReqTasks(jd){return[...buildPTasks(jd),...(SCHED[jd]?.ts||[])].filter(t=>!t[9]&&t[6]>0);}
 
 // ===== State =====
-const LS={stats:'sc:stats2',history:'sc:history2',reports:'sc:reports2',penalized:'sc:penalized2'};
+const LS={stats:'sc:stats2',history:'sc:history2',reports:'sc:reports2',penalized:'sc:penalized2',firstSeen:'sc:firstSeen1'};
 let STATS={cur:0,best:0,pts:0,lc:null,lf:null};
 let DONE={};
 let SELECTED_ALTS={};
@@ -446,6 +452,11 @@ let SELECTED_DATE=TODAY;
 let historyData={};
 let savedReports=[];
 let penalizedDates={}; // global penalty ledger — now synced to Firestore, not just local
+let FIRST_SEEN=null; // 'YYYY-MM-DD' — the first day this account/browser ever used the app.
+                      // No day before this date is ever eligible for punishment, and the
+                      // day FIRST_SEEN itself is never punished either, since the user
+                      // hadn't finished their first day when the account was created.
+let IS_BRAND_NEW_SESSION=false; // true only for the very session that creates FIRST_SEEN
 
 async function sGet(k){try{const r=localStorage.getItem(k);return r?JSON.parse(r):null}catch{return null}}
 async function sSet(k,v){try{localStorage.setItem(k,JSON.stringify(v))}catch{}}
@@ -508,11 +519,46 @@ function migrateSavedReports() {
     });
 }
 
+// One-time migration: rescue data that was incorrectly saved under future dates
+// due to the tab-onclick offset bug (j - todayJD() going positive for Sat/Sun tabs).
+// Any historyData key that is strictly in the future gets moved back 7 days,
+// provided the target date doesn't already have richer data.
+// This runs once on every load but is safe to re-run — future keys will disappear
+// after the first run and the condition will never trigger again.
+function rescueFutureDatedEntries() {
+    const today = new Date(TODAY + 'T12:00:00Z');
+    const keysToFix = Object.keys(historyData).filter(k => k > TODAY);
+    for (const futureKey of keysToFix) {
+        const targetDate = new Date(futureKey + 'T12:00:00Z');
+        targetDate.setUTCDate(targetDate.getUTCDate() - 7);
+        const correctKey = targetDate.toISOString().split('T')[0];
+        // Only rescue if the correct slot is empty or shallower than the future entry.
+        const futureEntry = historyData[futureKey];
+        const existingEntry = historyData[correctKey] || {};
+        const futureDoneCount = Object.keys(futureEntry.done || {}).length;
+        const existingDoneCount = Object.keys(existingEntry.done || {}).length;
+        if (futureDoneCount > existingDoneCount) {
+            historyData[correctKey] = futureEntry;
+        }
+        delete historyData[futureKey];
+    }
+}
+
 async function loadAll() {
     STATS = (await sGet(LS.stats)) || { cur: 0, best: 0, pts: 0, lc: null, lf: null };
     historyData = (await sGet(LS.history)) || {};
     savedReports = (await sGet(LS.reports)) || [];
     penalizedDates = (await sGet(LS.penalized)) || {};
+    FIRST_SEEN = await sGet(LS.firstSeen);
+    if (!FIRST_SEEN) {
+        // First time this browser/localStorage has ever run the app.
+        FIRST_SEEN = TODAY;
+        IS_BRAND_NEW_SESSION = true;
+        await sSet(LS.firstSeen, FIRST_SEEN);
+    }
+    
+    // Rescue any task data incorrectly saved under future dates due to the tab-offset bug.
+    rescueFutureDatedEntries();
     
     // Perform migration immediately after loading from storage
     migrateSavedReports();
@@ -541,7 +587,8 @@ async function saveAll(){
       stats:STATS,
       reports:savedReports,
       historyData:historyData,
-      penalizedDates:penalizedDates
+      penalizedDates:penalizedDates,
+      firstSeen:FIRST_SEEN
     },{merge:true});
   }catch(e){console.warn('cloud save failed',e);}
 }
@@ -557,8 +604,14 @@ function getPunishRate(){return (STATS.cur||0)>=3 ? 0.15 : 0.35;}
 
 async function applyPunishmentOnce(){
   try{
+    // Brand-new account/browser: never punish on the very session that created it.
+    // This prevents "sign up today, get docked tonight for a day you never used the app."
+    if(IS_BRAND_NEW_SESSION)return;
     const yesterday=dateOff(-1);
     if(penalizedDates[yesterday])return; // checked against the SYNCED ledger now, not a local-only flag
+    // Never evaluate a day before the account/browser's first-ever use — there is no
+    // legitimate "missed task" data for days that predate FIRST_SEEN.
+    if(FIRST_SEEN && yesterday<FIRST_SEEN)return;
     const jd=getJDfromISO(yesterday);
     const tasks=getReqTasks(jd);
     const dayDone=(historyData[yesterday]||{}).done||{};
@@ -728,9 +781,16 @@ async function finishPrayerFlow(){
   floatPts(activePrayer.x,activePrayer.y,total);
   if(activePrayer.late){showToast(`⏰ صليت متأخر شوي بس صليت — كمّل كذا`,3200,'late');cardEffect(activePrayer.id,'late');}
   else{showToast(`🕌 صلاة في وقتها، الله يتقبل`,3000);cardEffect(activePrayer.id,'ontime');}
-  checkStreak();
-  await saveAll();
-  renderPanels();switchDay(getJDfromISO(SELECTED_DATE));updateUI();
+  // Same save-guarantee as confirm/qada: a throw in checkStreak() must never
+  // prevent the actual prayer completion from being persisted.
+  try{ checkStreak(); }catch(err){ console.error('checkStreak failed, saving anyway:',err); }
+  try{
+    await saveAll();
+  }catch(err){
+    console.error('saveAll failed after prayer completion:',err);
+    showToast('⚠️ حصل خطأ أثناء حفظ الصلاة — جرب تاني أو أعد تحميل الصفحة',4000,'warn');
+  }
+  try{ renderPanels();switchDay(getJDfromISO(SELECTED_DATE));updateUI(); }catch(err){ console.error('re-render failed:',err); }
   activePrayer=null;
 }
 
@@ -875,6 +935,20 @@ async function showWeeklyReport(){
 
   el.innerHTML=renderReportSummaryHtml(data);
 
+  // Do NOT persist a report if there is genuinely nothing to show for that week —
+  // either every day had zero required tasks, or the underlying historyData for
+  // every day in the range is missing (e.g. loadAll() hadn't populated it yet, or
+  // this device never had local data for that week). Saving a 0%/0-task snapshot
+  // in that state is what produced the corrupt "0%, 25⭐, no details" report: the
+  // summary numbers were computed from a fluke partial read, not from real data.
+  const hasRealData = data.totalTasks > 0 && Object.keys(historyData).some(k => k >= data.rangeStart && k <= data.rangeEnd);
+  if (!hasRealData) {
+    showToast('لا توجد بيانات كافية لحفظ تقرير هذا الأسبوع — جرب مرة تانية بعد ما تسجل مهام', 4000, 'warn');
+    const rModal=document.getElementById('reportModal');
+    if(rModal) rModal.classList.add('open');
+    return;
+  }
+
   // weekStart uniquely identifies this week — reopening it just refreshes the
   // existing entry instead of creating a duplicate (this was the actual cause
   // of seeing the "same" report multiple times in the history list).
@@ -920,7 +994,10 @@ function showReportHistoryList(){
     el.innerHTML=savedReports.map((r,i)=>`
       <div class="report-history-item" data-hist-idx="${i}">
         <span style="color:var(--so);font-weight:700">${r.weekStart} → ${r.weekEnd||''}</span>
-        <span><b>${r.totalPts}⭐</b> <span style="color:var(--mu);font-weight:800">(${r.pct||0}%)</span></span>
+        <span style="display:flex;align-items:center;gap:10px">
+          <span><b>${r.totalPts}⭐</b> <span style="color:var(--mu);font-weight:800">(${r.pct||0}%)</span></span>
+          <button class="report-close" data-action="delreport" data-hist-idx="${i}" style="padding:4px 10px;font-size:.75rem" type="button">🗑️ حذف</button>
+        </span>
       </div>
     `).join('');
   }
@@ -938,7 +1015,20 @@ function showReportHistoryDetail(idx){
   if(!el) return;
   if(titleEl) titleEl.textContent=`📊 تقرير ${r.weekStart}`;
   if(rangeEl) rangeEl.textContent=`من ${r.weekStart} إلى ${r.weekEnd||''}`;
-  el.innerHTML=`<button class="report-back-btn" id="btn-back-to-history-list" type="button">← رجوع للسجل</button>${r.snapshotHtml||'<div style="color:var(--mu)">لا توجد تفاصيل محفوظة لهذا التقرير القديم</div>'}`;
+  el.innerHTML=`
+    <div style="display:flex;gap:8px;margin-bottom:16px">
+      <button class="report-back-btn" id="btn-back-to-history-list" type="button">← رجوع للسجل</button>
+      <button class="report-close" data-action="delreport" data-hist-idx="${idx}" type="button">🗑️ حذف هذا التقرير</button>
+    </div>
+    ${r.snapshotHtml||'<div style="color:var(--mu)">لا توجد تفاصيل محفوظة لهذا التقرير القديم</div>'}`;
+}
+
+async function deleteSavedReport(idx){
+  if(idx<0||idx>=savedReports.length)return;
+  savedReports.splice(idx,1);
+  await saveAll();
+  showToast('🗑️ تم حذف التقرير',2200);
+  showReportHistoryList();
 }
 
 // ===== UI =====
@@ -1026,7 +1116,13 @@ function renderTabs(){
     b.innerHTML=`<div>${DSHORT[j]}</div>${isG?'<div class="gdot"></div>':''}`;
     b.onclick=()=>{
       saveDay();
-      SELECTED_DATE=dateOff(j-todayJD());
+      // Compute the actual calendar date for this weekday within the current week.
+      // dateOff(j - todayJD()) is WRONG when j < todayJD() (gives a past day correctly)
+      // but also wrong when j > todayJD() (gives a future date, not last week's day).
+      // Instead: always find the most recent occurrence of weekday j that is <= TODAY.
+      const diff = j - todayJD();
+      // If the tab's weekday is in the future relative to today, step back a full week.
+      SELECTED_DATE = dateOff(diff > 0 ? diff - 7 : diff);
       loadDay();
       renderTabs();renderPanels();switchDay(j);updateUI();
     };
@@ -1111,6 +1207,13 @@ document.body.addEventListener('click',async e=>{
   if(tgt.id==='btn-report-history'){showReportHistoryList();return;}
   if(tgt.id==='btn-back-to-history-list'){showReportHistoryList();return;}
 
+  const delBtn=closest('[data-action="delreport"]');
+  if(delBtn){
+    const idx=parseInt(delBtn.getAttribute('data-hist-idx'),10);
+    await deleteSavedReport(idx);
+    return;
+  }
+
   const histItem=closest('.report-history-item');
   if(histItem){
     const idx=parseInt(histItem.getAttribute('data-hist-idx'),10);
@@ -1171,8 +1274,19 @@ document.body.addEventListener('click',async e=>{
     floatPts(e.clientX,e.clientY,pts);
     if(late){showToast('⏰ متأخر شوي بس تم — استمر كذا 💪',3000,'late');cardEffect(id,'late');}
     else{showToast('✅ في الوقت المثالي، أحسنت',2200);cardEffect(id,'ontime');}
-    checkStreak();
-    await saveAll();renderPanels();switchDay(getJDfromISO(SELECTED_DATE));updateUI();
+    // checkStreak() and the re-render below must never be able to swallow the save.
+    // Previously, if checkStreak() (or anything after it) threw, saveAll() was never
+    // reached — the user saw the success animation but the completion was silently
+    // never persisted. That's what caused tasks to vanish from historyData while
+    // looking completed in the moment.
+    try{ checkStreak(); }catch(err){ console.error('checkStreak failed, saving anyway:',err); }
+    try{
+      await saveAll();
+    }catch(err){
+      console.error('saveAll failed after confirm:',err);
+      showToast('⚠️ حصل خطأ أثناء الحفظ — جرب تاني أو أعد تحميل الصفحة',4000,'warn');
+    }
+    try{ renderPanels();switchDay(getJDfromISO(SELECTED_DATE));updateUI(); }catch(err){ console.error('re-render failed:',err); }
     return;
   }
 
@@ -1183,8 +1297,14 @@ document.body.addEventListener('click',async e=>{
     DONE[id]='qada';STATS.pts+=half;
     floatPts(e.clientX,e.clientY,half);
     cardEffect(id,'qada');
-    checkStreak();
-    await saveAll();renderPanels();switchDay(getJDfromISO(SELECTED_DATE));updateUI();
+    try{ checkStreak(); }catch(err){ console.error('checkStreak failed, saving anyway:',err); }
+    try{
+      await saveAll();
+    }catch(err){
+      console.error('saveAll failed after qada:',err);
+      showToast('⚠️ حصل خطأ أثناء الحفظ — جرب تاني أو أعد تحميل الصفحة',4000,'warn');
+    }
+    try{ renderPanels();switchDay(getJDfromISO(SELECTED_DATE));updateUI(); }catch(err){ console.error('re-render failed:',err); }
     showToast('تم تسجيل القضاء — حاول تصلي بدري بكرة 🌙',3500,'qada');return;
   }
 });
@@ -1233,6 +1353,19 @@ if (typeof onAuthStateChanged !== 'undefined' && typeof fbAuth !== 'undefined') 
             }
           }
           if(d.penalizedDates) penalizedDates={...penalizedDates,...d.penalizedDates};
+          // firstSeen from the cloud is authoritative once it exists — this is what makes
+          // "sign in on a fresh browser" not reset the account's age. If the cloud has no
+          // firstSeen yet, this is genuinely the first time this account has ever been used
+          // anywhere, so today becomes the anchor and this session must not be punished.
+          if(d.firstSeen){
+            FIRST_SEEN=d.firstSeen;
+            IS_BRAND_NEW_SESSION=false;
+          }else{
+            FIRST_SEEN=FIRST_SEEN||TODAY;
+            IS_BRAND_NEW_SESSION=true;
+          }
+          // Rescue any cloud entries that landed on wrong future dates due to tab-offset bug.
+          rescueFutureDatedEntries();
           migrateSavedReports();
           loadDay();
         }
