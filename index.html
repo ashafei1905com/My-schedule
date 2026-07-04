@@ -1091,7 +1091,18 @@ if (typeof onAuthStateChanged !== 'undefined' && typeof fbAuth !== 'undefined') 
           if(d.reports) savedReports=d.reports;
           // Cloud historyData/penalizedDates now genuinely merge in — this is what
           // makes a second browser/device actually see your past days.
-          if(d.historyData) historyData={...historyData,...d.historyData};
+          if(d.historyData){
+  for(const dateKey of Object.keys(d.historyData)){
+    const cloudDay=d.historyData[dateKey]||{};
+    const localDay=historyData[dateKey]||{};
+    historyData[dateKey]={
+      done:{...(localDay.done||{}),...(cloudDay.done||{})},
+      alts:{...(localDay.alts||{}),...(cloudDay.alts||{})},
+      prayerLogs:{...(localDay.prayerLogs||{}),...(cloudDay.prayerLogs||{})},
+      penalty:cloudDay.penalty||localDay.penalty
+    };
+  }
+}
           if(d.penalizedDates) penalizedDates={...penalizedDates,...d.penalizedDates};
           migrateSavedReports();
           loadDay();
