@@ -737,48 +737,28 @@ async function finishPrayerFlow(){
 // ===== Weekly Report =====
 // The report is for the last full week, defined as Saturday to the most recent Friday.
 function getReportRangeDates() {
-    // Report week should be Kuwait-local (Asia/Kuwait), not browser-local.
-    // Use Kuwait timezone when building calendar days to match how history keys are created.
+    // Builds the last full week as 7 UTC ISO keys (YYYY-MM-DD) that match `historyData`.
+    // We anchor everything on the app's own TODAY string (already computed as UTC YYYY-MM-DD).
+    const todayUtc = new Date(TODAY + 'T12:00:00Z');
 
-    // This is the final, robust, timezone-proof implementation.
-    // It creates a date object based on the known TODAY string (YYYY-MM-DD),
-    // interpreting it as a UTC date to prevent any local timezone interference.
-// Build report range using the same UTC day keys used for historyData.
-    // TODAY is already a UTC YYYY-MM-DD produced by todayStr(), so anchoring with T12:00Z
-    // prevents edge-of-day timezone drift.
-const today = new Date(TODAY + 'T12:00:00Z');
+    // Find the most recent Friday relative to TODAY in UTC.
+    // JS getUTCDay(): Sun=0 ... Fri=5, Sat=6
+    const daysBackToFriday = (todayUtc.getUTCDay() + 2) % 7;
+    const lastFriday = new Date(todayUtc.getTime());
+    lastFriday.setUTCDate(lastFriday.getUTCDate() - daysBackToFriday);
 
-    // Make the report range target the last *completed* week in UTC,
-    // but exclude the current day completely. This avoids timezone mismatches
-    // where TODAY and the week boundaries end up on different calendar days.
-    const nowUtc = new Date();
-    const isTodayInUtc = nowUtc.toISOString().split('T')[0] === TODAY;
-
-    // To find the most recent Friday, we calculate how many days to go back.
-    // getUTCDay(): Sun=0, Mon=1, ..., Fri=5, Sat=6
-    // If today is Sunday (0), we need to go back 2 days to get to Friday.
-    // If today is Saturday (6), we need to go back 1 day.
-    // The formula is: (today's day of week - 5 (Friday) + 7) % 7
-    // But a simpler way is: (today's day of week + 2) % 7.
-    // Sun(0): (0+2)%7=2. Correct.
-    // Sat(6): (6+2)%7=1. Correct.
-    const daysToLastFriday = (today.getUTCDay() + 2) % 7;
-    
-    let lastFriday = new Date(today.getTime());
-    lastFriday.setUTCDate(lastFriday.getUTCDate() - daysToLastFriday);
-
-    // The week starts 6 days before this Friday, which is a Saturday.
-    let firstDayOfWeek = new Date(lastFriday.getTime());
-    firstDayOfWeek.setUTCDate(firstDayOfWeek.getUTCDate() - 6);
+    // Week starts 6 days before Friday => Saturday.
+    const weekStart = new Date(lastFriday.getTime());
+    weekStart.setUTCDate(weekStart.getUTCDate() - 6);
 
     const wantedDates = {};
     for (let i = 0; i < 7; i++) {
-        let currentDay = new Date(firstDayOfWeek.getTime());
-        currentDay.setUTCDate(currentDay.getUTCDate() + i);
-        const iso = currentDay.toISOString().split('T')[0];
-        wantedDates[currentDay.getUTCDay()] = iso;
+        const d = new Date(weekStart.getTime());
+        d.setUTCDate(d.getUTCDate() + i);
+        const iso = d.toISOString().split('T')[0];
+        wantedDates[d.getUTCDay()] = iso;
     }
-    
+
     return wantedDates;
 }
 
