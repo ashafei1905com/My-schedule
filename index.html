@@ -301,6 +301,19 @@ function getJDfromISO(iso) {
     return d.getUTCDay();
 }
 
+function currentWeekStartISO(refISO) {
+    const ref = refISO || TODAY;
+    const refJD = getJDfromISO(ref);
+    const daysSinceSat = (refJD + 1) % 7;
+    return dateOff(-daysSinceSat, ref);
+}
+
+function dateForWeekday(jd, refISO) {
+    const weekStart = currentWeekStartISO(refISO);
+    const offsetFromSat = (jd + 1) % 7;
+    return dateOff(offsetFromSat, weekStart);
+}
+
 const TODAY = todayStr();
 
 function cleanTime(s){if(!s)return'';const m=String(s).match(/\d{1,2}:\d{2}/);return m?m[0]:String(s);}
@@ -404,7 +417,7 @@ const PMETA={
 };
 const DKEYS=['sun','mon','tue','wed','thu','fri','sat'];
 const DSHORT=['الأحد','الاثنين','الثلاثاء','الأربعاء','الخميس','الجمعة','السبت'];
-const WEEK_ORDER=[0,1,2,3,4,5,6];
+const WEEK_ORDER=[6,0,1,2,3,4,5];
 const FALLBK={Fajr:'03:13',Sunrise:'04:50',Dhuhr:'11:51',Asr:'15:25',Maghrib:'18:51',Isha:'20:26'};
 let PRYT={...FALLBK};
 
@@ -445,7 +458,7 @@ function getReqTasks(jd){return[...buildPTasks(jd),...(SCHED[jd]?.ts||[])].filte
 
 // ===== State =====
 const LS={stats:'sc:stats2',history:'sc:history2',reports:'sc:reports2',penalized:'sc:penalized2',firstSeen:'sc:firstSeen1'};
-let STATS={cur:0,best:0,pts:0,lc:null,lf:null};
+let STATS={cur:0,best:0,pts:0,lc:null,lf:null,lastPtsWeekStart:null};
 let DONE={};
 let SELECTED_ALTS={};
 let SELECTED_DATE=TODAY;
@@ -545,7 +558,7 @@ function rescueFutureDatedEntries() {
 }
 
 async function loadAll() {
-    STATS = (await sGet(LS.stats)) || { cur: 0, best: 0, pts: 0, lc: null, lf: null };
+    STATS = (await sGet(LS.stats)) || { cur: 0, best: 0, pts: 0, lc: null, lf: null, lastPtsWeekStart: null };
     historyData = (await sGet(LS.history)) || {};
     savedReports = (await sGet(LS.reports)) || [];
     penalizedDates = (await sGet(LS.penalized)) || {};
@@ -667,6 +680,19 @@ function checkStreak(){
     STATS.best=Math.max(STATS.best,STATS.cur);
     if(STATS.cur>0){showToast(`💔 انكسر الاستريك بعد ${STATS.cur} يوم\n${pickRandom(ENCOURAGE_MISS)}`,3800,'warn');shakeStreakBroken();}
     STATS.cur=0;STATS.lf=null;
+  }
+}
+
+// Resets the visible weekly points counter (STATS.pts) back to 0 the first time
+// the app is opened in a NEW app-week (Saturday->Friday). This does NOT touch
+// STATS.cur or STATS.best — the streak is a separate, cross-week concept and must
+// keep counting through week boundaries. Idempotent: safe to call on every load,
+// only fires once per week because it stamps STATS.lastPtsWeekStart.
+function resetWeeklyPointsIfNewWeek(){
+  const thisWeekStart=currentWeekStartISO(TODAY);
+  if(STATS.lastPtsWeekStart!==thisWeekStart){
+    STATS.pts=0;
+    STATS.lastPtsWeekStart=thisWeekStart;
   }
 }
 
@@ -795,28 +821,21 @@ async function finishPrayerFlow(){
 }
 
 // ===== Weekly Report =====
-// The report is for the last full week, defined as Saturday to the most recent Friday.
+// The report covers the app-week that just ended: Saturday through Friday.
+// Uses the SAME canonical currentWeekStartISO()/dateForWeekday() functions the tabs
+// use, so a task saved under a tab's date is guaranteed to be found by the report
+// looking up that same date — no more independent, disagreeing date formulas.
 function getReportRangeDates() {
-    // Builds the last full week as 7 UTC ISO keys (YYYY-MM-DD) that match `historyData`.
-    // We anchor everything on the app's own TODAY string (already computed as UTC YYYY-MM-DD).
-    const todayUtc = new Date(TODAY + 'T12:00:00Z');
-
-    // Find the most recent Friday relative to TODAY in UTC.
-    // JS getUTCDay(): Sun=0 ... Fri=5, Sat=6
-    const daysBackToFriday = (todayUtc.getUTCDay() + 2) % 7;
-    const lastFriday = new Date(todayUtc.getTime());
-    lastFriday.setUTCDate(lastFriday.getUTCDate() - daysBackToFriday);
-
-    // Week starts 6 days before Friday => Saturday.
-    const weekStart = new Date(lastFriday.getTime());
-    weekStart.setUTCDate(weekStart.getUTCDate() - 6);
+    // TODAY is always a Saturday when this runs (report button is Saturday-only),
+    // so currentWeekStartISO(TODAY) is the Saturday that JUST started — the last
+    // COMPLETED week is exactly 7 days before that.
+    const thisWeekStart = currentWeekStartISO(TODAY);
+    const lastWeekStart = dateOff(-7, thisWeekStart);
 
     const wantedDates = {};
     for (let i = 0; i < 7; i++) {
-        const d = new Date(weekStart.getTime());
-        d.setUTCDate(d.getUTCDate() + i);
-        const iso = d.toISOString().split('T')[0];
-        wantedDates[d.getUTCDay()] = iso;
+        const iso = dateOff(i, lastWeekStart);
+        wantedDates[getJDfromISO(iso)] = iso;
     }
 
     return wantedDates;
@@ -1116,13 +1135,9 @@ function renderTabs(){
     b.innerHTML=`<div>${DSHORT[j]}</div>${isG?'<div class="gdot"></div>':''}`;
     b.onclick=()=>{
       saveDay();
-      // Compute the actual calendar date for this weekday within the current week.
-      // dateOff(j - todayJD()) is WRONG when j < todayJD() (gives a past day correctly)
-      // but also wrong when j > todayJD() (gives a future date, not last week's day).
-      // Instead: always find the most recent occurrence of weekday j that is <= TODAY.
-      const diff = j - todayJD();
-      // If the tab's weekday is in the future relative to today, step back a full week.
-      SELECTED_DATE = dateOff(diff > 0 ? diff - 7 : diff);
+      // Use the single canonical Sat->Fri week function so tab dates and report
+      // dates can never disagree with each other.
+      SELECTED_DATE = dateForWeekday(j, TODAY);
       loadDay();
       renderTabs();renderPanels();switchDay(j);updateUI();
     };
@@ -1335,7 +1350,10 @@ document.body.addEventListener('click',async e=>{
 // ===== Init =====
 function initAppFlow(user){
   updateAuthUI(user);
-  fetchPrayers().then(()=>applyPunishmentOnce()).then(()=>{
+  fetchPrayers().then(()=>applyPunishmentOnce()).then(async ()=>{
+    const ptsBefore=STATS.pts;
+    resetWeeklyPointsIfNewWeek();
+    if(STATS.pts!==ptsBefore){ try{ await saveAll(); }catch(e){ console.warn('weekly reset save failed',e); } }
     checkStreak();
     renderTabs();renderPanels();switchDay(todayJD());updateUI();
     const ldEl=document.getElementById('ld'); if(ldEl) ldEl.style.display='none';
