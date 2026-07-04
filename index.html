@@ -1038,9 +1038,9 @@ document.body.addEventListener('click',async e=>{
 
   if(tgt.id==='btn-signout'){
     if(typeof fbAuth!=='undefined') await fbAuth.signOut();
-    DONE={};SELECTED_ALTS={};historyData={};savedReports=[];penalizedDates={};SELECTED_DATE=TODAY;
-    [LS.stats,LS.history,LS.reports,LS.penalized].forEach(k=>localStorage.removeItem(k));
-    updateAuthUI(null);renderTabs();renderPanels();switchDay(todayJD());updateUI();
+    // Simply reload the page for a clean state. This is more robust than
+    // trying to manually reset all state variables, which can lead to race conditions.
+    window.location.reload();
     return;
   }
 
@@ -1160,17 +1160,19 @@ if (typeof onAuthStateChanged !== 'undefined' && typeof fbAuth !== 'undefined') 
           // Cloud historyData/penalizedDates now genuinely merge in — this is what
           // makes a second browser/device actually see your past days.
           if(d.historyData){
-  for(const dateKey of Object.keys(d.historyData)){
-    const cloudDay=d.historyData[dateKey]||{};
-    const localDay=historyData[dateKey]||{};
-    historyData[dateKey]={
-      done:{...(localDay.done||{}),...(cloudDay.done||{})},
-      alts:{...(localDay.alts||{}),...(cloudDay.alts||{})},
-      prayerLogs:{...(localDay.prayerLogs||{}),...(cloudDay.prayerLogs||{})},
-      penalty:cloudDay.penalty||localDay.penalty
-    };
-  }
-}
+            for(const dateKey of Object.keys(d.historyData)){
+              const cloudDay=d.historyData[dateKey]||{};
+              const localDay=historyData[dateKey]||{};
+              historyData[dateKey]={
+                done:{...(localDay.done||{}),...(cloudDay.done||{})},
+                alts:{...(localDay.alts||{}),...(cloudDay.alts||{})},
+                prayerLogs:{...(localDay.prayerLogs||{}),...(cloudDay.prayerLogs||{})},
+                // Critical fix: Ensure penalty is explicitly null if it doesn't exist,
+                // preventing 'undefined' from being sent to Firestore.
+                penalty:cloudDay.penalty||localDay.penalty||null
+              };
+            }
+          }
           if(d.penalizedDates) penalizedDates={...penalizedDates,...d.penalizedDates};
           migrateSavedReports();
           loadDay();
