@@ -18,7 +18,6 @@ body{font-family:'Cairo',sans-serif;background:var(--bg);color:var(--tx);directi
 @keyframes shakeX{0%,100%{transform:translateX(0)}20%{transform:translateX(-6px)}40%{transform:translateX(6px)}60%{transform:translateX(-4px)}80%{transform:translateX(4px)}}
 @keyframes flashRed{0%{background:rgba(239,68,68,.35)}100%{background:rgba(10,14,26,.96)}}
 @keyframes streakPulse{0%{transform:scale(1)}50%{transform:scale(1.5);color:#fbbf24;text-shadow:0 0 18px #fbbf24}100%{transform:scale(1)}}
-@keyframes milestoneGlow{0%{box-shadow:0 0 0 rgba(251,191,36,0)}50%{box-shadow:0 0 30px 8px rgba(251,191,36,.6)}100%{box-shadow:0 0 0 rgba(251,191,36,0)}}
 @keyframes ontimeGlow{0%{box-shadow:0 0 0 rgba(16,185,129,0);border-color:var(--br)}40%{box-shadow:0 0 18px 3px rgba(16,185,129,.55);border-color:var(--gr)}100%{box-shadow:0 0 0 rgba(16,185,129,0)}}
 @keyframes lateGlow{0%{box-shadow:0 0 0 rgba(245,158,11,0);border-color:var(--br)}40%{box-shadow:0 0 18px 3px rgba(245,158,11,.55);border-color:var(--or)}100%{box-shadow:0 0 0 rgba(245,158,11,0)}}
 @keyframes qadaGlow{0%{box-shadow:0 0 0 rgba(148,163,184,0)}40%{box-shadow:0 0 14px 2px rgba(148,163,184,.4)}100%{box-shadow:0 0 0 rgba(148,163,184,0)}}
@@ -113,6 +112,18 @@ body{font-family:'Cairo',sans-serif;background:var(--bg);color:var(--tx);directi
 #toast.toast-late{border-color:var(--or);color:var(--or)}
 #toast.toast-gold{border-color:#fbbf24;color:#fbbf24;box-shadow:0 0 24px rgba(251,191,36,.4)}
 
+/* Top bar action buttons — visually distinct per function */
+.topbtn{padding:9px 16px;border-radius:10px;font-family:'Cairo',sans-serif;font-size:.78rem;font-weight:800;cursor:pointer;display:inline-flex;align-items:center;gap:6px;transition:all .2s;border:none}
+.topbtn-report{background:linear-gradient(135deg,#2563eb,#1d4ed8);color:#fff;box-shadow:0 2px 10px rgba(37,99,235,.35)}
+.topbtn-report:hover{box-shadow:0 4px 16px rgba(37,99,235,.5);transform:translateY(-1px)}
+.topbtn-report:disabled{opacity:.4;cursor:not-allowed;transform:none;box-shadow:none}
+.topbtn-history{background:linear-gradient(135deg,#7c3aed,#6d28d9);color:#fff;box-shadow:0 2px 10px rgba(124,58,237,.35)}
+.topbtn-history:hover{box-shadow:0 4px 16px rgba(124,58,237,.5);transform:translateY(-1px)}
+.topbtn-signout{background:rgba(239,68,68,.12);border:1.5px solid rgba(239,68,68,.5);color:#f87171}
+.topbtn-signout:hover{background:rgba(239,68,68,.22)}
+.topbtn-signin{background:linear-gradient(135deg,#10b981,#059669);color:#fff;box-shadow:0 2px 10px rgba(16,185,129,.35)}
+.topbtn-signin:hover{box-shadow:0 4px 16px rgba(16,185,129,.5);transform:translateY(-1px)}
+
 /* Prayer Modal */
 .modal-overlay{position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(10,14,26,.92);display:none;align-items:center;justify-content:center;z-index:10000;padding:20px}
 .modal-overlay.open{display:flex}
@@ -129,12 +140,13 @@ body{font-family:'Cairo',sans-serif;background:var(--bg);color:var(--tx);directi
 .modal-back-btn{margin-top:16px;padding:9px 18px;background:rgba(239,68,68,.12);border:2px solid rgba(239,68,68,.45);border-radius:10px;color:#ef4444;font-family:'Cairo',sans-serif;font-weight:800;font-size:.82rem;cursor:pointer;transition:all .2s}
 .modal-back-btn:hover{background:rgba(239,68,68,.22)}
 
-/* Weekly Report Modal */
+/* Weekly Report / History Modal */
 .report-overlay{position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(10,14,26,.95);display:none;align-items:flex-start;justify-content:center;z-index:10001;padding:40px 20px;overflow-y:auto}
 .report-overlay.open{display:flex}
 .report-box{background:var(--c2);border:2px solid var(--br);border-radius:20px;padding:24px 24px;width:100%;max-width:650px;margin:auto;box-shadow:0 10px 40px rgba(0,0,0,0.8)}
 .report-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:24px;padding-bottom:12px;border-bottom:2px solid var(--br)}
 .report-title{font-size:1.4rem;font-weight:900;color:var(--ye)}
+.report-range{font-size:.72rem;color:var(--mu);font-weight:700;margin-top:2px}
 .report-close{background:rgba(239,68,68,.1);border:1px solid rgba(239,68,68,.3);color:#ef4444;border-radius:8px;padding:6px 16px;cursor:pointer;font-family:'Cairo',sans-serif;font-size:.9rem;font-weight:700;transition:all .2s}
 .report-close:hover{background:rgba(239,68,68,.2)}
 .report-summary{display:grid;grid-template-columns:repeat(4, 1fr);gap:12px;margin-bottom:24px}
@@ -148,16 +160,14 @@ body{font-family:'Cairo',sans-serif;background:var(--bg);color:var(--tx);directi
 .badge-green{color:#10b981;font-weight:900;background:rgba(16,185,129,.15);padding:2px 8px;border-radius:4px}
 .badge-red{color:#ef4444;font-weight:900;background:rgba(239,68,68,.15);padding:2px 8px;border-radius:4px}
 .badge-or{color:var(--or);font-weight:700}
-.badge-gray{color:var(--so);font-weight:700;background:rgba(148,163,184,.1);padding:2px 8px;border-radius:4px}
 .badge-alt{color:#60a5fa;font-weight:700;background:rgba(59,130,246,.12);padding:2px 8px;border-radius:4px;font-size:.68rem}
 .report-day-enc{margin-top:10px;padding:8px 12px;background:rgba(251,191,36,.08);border:1px solid rgba(251,191,36,.25);border-radius:8px;font-size:.75rem;color:var(--ye);font-weight:700;text-align:center}
-.report-history{margin-top:18px;padding-top:14px;border-top:2px solid var(--br)}
-.report-history-title{font-size:1rem;font-weight:900;color:var(--ac);margin-bottom:10px}
-.report-history-item{display:flex;justify-content:space-between;align-items:center;padding:10px 12px;background:rgba(0,0,0,.15);border:1px solid rgba(30,45,69,.6);border-radius:12px;margin-bottom:10px;cursor:pointer;transition:all .2s}
-.report-history-item:hover{background:rgba(59,130,246,.12);border-color:rgba(59,130,246,.4)}
+.report-history-item{display:flex;justify-content:space-between;align-items:center;padding:12px 14px;background:rgba(0,0,0,.15);border:1px solid rgba(30,45,69,.6);border-radius:12px;margin-bottom:10px;cursor:pointer;transition:all .2s}
+.report-history-item:hover{background:rgba(124,58,237,.14);border-color:rgba(124,58,237,.5)}
 .report-history-item b{color:var(--ye)}
-.report-back-btn{margin-bottom:16px;padding:8px 16px;background:rgba(59,130,246,.12);border:1px solid rgba(59,130,246,.4);border-radius:8px;color:#60a5fa;font-family:'Cairo',sans-serif;font-weight:700;font-size:.82rem;cursor:pointer}
-.report-back-btn:hover{background:rgba(59,130,246,.22)}
+.report-back-btn{margin-bottom:16px;padding:9px 16px;background:rgba(124,58,237,.14);border:1px solid rgba(124,58,237,.5);border-radius:10px;color:#a78bfa;font-family:'Cairo',sans-serif;font-weight:800;font-size:.82rem;cursor:pointer}
+.report-back-btn:hover{background:rgba(124,58,237,.24)}
+.history-empty{color:var(--mu);font-weight:700;text-align:center;padding:30px 10px}
 @media(max-width:500px){.report-summary{grid-template-columns:1fr 1fr;}}
 </style>
 </head>
@@ -175,9 +185,9 @@ body{font-family:'Cairo',sans-serif;background:var(--bg);color:var(--tx);directi
       <div class="st"><div class="sv" id="sv2">0</div><div class="sl">⭐ نقاطي</div></div>
       <div class="st"><div class="sv" id="sv3">0</div><div class="sl">🏆 أعلى استريك</div></div>
     </div>
-    <div style="display:flex;flex-direction:column;align-items:flex-end;gap:4px">
+    <div style="display:flex;flex-direction:column;align-items:flex-end;gap:6px">
       <div id="authName" style="font-size:.8rem;font-weight:700;color:var(--so)"></div>
-      <div id="authBtn" style="display:flex;gap:6px;align-items:center;flex-wrap:wrap;justify-content:flex-end"></div>
+      <div id="authBtn" style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;justify-content:flex-end"></div>
     </div>
   </div>
 
@@ -209,12 +219,14 @@ body{font-family:'Cairo',sans-serif;background:var(--bg);color:var(--tx);directi
   </div>
 </div>
 
-
-<!-- Weekly Report Modal (also used for history list/detail) -->
+<!-- Weekly Report / History Modal -->
 <div id="reportModal" class="report-overlay">
   <div class="report-box">
     <div class="report-header">
-      <div class="report-title" id="reportTitle">📊 التقرير الأسبوعي المفصل</div>
+      <div>
+        <div class="report-title" id="reportTitle">📊 التقرير الأسبوعي</div>
+        <div class="report-range" id="reportRange"></div>
+      </div>
       <button class="report-close" id="closeReport" onclick="document.getElementById('reportModal').classList.remove('open')">✕ إغلاق</button>
     </div>
     <div id="reportContent"></div>
@@ -264,7 +276,7 @@ function getKuwaitDateParts(dt=new Date()){
 
 const DKEYS=['sun','mon','tue','wed','thu','fri','sat'];
 const DSHORT=['الأحد','الاثنين','الثلاثاء','الأربعاء','الخميس','الجمعة','السبت'];
-const WEEK_ORDER=[6,0,1,2,3,4,5]; // Saturday first, Friday last — display order only
+const WEEK_ORDER=[6,0,1,2,3,4,5];
 
 function todayStr(){const d=getKuwaitDateParts();return `${d.year}-${d.month}-${d.day}`;}
 function todayJD(){return['Sun','Mon','Tue','Wed','Thu','Fri','Sat'].indexOf(getKuwaitDateParts().weekday);}
@@ -319,51 +331,15 @@ function showToast(msg,ms=3500,type='ok'){
   clearTimeout(toastT);toastT=setTimeout(()=>{if(t)t.className='';},ms);
 }
 
-// ===== Fun/feedback effects =====
-function flashPenalty(){
-  const bar=document.getElementById('sbar');
-  if(!bar)return;
-  bar.classList.add('penalty-flash');
-  setTimeout(()=>bar.classList.remove('penalty-flash'),1000);
-}
-function pulseStreakWin(){
-  const el=document.getElementById('sv1');
-  if(!el)return;
-  el.classList.add('streak-win');
-  setTimeout(()=>el.classList.remove('streak-win'),800);
-}
-function hitMilestone(){
-  const el=document.getElementById('sv1');
-  if(!el)return;
-  el.classList.add('milestone-hit');
-  setTimeout(()=>el.classList.remove('milestone-hit'),2200);
-}
-function shakeStreakBroken(){
-  const el=document.getElementById('sv1');
-  if(!el)return;
-  el.classList.add('streak-broke');
-  setTimeout(()=>el.classList.remove('streak-broke'),600);
-}
-function cardEffect(id,kind){
-  const el=document.getElementById(`c-${id}`);
-  if(!el)return;
-  const cls=kind==='ontime'?'card-ontime':kind==='late'?'card-late':'card-qada';
-  el.classList.add(cls);
-  setTimeout(()=>el.classList.remove(cls),1100);
-}
-function barGoldFlash(){
-  const el=document.getElementById('progBox');
-  if(!el)return;
-  el.classList.add('bar-gold');
-  setTimeout(()=>el.classList.remove('bar-gold'),1000);
-}
+function flashPenalty(){const bar=document.getElementById('sbar');if(!bar)return;bar.classList.add('penalty-flash');setTimeout(()=>bar.classList.remove('penalty-flash'),1000);}
+function pulseStreakWin(){const el=document.getElementById('sv1');if(!el)return;el.classList.add('streak-win');setTimeout(()=>el.classList.remove('streak-win'),800);}
+function hitMilestone(){const el=document.getElementById('sv1');if(!el)return;el.classList.add('milestone-hit');setTimeout(()=>el.classList.remove('milestone-hit'),2200);}
+function shakeStreakBroken(){const el=document.getElementById('sv1');if(!el)return;el.classList.add('streak-broke');setTimeout(()=>el.classList.remove('streak-broke'),600);}
+function cardEffect(id,kind){const el=document.getElementById(`c-${id}`);if(!el)return;const cls=kind==='ontime'?'card-ontime':kind==='late'?'card-late':'card-qada';el.classList.add(cls);setTimeout(()=>el.classList.remove(cls),1100);}
+function barGoldFlash(){const el=document.getElementById('progBox');if(!el)return;el.classList.add('bar-gold');setTimeout(()=>el.classList.remove('bar-gold'),1000);}
 
-const ENCOURAGE_WIN=[
-  '🎉 يوم كامل! أنت وحش اليوم','💪 استمرار رهيب، كمّل كذا','🔥 كل يوم بتقوى أكثر','⚡ الانضباط ده هو الفرق','🏅 يوم موثق بالكامل، فخور فيك'
-];
-const ENCOURAGE_MISS=[
-  'بكرة نرجع أقوى، ما تستسلمش 💪','يوم واحد مش نهاية الطريق، كمّل 🔥','خصم اليوم مش نهاية الاستريك، ثبّت بكرة ✊','خد نفس وابدأ من جديد النهاردة 🌱'
-];
+const ENCOURAGE_WIN=['🎉 يوم كامل! أنت وحش اليوم','💪 استمرار رهيب، كمّل كذا','🔥 كل يوم بتقوى أكثر','⚡ الانضباط ده هو الفرق','🏅 يوم موثق بالكامل، فخور فيك'];
+const ENCOURAGE_MISS=['بكرة نرجع أقوى، ما تستسلمش 💪','يوم واحد مش نهاية الطريق، كمّل 🔥','خصم اليوم مش نهاية الاستريك، ثبّت بكرة ✊','خد نفس وابدأ من جديد النهاردة 🌱'];
 function pickRandom(arr){return arr[Math.floor(Math.random()*arr.length)];}
 
 // ===== Schedule =====
@@ -421,10 +397,7 @@ function buildPTasks(jd){
       return[`pr-${k}-${pk}`,fmt24(t24),'prayer',pm.ic,pm.ar,desc,pm.pts,null,null,false,t24];
     });
 }
-function sortKey(t){
-  const base=toMin(t[10]||t[1]);
-  return t[2]==='sleep'?base+1440:base;
-}
+function sortKey(t){const base=toMin(t[10]||t[1]);return t[2]==='sleep'?base+1440:base;}
 function getAllTasks(jd){const d=SCHED[jd];if(!d)return[];const frees=(FREE_TIME[jd]||[]).map((f,i)=>[`fr-${jd}-${i}`,f.t,'free','🎮','وقت حر',f.d,0,null,null,false]);return[...buildPTasks(jd),...d.ts,...frees].sort((a,b)=>sortKey(a)-sortKey(b));}
 function getReqTasks(jd){return[...buildPTasks(jd),...(SCHED[jd]?.ts||[])].filter(t=>!t[9]&&t[6]>0);}
 
@@ -436,6 +409,7 @@ let SELECTED_ALTS={};
 let SELECTED_DATE=TODAY;
 let historyData={};
 let savedReports=[];
+let penalizedDates={}; // global penalty ledger — now synced to Firestore, not just local
 
 async function sGet(k){try{const r=localStorage.getItem(k);return r?JSON.parse(r):null}catch{return null}}
 async function sSet(k,v){try{localStorage.setItem(k,JSON.stringify(v))}catch{}}
@@ -443,10 +417,27 @@ async function sSet(k,v){try{localStorage.setItem(k,JSON.stringify(v))}catch{}}
 function loadDay(){const dk=SELECTED_DATE;const day=historyData[dk]||{};DONE={...day.done||{}};SELECTED_ALTS={...day.alts||{}};}
 function saveDay(){const dk=SELECTED_DATE;if(!historyData[dk])historyData[dk]={};historyData[dk].done={...DONE};historyData[dk].alts={...SELECTED_ALTS};}
 
+// Legacy savedReports entries (pre-weekStart schema) get deduplicated by content signature,
+// since the old code appended a new entry every time the modal was opened.
+function migrateSavedReports(){
+  const seen=new Set();
+  const cleaned=[];
+  for(const r of savedReports){
+    const key=r.weekStart||`legacy|${r.date}|${r.totalPts}|${r.totalMissed}|${r.totalQada}|${r.pct}`;
+    if(seen.has(key)) continue;
+    seen.add(key);
+    if(!r.weekStart) r.weekStart=r.date;
+    cleaned.push(r);
+  }
+  savedReports=cleaned;
+}
+
 async function loadAll(){
   STATS=(await sGet(LS.stats))||{cur:0,best:0,pts:0,lc:null,lf:null};
   historyData=(await sGet(LS.history))||{};
   savedReports=(await sGet(LS.reports))||[];
+  penalizedDates=(await sGet(LS.penalized))||{};
+  migrateSavedReports();
   loadDay();
 }
 
@@ -455,32 +446,36 @@ async function saveAll(){
   await sSet(LS.stats,STATS);
   await sSet(LS.history,historyData);
   await sSet(LS.reports,savedReports);
+  await sSet(LS.penalized,penalizedDates);
 
   const user=fbAuth.currentUser;
   if(!user)return;
   try{
-    await setDoc(doc(fbDb,'users',user.uid),{stats:STATS,reports:savedReports},{merge:true});
-    await setDoc(doc(fbDb,`users/${user.uid}/tasks/${SELECTED_DATE}`),{done:DONE,alts:SELECTED_ALTS},{merge:true});
+    // Full historyData + penalizedDates now sync to Firestore — previously only
+    // today's task doc was pushed, which is why other devices/browsers never saw
+    // past days or the "already penalized" flag.
+    await setDoc(doc(fbDb,'users',user.uid),{
+      stats:STATS,
+      reports:savedReports,
+      historyData:historyData,
+      penalizedDates:penalizedDates
+    },{merge:true});
   }catch(e){console.warn('cloud save failed',e);}
 }
 
-// ===== Helpers =====
 if (typeof dateOff !== 'function') window.dateOff=function(off,d){let dt=d?new Date(d):new Date();dt.setDate(dt.getDate()+off);return dt.toISOString().split('T')[0];};
 if (typeof todayJD !== 'function') window.todayJD=function(){return new Date().getDay();};
 if (typeof getJDfromISO !== 'function') window.getJDfromISO=function(iso){return new Date(iso).getDay();};
 
-// ===== Punishment (dynamic: harsher when off-track, gentler when on a streak) =====
+// ===== Punishment =====
 let PENALTY_FLASH_PENDING=false;
 
-function getPunishRate(){
-  return (STATS.cur||0)>=3 ? 0.15 : 0.35;
-}
+function getPunishRate(){return (STATS.cur||0)>=3 ? 0.15 : 0.35;}
 
 async function applyPunishmentOnce(){
   try{
     const yesterday=dateOff(-1);
-    const penalized=(await sGet(LS.penalized))||{};
-    if(penalized[yesterday])return;
+    if(penalizedDates[yesterday])return; // checked against the SYNCED ledger now, not a local-only flag
     const jd=getJDfromISO(yesterday);
     const tasks=getReqTasks(jd);
     const dayDone=(historyData[yesterday]||{}).done||{};
@@ -495,8 +490,8 @@ async function applyPunishmentOnce(){
       if(!historyData[yesterday])historyData[yesterday]={};
       historyData[yesterday].penalty={rate,ded,missedCount};
     }
-    penalized[yesterday]=true;
-    await sSet(LS.penalized,penalized);
+    penalizedDates[yesterday]=true;
+    await saveAll(); // persists the ledger to Firestore immediately so no other device can re-apply it
   }catch(e){console.error(e);}
 }
 
@@ -513,38 +508,29 @@ function checkStreak(){
   if(STATS.lc!==TODAY){
     if(STATS.lf===yesterday && !allDone){
       STATS.best=Math.max(STATS.best,STATS.cur);
-      if(STATS.cur>0){
-        showToast(`💔 انكسر الاستريك بعد ${STATS.cur} يوم\n${pickRandom(ENCOURAGE_MISS)}`,3800,'warn');
-        shakeStreakBroken();
-      }
+      if(STATS.cur>0){showToast(`💔 انكسر الاستريك بعد ${STATS.cur} يوم\n${pickRandom(ENCOURAGE_MISS)}`,3800,'warn');shakeStreakBroken();}
       STATS.cur=0;
     }
     STATS.lc=TODAY;
   }
 
   if(allDone && STATS.lf!==TODAY){
-    STATS.cur = (STATS.lf===yesterday) ? (STATS.cur+1) : 1;
+    STATS.cur=(STATS.lf===yesterday)?(STATS.cur+1):1;
     STATS.lf=TODAY;
     STATS.best=Math.max(STATS.best,STATS.cur);
     if(MILESTONES.includes(STATS.cur)){
       showToast(`🏆 ${STATS.cur} يوم متواصل! إنجاز كبير جداً 🎊`,5000,'gold');
-      hitMilestone();
-      barGoldFlash();
+      hitMilestone();barGoldFlash();
     }else{
       showToast(`${pickRandom(ENCOURAGE_WIN)}\nاستريك: ${STATS.cur} يوم 🔥`,4000);
     }
-    pulseStreakWin();
-    barGoldFlash();
+    pulseStreakWin();barGoldFlash();
   }
 
   if(!allDone && STATS.lf===yesterday){
     STATS.best=Math.max(STATS.best,STATS.cur);
-    if(STATS.cur>0){
-      showToast(`💔 انكسر الاستريك بعد ${STATS.cur} يوم\n${pickRandom(ENCOURAGE_MISS)}`,3800,'warn');
-      shakeStreakBroken();
-    }
-    STATS.cur=0;
-    STATS.lf=null;
+    if(STATS.cur>0){showToast(`💔 انكسر الاستريك بعد ${STATS.cur} يوم\n${pickRandom(ENCOURAGE_MISS)}`,3800,'warn');shakeStreakBroken();}
+    STATS.cur=0;STATS.lf=null;
   }
 }
 
@@ -556,12 +542,7 @@ function computeHistoricalBestStreak(){
     const jd=getJDfromISO(iso);
     const req=getReqTasks(jd);
     const allDone=!!(day&&day.done)&&req.length>0&&req.every(t=>day.done[t[0]]);
-    if(allDone){
-      cur=(prevDate&&dateOff(1,prevDate)===iso)?cur+1:1;
-      best=Math.max(best,cur);
-    }else{
-      cur=0;
-    }
+    if(allDone){cur=(prevDate&&dateOff(1,prevDate)===iso)?cur+1:1;best=Math.max(best,cur);}else{cur=0;}
     prevDate=iso;
   }
   return best;
@@ -662,43 +643,38 @@ async function finishPrayerFlow(){
   historyData[dk].prayerLogs[activePrayer.id]={name:activePrayer.name,total,log:activePrayer.log,late:activePrayer.late};
   STATS.pts+=total;
   floatPts(activePrayer.x,activePrayer.y,total);
-  if(activePrayer.late){
-    showToast(`⏰ صليت متأخر شوي بس صليت — كمّل كذا`,3200,'late');
-    cardEffect(activePrayer.id,'late');
-  }else{
-    showToast(`🕌 صلاة في وقتها، الله يتقبل`,3000);
-    cardEffect(activePrayer.id,'ontime');
-  }
+  if(activePrayer.late){showToast(`⏰ صليت متأخر شوي بس صليت — كمّل كذا`,3200,'late');cardEffect(activePrayer.id,'late');}
+  else{showToast(`🕌 صلاة في وقتها، الله يتقبل`,3000);cardEffect(activePrayer.id,'ontime');}
   checkStreak();
   await saveAll();
-  renderPanels();
-  switchDay(getJDfromISO(SELECTED_DATE));
-  updateUI();
+  renderPanels();switchDay(getJDfromISO(SELECTED_DATE));updateUI();
   activePrayer=null;
 }
 
 // ===== Weekly Report =====
-// Builds the report for the week that just ENDED (Saturday..Friday), never including
-// the day currently in progress. This is the fix for the "shows next week" bug:
-// the range now starts at yesterday, not today.
+// Range is fixed at "the 7 days ending yesterday" — never includes the day in progress.
+function getReportRangeDates(){
+  const past7=[...Array(7)].map((_,i)=>dateOff(-1-i)); // yesterday .. 7 days ago
+  const wantedDates={};
+  for(const iso of past7){wantedDates[getJDfromISO(iso)]=iso;}
+  return wantedDates; // wantedDates[6] is LAST Saturday, never today's
+}
+
 function buildWeekReportData(){
   const order=['sat','sun','mon','tue','wed','thu','fri'];
   const mapJD={sat:6,sun:0,mon:1,tue:2,wed:3,thu:4,fri:5};
-
-  const past7=[...Array(7)].map((_,i)=>dateOff(-1-i)); // yesterday .. 7 days ago
-  const wantedDates={};
-  for(const iso of past7){
-    const jd=getJDfromISO(iso);
-    wantedDates[jd]=iso;
-  }
+  const wantedDates=getReportRangeDates();
 
   let totalPts=0,totalMissed=0,totalQada=0,totalDone=0,totalTasks=0;
   const dayBlocks=[];
+  let rangeStart=null,rangeEnd=null;
 
   for(const dKey of order){
     const jd=mapJD[dKey];
     const iso=wantedDates[jd];
     if(!iso) continue;
+    if(rangeStart===null||iso<rangeStart) rangeStart=iso;
+    if(rangeEnd===null||iso>rangeEnd) rangeEnd=iso;
 
     const day=historyData[iso]||{};
     const dayDone=day.done||{};
@@ -741,13 +717,10 @@ function buildWeekReportData(){
     }
 
     totalPts+=pts;
-
     const dayName=DSHORT[jd]||'';
     const dayPct=tasks.length?Math.round(done/tasks.length*100):0;
     let prayerSection='';
-    if(prayerDetails.length>0){
-      prayerSection=`<div style="margin-top:8px;padding:8px;background:rgba(0,0,0,.2);border-radius:8px;font-size:.7rem">${prayerDetails.join('')}</div>`;
-    }
+    if(prayerDetails.length>0) prayerSection=`<div style="margin-top:8px;padding:8px;background:rgba(0,0,0,.2);border-radius:8px;font-size:.7rem">${prayerDetails.join('')}</div>`;
     const encLine=dayPct===100
       ?`<div class="report-day-enc">🎉 يوم كامل! ${dayName} كان يوم ممتاز</div>`
       :(missed>0?`<div class="report-day-enc">فاتك ${missed} مهمة ${dayName} — حاول تعوضهم بكرة 💪</div>`:'');
@@ -761,7 +734,7 @@ function buildWeekReportData(){
   }
 
   const pct=totalTasks>0?Math.round(totalDone/totalTasks*100):0;
-  return{totalPts,totalMissed,totalQada,totalDone,totalTasks,pct,dayBlocksHtml:dayBlocks.join('')};
+  return{totalPts,totalMissed,totalQada,totalDone,totalTasks,pct,dayBlocksHtml:dayBlocks.join(''),rangeStart,rangeEnd};
 }
 
 function renderReportSummaryHtml(data){
@@ -779,44 +752,47 @@ function renderReportSummaryHtml(data){
 async function showWeeklyReport(){
   const el=document.getElementById('reportContent');
   const titleEl=document.getElementById('reportTitle');
+  const rangeEl=document.getElementById('reportRange');
   if(!el) return;
-  if(titleEl) titleEl.textContent='📊 التقرير الأسبوعي المفصل';
+  if(titleEl) titleEl.textContent='📊 تقرير آخر أسبوع مكتمل';
 
   const data=buildWeekReportData();
+  if(rangeEl) rangeEl.textContent=`من ${data.rangeStart} إلى ${data.rangeEnd} — لا يشمل اليوم الحالي`;
 
-  el.innerHTML=renderReportSummaryHtml(data)+`
-    <div class="report-history">
-      <div class="report-history-title">🗂️ عرض كل التقارير السابقة</div>
-      <button class="report-back-btn" id="btn-view-history-list" type="button">📁 فتح سجل التقارير</button>
-    </div>
-  `;
+  el.innerHTML=renderReportSummaryHtml(data);
 
-  // Store a full, permanent snapshot — not just summary numbers — so history can
-  // re-open this exact week later without recomputation.
-  const alreadySaved=savedReports.some(r=>r.date===TODAY);
-  if(!alreadySaved){
-    savedReports.unshift({date:TODAY,totalPts:data.totalPts,totalMissed:data.totalMissed,totalQada:data.totalQada,pct:data.pct,snapshotHtml:renderReportSummaryHtml(data)});
-    if(savedReports.length>52) savedReports=savedReports.slice(0,52); // keep up to a year of weeks
-    await saveAll();
+  // weekStart uniquely identifies this week — reopening it just refreshes the
+  // existing entry instead of creating a duplicate (this was the actual cause
+  // of seeing the "same" report multiple times in the history list).
+  const weekStart=data.rangeStart;
+  const existingIdx=savedReports.findIndex(r=>r.weekStart===weekStart);
+  const entry={weekStart,weekEnd:data.rangeEnd,totalPts:data.totalPts,totalMissed:data.totalMissed,totalQada:data.totalQada,pct:data.pct,snapshotHtml:renderReportSummaryHtml(data)};
+  if(existingIdx>=0) savedReports[existingIdx]=entry;
+  else{
+    savedReports.unshift(entry);
+    if(savedReports.length>52) savedReports=savedReports.slice(0,52);
   }
+  await saveAll();
 
   const rModal=document.getElementById('reportModal');
   if(rModal) rModal.classList.add('open');
 }
 
-// Permanent history button — available every day, shows every saved week.
+// Separate, permanent history button — lists every distinct saved week.
 function showReportHistoryList(){
   const el=document.getElementById('reportContent');
   const titleEl=document.getElementById('reportTitle');
+  const rangeEl=document.getElementById('reportRange');
   if(!el) return;
-  if(titleEl) titleEl.textContent='🗂️ سجل التقارير الأسبوعية';
+  if(titleEl) titleEl.textContent='🗂️ سجل كل التقارير الأسبوعية';
+  if(rangeEl) rangeEl.textContent=savedReports.length?`${savedReports.length} تقرير محفوظ`:'';
 
   if(!savedReports.length){
-    el.innerHTML='<div style="color:var(--mu);font-weight:700;text-align:center;padding:20px">لا يوجد تقارير محفوظة بعد</div>';
+    el.innerHTML='<div class="history-empty">لا يوجد أي تقرير أسبوعي محفوظ بعد — أول تقرير يُحفظ تلقائياً أول مرة تفتح "تقرير الأسبوع" يوم السبت.</div>';
   }else{
     el.innerHTML=savedReports.map((r,i)=>`
       <div class="report-history-item" data-hist-idx="${i}">
-        <span style="color:var(--so);font-weight:700">تقرير أسبوع ${r.date}</span>
+        <span style="color:var(--so);font-weight:700">${r.weekStart} → ${r.weekEnd||''}</span>
         <span><b>${r.totalPts}⭐</b> <span style="color:var(--mu);font-weight:800">(${r.pct||0}%)</span></span>
       </div>
     `).join('');
@@ -831,8 +807,10 @@ function showReportHistoryDetail(idx){
   if(!r) return;
   const el=document.getElementById('reportContent');
   const titleEl=document.getElementById('reportTitle');
+  const rangeEl=document.getElementById('reportRange');
   if(!el) return;
-  if(titleEl) titleEl.textContent=`📊 تقرير أسبوع ${r.date}`;
+  if(titleEl) titleEl.textContent=`📊 تقرير ${r.weekStart}`;
+  if(rangeEl) rangeEl.textContent=`من ${r.weekStart} إلى ${r.weekEnd||''}`;
   el.innerHTML=`<button class="report-back-btn" id="btn-back-to-history-list" type="button">← رجوع للسجل</button>${r.snapshotHtml||'<div style="color:var(--mu)">لا توجد تفاصيل محفوظة لهذا التقرير القديم</div>'}`;
 }
 
@@ -930,9 +908,7 @@ function renderTabs(){
 }
 
 function switchDay(jd){
-  document.querySelectorAll('.tab').forEach(t=>{
-    if(parseInt(t.dataset.jd,10)===jd)t.classList.add('act');else t.classList.remove('act');
-  });
+  document.querySelectorAll('.tab').forEach(t=>{if(parseInt(t.dataset.jd,10)===jd)t.classList.add('act');else t.classList.remove('act');});
   document.querySelectorAll('.pan').forEach(p=>p.classList.remove('act'));
   const p=document.getElementById(`pan-${DKEYS[jd]}`);if(p)p.classList.add('act');
 }
@@ -944,7 +920,7 @@ function renderPanels(){
 
 function updateUI(){
   const s1=document.getElementById('sv1'); if(s1) s1.textContent=STATS.cur;
-  const s2=document.getElementById('sv2'); if(s2){ s2.textContent=STATS.pts; s2.style.color=STATS.pts<0?'var(--rd)':'var(--ye)'; }
+  const s2=document.getElementById('sv2'); if(s2){s2.textContent=STATS.pts;s2.style.color=STATS.pts<0?'var(--rd)':'var(--ye)';}
   const s3=document.getElementById('sv3'); if(s3) s3.textContent=STATS.best;
 
   const jd=getJDfromISO(SELECTED_DATE);
@@ -971,13 +947,14 @@ function updateAuthUI(user){
   const btnEl=document.getElementById('authBtn');
   if(!nameEl||!btnEl)return;
   const isSat=todayJD()===6;
-  const historyBtn=`<button class="altbtn" id="btn-report-history">🗂️ سجل التقارير</button>`;
+  const historyBtn=`<button class="topbtn topbtn-history" id="btn-report-history">🗂️ سجل التقارير</button>`;
+  const reportBtn=`<button class="topbtn topbtn-report" id="btn-report" ${isSat?'':'disabled'}>📊 تقرير الأسبوع</button>`;
   if(user){
     nameEl.textContent=(user.displayName||user.email||'').split('@')[0];
-    btnEl.innerHTML=`<button class="altbtn" id="btn-signout">خروج</button><button class="altbtn" id="btn-report" ${isSat?'':'disabled'}>📊 تقرير الأسبوع</button>${historyBtn}`;
+    btnEl.innerHTML=`<button class="topbtn topbtn-signout" id="btn-signout">خروج</button>${reportBtn}${historyBtn}`;
   }else{
     nameEl.textContent='';
-    btnEl.innerHTML=`<button class="altbtn" id="btn-signin">تسجيل دخول</button><button class="altbtn" id="btn-report" ${isSat?'':'disabled'}>📊 تقرير الأسبوع</button>${historyBtn}`;
+    btnEl.innerHTML=`<button class="topbtn topbtn-signin" id="btn-signin">تسجيل دخول</button>${reportBtn}${historyBtn}`;
   }
 }
 
@@ -993,7 +970,7 @@ document.body.addEventListener('click',async e=>{
 
   if(tgt.id==='btn-signout'){
     if(typeof fbAuth!=='undefined') await fbAuth.signOut();
-    DONE={};SELECTED_ALTS={};historyData={};savedReports={};SELECTED_DATE=TODAY;
+    DONE={};SELECTED_ALTS={};historyData={};savedReports=[];penalizedDates={};SELECTED_DATE=TODAY;
     [LS.stats,LS.history,LS.reports,LS.penalized].forEach(k=>localStorage.removeItem(k));
     updateAuthUI(null);renderTabs();renderPanels();switchDay(todayJD());updateUI();
     return;
@@ -1004,17 +981,8 @@ document.body.addEventListener('click',async e=>{
     await showWeeklyReport();return;
   }
 
-  if(tgt.id==='btn-report-history'){
-    showReportHistoryList();return;
-  }
-
-  if(tgt.id==='btn-view-history-list'){
-    showReportHistoryList();return;
-  }
-
-  if(tgt.id==='btn-back-to-history-list'){
-    showReportHistoryList();return;
-  }
+  if(tgt.id==='btn-report-history'){showReportHistoryList();return;}
+  if(tgt.id==='btn-back-to-history-list'){showReportHistoryList();return;}
 
   const histItem=closest('.report-history-item');
   if(histItem){
@@ -1027,11 +995,7 @@ document.body.addEventListener('click',async e=>{
 
   if(tgt.id==='btn-prayer-back'){
     if(!activePrayer) return;
-    if(activePrayer.step<=0){
-      document.getElementById('prayerModal')?.classList.remove('open');
-      activePrayer=null;
-      return;
-    }
+    if(activePrayer.step<=0){document.getElementById('prayerModal')?.classList.remove('open');activePrayer=null;return;}
     activePrayer.step--;
     const last=activePrayer.log.pop();
     if(last) activePrayer.bonus-=last.pts;
@@ -1078,13 +1042,8 @@ document.body.addEventListener('click',async e=>{
     const late=taskObj?isLateNonPrayer(taskObj):false;
     DONE[id]=pts;STATS.pts+=pts;
     floatPts(e.clientX,e.clientY,pts);
-    if(late){
-      showToast('⏰ متأخر شوي بس تم — استمر كذا 💪',3000,'late');
-      cardEffect(id,'late');
-    }else{
-      showToast('✅ في الوقت المثالي، أحسنت',2200);
-      cardEffect(id,'ontime');
-    }
+    if(late){showToast('⏰ متأخر شوي بس تم — استمر كذا 💪',3000,'late');cardEffect(id,'late');}
+    else{showToast('✅ في الوقت المثالي، أحسنت',2200);cardEffect(id,'ontime');}
     checkStreak();
     await saveAll();renderPanels();switchDay(getJDfromISO(SELECTED_DATE));updateUI();
     return;
@@ -1108,10 +1067,7 @@ function initAppFlow(user){
   updateAuthUI(user);
   fetchPrayers().then(()=>applyPunishmentOnce()).then(()=>{
     checkStreak();
-    renderTabs();
-    renderPanels();
-    switchDay(todayJD());
-    updateUI();
+    renderTabs();renderPanels();switchDay(todayJD());updateUI();
     const ldEl=document.getElementById('ld'); if(ldEl) ldEl.style.display='none';
     const appEl=document.getElementById('app'); if(appEl) appEl.style.display='block';
     if(PENALTY_FLASH_PENDING){flashPenalty();PENALTY_FLASH_PENDING=false;}
@@ -1125,6 +1081,7 @@ function initAppFlow(user){
 if (typeof onAuthStateChanged !== 'undefined' && typeof fbAuth !== 'undefined') {
   onAuthStateChanged(fbAuth, async user => {
     await loadAll();
+
     if(user && typeof getDoc !== 'undefined' && typeof doc !== 'undefined' && typeof fbDb !== 'undefined'){
       try{
         const ud=await getDoc(doc(fbDb,'users',user.uid));
@@ -1132,16 +1089,16 @@ if (typeof onAuthStateChanged !== 'undefined' && typeof fbAuth !== 'undefined') 
           const d=ud.data();
           if(d.stats) STATS=d.stats;
           if(d.reports) savedReports=d.reports;
-        }
-        const td=await getDoc(doc(fbDb,`users/${user.uid}/tasks/${SELECTED_DATE}`));
-        if(td.exists()){
-          const d=td.data();
-          DONE=d.done||{};
-          SELECTED_ALTS=d.alts||{};
-          saveDay();
+          // Cloud historyData/penalizedDates now genuinely merge in — this is what
+          // makes a second browser/device actually see your past days.
+          if(d.historyData) historyData={...historyData,...d.historyData};
+          if(d.penalizedDates) penalizedDates={...penalizedDates,...d.penalizedDates};
+          migrateSavedReports();
+          loadDay();
         }
       }catch(e){console.warn('cloud load failed',e);}
     }
+
     await sanitizeStats();
     initAppFlow(user);
   });
