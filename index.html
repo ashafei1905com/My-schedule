@@ -743,6 +743,9 @@ function getReportRangeDates() {
     // This is the final, robust, timezone-proof implementation.
     // It creates a date object based on the known TODAY string (YYYY-MM-DD),
     // interpreting it as a UTC date to prevent any local timezone interference.
+// Build report range using the same UTC day keys used for historyData.
+    // TODAY is already a UTC YYYY-MM-DD produced by todayStr(), so anchoring with T12:00Z
+    // prevents edge-of-day timezone drift.
 const today = new Date(TODAY + 'T12:00:00Z');
 
     // Make the report range target the last *completed* week in UTC,
