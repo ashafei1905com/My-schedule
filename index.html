@@ -453,11 +453,28 @@ function buildPTasks(jd){
     });
 }
 function sortKey(t){const base=toMin(t[10]||t[1]);return t[2]==='sleep'?base+1440:base;}
-function getAllTasks(jd){const d=SCHED[jd];if(!d)return[];const frees=(FREE_TIME[jd]||[]).map((f,i)=>[`fr-${jd}-${i}`,f.t,'free','🎮','وقت حر',f.d,0,null,null,false]);return[...buildPTasks(jd),...d.ts,...frees].sort((a,b)=>sortKey(a)-sortKey(b));}
-function getReqTasks(jd){return[...buildPTasks(jd),...(SCHED[jd]?.ts||[])].filter(t=>!t[9]&&t[6]>0);}
+// Both functions now accept an optional `iso` (the actual calendar date being viewed).
+// When omitted they fall back to the natural date for weekday `jd` relative to TODAY's
+// week, preserving old behavior for any call site that hasn't been updated. The user's
+// per-account edit overlay (moves/deletes/point overrides/custom tasks) is applied here
+// so every downstream consumer — rendering, points, streak, reports — sees one
+// consistent, already-merged view. Guests (no USER_EDITS loaded, i.e. it's the empty
+// default) see exactly the original SCHED-derived tasks, unchanged.
+function getAllTasks(jd,iso){
+  const effIso=iso||dateForWeekday(jd,TODAY);
+  const d=SCHED[jd];if(!d)return applyUserEditsToTasks([],effIso);
+  const frees=(FREE_TIME[jd]||[]).map((f,i)=>[`fr-${jd}-${i}`,f.t,'free','🎮','وقت حر',f.d,0,null,null,false]);
+  const base=[...buildPTasks(jd),...d.ts,...frees].sort((a,b)=>sortKey(a)-sortKey(b));
+  return applyUserEditsToTasks(base,effIso);
+}
+function getReqTasks(jd,iso){
+  const effIso=iso||dateForWeekday(jd,TODAY);
+  const base=[...buildPTasks(jd),...(SCHED[jd]?.ts||[])].filter(t=>!t[9]&&t[6]>0);
+  return applyUserEditsToTasks(base,effIso).filter(t=>!t._deleted);
+}
 
 // ===== State =====
-const LS={stats:'sc:stats2',history:'sc:history2',reports:'sc:reports2',penalized:'sc:penalized2',firstSeen:'sc:firstSeen1'};
+const LS={stats:'sc:stats2',history:'sc:history2',reports:'sc:reports2',penalized:'sc:penalized2',firstSeen:'sc:firstSeen1',userEdits:'sc:userEdits1'};
 let STATS={cur:0,best:0,pts:0,lc:null,lf:null,lastPtsWeekStart:null};
 let DONE={};
 let SELECTED_ALTS={};
@@ -466,6 +483,75 @@ let historyData={};
 let savedReports=[];
 let penalizedDates={}; // global penalty ledger — now synced to Firestore, not just local
 let FIRST_SEEN=null; // 'YYYY-MM-DD' — the first day this account/browser ever used the app.
+
+// ===== User Edits (per-account overlay on top of the static SCHED) =====
+// This is NEVER visible to a guest / signed-out browser: it only ever loads when
+// fbAuth.currentUser exists, and it only ever writes to the signed-in user's own
+// Firestore doc. SCHED itself is never mutated — this is a pure overlay applied at
+// render time in applyUserEditsToTasks(), so guests always see the untouched schedule.
+//
+// Shape:
+//   moves:   { [taskId]: { toDate:'YYYY-MM-DD', toTime:'HH:MM ص/م', fromDate:'YYYY-MM-DD', _origTask:[...] } }
+//   deletes: { [taskId]: true }   // soft-delete: stays visible, greyed out, marked removed
+//   pointOverrides: { [taskId]: number }
+//   customTasks: [ { id, date, time, cat, ico, name, desc, pts, createdAt } ]
+let USER_EDITS={moves:{},deletes:{},pointOverrides:{},customTasks:[]};
+
+function emptyUserEdits(){return{moves:{},deletes:{},pointOverrides:{},customTasks:[]};}
+
+// Applies USER_EDITS to a list of base tasks that were generated for weekday `jd` on
+// date `iso`. Returns a NEW array — never mutates SCHED-derived task tuples in place.
+//   - Tasks moved AWAY from this date are filtered out here (they'll appear on their
+//     target date's render instead, pulled in via the _origTask snapshot).
+//   - Tasks moved INTO this date (from elsewhere) are appended, tagged with fromDate.
+//   - Deleted tasks stay in the list but get a `_deleted:true` flag (soft-delete).
+//   - Point overrides replace task[6] (the point value) via a shallow tuple copy.
+//   - Custom tasks for this date are appended as synthetic task tuples.
+function applyUserEditsToTasks(baseTasks, iso){
+  let out=[];
+  for(const t of baseTasks){
+    const id=t[0];
+    const mv=USER_EDITS.moves[id];
+    if(mv && mv.toDate!==iso){
+      continue; // moved away from this date — rendered on its target date instead
+    }
+    let tt=[...t];
+    if(USER_EDITS.pointOverrides[id]!==undefined) tt[6]=USER_EDITS.pointOverrides[id];
+    if(mv && mv.toTime) tt[1]=mv.toTime;
+    if(USER_EDITS.deletes[id]) tt._deleted=true;
+    if(mv) tt._movedFrom=mv.fromDate;
+    out.push(tt);
+  }
+  for(const [id,mv] of Object.entries(USER_EDITS.moves)){
+    if(mv.toDate!==iso) continue;
+    if(out.some(t=>t[0]===id)) continue;
+    if(mv._origTask){
+      let tt=[...mv._origTask];
+      tt[1]=mv.toTime||tt[1];
+      if(USER_EDITS.pointOverrides[id]!==undefined) tt[6]=USER_EDITS.pointOverrides[id];
+      if(USER_EDITS.deletes[id]) tt._deleted=true;
+      tt._movedFrom=mv.fromDate;
+      out.push(tt);
+    }
+  }
+  for(const ct of USER_EDITS.customTasks){
+    if(ct.date!==iso) continue;
+    const tup=[ct.id,ct.time,ct.cat||'free',ct.ico||'✨',ct.name,ct.desc||'',ct.pts||0,null,null,false];
+    if(USER_EDITS.deletes[ct.id]) tup._deleted=true;
+    tup._custom=true;
+    out.push(tup);
+  }
+  return out;
+}
+
+async function saveUserEdits(){
+  await sSet(LS.userEdits,USER_EDITS);
+  const user=fbAuth.currentUser;
+  if(!user)return; // guests never sync edits anywhere, and edits never touch guest localStorage reads
+  try{
+    await setDoc(doc(fbDb,'users',user.uid),{userEdits:USER_EDITS},{merge:true});
+  }catch(e){console.warn('userEdits cloud save failed',e);}
+}
                       // No day before this date is ever eligible for punishment, and the
                       // day FIRST_SEEN itself is never punished either, since the user
                       // hadn't finished their first day when the account was created.
@@ -563,6 +649,7 @@ async function loadAll() {
     savedReports = (await sGet(LS.reports)) || [];
     penalizedDates = (await sGet(LS.penalized)) || {};
     FIRST_SEEN = await sGet(LS.firstSeen);
+    USER_EDITS = (await sGet(LS.userEdits)) || emptyUserEdits();
     if (!FIRST_SEEN) {
         // First time this browser/localStorage has ever run the app.
         FIRST_SEEN = TODAY;
@@ -589,6 +676,7 @@ async function saveAll(){
   await sSet(LS.history,historyData);
   await sSet(LS.reports,savedReports);
   await sSet(LS.penalized,penalizedDates);
+  await sSet(LS.userEdits,USER_EDITS);
 
   const user=fbAuth.currentUser;
   if(!user)return;
@@ -596,12 +684,16 @@ async function saveAll(){
     // Full historyData + penalizedDates now sync to Firestore — previously only
     // today's task doc was pushed, which is why other devices/browsers never saw
     // past days or the "already penalized" flag.
+    // userEdits syncs here too: this is the per-account overlay (moves/deletes/
+    // custom tasks/point overrides) that a signed-out guest never sees, since this
+    // whole block only runs when fbAuth.currentUser exists.
     await setDoc(doc(fbDb,'users',user.uid),{
       stats:STATS,
       reports:savedReports,
       historyData:historyData,
       penalizedDates:penalizedDates,
-      firstSeen:FIRST_SEEN
+      firstSeen:FIRST_SEEN,
+      userEdits:USER_EDITS
     },{merge:true});
   }catch(e){console.warn('cloud save failed',e);}
 }
@@ -1085,9 +1177,19 @@ function renderCard(task,isToday){
     `<div class="altlist" id="al-${id}">${alts.map(a=>`<div class="altitem" data-action="pickalt" data-id="${id}" data-alt="${String(a).replace(/"/g,'"')}">${a}</div>`).join('')}</div>`:'';
 
   const hwH=hw?`<div class="hwtag">⏰ ${hw}</div>`:'';
-  return`<div class="tc${isDone?' done':''}${isEx?' excx':''}" data-c="${cat}" id="c-${id}">
+
+  // Edit-overlay badges — soft-deleted tasks stay visible (greyed) rather than
+  // vanishing, per spec; moved tasks show where they came from; custom tasks are
+  // flagged so it's clear they were added by you (or via the assistant), not SCHED.
+  const isDeleted=!!task._deleted;
+  const movedBadge=task._movedFrom?`<div class="hwtag" style="background:rgba(59,130,246,.15);border-color:rgba(59,130,246,.3);color:#60a5fa">🔀 نُقلت من ${task._movedFrom}</div>`:'';
+  const customBadge=task._custom?`<div class="hwtag" style="background:rgba(139,92,246,.15);border-color:rgba(139,92,246,.3);color:#a78bfa">✨ مهمة مخصصة</div>`:'';
+  const deletedBadge=isDeleted?`<div class="hwtag">🗑️ محذوفة</div>`:'';
+  if(isDeleted) act=`<div class="cbtn exp" style="opacity:.6">🗑️ محذوفة</div>`;
+
+  return`<div class="tc${isDone?' done':''}${isEx?' excx':''}${isDeleted?' excx':''}" data-c="${cat}" id="c-${id}" ${isDeleted?'style="opacity:.5"':''}>
     <div class="tctime">${arTime}</div><div class="tcico">${ico}</div>
-    <div class="tcbody"><div class="tcname">${name}</div><div class="tcdesc">${getDisplayDesc(task)}</div>${hwH}${altH}</div>
+    <div class="tcbody"><div class="tcname">${name}</div><div class="tcdesc">${getDisplayDesc(task)}</div>${hwH}${movedBadge}${customBadge}${deletedBadge}${altH}</div>
     ${act}
   </div>`;
 }
@@ -1220,6 +1322,7 @@ document.body.addEventListener('click',async e=>{
       localStorage.removeItem(LS.reports);
       localStorage.removeItem(LS.penalized);
       localStorage.removeItem(LS.firstSeen);
+      localStorage.removeItem(LS.userEdits);
 
       // Clear any in-memory state
       STATS={cur:0,best:0,pts:0,lc:null,lf:null};
@@ -1229,6 +1332,7 @@ document.body.addEventListener('click',async e=>{
       savedReports=[];
       penalizedDates={};
       FIRST_SEEN=null;
+      USER_EDITS=emptyUserEdits();
       IS_BRAND_NEW_SESSION=false;
       SELECTED_DATE=TODAY;
     }catch(e){console.warn('local reset failed',e);}
@@ -1394,6 +1498,10 @@ if (typeof onAuthStateChanged !== 'undefined' && typeof fbAuth !== 'undefined') 
             }
           }
           if(d.penalizedDates) penalizedDates={...penalizedDates,...d.penalizedDates};
+          // Cloud userEdits is authoritative once it exists — this is what makes an
+          // edit made on your phone show up on your laptop. If the cloud doc has no
+          // userEdits yet (brand-new account), keep whatever local value we have.
+          if(d.userEdits) USER_EDITS={...emptyUserEdits(),...d.userEdits};
           // firstSeen from the cloud is authoritative once it exists — this is what makes
           // "sign in on a fresh browser" not reset the account's age. If the cloud has no
           // firstSeen yet, this is genuinely the first time this account has ever been used
