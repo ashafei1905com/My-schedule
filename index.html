@@ -908,6 +908,7 @@ function clearScheduledNotifs(){
 function scheduleTodayNotifications(){
   clearScheduledNotifs();
   if(!NOTIF_ENABLED) return;
+  if(isIOS() && !isStandalonePWA()) return; // silently no-op here; the toast explaining why already fired at the permission-request step
   if(typeof Notification==='undefined' || Notification.permission!=='granted') return;
 
   const jd=todayJD();
@@ -936,7 +937,24 @@ function scheduleTodayNotifications(){
   }
 }
 
+function isIOS(){
+  return /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
+}
+function isStandalonePWA(){
+  return window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone===true;
+}
+
 async function requestNotifPermission(){
+  // iOS Safari (regular browser tab, not installed to Home Screen) has NO Notification/
+  // Push API at all — this isn't a permission issue, the API object literally doesn't
+  // exist in that context. This is the actual reason notifications silently did nothing
+  // before: the constructor call was failing inside a try/catch that swallowed it.
+  // Apple only enables it once the site is added to the Home Screen (iOS 16.4+) and
+  // opened from that icon, in standalone mode.
+  if(isIOS() && !isStandalonePWA()){
+    showToast('📱 على الآيفون، الإشعارات بتشتغل بس لو ضفت الموقع للشاشة الرئيسية:\n(مشاركة ⬆️ ← أضف إلى الشاشة الرئيسية) وبعدين افتحه من الأيقونة',6500,'warn');
+    return false;
+  }
   if(typeof Notification==='undefined'){
     showToast('المتصفح ده مش بيدعم الإشعارات',3500,'warn');
     return false;
@@ -1637,8 +1655,7 @@ function aiParseIntent(msg){
       reply:`تم إضافة "${name}" يوم ${newDate} الساعة ${newTime} بـ ${pts}⭐ ✅`};
   }
 
-  return{action:'unknown',
-    reply:'مش فاهم الأمر ده 🤔 جرب صيغة زي: "عملت الجيم"، "انقل الغدا لبكرة"، "احذف السباحة"، أو "ضيف مهمة مذاكرة الساعة ٧"'};
+  return{action:'llmFallback',reply:null};
 }
 
 async function aiExecuteAction(intent){
@@ -1683,15 +1700,65 @@ async function aiExecuteAction(intent){
   return false; // unrecognized / needMoreInfo / unknown — nothing to execute
 }
 
-// ===== AI Assistant: chat UI =====
+// ===== AI Assistant: live Claude call (via Cloudflare Worker proxy) =====
+// The Worker holds the real Anthropic API key server-side — this file never contains
+// it, so it's safe to be in a public GitHub repo. Replace WORKER_URL below with your
+// deployed Worker's URL once you've completed the Cloudflare setup.
+const AI_WORKER_URL='https://falling-frost-7656.ashafei1905.workers.dev'; // Cloudflare Worker proxy — holds the Groq key server-side, never exposed in this file
+
+// Mentor persona, per Abdullah's explicit instructions — citation/sourcing requirement
+// intentionally dropped since this Worker has no web search tool attached, and
+// fabricating citations would be worse than not having them.
+const AI_SYSTEM_PROMPT=`You are a skeptical, research-oriented mentor for Abdullah, embedded in his personal schedule/habit-tracking app "جدول عبدالله". Your purpose is to sharpen his thinking, not validate his ego.
+
+TONE: Strictly formal, professional, precise. No flattery, no colloquialisms, no emotional cushioning. If he is wrong, say so directly and correct him.
+
+LENGTH RULES:
+- If he says "اختصر" (shorten): answer as briefly as possible, core point only, no elaboration.
+- If he says "اشرح" or "فسر" (explain): give a thorough, multi-angle answer covering context, nuance, edge cases, and implications, well organized.
+- Otherwise: match the natural length the question deserves — don't pad, don't truncate.
+
+ENGAGEMENT: Give direct answers first — never withhold the actual answer to force him to guess. After the direct answer, walk him through the underlying reasoning. End explanations with a sharp, specific question that pushes him to think further, not a generic "what do you think?"
+
+CONTEXT: You can also discuss his schedule app (prayers, gym, meals, points, streaks) if he asks, but you are not the one executing schedule commands (moving/deleting/marking tasks done) — a separate system handles those. If he asks you to do something schedule-related that sounds like a command rather than a question, tell him to phrase it as a direct instruction (e.g. "انقل الجيم لبكرة الساعة ٨").
+
+You have no web search or real-time data access. If something requires current/verifiable facts you're not certain of, say so plainly instead of guessing.`;
+
+async function aiCallLiveModel(){
+  if(!AI_WORKER_URL || AI_WORKER_URL==='REPLACE_WITH_YOUR_WORKER_URL'){
+    return{ok:false,text:'⚠️ المساعد الذكي لسه مش متوصل بالسيرفر (Cloudflare Worker). لازم تركّب الـ Worker وتحط رابطه في الكود الأول.'};
+  }
+  // Send recent history as real conversational context — this is what gives it actual
+  // memory of the conversation, same as any normal chat interface.
+  const recentMsgs=AI_CHAT.slice(-20).map(m=>({role:m.role==='user'?'user':'assistant',content:m.text}));
+  try{
+    const res=await fetch(AI_WORKER_URL,{
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({system:AI_SYSTEM_PROMPT,messages:recentMsgs})
+    });
+    const data=await res.json();
+    if(!res.ok || data.error){
+      console.error('AI worker error:',data.error||res.status);
+      return{ok:false,text:'⚠️ حصل خطأ من السيرفر — جرب تاني بعد شوية.'};
+    }
+    return{ok:true,text:data.text||'(رد فارغ)'};
+  }catch(e){
+    console.error('AI worker call failed:',e);
+    return{ok:false,text:'⚠️ مش قادر أوصل للسيرفر دلوقتي — تأكد من الاتصال بالإنترنت وجرب تاني.'};
+  }
+}
+
+
 function aiRenderMessages(){
   const body=document.getElementById('aiBody');
   if(!body) return;
   if(!AI_CHAT.length){
-    body.innerHTML=`<div class="ai-empty">👋 أهلاً! تقدر تقولي حاجات زي:<br>"عملت الجيم"<br>"انقل الغدا لبكرة الساعة ٢"<br>"احذف السباحة النهاردة"<br>"ضيف مهمة مذاكرة الساعة ٧ بـ 10 نقاط"<br><br>التغييرات دي خاصة بحسابك بس، ومتزامنة على كل أجهزتك.</div>`;
+    body.innerHTML=`<div class="ai-empty">👋 أهلاً! اسألني أي حاجة، أو جرب أوامر زي:<br>"عملت الجيم"<br>"انقل الغدا لبكرة الساعة ٢"<br>"احذف السباحة النهاردة"<br>"ضيف مهمة مذاكرة الساعة ٧ بـ 10 نقاط"<br><br>التغييرات دي خاصة بحسابك بس، ومتزامنة على كل أجهزتك.</div>`;
     return;
   }
   body.innerHTML=AI_CHAT.map(m=>{
+    if(m.tone==='typing') return`<div class="ai-msg bot" style="opacity:.6">⏳ بيفكر...</div>`;
     const cls=m.role==='user'?'user':`bot${m.tone?' '+m.tone:''}`;
     return`<div class="ai-msg ${cls}">${m.text.replace(/</g,'&lt;')}</div>`;
   }).join('');
@@ -1718,21 +1785,39 @@ async function aiHandleSend(){
   }
 
   const intent=aiParseIntent(text);
-  let tone='ok';
-  try{
-    if(['markDone','moveTask','deleteTask','editPoints','addCustomTask'].includes(intent.action)){
-      await aiExecuteAction(intent);
-      try{ renderPanels();switchDay(getJDfromISO(SELECTED_DATE));updateUI(); }catch(e){ console.error('re-render after AI action failed:',e); }
-    }else{
-      tone=intent.action==='unknown'?null:'err';
+
+  // Known, safe, structured commands (move/delete/mark-done/etc.) always execute
+  // locally and deterministically through the real data functions — never through
+  // the LLM. This is intentional: correctness and safety for actual data mutations
+  // matter more than routing everything through one code path.
+  if(['markDone','moveTask','deleteTask','editPoints','addCustomTask','unrecognizedTask','needMoreInfo'].includes(intent.action)){
+    let tone='ok';
+    try{
+      if(['markDone','moveTask','deleteTask','editPoints','addCustomTask'].includes(intent.action)){
+        await aiExecuteAction(intent);
+        try{ renderPanels();switchDay(getJDfromISO(SELECTED_DATE));updateUI(); }catch(e){ console.error('re-render after AI action failed:',e); }
+      }else{
+        tone='err';
+      }
+    }catch(e){
+      console.error('AI action execution failed:',e);
+      intent.reply='⚠️ حصل خطأ أثناء تنفيذ التغيير — جرب تاني.';
+      tone='err';
     }
-  }catch(e){
-    console.error('AI action execution failed:',e);
-    intent.reply='⚠️ حصل خطأ أثناء تنفيذ التغيير — جرب تاني.';
-    tone='err';
+    AI_CHAT.push({role:'bot',text:intent.reply,ts:Date.now(),tone});
+    aiRenderMessages();
+    await saveAiChat();
+    return;
   }
 
-  AI_CHAT.push({role:'bot',text:intent.reply,ts:Date.now(),tone});
+  // Anything not matching a known command pattern (general questions, conversation,
+  // "what can you do", etc.) goes to the real model via the Worker proxy.
+  AI_CHAT.push({role:'bot',text:'...',ts:Date.now(),tone:'typing'});
+  aiRenderMessages();
+
+  const result=await aiCallLiveModel();
+  AI_CHAT.pop(); // remove the typing placeholder
+  AI_CHAT.push({role:'bot',text:result.text,ts:Date.now(),tone:result.ok?null:'err'});
   aiRenderMessages();
   await saveAiChat();
 }
