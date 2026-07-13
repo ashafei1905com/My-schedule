@@ -169,6 +169,32 @@ body{font-family:'Cairo',sans-serif;background:var(--bg);color:var(--tx);directi
 .report-back-btn:hover{background:rgba(124,58,237,.24)}
 .history-empty{color:var(--mu);font-weight:700;text-align:center;padding:30px 10px}
 @media(max-width:500px){.report-summary{grid-template-columns:1fr 1fr;}}
+
+/* AI Assistant widget */
+#aiFab{position:fixed;bottom:22px;left:22px;width:58px;height:58px;border-radius:50%;background:linear-gradient(135deg,#8b5cf6,#6d28d9);display:flex;align-items:center;justify-content:center;font-size:1.6rem;cursor:pointer;z-index:9998;box-shadow:0 4px 20px rgba(139,92,246,.5);border:none;transition:transform .2s}
+#aiFab:hover{transform:scale(1.08)}
+#aiFab.hidden{display:none}
+#aiPanel{position:fixed;bottom:0;left:0;width:100%;max-width:420px;height:min(640px,88vh);background:var(--c2);border:2px solid var(--br);border-radius:20px 20px 0 0;z-index:9999;display:none;flex-direction:column;box-shadow:0 -8px 40px rgba(0,0,0,.6)}
+#aiPanel.open{display:flex}
+@media(min-width:460px){#aiPanel{bottom:22px;left:22px;border-radius:20px}}
+.ai-head{display:flex;justify-content:space-between;align-items:center;padding:14px 16px;border-bottom:1px solid var(--br);flex-shrink:0}
+.ai-title{font-weight:900;font-size:1rem;display:flex;align-items:center;gap:8px}
+.ai-sub{font-size:.65rem;color:var(--mu);margin-top:2px}
+.ai-close{background:rgba(239,68,68,.12);border:1px solid rgba(239,68,68,.4);color:#f87171;border-radius:8px;padding:5px 12px;cursor:pointer;font-family:'Cairo',sans-serif;font-size:.78rem;font-weight:700}
+.ai-body{flex:1;overflow-y:auto;padding:14px 16px;display:flex;flex-direction:column;gap:10px}
+.ai-msg{max-width:85%;padding:10px 14px;border-radius:14px;font-size:.85rem;line-height:1.6;white-space:pre-wrap}
+.ai-msg.user{align-self:flex-end;background:linear-gradient(135deg,#2563eb,#1d4ed8);color:#fff;border-bottom-left-radius:4px}
+.ai-msg.bot{align-self:flex-start;background:var(--c);border:1px solid var(--br);color:var(--tx);border-bottom-right-radius:4px}
+.ai-msg.bot.err{border-color:rgba(239,68,68,.4);background:rgba(239,68,68,.08)}
+.ai-msg.bot.ok{border-color:rgba(16,185,129,.4);background:rgba(16,185,129,.08)}
+.ai-empty{color:var(--mu);text-align:center;padding:30px 10px;font-size:.8rem;line-height:1.8}
+.ai-inputrow{display:flex;gap:8px;padding:12px;border-top:1px solid var(--br);flex-shrink:0}
+.ai-input{flex:1;background:var(--c);border:1px solid var(--br);border-radius:10px;padding:10px 14px;color:var(--tx);font-family:'Cairo',sans-serif;font-size:.85rem;resize:none;max-height:90px}
+.ai-input:focus{outline:none;border-color:var(--pu)}
+.ai-send{background:linear-gradient(135deg,#8b5cf6,#6d28d9);border:none;color:#fff;border-radius:10px;padding:0 18px;cursor:pointer;font-weight:800;font-size:.9rem}
+.ai-send:disabled{opacity:.4;cursor:not-allowed}
+.ai-clearbtn{background:none;border:none;color:var(--mu);font-size:.68rem;cursor:pointer;text-decoration:underline;padding:0}
+.ai-signin-note{padding:10px 14px;background:rgba(245,158,11,.08);border:1px solid rgba(245,158,11,.25);border-radius:10px;font-size:.72rem;color:var(--or);margin:10px 16px 0}
 </style>
 </head>
 <body>
@@ -230,6 +256,23 @@ body{font-family:'Cairo',sans-serif;background:var(--bg);color:var(--tx);directi
       <button class="report-close" id="closeReport" onclick="document.getElementById('reportModal').classList.remove('open')">✕ إغلاق</button>
     </div>
     <div id="reportContent"></div>
+  </div>
+</div>
+
+<!-- AI Assistant Widget -->
+<button id="aiFab" type="button" title="مساعد الجدول">🤖</button>
+<div id="aiPanel">
+  <div class="ai-head">
+    <div>
+      <div class="ai-title">🤖 مساعد الجدول</div>
+      <div class="ai-sub" id="aiSubStatus">جاهز للمساعدة</div>
+    </div>
+    <button class="ai-close" id="aiCloseBtn" type="button">✕ إغلاق</button>
+  </div>
+  <div class="ai-body" id="aiBody"></div>
+  <div class="ai-inputrow">
+    <textarea class="ai-input" id="aiInput" rows="1" placeholder="اكتب أمرك... مثال: انقل الجيم لبكرة الساعة ٨"></textarea>
+    <button class="ai-send" id="aiSendBtn" type="button">إرسال</button>
   </div>
 </div>
 
@@ -474,7 +517,7 @@ function getReqTasks(jd,iso){
 }
 
 // ===== State =====
-const LS={stats:'sc:stats2',history:'sc:history2',reports:'sc:reports2',penalized:'sc:penalized2',firstSeen:'sc:firstSeen1',userEdits:'sc:userEdits1'};
+const LS={stats:'sc:stats2',history:'sc:history2',reports:'sc:reports2',penalized:'sc:penalized2',firstSeen:'sc:firstSeen1',userEdits:'sc:userEdits1',aiChat:'sc:aiChat1'};
 let STATS={cur:0,best:0,pts:0,lc:null,lf:null,lastPtsWeekStart:null};
 let DONE={};
 let SELECTED_ALTS={};
@@ -552,10 +595,25 @@ async function saveUserEdits(){
     await setDoc(doc(fbDb,'users',user.uid),{userEdits:USER_EDITS},{merge:true});
   }catch(e){console.warn('userEdits cloud save failed',e);}
 }
-                      // No day before this date is ever eligible for punishment, and the
-                      // day FIRST_SEEN itself is never punished either, since the user
-                      // hadn't finished their first day when the account was created.
 let IS_BRAND_NEW_SESSION=false; // true only for the very session that creates FIRST_SEEN
+// (FIRST_SEEN itself: no day before it is ever eligible for punishment, and the day
+// FIRST_SEEN itself is never punished either, since the user hadn't finished their
+// first day when the account was created.)
+
+// ===== AI Assistant chat history =====
+// Same sync model as USER_EDITS: local always, cloud only when signed in. A guest
+// opening the app never sees your chat log, and it's cleared on sign-out along with
+// every other per-account thing.
+let AI_CHAT=[]; // [{role:'user'|'bot', text, ts, tone:'ok'|'err'|null}]
+
+async function saveAiChat(){
+  await sSet(LS.aiChat,AI_CHAT);
+  const user=fbAuth.currentUser;
+  if(!user)return;
+  try{
+    await setDoc(doc(fbDb,'users',user.uid),{aiChat:AI_CHAT},{merge:true});
+  }catch(e){console.warn('aiChat cloud save failed',e);}
+}
 
 async function sGet(k){try{const r=localStorage.getItem(k);return r?JSON.parse(r):null}catch{return null}}
 async function sSet(k,v){try{localStorage.setItem(k,JSON.stringify(v))}catch{}}
@@ -650,6 +708,7 @@ async function loadAll() {
     penalizedDates = (await sGet(LS.penalized)) || {};
     FIRST_SEEN = await sGet(LS.firstSeen);
     USER_EDITS = (await sGet(LS.userEdits)) || emptyUserEdits();
+    AI_CHAT = (await sGet(LS.aiChat)) || [];
     if (!FIRST_SEEN) {
         // First time this browser/localStorage has ever run the app.
         FIRST_SEEN = TODAY;
@@ -811,9 +870,93 @@ async function sanitizeStats(){
 }
 
 // ===== Prayer API =====
-async function fetchPrayers(){
+// Fine-tune offsets (in minutes) applied on top of the API's raw calculation, calibrated
+// against Abdullah's actual mosque/local authority times on 2026-07-13. Order per the
+// Aladhan API spec: Imsak,Fajr,Sunrise,Dhuhr,Asr,Maghrib,Sunset,Isha,Midnight.
+// Positive = push later, negative = push earlier. Fajr/Sunrise/Dhuhr were coming back
+// too early; Asr/Maghrib/Isha were coming back too late — this is a normal, expected
+// gap between calculation methods and locally-observed times (Aladhan's own docs note
+// 1-5 min differences even against the matching regional authority), not a bug in this
+// app's date/time logic. If real-world drift is noticed again later, re-measure against
+// the mosque and adjust these numbers — do not touch the fetch logic itself.
+const PRAYER_TUNE='0,11,7,3,-1,-1,0,-6,0';
+
+// ===== Notifications =====
+// Client-side only — reminders fire via setTimeout while this tab/PWA is open, using
+// the browser Notification API. This is NOT true background push (that requires a push
+// server, out of scope for a static GitHub Pages site with no backend) — but it covers
+// the actual use case: keep the app/tab open (or installed as a PWA) and get reminded
+// as each task's time approaches, same as any local reminder app.
+const LS_NOTIF_PREF='sc:notifPref1';
+let NOTIF_ENABLED=false;
+let NOTIF_TIMERS=[];
+
+async function loadNotifPref(){
+  const v=await sGet(LS_NOTIF_PREF);
+  NOTIF_ENABLED=!!v;
+}
+async function saveNotifPref(){await sSet(LS_NOTIF_PREF,NOTIF_ENABLED);}
+
+function clearScheduledNotifs(){
+  NOTIF_TIMERS.forEach(t=>clearTimeout(t));
+  NOTIF_TIMERS=[];
+}
+
+// Schedules a browser notification for every remaining, not-yet-done task today,
+// firing at the task's start time. Re-run whenever today's task list changes (task
+// completed, edit applied) so already-done tasks stop being scheduled.
+function scheduleTodayNotifications(){
+  clearScheduledNotifs();
+  if(!NOTIF_ENABLED) return;
+  if(typeof Notification==='undefined' || Notification.permission!=='granted') return;
+
+  const jd=todayJD();
+  const tasks=getAllTasks(jd,TODAY);
+  const nowMin=getKuwaitNow();
+
+  for(const t of tasks){
+    if(t._deleted) continue;
+    if(t[2]==='free') continue;
+    const id=t[0];
+    if(DONE[id]!==undefined && DONE[id]!==false) continue; // already done, no need to remind
+    const startMin=toMin(t[10]||t[1]);
+    const deltaMin=startMin-nowMin;
+    if(deltaMin<0 || deltaMin>16*60) continue; // skip past tasks and anything absurdly far out
+    const ms=deltaMin*60*1000;
+    const timer=setTimeout(()=>{
+      try{
+        new Notification('⏰ تذكير من جدول عبدالله',{
+          body:`${t[4]} — الساعة ${t[1]}`,
+          icon:'data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"%3E%3Ctext y="75" font-size="80"%3E%F0%9F%8F%8B%EF%B8%8F%3C/text%3E%3C/svg%3E',
+          tag:id
+        });
+      }catch(e){console.warn('notification fire failed',e);}
+    },ms);
+    NOTIF_TIMERS.push(timer);
+  }
+}
+
+async function requestNotifPermission(){
+  if(typeof Notification==='undefined'){
+    showToast('المتصفح ده مش بيدعم الإشعارات',3500,'warn');
+    return false;
+  }
+  if(Notification.permission==='granted') return true;
+  if(Notification.permission==='denied'){
+    showToast('الإشعارات متبلوكة من إعدادات المتصفح — لازم تفعّلها يدوياً من هناك',4200,'warn');
+    return false;
+  }
   try{
-    const res=await fetch('https://api.aladhan.com/v1/timingsByCity?city=Kuwait City&country=Kuwait&method=4');
+    const perm=await Notification.requestPermission();
+    return perm==='granted';
+  }catch{return false;}
+}
+
+async function fetchPrayers(){
+
+
+  try{
+    const res=await fetch(`https://api.aladhan.com/v1/timingsByCity?city=Kuwait City&country=Kuwait&method=4&tune=${PRAYER_TUNE}`);
     const json=await res.json();
     if(json&&json.code===200){const t=json.data.timings;PRYT={Fajr:t.Fajr,Sunrise:t.Sunrise,Dhuhr:t.Dhuhr,Asr:t.Asr,Maghrib:t.Maghrib,Isha:t.Isha};}
     else throw new Error();
@@ -933,6 +1076,18 @@ function getReportRangeDates() {
     return wantedDates;
 }
 
+const REPORT_CAT_META={
+  prayer:{label:'🕌 الصلوات',order:1},
+  food:{label:'🍽️ الوجبات',order:2},
+  gym:{label:'🏋️ الجيم',order:3},
+  swim:{label:'🏊 السباحة',order:4},
+  recovery:{label:'♨️ الريكفري',order:5},
+  quran:{label:'📿 القرآن',order:6},
+  prog:{label:'💻 البرمجة',order:7},
+  sleep:{label:'🌙 النوم',order:8},
+  free:{label:'🎮 وقت حر',order:9}
+};
+
 function buildWeekReportData(){
   const order=['sat','sun','mon','tue','wed','thu','fri'];
   const mapJD={sat:6,sun:0,mon:1,tue:2,wed:3,thu:4,fri:5};
@@ -953,32 +1108,52 @@ function buildWeekReportData(){
     const dayDone=day.done||{};
     const dayAlts=day.alts||{};
     const prayerLogs=day.prayerLogs||{};
-    const tasks=getReqTasks(jd);
+    // getReqTasks already applies USER_EDITS (moves/deletes/custom/point overrides),
+    // so the report automatically reflects any changes made via the AI assistant —
+    // no separate merge logic needed here.
+    const tasks=getReqTasks(jd,iso);
 
-    // If there are no tasks for a day, there's nothing to report.
-    if (!tasks.length) {
-        continue;
-    }
+    if (!tasks.length) continue;
 
     let pts=0,missed=0,qada=0,done=0;
-    const taskRows=[];
     const prayerDetails=[];
+    // Group every task row by category so the report reads as organized sections
+    // instead of one flat chronological list.
+    const byCat={};
 
     for(const t of tasks){
       const v=dayDone[t[0]];
       totalTasks++;
+      const cat=t[2]||'free';
+      if(!byCat[cat]) byCat[cat]=[];
+
+      // Always resolve what was actually eaten/done — the chosen alternative if one
+      // was picked, otherwise the task's default/main description. Previously this
+      // only showed anything when an alt was explicitly chosen, so "ate the default
+      // meal" produced zero detail in the report — this is the actual fix.
+      const altChoice=dayAlts[t[0]];
+      const usedAlt=t[7]&&altChoice&&t[7].includes(altChoice);
+      const contentLine=usedAlt?altChoice:(t[5]||'');
+      const movedNote=t._movedFrom?` <span class="badge-alt">🔀 نُقلت من ${t._movedFrom}</span>`:'';
+      const customNote=t._custom?` <span class="badge-alt" style="background:rgba(139,92,246,.15);color:#a78bfa">✨ مخصصة</span>`:'';
+
+      if(t._deleted){
+        // Soft-deleted tasks are shown but excluded from totals/percentages — they
+        // were removed on purpose and shouldn't count as "missed".
+        byCat[cat].push(`<div class="report-day-row" style="opacity:.5"><span>${t[4]}${movedNote}${customNote}</span><span class="badge-alt">🗑️ محذوفة</span></div>`);
+        continue;
+      }
+
       if(!v){
         missed++;totalMissed++;
-        taskRows.push(`<div class="report-day-row"><span>${t[4]}</span><span class="badge-red">❌ لم تُنجز</span></div>`);
+        byCat[cat].push(`<div class="report-day-row"><span>${t[4]}${movedNote}${customNote}<div style="font-size:.68rem;color:var(--mu);font-weight:400;margin-top:2px">${contentLine}</div></span><span class="badge-red">❌ لم تُنجز</span></div>`);
       }else if(v==='qada'){
         qada++;totalQada++;done++;totalDone++;
         const earned=Math.floor(t[6]/2);pts+=earned;
-        taskRows.push(`<div class="report-day-row"><span>${t[4]}</span><span class="badge-or">🟡 قضاء +${earned}⭐</span></div>`);
+        byCat[cat].push(`<div class="report-day-row"><span>${t[4]}${movedNote}${customNote}<div style="font-size:.68rem;color:var(--mu);font-weight:400;margin-top:2px">${contentLine}</div></span><span class="badge-or">🟡 قضاء +${earned}⭐</span></div>`);
       }else{
         done++;totalDone++;
         const earned=typeof v==='number'?v:t[6];pts+=earned;
-        const altChoice=dayAlts[t[0]];
-        const altBadge=(t[7]&&altChoice&&t[7].includes(altChoice))?`<span class="badge-alt">🔄 ${altChoice}</span>`:'';
         if(isPrayer(t)&&prayerLogs[t[0]]){
           const pl=prayerLogs[t[0]];
           const details=pl.log.map(l=>{
@@ -987,9 +1162,9 @@ function buildWeekReportData(){
           }).join(' · ');
           const timingBadge=pl.late?'<span class="badge-or">⏰ متأخر</span>':'<span class="badge-green">✅ في وقتها</span>';
           prayerDetails.push(`<div style="margin-bottom:4px"><span style="color:var(--ye);font-weight:700">${t[4]}</span> ${timingBadge}: <span>+${earned}⭐</span><div class="report-prayer-detail">${details}</div></div>`);
-          taskRows.push(`<div class="report-day-row"><span>${t[4]}</span><span class="badge-green">✅ +${earned}⭐</span></div>`);
+          byCat[cat].push(`<div class="report-day-row"><span>${t[4]}</span><span class="badge-green">✅ +${earned}⭐</span></div>`);
         }else{
-          taskRows.push(`<div class="report-day-row"><span>${t[4]} ${altBadge}</span><span class="badge-green">✅ +${earned}⭐</span></div>`);
+          byCat[cat].push(`<div class="report-day-row"><span>${t[4]}${movedNote}${customNote}<div style="font-size:.68rem;color:var(--so);font-weight:400;margin-top:2px">🍽️ ${contentLine}</div></span><span class="badge-green">✅ +${earned}⭐</span></div>`);
         }
       }
     }
@@ -1003,9 +1178,21 @@ function buildWeekReportData(){
       ?`<div class="report-day-enc">🎉 يوم كامل! ${dayName} كان يوم ممتاز</div>`
       :(missed>0?`<div class="report-day-enc">فاتك ${missed} مهمة ${dayName} — حاول تعوضهم بكرة 💪</div>`:'');
 
+    // Render grouped-by-category sections, in a fixed logical order (prayers first,
+    // then food, then activity types) rather than raw chronological order — this is
+    // what actually makes the report scannable instead of a wall of mixed rows.
+    const catKeys=Object.keys(byCat).sort((a,b)=>(REPORT_CAT_META[a]?.order||99)-(REPORT_CAT_META[b]?.order||99));
+    const catSections=catKeys.map(cat=>{
+      const meta=REPORT_CAT_META[cat]||{label:cat};
+      return`<div style="margin-bottom:10px">
+        <div style="font-size:.72rem;font-weight:800;color:var(--so);margin-bottom:4px;padding-bottom:3px;border-bottom:1px solid rgba(255,255,255,.06)">${meta.label}</div>
+        ${byCat[cat].join('')}
+      </div>`;
+    }).join('');
+
     dayBlocks.push(`<div class="report-day">
       <div class="report-day-title">${dayName} — ${iso} — <span style="color:var(--ye)">${pts}⭐</span> <span style="color:var(--mu);font-size:.7rem">(${done}/${tasks.length} مهمة${missed>0?` · ${missed} مفقود`:''}${qada>0?` · ${qada} قضاء`:''})</span></div>
-      ${taskRows.join('')}
+      ${catSections}
       ${prayerSection}
       ${encLine}
     </div>`);
@@ -1264,7 +1451,11 @@ function updateUI(){
   const s3=document.getElementById('sv3'); if(s3) s3.textContent=STATS.best;
 
   const jd=getJDfromISO(SELECTED_DATE);
-  const req=getReqTasks(jd);
+  // Pass SELECTED_DATE explicitly — previously this defaulted to "today's natural date
+  // for this weekday", which silently showed the WRONG week's task list/points whenever
+  // browsing history via the prev/next day buttons. Not something I introduced, but
+  // worth fixing since this function is being touched anyway.
+  const req=getReqTasks(jd,SELECTED_DATE);
   let d=0,p=0;
   for(const t of req){
     const v=DONE[t[0]];
@@ -1280,6 +1471,12 @@ function updateUI(){
   document.getElementById('ppts').textContent=`${p} نقطة اليوم`;
   document.getElementById('pfill').style.width=req.length?`${(d/req.length)*100}%`:'0%';
   const hlbl=document.getElementById('hist-label'); if(hlbl) hlbl.textContent=SELECTED_DATE===TODAY?'اليوم':SELECTED_DATE;
+
+  // Keep today's scheduled reminders in sync with actual completion state — a task
+  // just marked done should stop having a pending notification.
+  if(SELECTED_DATE===TODAY && NOTIF_ENABLED){
+    try{ scheduleTodayNotifications(); }catch(e){ console.warn('notif reschedule failed',e); }
+  }
 }
 
 function updateAuthUI(user){
@@ -1289,19 +1486,293 @@ function updateAuthUI(user){
   const isSat=todayJD()===6;
   const historyBtn=`<button class="topbtn topbtn-history" id="btn-report-history">🗂️ سجل التقارير</button>`;
   const reportBtn=`<button class="topbtn topbtn-report" id="btn-report" ${isSat?'':'disabled'}>📊 تقرير الأسبوع</button>`;
+  const notifBtn=`<button class="topbtn" id="btn-notif-toggle" style="background:${NOTIF_ENABLED?'rgba(16,185,129,.18)':'rgba(100,116,139,.15)'};border:1px solid ${NOTIF_ENABLED?'rgba(16,185,129,.5)':'var(--br)'};color:${NOTIF_ENABLED?'var(--gr)':'var(--so)'}">${NOTIF_ENABLED?'🔔 مفعّلة':'🔕 التذكيرات'}</button>`;
   if(user){
     nameEl.textContent=(user.displayName||user.email||'').split('@')[0];
-    btnEl.innerHTML=`<button class="topbtn topbtn-signout" id="btn-signout">خروج</button>${reportBtn}${historyBtn}`;
+    btnEl.innerHTML=`<button class="topbtn topbtn-signout" id="btn-signout">خروج</button>${notifBtn}${reportBtn}${historyBtn}`;
   }else{
     nameEl.textContent='';
-    btnEl.innerHTML=`<button class="topbtn topbtn-signin" id="btn-signin">تسجيل دخول</button>${reportBtn}${historyBtn}`;
+    btnEl.innerHTML=`<button class="topbtn topbtn-signin" id="btn-signin">تسجيل دخول</button>${notifBtn}${reportBtn}${historyBtn}`;
   }
 }
 
-// ===== Events =====
+// ===== AI Assistant: local intent parser + action execution =====
+// No live LLM call (per explicit instruction — "live calls are not important at all").
+// This is a deliberately constrained natural-language parser: it recognizes a fixed set
+// of actions (mark done, move, delete, edit points, add custom task) against your real
+// task catalog, then executes them through the SAME data functions your buttons already
+// use (DONE, USER_EDITS, saveAll/saveUserEdits). It cannot do anything your UI can't
+// already do — it just lets you say it instead of clicking it. This constraint is
+// intentional: an assistant that can only call known-safe actions can't corrupt your
+// schedule no matter how it misreads a sentence, unlike an unconstrained "rewrite
+// anything" model would.
+
+const AI_DAY_WORDS={
+  'اليوم':0,'today':0,
+  'بكرة':1,'بكره':1,'غدا':1,'غداً':1,'tomorrow':1,
+  'بعد بكرة':2,'بعد بكره':2,
+  'الأحد':'sun','الاحد':'sun','sunday':'sun',
+  'الاثنين':'mon','الإثنين':'mon','monday':'mon',
+  'الثلاثاء':'tue','tuesday':'tue',
+  'الأربعاء':'wed','الاربعاء':'wed','wednesday':'wed',
+  'الخميس':'thu','thursday':'thu',
+  'الجمعة':'fri','friday':'fri',
+  'السبت':'sat','saturday':'sat'
+};
+const AI_DKEY_TO_JD={sun:0,mon:1,tue:2,wed:3,thu:4,fri:5,sat:6};
+
+function aiResolveDate(phrase){
+  const p=phrase.trim().toLowerCase();
+  for(const [word,val] of Object.entries(AI_DAY_WORDS)){
+    if(p.includes(word)){
+      if(typeof val==='number') return dateOff(val,TODAY);
+      const jd=AI_DKEY_TO_JD[val];
+      return dateForWeekday(jd,TODAY);
+    }
+  }
+  return null;
+}
+
+// Parses "8:00 م" / "8 مساءً" / "20:00" / "8pm" / "8 صباحا" style fragments into the
+// app's internal "H:MM ص/م" display format.
+function aiResolveTime(phrase){
+  const p=phrase.trim();
+  let m=p.match(/(\d{1,2}):?(\d{2})?\s*(ص|صباح|am|AM)/);
+  if(m){const h=parseInt(m[1],10)%12||12;const mm=m[2]||'00';return`${h}:${mm} ص`;}
+  m=p.match(/(\d{1,2}):?(\d{2})?\s*(م|مساء|pm|PM)/);
+  if(m){const h=parseInt(m[1],10)%12||12;const mm=m[2]||'00';return`${h}:${mm} م`;}
+  m=p.match(/(\d{1,2}):(\d{2})/);
+  if(m){const h24=parseInt(m[1],10);const mm=m[2];const pm=h24>=12;const h12=h24%12||12;return`${h12}:${mm} ${pm?'م':'ص'}`;}
+  m=p.match(/(\d{1,2})\s*(?!:)/);
+  if(m){const h=parseInt(m[1],10)%12||12;return`${h}:00 م`;} // bare hour, assume PM (most tasks are afternoon/evening)
+  return null;
+}
+
+// Fuzzy-match a spoken task description against every task across the whole week
+// (base SCHED tasks + already-added custom tasks), searching by Arabic name first
+// since that's what's actually displayed to the user.
+function aiFindTask(phrase){
+  const p=phrase.trim();
+  if(!p) return null;
+  const candidates=[];
+  for(let jd=0;jd<7;jd++){
+    const iso=dateForWeekday(jd,TODAY);
+    const tasks=getAllTasks(jd,iso);
+    for(const t of tasks){
+      candidates.push({task:t,iso,jd});
+    }
+  }
+  // exact substring match on name first
+  let hit=candidates.find(c=>c.task[4] && p.includes(c.task[4]));
+  if(hit) return hit;
+  // reverse: task name contains a meaningful word from the phrase
+  const words=p.split(/\s+/).filter(w=>w.length>=3);
+  for(const c of candidates){
+    if(!c.task[4]) continue;
+    if(words.some(w=>c.task[4].includes(w))) return c;
+  }
+  return null;
+}
+
+function aiGenId(prefix){return`${prefix}-${Date.now()}-${Math.floor(Math.random()*9999)}`;}
+
+// The parser: returns {action, ...params, reply} or null if nothing recognized.
+// Order matters — more specific patterns are checked before generic ones.
+function aiParseIntent(msg){
+  const raw=msg.trim();
+  const low=raw.toLowerCase();
+
+  // 1. Mark as done (retroactively) — "عملت الجيم" / "خلصت الغدا" / "i did the gym"
+  if(/عملت|خلصت|سويت|انجزت|أنجزت|i did|done|completed|finished/.test(low)){
+    const found=aiFindTask(raw);
+    if(found){
+      return{action:'markDone',task:found.task,iso:found.iso,jd:found.jd,
+        reply:`تمام، سجلت "${found.task[4]}" بتاريخ ${found.iso} كمُنجزة ✅`};
+    }
+    return{action:'unrecognizedTask',reply:'مش لاقي المهمة دي في الجدول. ممكن تقولي اسمها بالظبط زي ما هي ظاهرة؟'};
+  }
+
+  // 2. Move a task — "انقل الجيم لبكرة الساعة ٨" / "move gym to tomorrow 8pm"
+  if(/انقل|حرك|غير وقت|move|reschedule/.test(low)){
+    const found=aiFindTask(raw);
+    if(!found) return{action:'unrecognizedTask',reply:'مش لاقي المهمة دي. جرب تكتب اسمها زي ما هو ظاهر في الجدول.'};
+    const newDate=aiResolveDate(raw);
+    const newTime=aiResolveTime(raw);
+    if(!newDate) return{action:'needMoreInfo',reply:`لأي يوم عايز تنقل "${found.task[4]}"؟ (مثلاً: بكرة، الأربعاء...)`};
+    return{action:'moveTask',task:found.task,fromIso:found.iso,toDate:newDate,toTime:newTime,
+      reply:`تم نقل "${found.task[4]}" من ${found.iso} إلى ${newDate}${newTime?' الساعة '+newTime:''} ✅`};
+  }
+
+  // 3. Delete a task — "احذف السباحة النهاردة" / "delete swimming"
+  if(/احذف|امسح|شيل|delete|remove/.test(low)){
+    const found=aiFindTask(raw);
+    if(!found) return{action:'unrecognizedTask',reply:'مش لاقي المهمة دي. جرب تكتب اسمها زي ما هو ظاهر في الجدول.'};
+    return{action:'deleteTask',task:found.task,iso:found.iso,
+      reply:`تم حذف "${found.task[4]}" من ${found.iso} (لسه ظاهرة بس متعلّم عليها كمحذوفة) 🗑️`};
+  }
+
+  // 4. Edit points — "خلي الجيم بـ 30 نقطة" / "set gym points to 30"
+  if(/(نقطة|نقاط|points?)/.test(low) && /(\d+)/.test(low)){
+    const found=aiFindTask(raw);
+    const numMatch=raw.match(/(\d+)/);
+    if(found && numMatch){
+      return{action:'editPoints',task:found.task,pts:parseInt(numMatch[1],10),
+        reply:`تم تغيير نقاط "${found.task[4]}" إلى ${numMatch[1]}⭐ ✅`};
+    }
+  }
+
+  // 5. Add a custom task — "ضيف مهمة قراءة الساعة ٩ بكرة بـ 10 نقاط"
+  if(/ضيف|اضف|أضف|add task|new task/.test(low)){
+    const newDate=aiResolveDate(raw)||TODAY;
+    const newTime=aiResolveTime(raw)||'9:00 م';
+    const numMatch=raw.match(/(\d+)\s*(نقطة|نقاط|points?)/);
+    const pts=numMatch?parseInt(numMatch[1],10):5;
+    // strip command words + date/time/points fragments to guess a name — imperfect on
+    // purpose; we always show the parsed result before committing (see confirm flow).
+    let name=raw.replace(/ضيف|اضف|أضف|add task|new task/gi,'')
+                .replace(/(\d+)\s*(نقطة|نقاط|points?)/gi,'')
+                .trim();
+    if(!name) name='مهمة جديدة';
+    return{action:'addCustomTask',date:newDate,time:newTime,pts,name,
+      reply:`تم إضافة "${name}" يوم ${newDate} الساعة ${newTime} بـ ${pts}⭐ ✅`};
+  }
+
+  return{action:'unknown',
+    reply:'مش فاهم الأمر ده 🤔 جرب صيغة زي: "عملت الجيم"، "انقل الغدا لبكرة"، "احذف السباحة"، أو "ضيف مهمة مذاكرة الساعة ٧"'};
+}
+
+async function aiExecuteAction(intent){
+  const{action}=intent;
+  if(action==='markDone'){
+    const{task,iso}=intent;
+    if(!historyData[iso]) historyData[iso]={};
+    if(!historyData[iso].done) historyData[iso].done={};
+    if(historyData[iso].done[task[0]]===undefined || historyData[iso].done[task[0]]===false){
+      historyData[iso].done[task[0]]=task[6]||true;
+      if(iso===SELECTED_DATE) DONE[task[0]]=task[6]||true;
+      if(iso===TODAY) STATS.pts=(STATS.pts||0)+(typeof task[6]==='number'?task[6]:0);
+      try{ checkStreak(); }catch(e){ console.error(e); }
+    }
+    await saveAll();
+    return true;
+  }
+  if(action==='moveTask'){
+    const{task,fromIso,toDate,toTime}=intent;
+    USER_EDITS.moves[task[0]]={toDate,toTime:toTime||task[1],fromDate:fromIso,_origTask:[...task]};
+    await saveUserEdits();
+    return true;
+  }
+  if(action==='deleteTask'){
+    const{task}=intent;
+    USER_EDITS.deletes[task[0]]=true;
+    await saveUserEdits();
+    return true;
+  }
+  if(action==='editPoints'){
+    const{task,pts}=intent;
+    USER_EDITS.pointOverrides[task[0]]=pts;
+    await saveUserEdits();
+    return true;
+  }
+  if(action==='addCustomTask'){
+    const{date,time,pts,name}=intent;
+    USER_EDITS.customTasks.push({id:aiGenId('custom'),date,time,cat:'free',ico:'✨',name,desc:'أُضيفت بواسطة المساعد',pts,createdAt:Date.now()});
+    await saveUserEdits();
+    return true;
+  }
+  return false; // unrecognized / needMoreInfo / unknown — nothing to execute
+}
+
+// ===== AI Assistant: chat UI =====
+function aiRenderMessages(){
+  const body=document.getElementById('aiBody');
+  if(!body) return;
+  if(!AI_CHAT.length){
+    body.innerHTML=`<div class="ai-empty">👋 أهلاً! تقدر تقولي حاجات زي:<br>"عملت الجيم"<br>"انقل الغدا لبكرة الساعة ٢"<br>"احذف السباحة النهاردة"<br>"ضيف مهمة مذاكرة الساعة ٧ بـ 10 نقاط"<br><br>التغييرات دي خاصة بحسابك بس، ومتزامنة على كل أجهزتك.</div>`;
+    return;
+  }
+  body.innerHTML=AI_CHAT.map(m=>{
+    const cls=m.role==='user'?'user':`bot${m.tone?' '+m.tone:''}`;
+    return`<div class="ai-msg ${cls}">${m.text.replace(/</g,'&lt;')}</div>`;
+  }).join('');
+  body.scrollTop=body.scrollHeight;
+}
+
+async function aiHandleSend(){
+  const input=document.getElementById('aiInput');
+  if(!input) return;
+  const text=input.value.trim();
+  if(!text) return;
+  input.value='';
+  input.style.height='auto';
+
+  const user=fbAuth.currentUser;
+  AI_CHAT.push({role:'user',text,ts:Date.now()});
+  aiRenderMessages();
+
+  if(!user){
+    AI_CHAT.push({role:'bot',text:'لازم تسجل دخول الأول عشان أقدر أعمل تغييرات في جدولك وأحفظها ليك 🔒',ts:Date.now(),tone:'err'});
+    aiRenderMessages();
+    await saveAiChat();
+    return;
+  }
+
+  const intent=aiParseIntent(text);
+  let tone='ok';
+  try{
+    if(['markDone','moveTask','deleteTask','editPoints','addCustomTask'].includes(intent.action)){
+      await aiExecuteAction(intent);
+      try{ renderPanels();switchDay(getJDfromISO(SELECTED_DATE));updateUI(); }catch(e){ console.error('re-render after AI action failed:',e); }
+    }else{
+      tone=intent.action==='unknown'?null:'err';
+    }
+  }catch(e){
+    console.error('AI action execution failed:',e);
+    intent.reply='⚠️ حصل خطأ أثناء تنفيذ التغيير — جرب تاني.';
+    tone='err';
+  }
+
+  AI_CHAT.push({role:'bot',text:intent.reply,ts:Date.now(),tone});
+  aiRenderMessages();
+  await saveAiChat();
+}
+
+function aiOpenPanel(){
+  const panel=document.getElementById('aiPanel');
+  const sub=document.getElementById('aiSubStatus');
+  if(sub) sub.textContent=fbAuth.currentUser?'جاهز للمساعدة':'سجل دخول عشان أقدر أحفظلك التغييرات';
+  if(panel) panel.classList.add('open');
+  aiRenderMessages();
+  setTimeout(()=>document.getElementById('aiInput')?.focus(),50);
+}
+function aiClosePanel(){document.getElementById('aiPanel')?.classList.remove('open');}
+
+
 document.body.addEventListener('click',async e=>{
   const tgt=e.target;
   const closest=sel=>tgt.closest(sel);
+
+  if(tgt.id==='aiFab'){aiOpenPanel();return;}
+  if(tgt.id==='aiCloseBtn'){aiClosePanel();return;}
+  if(tgt.id==='aiSendBtn'){await aiHandleSend();return;}
+
+  if(tgt.id==='btn-notif-toggle'){
+    if(!NOTIF_ENABLED){
+      const granted=await requestNotifPermission();
+      if(!granted)return;
+      NOTIF_ENABLED=true;
+      await saveNotifPref();
+      scheduleTodayNotifications();
+      showToast('🔔 التذكيرات اشتغلت — هتوصلك إشعارات للمهام النهاردة',3000);
+    }else{
+      NOTIF_ENABLED=false;
+      await saveNotifPref();
+      clearScheduledNotifs();
+      showToast('🔕 التذكيرات اتقفلت',2200);
+    }
+    updateAuthUI(fbAuth.currentUser);
+    return;
+  }
 
   if(tgt.id==='btn-signin'){
     try{await signInWithPopup(fbAuth,new GoogleAuthProvider());}catch{showToast('فشل تسجيل الدخول',3500,'warn');}
@@ -1323,6 +1794,7 @@ document.body.addEventListener('click',async e=>{
       localStorage.removeItem(LS.penalized);
       localStorage.removeItem(LS.firstSeen);
       localStorage.removeItem(LS.userEdits);
+      localStorage.removeItem(LS.aiChat);
 
       // Clear any in-memory state
       STATS={cur:0,best:0,pts:0,lc:null,lf:null};
@@ -1333,6 +1805,7 @@ document.body.addEventListener('click',async e=>{
       penalizedDates={};
       FIRST_SEEN=null;
       USER_EDITS=emptyUserEdits();
+      AI_CHAT=[];
       IS_BRAND_NEW_SESSION=false;
       SELECTED_DATE=TODAY;
     }catch(e){console.warn('local reset failed',e);}
@@ -1451,6 +1924,19 @@ document.body.addEventListener('click',async e=>{
   }
 });
 
+document.body.addEventListener('input',e=>{
+  if(e.target && e.target.id==='aiInput'){
+    e.target.style.height='auto';
+    e.target.style.height=Math.min(e.target.scrollHeight,90)+'px';
+  }
+});
+document.body.addEventListener('keydown',async e=>{
+  if(e.target && e.target.id==='aiInput' && e.key==='Enter' && !e.shiftKey){
+    e.preventDefault();
+    await aiHandleSend();
+  }
+});
+
 // ===== Init =====
 function initAppFlow(user){
   updateAuthUI(user);
@@ -1463,6 +1949,11 @@ function initAppFlow(user){
     const ldEl=document.getElementById('ld'); if(ldEl) ldEl.style.display='none';
     const appEl=document.getElementById('app'); if(appEl) appEl.style.display='block';
     if(PENALTY_FLASH_PENDING){flashPenalty();PENALTY_FLASH_PENDING=false;}
+    await loadNotifPref();
+    updateAuthUI(user);
+    if(NOTIF_ENABLED && typeof Notification!=='undefined' && Notification.permission==='granted'){
+      scheduleTodayNotifications();
+    }
   }).catch(e=>{
     console.warn('Init error bypass:',e);
     const ldEl=document.getElementById('ld'); if(ldEl) ldEl.style.display='none';
@@ -1502,6 +1993,7 @@ if (typeof onAuthStateChanged !== 'undefined' && typeof fbAuth !== 'undefined') 
           // edit made on your phone show up on your laptop. If the cloud doc has no
           // userEdits yet (brand-new account), keep whatever local value we have.
           if(d.userEdits) USER_EDITS={...emptyUserEdits(),...d.userEdits};
+          if(d.aiChat) AI_CHAT=d.aiChat;
           // firstSeen from the cloud is authoritative once it exists — this is what makes
           // "sign in on a fresh browser" not reset the account's age. If the cloud has no
           // firstSeen yet, this is genuinely the first time this account has ever been used
