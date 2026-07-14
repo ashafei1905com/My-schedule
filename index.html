@@ -2,7 +2,7 @@
 <html lang="ar" dir="rtl">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width,initial-scale=1.0">
+<meta name="viewport" content="width=device-width,initial-scale=1.0,maximum-scale=1.0,user-scalable=no">
 <title>جدول عبدالله 🏋️</title>
 <link rel="icon" href="data:," />
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -171,16 +171,25 @@ body{font-family:'Cairo',sans-serif;background:var(--bg);color:var(--tx);directi
 @media(max-width:500px){.report-summary{grid-template-columns:1fr 1fr;}}
 
 /* AI Assistant widget */
-#aiFab{position:fixed;bottom:22px;left:22px;width:58px;height:58px;border-radius:50%;background:linear-gradient(135deg,#8b5cf6,#6d28d9);display:flex;align-items:center;justify-content:center;font-size:1.6rem;cursor:pointer;z-index:9998;box-shadow:0 4px 20px rgba(139,92,246,.5);border:none;transition:transform .2s}
+@keyframes aiPopIn{0%{opacity:0;transform:scale(.85) translateY(30px)}100%{opacity:1;transform:scale(1) translateY(0)}}
+@keyframes aiFullIn{0%{opacity:0;transform:scale(.96)}100%{opacity:1;transform:scale(1)}}
+@keyframes fabPop{0%{transform:scale(0);opacity:0}70%{transform:scale(1.15)}100%{transform:scale(1);opacity:1}}
+#aiFab{position:fixed;bottom:22px;left:22px;width:58px;height:58px;border-radius:50%;background:linear-gradient(135deg,#8b5cf6,#6d28d9);display:flex;align-items:center;justify-content:center;font-size:1.6rem;cursor:pointer;z-index:9998;box-shadow:0 4px 20px rgba(139,92,246,.5);border:none;transition:transform .2s;animation:fabPop .4s ease}
 #aiFab:hover{transform:scale(1.08)}
+#aiFab:active{transform:scale(.94)}
 #aiFab.hidden{display:none}
 #aiPanel{position:fixed;bottom:0;left:0;width:100%;max-width:420px;height:min(640px,88vh);background:var(--c2);border:2px solid var(--br);border-radius:20px 20px 0 0;z-index:9999;display:none;flex-direction:column;box-shadow:0 -8px 40px rgba(0,0,0,.6)}
-#aiPanel.open{display:flex}
-@media(min-width:460px){#aiPanel{bottom:22px;left:22px;border-radius:20px}}
-.ai-head{display:flex;justify-content:space-between;align-items:center;padding:14px 16px;border-bottom:1px solid var(--br);flex-shrink:0}
+#aiPanel.open{display:flex;animation:aiPopIn .32s cubic-bezier(.2,.9,.3,1.3)}
+@media(min-width:460px){#aiPanel:not(.full){bottom:22px;left:22px;border-radius:20px}}
+#aiPanel.full{top:0;left:0;right:0;bottom:0;width:100%;max-width:100%;height:100%;border-radius:0;border-width:0}
+#aiPanel.full.open{animation:aiFullIn .28s ease}
+.ai-head{display:flex;justify-content:space-between;align-items:center;padding:14px 16px;border-bottom:1px solid var(--br);flex-shrink:0;gap:8px}
 .ai-title{font-weight:900;font-size:1rem;display:flex;align-items:center;gap:8px}
 .ai-sub{font-size:.65rem;color:var(--mu);margin-top:2px}
-.ai-close{background:rgba(239,68,68,.12);border:1px solid rgba(239,68,68,.4);color:#f87171;border-radius:8px;padding:5px 12px;cursor:pointer;font-family:'Cairo',sans-serif;font-size:.78rem;font-weight:700}
+.ai-headbtns{display:flex;gap:6px;align-items:center;flex-shrink:0}
+.ai-iconbtn{background:rgba(139,92,246,.12);border:1px solid rgba(139,92,246,.35);color:#c4b5fd;border-radius:8px;width:32px;height:32px;display:flex;align-items:center;justify-content:center;cursor:pointer;font-size:.95rem;transition:all .15s}
+.ai-iconbtn:hover{background:rgba(139,92,246,.24)}
+.ai-close{background:rgba(239,68,68,.12);border:1px solid rgba(239,68,68,.4);color:#f87171;border-radius:8px;padding:5px 12px;cursor:pointer;font-family:'Cairo',sans-serif;font-size:.78rem;font-weight:700;flex-shrink:0}
 .ai-body{flex:1;overflow-y:auto;padding:14px 16px;display:flex;flex-direction:column;gap:10px}
 .ai-msg{max-width:85%;padding:10px 14px;border-radius:14px;font-size:.85rem;line-height:1.6;white-space:pre-wrap;unicode-bidi:plaintext;text-align:start}
 .ai-msg.user{align-self:flex-end;background:linear-gradient(135deg,#2563eb,#1d4ed8);color:#fff;border-bottom-left-radius:4px}
@@ -195,6 +204,13 @@ body{font-family:'Cairo',sans-serif;background:var(--bg);color:var(--tx);directi
 .ai-send:disabled{opacity:.4;cursor:not-allowed}
 .ai-clearbtn{background:none;border:none;color:var(--mu);font-size:.68rem;cursor:pointer;text-decoration:underline;padding:0}
 .ai-signin-note{padding:10px 14px;background:rgba(245,158,11,.08);border:1px solid rgba(245,158,11,.25);border-radius:10px;font-size:.72rem;color:var(--or);margin:10px 16px 0}
+/* Session history list (shown inside aiBody when in "history" view mode) */
+.ai-session-item{display:flex;justify-content:space-between;align-items:center;gap:10px;padding:12px 14px;background:var(--c);border:1px solid var(--br);border-radius:12px;cursor:pointer;transition:all .15s}
+.ai-session-item:hover{border-color:rgba(139,92,246,.5);background:rgba(139,92,246,.08)}
+.ai-session-item.active{border-color:var(--pu);background:rgba(139,92,246,.12)}
+.ai-session-title{font-size:.82rem;font-weight:700;color:var(--tx)}
+.ai-session-meta{font-size:.66rem;color:var(--mu);margin-top:2px}
+.ai-session-del{background:rgba(239,68,68,.1);border:1px solid rgba(239,68,68,.3);color:#f87171;border-radius:6px;padding:4px 8px;font-size:.68rem;cursor:pointer;flex-shrink:0}
 </style>
 </head>
 <body>
@@ -260,14 +276,19 @@ body{font-family:'Cairo',sans-serif;background:var(--bg);color:var(--tx);directi
 </div>
 
 <!-- AI Assistant Widget -->
-<button id="aiFab" type="button" title="مساعد الجدول">🤖</button>
+<button id="aiFab" class="hidden" type="button" title="مساعد الجدول">🤖</button>
 <div id="aiPanel">
   <div class="ai-head">
     <div>
       <div class="ai-title">🤖 مساعد الجدول</div>
       <div class="ai-sub" id="aiSubStatus">جاهز للمساعدة</div>
     </div>
-    <button class="ai-close" id="aiCloseBtn" type="button">✕ إغلاق</button>
+    <div class="ai-headbtns">
+      <button class="ai-iconbtn" id="aiNewChatBtn" type="button" title="محادثة جديدة">➕</button>
+      <button class="ai-iconbtn" id="aiHistoryBtn" type="button" title="سجل المحادثات">🗂️</button>
+      <button class="ai-iconbtn" id="aiFullToggleBtn" type="button" title="ملء الشاشة">⤢</button>
+      <button class="ai-close" id="aiCloseBtn" type="button">✕ إغلاق</button>
+    </div>
   </div>
   <div class="ai-body" id="aiBody"></div>
   <div class="ai-inputrow">
@@ -505,15 +526,19 @@ function sortKey(t){const base=toMin(t[10]||t[1]);return t[2]==='sleep'?base+144
 // default) see exactly the original SCHED-derived tasks, unchanged.
 function getAllTasks(jd,iso){
   const effIso=iso||dateForWeekday(jd,TODAY);
-  const d=SCHED[jd];if(!d)return applyUserEditsToTasks([],effIso);
+  const d=SCHED[jd];if(!d)return applyUserEditsToTasks([],effIso).sort((a,b)=>sortKey(a)-sortKey(b));
   const frees=(FREE_TIME[jd]||[]).map((f,i)=>[`fr-${jd}-${i}`,f.t,'free','🎮','وقت حر',f.d,0,null,null,false]);
-  const base=[...buildPTasks(jd),...d.ts,...frees].sort((a,b)=>sortKey(a)-sortKey(b));
-  return applyUserEditsToTasks(base,effIso);
+  const base=[...buildPTasks(jd),...d.ts,...frees];
+  // Sort AFTER merging user edits, not before — moved-in and custom tasks are appended
+  // by applyUserEditsToTasks and were previously never re-sorted, so they always landed
+  // at the end of the list regardless of their actual time. This was the root cause of
+  // AI-moved tasks appearing at the bottom of the day instead of in chronological order.
+  return applyUserEditsToTasks(base,effIso).sort((a,b)=>sortKey(a)-sortKey(b));
 }
 function getReqTasks(jd,iso){
   const effIso=iso||dateForWeekday(jd,TODAY);
   const base=[...buildPTasks(jd),...(SCHED[jd]?.ts||[])].filter(t=>!t[9]&&t[6]>0);
-  return applyUserEditsToTasks(base,effIso).filter(t=>!t._deleted);
+  return applyUserEditsToTasks(base,effIso).filter(t=>!t._deleted).sort((a,b)=>sortKey(a)-sortKey(b));
 }
 
 // ===== State =====
@@ -604,14 +629,85 @@ let IS_BRAND_NEW_SESSION=false; // true only for the very session that creates F
 // Same sync model as USER_EDITS: local always, cloud only when signed in. A guest
 // opening the app never sees your chat log, and it's cleared on sign-out along with
 // every other per-account thing.
-let AI_CHAT=[]; // [{role:'user'|'bot', text, ts, tone:'ok'|'err'|null}]
+//
+// Restructured from a single flat AI_CHAT array into multiple named sessions, so past
+// conversations can be listed and reopened instead of being one endless thread that
+// always continues wherever you left off. Each session:
+//   { id, title, startedAt, lastMsgAt, messages:[{role,text,ts,tone}] }
+// AI_SESSIONS holds all of them; AI_ACTIVE_SESSION_ID points at the one currently open.
+// AI_SESSION_IDLE_MS controls the "auto-start a new chat" threshold (3 hours).
+let AI_SESSIONS=[];
+let AI_ACTIVE_SESSION_ID=null;
+const AI_SESSION_IDLE_MS=3*60*60*1000; // 3 hours
+
+function aiGenSessionId(){return`sess-${Date.now()}-${Math.floor(Math.random()*9999)}`;}
+
+function aiCreateSession(){
+  const s={id:aiGenSessionId(),title:null,startedAt:Date.now(),lastMsgAt:Date.now(),messages:[]};
+  AI_SESSIONS.unshift(s);
+  AI_ACTIVE_SESSION_ID=s.id;
+  return s;
+}
+
+function aiGetActiveSession(){
+  let s=AI_SESSIONS.find(x=>x.id===AI_ACTIVE_SESSION_ID);
+  if(!s) s=aiCreateSession();
+  return s;
+}
+
+// Derives a short readable title from the first user message in a session, so the
+// history list shows something meaningful instead of just a timestamp.
+function aiSessionTitle(s){
+  if(s.title) return s.title;
+  const firstUser=s.messages.find(m=>m.role==='user');
+  if(!firstUser) return'محادثة جديدة';
+  const t=firstUser.text.trim();
+  return t.length>40?t.slice(0,40)+'…':t;
+}
+
+function aiFormatSessionMeta(s){
+  const d=new Date(s.lastMsgAt);
+  const datePart=d.toLocaleDateString('ar-EG',{day:'numeric',month:'short'});
+  const timePart=d.toLocaleTimeString('ar-EG',{hour:'2-digit',minute:'2-digit'});
+  return`${s.messages.length} رسالة · ${datePart} ${timePart}`;
+}
+
+// Auto-starts a new session if the active one has been idle for 3+ hours. Called every
+// time the panel is opened — this is what makes reopening the app after a long gap
+// begin a fresh chat automatically, while still keeping the old one in history.
+function aiMaybeAutoNewSession(){
+  const active=AI_SESSIONS.find(x=>x.id===AI_ACTIVE_SESSION_ID);
+  if(!active || active.messages.length===0) return; // nothing to roll over from
+  if(Date.now()-active.lastMsgAt>AI_SESSION_IDLE_MS){
+    aiCreateSession();
+  }
+}
+
+// Accepts whatever shape was found in storage (old flat message array, new
+// {sessions,activeId} object, or nothing) and normalizes into AI_SESSIONS /
+// AI_ACTIVE_SESSION_ID. This is what lets existing users keep their chat history
+// across the sessions restructure instead of it silently vanishing.
+function aiLoadSessionsFromRaw(raw){
+  if(raw && Array.isArray(raw.sessions)){
+    AI_SESSIONS=raw.sessions;
+    AI_ACTIVE_SESSION_ID=raw.activeId||(AI_SESSIONS[0]&&AI_SESSIONS[0].id)||null;
+  }else if(Array.isArray(raw) && raw.length){
+    // Old flat-array format: wrap it as a single legacy session.
+    AI_SESSIONS=[{id:aiGenSessionId(),title:'محادثة سابقة',startedAt:raw[0]?.ts||Date.now(),lastMsgAt:raw[raw.length-1]?.ts||Date.now(),messages:raw}];
+    AI_ACTIVE_SESSION_ID=AI_SESSIONS[0].id;
+  }else{
+    AI_SESSIONS=[];
+    AI_ACTIVE_SESSION_ID=null;
+  }
+  if(!AI_SESSIONS.length) aiCreateSession();
+}
 
 async function saveAiChat(){
-  await sSet(LS.aiChat,AI_CHAT);
+  await sSet(LS.aiChat,{sessions:AI_SESSIONS,activeId:AI_ACTIVE_SESSION_ID});
   const user=fbAuth.currentUser;
   if(!user)return;
   try{
-    await setDoc(doc(fbDb,'users',user.uid),{aiChat:AI_CHAT},{merge:true});
+    await setDoc(doc(fbDb,'users',user.uid),{aiChat:AI_SESSIONS,aiActiveSessionId:AI_ACTIVE_SESSION_ID},{merge:true});
   }catch(e){console.warn('aiChat cloud save failed',e);}
 }
 
@@ -708,7 +804,7 @@ async function loadAll() {
     penalizedDates = (await sGet(LS.penalized)) || {};
     FIRST_SEEN = await sGet(LS.firstSeen);
     USER_EDITS = (await sGet(LS.userEdits)) || emptyUserEdits();
-    AI_CHAT = (await sGet(LS.aiChat)) || [];
+    aiLoadSessionsFromRaw(await sGet(LS.aiChat));
     if (!FIRST_SEEN) {
         // First time this browser/localStorage has ever run the app.
         FIRST_SEEN = TODAY;
@@ -902,9 +998,21 @@ function clearScheduledNotifs(){
   NOTIF_TIMERS=[];
 }
 
-// Schedules a browser notification for every remaining, not-yet-done task today,
-// firing at the task's start time. Re-run whenever today's task list changes (task
-// completed, edit applied) so already-done tasks stop being scheduled.
+// Schedules browser notifications for every remaining, not-yet-done task today.
+// Each task now gets up to TWO reminders instead of one:
+//   1. "starting soon" — fires 30 minutes BEFORE the task's start time
+//   2. "starting now"  — fires exactly AT the task's start time
+// Previously there was only the at-start-time notification, which is why it always
+// felt like it arrived "after the fact" rather than as an advance warning.
+// Re-run whenever today's task list changes (task completed, edit applied) so
+// already-done tasks stop being scheduled.
+//
+// Known platform limit, not a bug: these are setTimeout-based, so they only fire
+// while this tab/PWA is actually open (or the OS keeps the PWA process alive). A
+// closed tab means no timer runs. True background delivery needs server-sent Web
+// Push, which is out of scope for a static GitHub Pages site with no backend.
+const NOTIF_LEAD_MIN=30;
+
 function scheduleTodayNotifications(){
   clearScheduledNotifs();
   if(!NOTIF_ENABLED) return;
@@ -921,19 +1029,38 @@ function scheduleTodayNotifications(){
     const id=t[0];
     if(DONE[id]!==undefined && DONE[id]!==false) continue; // already done, no need to remind
     const startMin=toMin(t[10]||t[1]);
-    const deltaMin=startMin-nowMin;
-    if(deltaMin<0 || deltaMin>16*60) continue; // skip past tasks and anything absurdly far out
-    const ms=deltaMin*60*1000;
-    const timer=setTimeout(()=>{
-      try{
-        new Notification('⏰ تذكير من جدول عبدالله',{
-          body:`${t[4]} — الساعة ${t[1]}`,
-          icon:'data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"%3E%3Ctext y="75" font-size="80"%3E%F0%9F%8F%8B%EF%B8%8F%3C/text%3E%3C/svg%3E',
-          tag:id
-        });
-      }catch(e){console.warn('notification fire failed',e);}
-    },ms);
-    NOTIF_TIMERS.push(timer);
+
+    // Reminder 1: fires NOTIF_LEAD_MIN before start ("starting soon").
+    const leadDelta=(startMin-NOTIF_LEAD_MIN)-nowMin;
+    if(leadDelta>=0 && leadDelta<=16*60){
+      const ms=leadDelta*60*1000;
+      const timer=setTimeout(()=>{
+        try{
+          new Notification('⏳ بعد 30 دقيقة',{
+            body:`${t[4]} هتبدأ الساعة ${t[1]}`,
+            icon:'data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"%3E%3Ctext y="75" font-size="80"%3E%E2%8F%B3%3C/text%3E%3C/svg%3E',
+            tag:id+'-soon'
+          });
+        }catch(e){console.warn('notification fire failed',e);}
+      },ms);
+      NOTIF_TIMERS.push(timer);
+    }
+
+    // Reminder 2: fires exactly at start time ("starting now").
+    const startDelta=startMin-nowMin;
+    if(startDelta>=0 && startDelta<=16*60){
+      const ms=startDelta*60*1000;
+      const timer=setTimeout(()=>{
+        try{
+          new Notification('⏰ حان الوقت',{
+            body:`${t[4]} — الساعة ${t[1]}`,
+            icon:'data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"%3E%3Ctext y="75" font-size="80"%3E%F0%9F%8F%8B%EF%B8%8F%3C/text%3E%3C/svg%3E',
+            tag:id+'-now'
+          });
+        }catch(e){console.warn('notification fire failed',e);}
+      },ms);
+      NOTIF_TIMERS.push(timer);
+    }
   }
 }
 
@@ -1551,8 +1678,18 @@ function aiResolveDate(phrase){
   return null;
 }
 
-// Parses "8:00 م" / "8 مساءً" / "20:00" / "8pm" / "8 صباحا" style fragments into the
-// app's internal "H:MM ص/م" display format.
+// Returns true if the phrase explicitly says "keep the same time" — e.g. "نفس الوقت",
+// "نفس الساعة", "same time" — so a move command can preserve the original task time
+// instead of silently returning null and leaving the caller to guess.
+function aiWantsSameTime(phrase){
+  return /نفس\s*(ال)?وقت|نفس\s*(ال)?ساعة|same\s*time/.test(phrase.toLowerCase());
+}
+
+// Parses "8:00 م" / "8 مساءً" / "20:00" / "8pm" / "8 صباحا" / "الساعة 8" style
+// fragments into the app's internal "H:MM ص/م" display format. The bare-digit fallback
+// now REQUIRES a time-context word (الساعة/عند/at) directly before the number, since
+// previously it matched any stray digit anywhere in the sentence (e.g. a "3" in an
+// unrelated word) and silently produced a wrong time.
 function aiResolveTime(phrase){
   const p=phrase.trim();
   let m=p.match(/(\d{1,2}):?(\d{2})?\s*(ص|صباح|am|AM)/);
@@ -1561,8 +1698,10 @@ function aiResolveTime(phrase){
   if(m){const h=parseInt(m[1],10)%12||12;const mm=m[2]||'00';return`${h}:${mm} م`;}
   m=p.match(/(\d{1,2}):(\d{2})/);
   if(m){const h24=parseInt(m[1],10);const mm=m[2];const pm=h24>=12;const h12=h24%12||12;return`${h12}:${mm} ${pm?'م':'ص'}`;}
-  m=p.match(/(\d{1,2})\s*(?!:)/);
-  if(m){const h=parseInt(m[1],10)%12||12;return`${h}:00 م`;} // bare hour, assume PM (most tasks are afternoon/evening)
+  // Bare hour only counts if introduced by an explicit time-context word, e.g.
+  // "الساعة 8" / "عند 8" / "at 8" — prevents false positives from unrelated digits.
+  m=p.match(/(?:الساعة|عند|at)\s*(\d{1,2})(?!:)/i);
+  if(m){const h=parseInt(m[1],10)%12||12;return`${h}:00 م`;} // assume PM (most tasks are afternoon/evening)
   return null;
 }
 
@@ -1617,8 +1756,12 @@ function aiParseIntent(msg){
     const newDate=aiResolveDate(raw);
     const newTime=aiResolveTime(raw);
     if(!newDate) return{action:'needMoreInfo',reply:`لأي يوم عايز تنقل "${found.task[4]}"؟ (مثلاً: بكرة، الأربعاء...)`};
-    return{action:'moveTask',task:found.task,fromIso:found.iso,toDate:newDate,toTime:newTime,
-      reply:`تم نقل "${found.task[4]}" من ${found.iso} إلى ${newDate}${newTime?' الساعة '+newTime:''} ✅`};
+    // "same time" is now explicitly recognized instead of silently falling through to
+    // null and leaving the caller to guess whether that meant "unspecified" or "keep it".
+    const keepSameTime=aiWantsSameTime(raw);
+    const resolvedTime=keepSameTime?found.task[1]:newTime;
+    return{action:'moveTask',task:found.task,fromIso:found.iso,toDate:newDate,toTime:resolvedTime,
+      reply:`تم نقل "${found.task[4]}" من ${found.iso} إلى ${newDate}${resolvedTime?' الساعة '+resolvedTime:' (بنفس وقتها الأصلي)'} ✅`};
   }
 
   // 3. Delete a task — "احذف السباحة النهاردة" / "delete swimming"
@@ -1728,9 +1871,11 @@ async function aiCallLiveModel(){
   if(!AI_WORKER_URL || AI_WORKER_URL==='REPLACE_WITH_YOUR_WORKER_URL'){
     return{ok:false,text:'⚠️ المساعد الذكي لسه مش متوصل بالسيرفر (Cloudflare Worker). لازم تركّب الـ Worker وتحط رابطه في الكود الأول.'};
   }
-  // Send recent history as real conversational context — this is what gives it actual
-  // memory of the conversation, same as any normal chat interface.
-  const recentMsgs=AI_CHAT.slice(-20).map(m=>({role:m.role==='user'?'user':'assistant',content:m.text}));
+  // Send recent history from the ACTIVE SESSION as conversational context — memory is
+  // now scoped per-session (a new chat starts with a clean context) rather than
+  // dragging in every message you've ever sent across every past conversation.
+  const session=aiGetActiveSession();
+  const recentMsgs=session.messages.slice(-20).map(m=>({role:m.role==='user'?'user':'assistant',content:m.text}));
   try{
     const res=await fetch(AI_WORKER_URL,{
       method:'POST',
@@ -1749,20 +1894,47 @@ async function aiCallLiveModel(){
   }
 }
 
+// aiViewMode toggles between the live chat view and the session-history list view
+// inside the same panel body.
+let AI_VIEW_MODE='chat'; // 'chat' | 'history'
 
 function aiRenderMessages(){
   const body=document.getElementById('aiBody');
   if(!body) return;
-  if(!AI_CHAT.length){
+  if(AI_VIEW_MODE==='history'){ aiRenderHistoryList(); return; }
+  const session=aiGetActiveSession();
+  if(!session.messages.length){
     body.innerHTML=`<div class="ai-empty">👋 أهلاً! اسألني أي حاجة، أو جرب أوامر زي:<br>"عملت الجيم"<br>"انقل الغدا لبكرة الساعة ٢"<br>"احذف السباحة النهاردة"<br>"ضيف مهمة مذاكرة الساعة ٧ بـ 10 نقاط"<br><br>التغييرات دي خاصة بحسابك بس، ومتزامنة على كل أجهزتك.</div>`;
     return;
   }
-  body.innerHTML=AI_CHAT.map(m=>{
+  body.innerHTML=session.messages.map(m=>{
     if(m.tone==='typing') return`<div class="ai-msg bot" style="opacity:.6">⏳ بيفكر...</div>`;
     const cls=m.role==='user'?'user':`bot${m.tone?' '+m.tone:''}`;
     return`<div class="ai-msg ${cls}">${m.text.replace(/</g,'&lt;')}</div>`;
   }).join('');
   body.scrollTop=body.scrollHeight;
+}
+
+// Renders the "🗂️ سجل المحادثات" (chat history) list: every session, newest-first,
+// with a title guessed from its first message, a message-count + last-active
+// timestamp, a delete button, and a click-to-reopen row.
+function aiRenderHistoryList(){
+  const body=document.getElementById('aiBody');
+  if(!body) return;
+  if(!AI_SESSIONS.length){
+    body.innerHTML=`<div class="ai-empty">لا يوجد محادثات محفوظة بعد.</div>`;
+    return;
+  }
+  const sorted=[...AI_SESSIONS].sort((a,b)=>b.lastMsgAt-a.lastMsgAt);
+  body.innerHTML=sorted.map(s=>`
+    <div class="ai-session-item${s.id===AI_ACTIVE_SESSION_ID?' active':''}" data-session-id="${s.id}">
+      <div>
+        <div class="ai-session-title">${aiSessionTitle(s).replace(/</g,'&lt;')}</div>
+        <div class="ai-session-meta">${aiFormatSessionMeta(s)}</div>
+      </div>
+      <button class="ai-session-del" data-session-del="${s.id}" type="button">🗑️</button>
+    </div>
+  `).join('');
 }
 
 async function aiHandleSend(){
@@ -1774,11 +1946,14 @@ async function aiHandleSend(){
   input.style.height='auto';
 
   const user=fbAuth.currentUser;
-  AI_CHAT.push({role:'user',text,ts:Date.now()});
+  const session=aiGetActiveSession();
+  session.messages.push({role:'user',text,ts:Date.now()});
+  session.lastMsgAt=Date.now();
   aiRenderMessages();
 
   if(!user){
-    AI_CHAT.push({role:'bot',text:'لازم تسجل دخول الأول عشان أقدر أعمل تغييرات في جدولك وأحفظها ليك 🔒',ts:Date.now(),tone:'err'});
+    session.messages.push({role:'bot',text:'لازم تسجل دخول الأول عشان أقدر أعمل تغييرات في جدولك وأحفظها ليك 🔒',ts:Date.now(),tone:'err'});
+    session.lastMsgAt=Date.now();
     aiRenderMessages();
     await saveAiChat();
     return;
@@ -1804,7 +1979,8 @@ async function aiHandleSend(){
       intent.reply='⚠️ حصل خطأ أثناء تنفيذ التغيير — جرب تاني.';
       tone='err';
     }
-    AI_CHAT.push({role:'bot',text:intent.reply,ts:Date.now(),tone});
+    session.messages.push({role:'bot',text:intent.reply,ts:Date.now(),tone});
+    session.lastMsgAt=Date.now();
     aiRenderMessages();
     await saveAiChat();
     return;
@@ -1812,34 +1988,97 @@ async function aiHandleSend(){
 
   // Anything not matching a known command pattern (general questions, conversation,
   // "what can you do", etc.) goes to the real model via the Worker proxy.
-  AI_CHAT.push({role:'bot',text:'...',ts:Date.now(),tone:'typing'});
+  session.messages.push({role:'bot',text:'...',ts:Date.now(),tone:'typing'});
   aiRenderMessages();
 
   const result=await aiCallLiveModel();
-  AI_CHAT.pop(); // remove the typing placeholder
-  AI_CHAT.push({role:'bot',text:result.text,ts:Date.now(),tone:result.ok?null:'err'});
+  session.messages.pop(); // remove the typing placeholder
+  session.messages.push({role:'bot',text:result.text,ts:Date.now(),tone:result.ok?null:'err'});
+  session.lastMsgAt=Date.now();
   aiRenderMessages();
   await saveAiChat();
 }
 
-function aiOpenPanel(){
+async function aiOpenPanel(){
   const panel=document.getElementById('aiPanel');
   const sub=document.getElementById('aiSubStatus');
   if(sub) sub.textContent=fbAuth.currentUser?'جاهز للمساعدة':'سجل دخول عشان أقدر أحفظلك التغييرات';
+  // Auto-roll to a new session if the last one went idle 3+ hours ago, so reopening
+  // the app after a long gap starts fresh instead of resuming a stale conversation —
+  // the old one stays fully intact and reachable from 🗂️ history.
+  aiMaybeAutoNewSession();
+  AI_VIEW_MODE='chat';
   if(panel) panel.classList.add('open');
   aiRenderMessages();
+  await saveAiChat();
   setTimeout(()=>document.getElementById('aiInput')?.focus(),50);
 }
 function aiClosePanel(){document.getElementById('aiPanel')?.classList.remove('open');}
+
+async function aiStartNewChat(){
+  aiCreateSession();
+  AI_VIEW_MODE='chat';
+  aiRenderMessages();
+  await saveAiChat();
+}
+
+function aiToggleHistoryView(){
+  AI_VIEW_MODE=AI_VIEW_MODE==='history'?'chat':'history';
+  aiRenderMessages();
+}
+
+async function aiOpenSession(id){
+  if(!AI_SESSIONS.some(s=>s.id===id)) return;
+  AI_ACTIVE_SESSION_ID=id;
+  AI_VIEW_MODE='chat';
+  aiRenderMessages();
+  await saveAiChat();
+}
+
+async function aiDeleteSession(id){
+  const idx=AI_SESSIONS.findIndex(s=>s.id===id);
+  if(idx<0) return;
+  AI_SESSIONS.splice(idx,1);
+  if(AI_ACTIVE_SESSION_ID===id){
+    AI_ACTIVE_SESSION_ID=AI_SESSIONS[0]?AI_SESSIONS[0].id:null;
+    if(!AI_SESSIONS.length) aiCreateSession();
+  }
+  aiRenderHistoryList();
+  await saveAiChat();
+}
+
+function aiToggleFullScreen(){
+  const panel=document.getElementById('aiPanel');
+  if(!panel) return;
+  panel.classList.toggle('full');
+  const btn=document.getElementById('aiFullToggleBtn');
+  if(btn) btn.textContent=panel.classList.contains('full')?'⤡':'⤢';
+}
 
 
 document.body.addEventListener('click',async e=>{
   const tgt=e.target;
   const closest=sel=>tgt.closest(sel);
 
-  if(tgt.id==='aiFab'){aiOpenPanel();return;}
+  if(tgt.id==='aiFab'){await aiOpenPanel();return;}
   if(tgt.id==='aiCloseBtn'){aiClosePanel();return;}
   if(tgt.id==='aiSendBtn'){await aiHandleSend();return;}
+  if(tgt.id==='aiNewChatBtn'){await aiStartNewChat();return;}
+  if(tgt.id==='aiHistoryBtn'){aiToggleHistoryView();return;}
+  if(tgt.id==='aiFullToggleBtn'){aiToggleFullScreen();return;}
+
+  const sessDel=closest('[data-session-del]');
+  if(sessDel){
+    const sid=sessDel.getAttribute('data-session-del');
+    await aiDeleteSession(sid);
+    return;
+  }
+  const sessItem=closest('[data-session-id]');
+  if(sessItem){
+    const sid=sessItem.getAttribute('data-session-id');
+    await aiOpenSession(sid);
+    return;
+  }
 
   if(tgt.id==='btn-notif-toggle'){
     if(!NOTIF_ENABLED){
@@ -1890,7 +2129,9 @@ document.body.addEventListener('click',async e=>{
       penalizedDates={};
       FIRST_SEEN=null;
       USER_EDITS=emptyUserEdits();
-      AI_CHAT=[];
+      AI_SESSIONS=[];
+      AI_ACTIVE_SESSION_ID=null;
+      AI_VIEW_MODE='chat';
       IS_BRAND_NEW_SESSION=false;
       SELECTED_DATE=TODAY;
     }catch(e){console.warn('local reset failed',e);}
@@ -2023,6 +2264,16 @@ document.body.addEventListener('keydown',async e=>{
 });
 
 // ===== Init =====
+// Single shared "app is ready" reveal — used by both the success and error paths of
+// initAppFlow so the AI fab button can NEVER become visible/clickable before this
+// fires. Previously #aiFab had no gating tied to load state at all and was tappable
+// during the loading spinner.
+function revealApp(){
+  const ldEl=document.getElementById('ld'); if(ldEl) ldEl.style.display='none';
+  const appEl=document.getElementById('app'); if(appEl) appEl.style.display='block';
+  const fabEl=document.getElementById('aiFab'); if(fabEl) fabEl.classList.remove('hidden');
+}
+
 function initAppFlow(user){
   updateAuthUI(user);
   fetchPrayers().then(()=>applyPunishmentOnce()).then(async ()=>{
@@ -2031,8 +2282,7 @@ function initAppFlow(user){
     if(STATS.pts!==ptsBefore){ try{ await saveAll(); }catch(e){ console.warn('weekly reset save failed',e); } }
     checkStreak();
     renderTabs();renderPanels();switchDay(todayJD());updateUI();
-    const ldEl=document.getElementById('ld'); if(ldEl) ldEl.style.display='none';
-    const appEl=document.getElementById('app'); if(appEl) appEl.style.display='block';
+    revealApp();
     if(PENALTY_FLASH_PENDING){flashPenalty();PENALTY_FLASH_PENDING=false;}
     await loadNotifPref();
     updateAuthUI(user);
@@ -2041,8 +2291,7 @@ function initAppFlow(user){
     }
   }).catch(e=>{
     console.warn('Init error bypass:',e);
-    const ldEl=document.getElementById('ld'); if(ldEl) ldEl.style.display='none';
-    const appEl=document.getElementById('app'); if(appEl) appEl.style.display='block';
+    revealApp();
   });
 }
 
@@ -2078,7 +2327,7 @@ if (typeof onAuthStateChanged !== 'undefined' && typeof fbAuth !== 'undefined') 
           // edit made on your phone show up on your laptop. If the cloud doc has no
           // userEdits yet (brand-new account), keep whatever local value we have.
           if(d.userEdits) USER_EDITS={...emptyUserEdits(),...d.userEdits};
-          if(d.aiChat) AI_CHAT=d.aiChat;
+          if(d.aiChat) aiLoadSessionsFromRaw({sessions:d.aiChat,activeId:d.aiActiveSessionId});
           // firstSeen from the cloud is authoritative once it exists — this is what makes
           // "sign in on a fresh browser" not reset the account's age. If the cloud has no
           // firstSeen yet, this is genuinely the first time this account has ever been used
