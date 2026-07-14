@@ -286,6 +286,7 @@ body{font-family:'Cairo',sans-serif;background:var(--bg);color:var(--tx);directi
     <div class="ai-headbtns">
       <button class="ai-iconbtn" id="aiNewChatBtn" type="button" title="محادثة جديدة">➕</button>
       <button class="ai-iconbtn" id="aiHistoryBtn" type="button" title="سجل المحادثات">🗂️</button>
+      <button class="ai-iconbtn" id="aiMemoryBtn" type="button" title="ما يتذكره عنك">🧠</button>
       <button class="ai-iconbtn" id="aiFullToggleBtn" type="button" title="ملء الشاشة">⤢</button>
       <button class="ai-close" id="aiCloseBtn" type="button">✕ إغلاق</button>
     </div>
@@ -542,7 +543,7 @@ function getReqTasks(jd,iso){
 }
 
 // ===== State =====
-const LS={stats:'sc:stats2',history:'sc:history2',reports:'sc:reports2',penalized:'sc:penalized2',firstSeen:'sc:firstSeen1',userEdits:'sc:userEdits1',aiChat:'sc:aiChat1'};
+const LS={stats:'sc:stats2',history:'sc:history2',reports:'sc:reports2',penalized:'sc:penalized2',firstSeen:'sc:firstSeen1',userEdits:'sc:userEdits1',aiChat:'sc:aiChat1',userMemory:'sc:userMemory1'};
 let STATS={cur:0,best:0,pts:0,lc:null,lf:null,lastPtsWeekStart:null};
 let DONE={};
 let SELECTED_ALTS={};
@@ -804,6 +805,7 @@ async function loadAll() {
     penalizedDates = (await sGet(LS.penalized)) || {};
     FIRST_SEEN = await sGet(LS.firstSeen);
     USER_EDITS = (await sGet(LS.userEdits)) || emptyUserEdits();
+    USER_MEMORY = (await sGet(LS.userMemory)) || [];
     aiLoadSessionsFromRaw(await sGet(LS.aiChat));
     if (!FIRST_SEEN) {
         // First time this browser/localStorage has ever run the app.
@@ -966,16 +968,70 @@ async function sanitizeStats(){
 }
 
 // ===== Prayer API =====
-// Fine-tune offsets (in minutes) applied on top of the API's raw calculation, calibrated
-// against Abdullah's actual mosque/local authority times on 2026-07-13. Order per the
-// Aladhan API spec: Imsak,Fajr,Sunrise,Dhuhr,Asr,Maghrib,Sunset,Isha,Midnight.
-// Positive = push later, negative = push earlier. Fajr/Sunrise/Dhuhr were coming back
-// too early; Asr/Maghrib/Isha were coming back too late — this is a normal, expected
-// gap between calculation methods and locally-observed times (Aladhan's own docs note
-// 1-5 min differences even against the matching regional authority), not a bug in this
-// app's date/time logic. If real-world drift is noticed again later, re-measure against
-// the mosque and adjust these numbers — do not touch the fetch logic itself.
-const PRAYER_TUNE='0,11,7,3,-1,-1,0,-6,0';
+// Switched from method=4 (Umm Al-Qura/Mecca) + manual minute-offset hacks to
+// method=9 — Aladhan's dedicated "Kuwait" calculation method, built around the local
+// religious authority's own angle parameters instead of approximating Mecca math with
+// tuning. This is the correct base fix: stacking more manual offsets on top of the
+// wrong method was treating a symptom, not the cause of the Isha drift.
+//
+// On top of that, prayer times are now fetched using the user's ACTUAL coordinates via
+// the Geolocation API instead of a fixed "Kuwait City" lookup — city-based lookups
+// geocode to one central point, which can be several minutes off from mosque times in
+// a specific neighborhood. Coordinates give the exact local calculation.
+//
+// Geolocation permission is requested at most ONCE per browser: the browser's native
+// prompt (Don't Allow / Allow Once / Allow While Using App) only fires the very first
+// time this runs, and the browser itself remembers that choice for this site going
+// forward — this app has no ability to change that browser behavior, it can only ask
+// once and respect whatever was decided. The one thing the app DOES control is not
+// re-prompting on every visit if the browser reports the permission as available.
+const LS_GEO_COORDS='sc:geoCoords1';
+const KUWAIT_CITY_FALLBACK={lat:29.3759,lon:47.9774}; // Kuwait City center, used only if geolocation is denied/unavailable
+
+// Fine-tune offsets — now against method=9 (Kuwait), not method=4. Left at 0 by
+// default since method=9 should already track local Kuwaiti authority times closely;
+// re-measure against the mosque app and adjust here ONLY if a real gap remains after
+// switching methods. Order per Aladhan spec: Imsak,Fajr,Sunrise,Dhuhr,Asr,Maghrib,Sunset,Isha,Midnight.
+const PRAYER_TUNE='0,0,0,0,0,0,0,0,0';
+
+async function getPrayerCoords(){
+  // Cached from a previous grant — never re-prompt if we already have a location.
+  const cached=await sGet(LS_GEO_COORDS);
+  if(cached && cached.lat && cached.lon) return cached;
+
+  if(typeof navigator==='undefined' || !navigator.geolocation){
+    return KUWAIT_CITY_FALLBACK;
+  }
+
+  return new Promise(resolve=>{
+    navigator.geolocation.getCurrentPosition(
+      async pos=>{
+        const coords={lat:pos.coords.latitude,lon:pos.coords.longitude};
+        await sSet(LS_GEO_COORDS,coords);
+        resolve(coords);
+      },
+      ()=>{
+        // Denied, blocked, or timed out — fall back to city-level accuracy for
+        // this session only. Deliberately NOT cached as a permanent fallback, so
+        // if the user later changes the browser permission to Allow, the next
+        // fetchPrayers() call will naturally try geolocation again instead of
+        // being stuck on the fallback forever.
+        resolve(KUWAIT_CITY_FALLBACK);
+      },
+      {timeout:8000,maximumAge:Infinity}
+    );
+  });
+}
+
+async function fetchPrayers(){
+  try{
+    const {lat,lon}=await getPrayerCoords();
+    const res=await fetch(`https://api.aladhan.com/v1/timings?latitude=${lat}&longitude=${lon}&method=9&tune=${PRAYER_TUNE}`);
+    const json=await res.json();
+    if(json&&json.code===200){const t=json.data.timings;PRYT={Fajr:t.Fajr,Sunrise:t.Sunrise,Dhuhr:t.Dhuhr,Asr:t.Asr,Maghrib:t.Maghrib,Isha:t.Isha};}
+    else throw new Error();
+  }catch{PRYT={...FALLBK};}
+}
 
 // ===== Notifications =====
 // Client-side only — reminders fire via setTimeout while this tab/PWA is open, using
@@ -1095,17 +1151,6 @@ async function requestNotifPermission(){
     const perm=await Notification.requestPermission();
     return perm==='granted';
   }catch{return false;}
-}
-
-async function fetchPrayers(){
-
-
-  try{
-    const res=await fetch(`https://api.aladhan.com/v1/timingsByCity?city=Kuwait City&country=Kuwait&method=4&tune=${PRAYER_TUNE}`);
-    const json=await res.json();
-    if(json&&json.code===200){const t=json.data.timings;PRYT={Fajr:t.Fajr,Sunrise:t.Sunrise,Dhuhr:t.Dhuhr,Asr:t.Asr,Maghrib:t.Maghrib,Isha:t.Isha};}
-    else throw new Error();
-  }catch{PRYT={...FALLBK};}
 }
 
 // ===== Prayer Modal =====
@@ -1739,6 +1784,15 @@ function aiParseIntent(msg){
   const raw=msg.trim();
   const low=raw.toLowerCase();
 
+  // 0. Explicit memory command — "افتكر إني..." / "سجل عني إني..." / "remember that I..."
+  // Handled deterministically here rather than relying on the LLM to infer it every
+  // time, so an explicit ask always reliably lands in USER_MEMORY.
+  const rememberMatch=raw.match(/^(?:افتكر|اتذكر|سجل عني|تذكر)\s*(?:إن|ان|أن)?\s*(.+)$/i) || raw.match(/^remember\s+that\s+(.+)$/i);
+  if(rememberMatch && rememberMatch[1] && rememberMatch[1].trim().length>2){
+    return{action:'rememberFact',fact:rememberMatch[1].trim(),
+      reply:`تمام، هفتكر إن ${rememberMatch[1].trim()} ✅`};
+  }
+
   // 1. Mark as done (retroactively) — "عملت الجيم" / "خلصت الغدا" / "i did the gym"
   if(/عملت|خلصت|سويت|انجزت|أنجزت|i did|done|completed|finished/.test(low)){
     const found=aiFindTask(raw);
@@ -1803,6 +1857,11 @@ function aiParseIntent(msg){
 
 async function aiExecuteAction(intent){
   const{action}=intent;
+  if(action==='rememberFact'){
+    aiMemoryAdd(intent.fact);
+    await saveUserMemory();
+    return true;
+  }
   if(action==='markDone'){
     const{task,iso}=intent;
     if(!historyData[iso]) historyData[iso]={};
@@ -1843,6 +1902,44 @@ async function aiExecuteAction(intent){
   return false; // unrecognized / needMoreInfo / unknown — nothing to execute
 }
 
+// ===== AI Assistant: persistent cross-session memory =====
+// This is DIFFERENT from AI_SESSIONS: session messages are scoped to one conversation
+// and start fresh in a new chat. USER_MEMORY is a small list of durable facts about
+// Abdullah personally (preferences, recurring context, things he's told the assistant
+// to remember) that gets injected into EVERY call regardless of which session is
+// active — this is what makes "answer me based on what you know about me personally"
+// actually work across brand-new chats, not just within one thread.
+//
+// Kept as a flat array of short strings rather than a single freeform blob so entries
+// can be listed and deleted individually from the UI, same spirit as memory_user_edits.
+// Synced to Firestore like USER_EDITS — local always, cloud only when signed in.
+let USER_MEMORY=[]; // string[]
+const AI_MEMORY_MAX=60; // hard cap so the system prompt injection never grows unbounded
+
+async function saveUserMemory(){
+  await sSet(LS.userMemory,USER_MEMORY);
+  const user=fbAuth.currentUser;
+  if(!user)return;
+  try{
+    await setDoc(doc(fbDb,'users',user.uid),{userMemory:USER_MEMORY},{merge:true});
+  }catch(e){console.warn('userMemory cloud save failed',e);}
+}
+
+function aiMemoryAdd(fact){
+  const f=fact.trim();
+  if(!f) return;
+  if(USER_MEMORY.some(x=>x.toLowerCase()===f.toLowerCase())) return; // no exact dupes
+  USER_MEMORY.push(f);
+  if(USER_MEMORY.length>AI_MEMORY_MAX) USER_MEMORY.shift(); // drop oldest on overflow
+}
+
+// Builds the block of remembered facts to prepend to the system prompt. Empty string
+// if nothing is stored yet, so a brand-new user gets the plain persona prompt.
+function aiMemoryBlock(){
+  if(!USER_MEMORY.length) return'';
+  return`\n\nTHINGS YOU KNOW ABOUT ABDULLAH FROM PAST CONVERSATIONS (treat as established fact, apply naturally, don't recite this list back to him unless he asks what you remember):\n${USER_MEMORY.map(f=>'- '+f).join('\n')}`;
+}
+
 // ===== AI Assistant: live Claude call (via Cloudflare Worker proxy) =====
 // The Worker holds the real Anthropic API key server-side — this file never contains
 // it, so it's safe to be in a public GitHub repo. Replace WORKER_URL below with your
@@ -1865,43 +1962,57 @@ ENGAGEMENT: Give direct answers first — never withhold the actual answer to fo
 
 CONTEXT: You can also discuss his schedule app (prayers, gym, meals, points, streaks) if he asks, but you are not the one executing schedule commands (moving/deleting/marking tasks done) — a separate system handles those. If he asks you to do something schedule-related that sounds like a command rather than a question, tell him to phrase it as a direct instruction (e.g. "انقل الجيم لبكرة الساعة ٨").
 
-You have no web search or real-time data access. If something requires current/verifiable facts you're not certain of, say so plainly instead of guessing.`;
+You have no web search or real-time data access. If something requires current/verifiable facts you're not certain of, say so plainly instead of guessing.
+
+MEMORY: If Abdullah shares a durable personal fact worth remembering for future conversations — a preference, a recurring circumstance, a goal, a correction about himself — append ONE line at the very end of your reply in this exact format: [REMEMBER: the fact stated plainly in third person]. Only do this for things worth recalling weeks later, not routine chat. Never fabricate one if nothing new was shared. This tag is stripped before he sees your reply, so don't reference it in the visible text.`;
 
 async function aiCallLiveModel(){
   if(!AI_WORKER_URL || AI_WORKER_URL==='REPLACE_WITH_YOUR_WORKER_URL'){
     return{ok:false,text:'⚠️ المساعد الذكي لسه مش متوصل بالسيرفر (Cloudflare Worker). لازم تركّب الـ Worker وتحط رابطه في الكود الأول.'};
   }
-  // Send recent history from the ACTIVE SESSION as conversational context — memory is
-  // now scoped per-session (a new chat starts with a clean context) rather than
-  // dragging in every message you've ever sent across every past conversation.
+  // Send recent history from the ACTIVE SESSION as conversational context — memory of
+  // the CONVERSATION is scoped per-session (a new chat starts with a clean thread), but
+  // memory of ABDULLAH HIMSELF (USER_MEMORY) is injected into the system prompt below
+  // regardless of session, so personal facts persist across every chat, old and new.
   const session=aiGetActiveSession();
   const recentMsgs=session.messages.slice(-20).map(m=>({role:m.role==='user'?'user':'assistant',content:m.text}));
+  const systemWithMemory=AI_SYSTEM_PROMPT+aiMemoryBlock();
   try{
     const res=await fetch(AI_WORKER_URL,{
       method:'POST',
       headers:{'Content-Type':'application/json'},
-      body:JSON.stringify({system:AI_SYSTEM_PROMPT,messages:recentMsgs})
+      body:JSON.stringify({system:systemWithMemory,messages:recentMsgs})
     });
     const data=await res.json();
     if(!res.ok || data.error){
       console.error('AI worker error:',data.error||res.status);
       return{ok:false,text:'⚠️ حصل خطأ من السيرفر — جرب تاني بعد شوية.'};
     }
-    return{ok:true,text:data.text||'(رد فارغ)'};
+    let text=data.text||'(رد فارغ)';
+    // Parse out the [REMEMBER: ...] tag the model may have appended, store it in
+    // USER_MEMORY, and strip it from what's actually shown in the chat bubble.
+    const memMatch=text.match(/\[REMEMBER:\s*([^\]]+)\]\s*$/i);
+    if(memMatch){
+      aiMemoryAdd(memMatch[1]);
+      await saveUserMemory();
+      text=text.slice(0,memMatch.index).trim();
+    }
+    return{ok:true,text};
   }catch(e){
     console.error('AI worker call failed:',e);
     return{ok:false,text:'⚠️ مش قادر أوصل للسيرفر دلوقتي — تأكد من الاتصال بالإنترنت وجرب تاني.'};
   }
 }
 
-// aiViewMode toggles between the live chat view and the session-history list view
-// inside the same panel body.
-let AI_VIEW_MODE='chat'; // 'chat' | 'history'
+// aiViewMode toggles between the live chat view, the session-history list view, and
+// the memory list view — all inside the same panel body.
+let AI_VIEW_MODE='chat'; // 'chat' | 'history' | 'memory'
 
 function aiRenderMessages(){
   const body=document.getElementById('aiBody');
   if(!body) return;
   if(AI_VIEW_MODE==='history'){ aiRenderHistoryList(); return; }
+  if(AI_VIEW_MODE==='memory'){ aiRenderMemoryList(); return; }
   const session=aiGetActiveSession();
   if(!session.messages.length){
     body.innerHTML=`<div class="ai-empty">👋 أهلاً! اسألني أي حاجة، أو جرب أوامر زي:<br>"عملت الجيم"<br>"انقل الغدا لبكرة الساعة ٢"<br>"احذف السباحة النهاردة"<br>"ضيف مهمة مذاكرة الساعة ٧ بـ 10 نقاط"<br><br>التغييرات دي خاصة بحسابك بس، ومتزامنة على كل أجهزتك.</div>`;
@@ -1937,6 +2048,36 @@ function aiRenderHistoryList(){
   `).join('');
 }
 
+// Renders the "🧠 ما يتذكره عنك" (what it remembers about you) list — full
+// transparency into USER_MEMORY, with a delete button per fact so nothing the
+// assistant has stored stays hidden or hard to remove.
+function aiRenderMemoryList(){
+  const body=document.getElementById('aiBody');
+  if(!body) return;
+  if(!USER_MEMORY.length){
+    body.innerHTML=`<div class="ai-empty">لسه مفيش حاجة متسجلة. لما تحكيلي حاجة شخصية مهمة، هسجلها هنا تلقائياً عشان أفتكرها في أي محادثة جديدة.</div>`;
+    return;
+  }
+  body.innerHTML=USER_MEMORY.map((fact,i)=>`
+    <div class="ai-session-item">
+      <div class="ai-session-title" style="flex:1">${fact.replace(/</g,'&lt;')}</div>
+      <button class="ai-session-del" data-memory-del="${i}" type="button">🗑️</button>
+    </div>
+  `).join('');
+}
+
+async function aiDeleteMemory(idx){
+  if(idx<0||idx>=USER_MEMORY.length) return;
+  USER_MEMORY.splice(idx,1);
+  aiRenderMemoryList();
+  await saveUserMemory();
+}
+
+function aiToggleMemoryView(){
+  AI_VIEW_MODE=AI_VIEW_MODE==='memory'?'chat':'memory';
+  aiRenderMessages();
+}
+
 async function aiHandleSend(){
   const input=document.getElementById('aiInput');
   if(!input) return;
@@ -1965,10 +2106,10 @@ async function aiHandleSend(){
   // locally and deterministically through the real data functions — never through
   // the LLM. This is intentional: correctness and safety for actual data mutations
   // matter more than routing everything through one code path.
-  if(['markDone','moveTask','deleteTask','editPoints','addCustomTask','unrecognizedTask','needMoreInfo'].includes(intent.action)){
+  if(['markDone','moveTask','deleteTask','editPoints','addCustomTask','rememberFact','unrecognizedTask','needMoreInfo'].includes(intent.action)){
     let tone='ok';
     try{
-      if(['markDone','moveTask','deleteTask','editPoints','addCustomTask'].includes(intent.action)){
+      if(['markDone','moveTask','deleteTask','editPoints','addCustomTask','rememberFact'].includes(intent.action)){
         await aiExecuteAction(intent);
         try{ renderPanels();switchDay(getJDfromISO(SELECTED_DATE));updateUI(); }catch(e){ console.error('re-render after AI action failed:',e); }
       }else{
@@ -2065,8 +2206,15 @@ document.body.addEventListener('click',async e=>{
   if(tgt.id==='aiSendBtn'){await aiHandleSend();return;}
   if(tgt.id==='aiNewChatBtn'){await aiStartNewChat();return;}
   if(tgt.id==='aiHistoryBtn'){aiToggleHistoryView();return;}
+  if(tgt.id==='aiMemoryBtn'){aiToggleMemoryView();return;}
   if(tgt.id==='aiFullToggleBtn'){aiToggleFullScreen();return;}
 
+  const memDel=closest('[data-memory-del]');
+  if(memDel){
+    const idx=parseInt(memDel.getAttribute('data-memory-del'),10);
+    await aiDeleteMemory(idx);
+    return;
+  }
   const sessDel=closest('[data-session-del]');
   if(sessDel){
     const sid=sessDel.getAttribute('data-session-del');
@@ -2119,6 +2267,7 @@ document.body.addEventListener('click',async e=>{
       localStorage.removeItem(LS.firstSeen);
       localStorage.removeItem(LS.userEdits);
       localStorage.removeItem(LS.aiChat);
+      localStorage.removeItem(LS.userMemory);
 
       // Clear any in-memory state
       STATS={cur:0,best:0,pts:0,lc:null,lf:null};
@@ -2129,6 +2278,7 @@ document.body.addEventListener('click',async e=>{
       penalizedDates={};
       FIRST_SEEN=null;
       USER_EDITS=emptyUserEdits();
+      USER_MEMORY=[];
       AI_SESSIONS=[];
       AI_ACTIVE_SESSION_ID=null;
       AI_VIEW_MODE='chat';
@@ -2327,6 +2477,7 @@ if (typeof onAuthStateChanged !== 'undefined' && typeof fbAuth !== 'undefined') 
           // edit made on your phone show up on your laptop. If the cloud doc has no
           // userEdits yet (brand-new account), keep whatever local value we have.
           if(d.userEdits) USER_EDITS={...emptyUserEdits(),...d.userEdits};
+          if(d.userMemory) USER_MEMORY=d.userMemory;
           if(d.aiChat) aiLoadSessionsFromRaw({sessions:d.aiChat,activeId:d.aiActiveSessionId});
           // firstSeen from the cloud is authoritative once it exists — this is what makes
           // "sign in on a fresh browser" not reset the account's age. If the cloud has no
