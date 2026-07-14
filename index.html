@@ -1753,27 +1753,69 @@ function aiResolveTime(phrase){
 // Fuzzy-match a spoken task description against every task across the whole week
 // (base SCHED tasks + already-added custom tasks), searching by Arabic name first
 // since that's what's actually displayed to the user.
-function aiFindTask(phrase){
-  const p=phrase.trim();
+// Normalizes Arabic/English text for matching: strips the "ال" definite article
+// prefix from words, drops punctuation/dashes/diacritics, collapses whitespace, and
+// lowercases. This is what lets "الجيم" match a task literally named "جيم — Upper
+// Body" — previously only a raw substring check was used, which silently failed on
+// anything with a definite article, a category prefix, or extra words mixed in.
+function aiNormalize(s){
+  if(!s) return'';
+  return s
+    .replace(/[\u064B-\u0652]/g,'')          // strip Arabic diacritics
+    .replace(/[—\-–,،.:؛;!؟?()]/g,' ')       // punctuation/dashes -> space
+    .split(/\s+/)
+    .filter(Boolean)
+    .map(w=>w.replace(/^ال/,''))              // drop leading "ال" per word
+    .join(' ')
+    .trim()
+    .toLowerCase();
+}
+
+// Fuzzy-matches a spoken task description against every task across the whole week
+// (base SCHED tasks + already-added custom tasks). Scores by normalized token
+// overlap instead of raw substring checks, so partial/definite-article/reordered
+// phrasing ("الجيم", "gym today", "جيم لور بودي") all resolve correctly instead of
+// requiring the exact on-screen string.
+function aiFindTask(phrase,preferIso){
+  const p=aiNormalize(phrase);
   if(!p) return null;
+  const pTokens=new Set(p.split(' ').filter(w=>w.length>=2));
+  if(!pTokens.size) return null;
+
   const candidates=[];
   for(let jd=0;jd<7;jd++){
     const iso=dateForWeekday(jd,TODAY);
     const tasks=getAllTasks(jd,iso);
     for(const t of tasks){
+      if(t[2]==='free') continue;
       candidates.push({task:t,iso,jd});
     }
   }
-  // exact substring match on name first
-  let hit=candidates.find(c=>c.task[4] && p.includes(c.task[4]));
-  if(hit) return hit;
-  // reverse: task name contains a meaningful word from the phrase
-  const words=p.split(/\s+/).filter(w=>w.length>=3);
+
+  let best=null,bestScore=0;
   for(const c of candidates){
-    if(!c.task[4]) continue;
-    if(words.some(w=>c.task[4].includes(w))) return c;
+    const name=aiNormalize(c.task[4]);
+    if(!name) continue;
+    const nameTokens=name.split(' ').filter(w=>w.length>=2);
+    if(!nameTokens.length) continue;
+    let overlap=0;
+    for(const tok of nameTokens) if(pTokens.has(tok)) overlap++;
+    if(overlap===0) continue;
+    // Score = fraction of the TASK NAME's own words that were mentioned — a short,
+    // specific task name ("جيم") fully covered by the phrase scores higher than a
+    // long task name partially covered by a stray shared word.
+    let score=overlap/nameTokens.length;
+    // Slight boost for matching today's/the currently-viewed date's task when the
+    // phrase itself didn't specify a day, so "امسح الجيم" today prefers today's gym
+    // entry over some other day's, all else equal.
+    if(preferIso && c.iso===preferIso) score+=0.05;
+    if(score>bestScore){bestScore=score;best=c;}
   }
-  return null;
+  // Confidence floor: a single generic shared word against a long task name (e.g.
+  // one word overlapping out of 5+) is too weak to commit to silently — better to
+  // report "not found" and let the caller ask for a clearer phrase than guess wrong.
+  const AI_MATCH_MIN_SCORE=0.28;
+  return bestScore>=AI_MATCH_MIN_SCORE?best:null;
 }
 
 function aiGenId(prefix){return`${prefix}-${Date.now()}-${Math.floor(Math.random()*9999)}`;}
@@ -1795,7 +1837,7 @@ function aiParseIntent(msg){
 
   // 1. Mark as done (retroactively) — "عملت الجيم" / "خلصت الغدا" / "i did the gym"
   if(/عملت|خلصت|سويت|انجزت|أنجزت|i did|done|completed|finished/.test(low)){
-    const found=aiFindTask(raw);
+    const found=aiFindTask(raw,SELECTED_DATE);
     if(found){
       return{action:'markDone',task:found.task,iso:found.iso,jd:found.jd,
         reply:`تمام، سجلت "${found.task[4]}" بتاريخ ${found.iso} كمُنجزة ✅`};
@@ -1805,7 +1847,7 @@ function aiParseIntent(msg){
 
   // 2. Move a task — "انقل الجيم لبكرة الساعة ٨" / "move gym to tomorrow 8pm"
   if(/انقل|حرك|غير وقت|move|reschedule/.test(low)){
-    const found=aiFindTask(raw);
+    const found=aiFindTask(raw,SELECTED_DATE);
     if(!found) return{action:'unrecognizedTask',reply:'مش لاقي المهمة دي. جرب تكتب اسمها زي ما هو ظاهر في الجدول.'};
     const newDate=aiResolveDate(raw);
     const newTime=aiResolveTime(raw);
@@ -1820,7 +1862,7 @@ function aiParseIntent(msg){
 
   // 3. Delete a task — "احذف السباحة النهاردة" / "delete swimming"
   if(/احذف|امسح|شيل|delete|remove/.test(low)){
-    const found=aiFindTask(raw);
+    const found=aiFindTask(raw,SELECTED_DATE);
     if(!found) return{action:'unrecognizedTask',reply:'مش لاقي المهمة دي. جرب تكتب اسمها زي ما هو ظاهر في الجدول.'};
     return{action:'deleteTask',task:found.task,iso:found.iso,
       reply:`تم حذف "${found.task[4]}" من ${found.iso} (لسه ظاهرة بس متعلّم عليها كمحذوفة) 🗑️`};
@@ -1828,7 +1870,7 @@ function aiParseIntent(msg){
 
   // 4. Edit points — "خلي الجيم بـ 30 نقطة" / "set gym points to 30"
   if(/(نقطة|نقاط|points?)/.test(low) && /(\d+)/.test(low)){
-    const found=aiFindTask(raw);
+    const found=aiFindTask(raw,SELECTED_DATE);
     const numMatch=raw.match(/(\d+)/);
     if(found && numMatch){
       return{action:'editPoints',task:found.task,pts:parseInt(numMatch[1],10),
@@ -1855,6 +1897,22 @@ function aiParseIntent(msg){
   return{action:'llmFallback',reply:null};
 }
 
+// Looks up a full task tuple by id + the date it currently sits on (accounting for
+// any prior moves already in USER_EDITS), used by the relative-move resolver which
+// only has a taskId, not a full tuple.
+function aiFindTaskByIdOnDate(taskId,iso){
+  const jd=getJDfromISO(iso);
+  return getAllTasks(jd,iso).find(t=>t[0]===taskId)||null;
+}
+
+// Shared move executor — moves a task (by full tuple) to a new date/time. Used by
+// both the fast local parser's moveTask action and the LLM-resolved relative-position
+// path, so there's exactly one code path that actually writes to USER_EDITS.moves.
+async function aiMoveTaskExec(task,fromIso,toDate,toTime){
+  USER_EDITS.moves[task[0]]={toDate,toTime:toTime||task[1],fromDate:fromIso,_origTask:[...task]};
+  await saveUserEdits();
+}
+
 async function aiExecuteAction(intent){
   const{action}=intent;
   if(action==='rememberFact'){
@@ -1877,8 +1935,7 @@ async function aiExecuteAction(intent){
   }
   if(action==='moveTask'){
     const{task,fromIso,toDate,toTime}=intent;
-    USER_EDITS.moves[task[0]]={toDate,toTime:toTime||task[1],fromDate:fromIso,_origTask:[...task]};
-    await saveUserEdits();
+    await aiMoveTaskExec(task,fromIso,toDate,toTime);
     return true;
   }
   if(action==='deleteTask'){
@@ -1965,6 +2022,72 @@ CONTEXT: You can also discuss his schedule app (prayers, gym, meals, points, str
 You have no web search or real-time data access. If something requires current/verifiable facts you're not certain of, say so plainly instead of guessing.
 
 MEMORY: If Abdullah shares a durable personal fact worth remembering for future conversations — a preference, a recurring circumstance, a goal, a correction about himself — append ONE line at the very end of your reply in this exact format: [REMEMBER: the fact stated plainly in third person]. Only do this for things worth recalling weeks later, not routine chat. Never fabricate one if nothing new was shared. This tag is stripped before he sees your reply, so don't reference it in the visible text.`;
+
+// Detects "move X before/after Y" style relative-position phrasing — these need real
+// reasoning (what time does "before the gym" actually resolve to? which day?) rather
+// than a regex, so they're routed to the live model with structured task data and a
+// strict JSON-only response format, then executed deterministically once resolved.
+const AI_RELATIVE_MOVE_RE=/(قبل|بعد|before|after)/i;
+function aiLooksLikeRelativeMove(msg){
+  const low=msg.toLowerCase();
+  return/انقل|حرك|move|reschedule/.test(low) && AI_RELATIVE_MOVE_RE.test(low);
+}
+
+// Builds a compact JSON task list for the whole week — id, name, date, time — so the
+// model has exact ground truth to reason against instead of guessing task names/times.
+function aiBuildWeekTaskContext(){
+  const days=[];
+  for(let jd=0;jd<7;jd++){
+    const iso=dateForWeekday(jd,TODAY);
+    const tasks=getAllTasks(jd,iso).filter(t=>t[2]!=='free');
+    days.push({date:iso,day:DSHORT[jd],tasks:tasks.map(t=>({id:t[0],name:t[4],time:t[1]}))});
+  }
+  return days;
+}
+
+// Asks the live model to resolve a relative-position move command into an exact
+// {taskId, toDate, toTime} decision, given real task data. The model is instructed to
+// respond with ONLY a JSON object — no prose — which is parsed and validated against
+// the real task list before anything is executed, so a malformed or hallucinated
+// response can never silently corrupt the schedule.
+async function aiResolveRelativeMove(msg){
+  if(!AI_WORKER_URL || AI_WORKER_URL==='REPLACE_WITH_YOUR_WORKER_URL'){
+    return{ok:false,reply:'⚠️ المساعد الذكي لسه مش متوصل بالسيرفر.'};
+  }
+  const context=aiBuildWeekTaskContext();
+  const sys=`You resolve a scheduling instruction into an exact move decision. You will receive the user's instruction and the full week's task list (id, name, time, date) in JSON. Respond with ONLY a raw JSON object, nothing else — no markdown fences, no explanation:
+{"taskId":"<id of the task to move>","toDate":"YYYY-MM-DD","toTime":"H:MM ص" or "H:MM م","reasoning":"<one short sentence in Arabic explaining the placement>"}
+If you cannot confidently identify the task or the reference task, respond with:
+{"error":"<short Arabic explanation of what's missing>"}
+Rules: "before X" means schedule at least 15 minutes earlier than X's time, same date as X unless the user said otherwise. "after X" means at least 15 minutes later than X's time, same date as X unless the user said otherwise. Never invent a task id that isn't in the provided list.`;
+  try{
+    const res=await fetch(AI_WORKER_URL,{
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({
+        system:sys,
+        messages:[{role:'user',content:`Week tasks:\n${JSON.stringify(context)}\n\nInstruction: ${msg}`}]
+      })
+    });
+    const data=await res.json();
+    if(!res.ok || data.error) return{ok:false,reply:'⚠️ حصل خطأ من السيرفر — جرب تاني.'};
+    let raw=(data.text||'').trim().replace(/^```json\s*|```$/g,'').trim();
+    let parsed;
+    try{ parsed=JSON.parse(raw); }catch{ return{ok:false,reply:'⚠️ مش فاهم الطلب ده كويس — جرب تصيغه بشكل أوضح.'}; }
+    if(parsed.error) return{ok:false,reply:parsed.error};
+    // Validate the model's answer against the REAL task list — never trust a
+    // taskId/date blindly, since a hallucinated id would otherwise silently no-op
+    // or create a broken move record.
+    const allTasks=context.flatMap(d=>d.tasks.map(t=>({...t,date:d.date})));
+    const match=allTasks.find(t=>t.id===parsed.taskId);
+    if(!match) return{ok:false,reply:'⚠️ مش لاقي المهمة اللي حددها الذكاء الاصطناعي في الجدول الحقيقي — جرب تاني بصياغة أوضح.'};
+    if(!parsed.toDate || !parsed.toTime) return{ok:false,reply:'⚠️ مش قادر أحدد الوقت المناسب — قول لي الوقت أو اليوم بالظبط.'};
+    return{ok:true,taskId:parsed.taskId,taskName:match.name,fromIso:match.date,toDate:parsed.toDate,toTime:parsed.toTime,reasoning:parsed.reasoning||''};
+  }catch(e){
+    console.error('relative move resolve failed',e);
+    return{ok:false,reply:'⚠️ مش قادر أوصل للسيرفر دلوقتي.'};
+  }
+}
 
 async function aiCallLiveModel(){
   if(!AI_WORKER_URL || AI_WORKER_URL==='REPLACE_WITH_YOUR_WORKER_URL'){
@@ -2078,6 +2201,84 @@ function aiToggleMemoryView(){
   aiRenderMessages();
 }
 
+// Splits one message into multiple command clauses so "انقل الجيم لبكرة واحذف
+// السباحة النهاردة" (move gym to tomorrow AND delete swimming today) executes BOTH
+// instead of only whichever pattern happened to match first across the whole string.
+// Splits on Arabic/English conjunctions and commas that sit between two clauses, but
+// only when each side independently looks like it starts a new command (contains a
+// recognized action verb) — this avoids wrongly splitting a single instruction that
+// simply contains "و" as part of a task name or description.
+const AI_ACTION_VERBS=/^(انقل|حرك|غير وقت|move|reschedule|احذف|امسح|شيل|delete|remove|عملت|خلصت|سويت|انجزت|أنجزت|i did|done|completed|finished|ضيف|اضف|أضف|add task|new task|افتكر|اتذكر|سجل عني|تذكر|remember)/i;
+
+function aiSplitCommands(msg){
+  // Split on " و " / " and " / "، " / "," that precede another action-verb clause.
+  const rough=msg.split(/\s*(?:،|,)\s*|\s+و\s+(?=\S)|\s+and\s+(?=\S)/i);
+  if(rough.length<=1) return[msg.trim()];
+  const parts=[];
+  let buffer='';
+  for(const piece of rough){
+    const trimmed=piece.trim();
+    if(!trimmed) continue;
+    if(AI_ACTION_VERBS.test(trimmed) && buffer){
+      parts.push(buffer.trim());
+      buffer=trimmed;
+    }else{
+      buffer=buffer?buffer+' '+trimmed:trimmed;
+    }
+  }
+  if(buffer) parts.push(buffer.trim());
+  // Fall back to treating it as one command if splitting produced pieces that don't
+  // each look like a real command — safer than mangling a legitimate single sentence.
+  return parts.length>1 && parts.every(p=>AI_ACTION_VERBS.test(p))?parts:[msg.trim()];
+}
+
+// Processes a single command clause (already split out of a possibly multi-command
+// message) and returns {tone, reply, handled}. Does NOT push to chat or save — the
+// caller (aiHandleSend) batches all clause results from one message into one flow.
+async function aiProcessClause(clauseText){
+  // Relative-position moves ("انقل الجيم قبل الغدا") need real reasoning about what
+  // time "before/after X" resolves to — routed to the live model with structured task
+  // data, then executed deterministically once validated against the real schedule.
+  if(aiLooksLikeRelativeMove(clauseText)){
+    const resolved=await aiResolveRelativeMove(clauseText);
+    if(!resolved.ok) return{tone:'err',reply:resolved.reply,handled:true};
+    const task=aiFindTaskByIdOnDate(resolved.taskId,resolved.fromIso);
+    if(!task) return{tone:'err',reply:'⚠️ المهمة مش موجودة على التاريخ المتوقع — جرب تاني.',handled:true};
+    try{
+      await aiMoveTaskExec(task,resolved.fromIso,resolved.toDate,resolved.toTime);
+      const why=resolved.reasoning?` (${resolved.reasoning})`:'';
+      return{tone:'ok',reply:`تم نقل "${resolved.taskName}" إلى ${resolved.toDate} الساعة ${resolved.toTime}${why} ✅`,handled:true};
+    }catch(e){
+      console.error('relative move exec failed',e);
+      return{tone:'err',reply:'⚠️ حصل خطأ أثناء تنفيذ النقل — جرب تاني.',handled:true};
+    }
+  }
+
+  const intent=aiParseIntent(clauseText);
+
+  // Known, safe, structured commands (move/delete/mark-done/etc.) always execute
+  // locally and deterministically through the real data functions — never through
+  // the LLM. This is intentional: correctness and safety for actual data mutations
+  // matter more than routing everything through one code path.
+  if(['markDone','moveTask','deleteTask','editPoints','addCustomTask','rememberFact','unrecognizedTask','needMoreInfo'].includes(intent.action)){
+    let tone='ok';
+    try{
+      if(['markDone','moveTask','deleteTask','editPoints','addCustomTask','rememberFact'].includes(intent.action)){
+        await aiExecuteAction(intent);
+      }else{
+        tone='err';
+      }
+    }catch(e){
+      console.error('AI action execution failed:',e);
+      intent.reply='⚠️ حصل خطأ أثناء تنفيذ التغيير — جرب تاني.';
+      tone='err';
+    }
+    return{tone,reply:intent.reply,handled:true};
+  }
+
+  return{handled:false}; // not a recognized structured command
+}
+
 async function aiHandleSend(){
   const input=document.getElementById('aiInput');
   if(!input) return;
@@ -2100,35 +2301,43 @@ async function aiHandleSend(){
     return;
   }
 
-  const intent=aiParseIntent(text);
+  // Split into individual command clauses so a single message with multiple
+  // instructions ("انقل الجيم لبكرة واحذف السباحة النهاردة") executes ALL of them,
+  // not just whichever pattern matched first.
+  const clauses=aiSplitCommands(text);
+  const results=[];
+  let anyHandled=false;
+  let anyMutated=false;
 
-  // Known, safe, structured commands (move/delete/mark-done/etc.) always execute
-  // locally and deterministically through the real data functions — never through
-  // the LLM. This is intentional: correctness and safety for actual data mutations
-  // matter more than routing everything through one code path.
-  if(['markDone','moveTask','deleteTask','editPoints','addCustomTask','rememberFact','unrecognizedTask','needMoreInfo'].includes(intent.action)){
-    let tone='ok';
-    try{
-      if(['markDone','moveTask','deleteTask','editPoints','addCustomTask','rememberFact'].includes(intent.action)){
-        await aiExecuteAction(intent);
-        try{ renderPanels();switchDay(getJDfromISO(SELECTED_DATE));updateUI(); }catch(e){ console.error('re-render after AI action failed:',e); }
-      }else{
-        tone='err';
-      }
-    }catch(e){
-      console.error('AI action execution failed:',e);
-      intent.reply='⚠️ حصل خطأ أثناء تنفيذ التغيير — جرب تاني.';
-      tone='err';
+  for(const clause of clauses){
+    const r=await aiProcessClause(clause);
+    if(r.handled){
+      anyHandled=true;
+      if(r.tone!=='err') anyMutated=true;
+      results.push(r);
     }
-    session.messages.push({role:'bot',text:intent.reply,ts:Date.now(),tone});
+  }
+
+  if(anyHandled){
+    if(anyMutated){
+      try{ renderPanels();switchDay(getJDfromISO(SELECTED_DATE));updateUI(); }catch(e){ console.error('re-render after AI action(s) failed:',e); }
+    }
+    // Combine every clause's reply into one message, numbered if there was more than
+    // one command, so a multi-instruction message gets one clear combined confirmation
+    // instead of several separate bubbles.
+    const combinedText=results.length>1
+      ?results.map((r,i)=>`${i+1}. ${r.reply}`).join('\n')
+      :results[0].reply;
+    const overallTone=results.some(r=>r.tone==='err')?(results.every(r=>r.tone==='err')?'err':null):'ok';
+    session.messages.push({role:'bot',text:combinedText,ts:Date.now(),tone:overallTone});
     session.lastMsgAt=Date.now();
     aiRenderMessages();
     await saveAiChat();
     return;
   }
 
-  // Anything not matching a known command pattern (general questions, conversation,
-  // "what can you do", etc.) goes to the real model via the Worker proxy.
+  // Nothing in the message matched a known command pattern — treat the whole
+  // original message as general conversation and send it to the live model.
   session.messages.push({role:'bot',text:'...',ts:Date.now(),tone:'typing'});
   aiRenderMessages();
 
