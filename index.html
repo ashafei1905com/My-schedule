@@ -2204,32 +2204,28 @@ function aiToggleMemoryView(){
 // Splits one message into multiple command clauses so "انقل الجيم لبكرة واحذف
 // السباحة النهاردة" (move gym to tomorrow AND delete swimming today) executes BOTH
 // instead of only whichever pattern happened to match first across the whole string.
-// Splits on Arabic/English conjunctions and commas that sit between two clauses, but
-// only when each side independently looks like it starts a new command (contains a
-// recognized action verb) — this avoids wrongly splitting a single instruction that
-// simply contains "و" as part of a task name or description.
-const AI_ACTION_VERBS=/^(انقل|حرك|غير وقت|move|reschedule|احذف|امسح|شيل|delete|remove|عملت|خلصت|سويت|انجزت|أنجزت|i did|done|completed|finished|ضيف|اضف|أضف|add task|new task|افتكر|اتذكر|سجل عني|تذكر|remember)/i;
+// Splits on Arabic/English conjunctions and commas that sit between two clauses.
+// A piece counts as a real command if it CONTAINS a recognized action verb anywhere
+// (not just at the very start) — real messages often have filler/preamble text before
+// the actual instruction ("أنا مشغول النهاردة و شيل كذا"), so requiring the verb to be
+// the first word was too strict and caused the entire split to be discarded whenever
+// any natural preamble was present, silently falling back to single-command parsing.
+const AI_ACTION_VERBS_ANY=/(انقل|حرك|غير وقت|move|reschedule|احذف|امسح|شيل|delete|remove|عملت|خلصت|سويت|انجزت|أنجزت|i did|done|completed|finished|ضيف|اضف|أضف|add task|new task|افتكر|اتذكر|سجل عني|تذكر|remember)/i;
 
 function aiSplitCommands(msg){
-  // Split on " و " / " and " / "، " / "," that precede another action-verb clause.
+  // Split on " و " / " and " / "، " / "," — commas and conjunctions between clauses.
   const rough=msg.split(/\s*(?:،|,)\s*|\s+و\s+(?=\S)|\s+and\s+(?=\S)/i);
   if(rough.length<=1) return[msg.trim()];
-  const parts=[];
-  let buffer='';
-  for(const piece of rough){
-    const trimmed=piece.trim();
-    if(!trimmed) continue;
-    if(AI_ACTION_VERBS.test(trimmed) && buffer){
-      parts.push(buffer.trim());
-      buffer=trimmed;
-    }else{
-      buffer=buffer?buffer+' '+trimmed:trimmed;
-    }
-  }
-  if(buffer) parts.push(buffer.trim());
-  // Fall back to treating it as one command if splitting produced pieces that don't
-  // each look like a real command — safer than mangling a legitimate single sentence.
-  return parts.length>1 && parts.every(p=>AI_ACTION_VERBS.test(p))?parts:[msg.trim()];
+
+  // Keep only pieces that actually contain a command verb somewhere — pure filler
+  // pieces ("أنا مشغول جدًا فقولنا مش مهم النهاردة") are dropped rather than merged
+  // into the next piece or used to invalidate the whole split.
+  const commandPieces=rough.map(p=>p.trim()).filter(p=>p && AI_ACTION_VERBS_ANY.test(p));
+
+  // Need at least 2 genuine command pieces to treat this as multi-command; a single
+  // command piece plus filler should just be handled as one command via the normal
+  // single-message path (which still works fine on the full original text).
+  return commandPieces.length>=2?commandPieces:[msg.trim()];
 }
 
 // Processes a single command clause (already split out of a possibly multi-command
