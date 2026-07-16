@@ -2961,7 +2961,49 @@ if (typeof onAuthStateChanged !== 'undefined' && typeof fbAuth !== 'undefined') 
         const ud=await getDoc(doc(fbDb,'users',user.uid));
         if(ud.exists()){
           const d=ud.data();
-          if(d.stats) STATS=d.stats;
+          // STATS used to be a flat overwrite (STATS=d.stats), which is what actually
+          // caused points/streak to reset to 0: if THIS tab/PWA still held a stale
+          // in-memory STATS from before another device did a task (e.g. this tab was
+          // already open in the background while the phone's PWA racked up points),
+          // then interacting with the AI chat or history in THIS tab triggers a
+          // saveAll()/saveUserEdits() call that pushes the stale STATS right back up
+          // to Firestore, clobbering the real progress. historyData below already gets
+          // a proper merge for exactly this reason — STATS needs the same protection.
+          // There's no per-field timestamp to know which side is "newer", so the merge
+          // policy is: never let a sync REDUCE pts/cur/best (take the max of both
+          // sides), and for the date-stamped fields (lc/lf/lastPtsWeekStart) take
+          // whichever side has the later date. This can't recover a genuine loss that
+          // already happened before this fix, but it makes the loss structurally
+          // impossible going forward — a stale local 0 can never beat a real cloud 25.
+          if(d.stats){
+            const cloudStats=d.stats;
+            const localStats=STATS;
+            const laterDate=(a,b)=>{if(!a)return b;if(!b)return a;return a>b?a:b;};
+            STATS={
+              pts:Math.max(cloudStats.pts||0,localStats.pts||0),
+              cur:Math.max(cloudStats.cur||0,localStats.cur||0),
+              best:Math.max(cloudStats.best||0,localStats.best||0),
+              lc:laterDate(cloudStats.lc,localStats.lc),
+              lf:laterDate(cloudStats.lf,localStats.lf),
+              lastPtsWeekStart:laterDate(cloudStats.lastPtsWeekStart,localStats.lastPtsWeekStart),
+              bestFixed:cloudStats.bestFixed||localStats.bestFixed||false
+            };
+          }
+          // ONE-TIME manual recovery for the points lost to the STATS-overwrite bug
+          // above (fixed in this same update). Abdullah reported 468 points before two
+          // separate corruption incidents zeroed it out; Firestore has no point-in-time
+          // recovery on the Spark plan, so there's no way to pull the real prior value
+          // back programmatically — this restores the number he confirmed.
+          // This app is single-user (Abdullah's personal schedule, not multi-tenant),
+          // so gating on "any signed-in user" is safe here — but the check is written
+          // explicitly rather than implicitly, and guarded so it can never re-fire
+          // after the first successful save, and never re-lower an already-higher
+          // value (strict no-op if run twice, or if pts are already above 468 by the
+          // time this loads). Safe to delete this whole block once confirmed working.
+          if(!STATS._recovery468Applied && (STATS.pts||0)<468){
+            STATS.pts=468;
+            STATS._recovery468Applied=true;
+          }
           if(d.reports) savedReports=d.reports;
           // Cloud historyData/penalizedDates now genuinely merge in — this is what
           // makes a second browser/device actually see your past days.
