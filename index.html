@@ -81,6 +81,9 @@ body{font-family:'Cairo',sans-serif;background:var(--bg);color:var(--tx);directi
 .tc[data-c="prog"]{border-right:3px solid var(--pk)}
 .tc[data-c="sleep"]{border-right:3px solid var(--pu)}
 .tc[data-c="free"]{border-right:3px dashed #6366f1}
+.tc[data-c="snack"]{border-right:3px dotted #f472b6}
+.cbtn.snack{background:rgba(244,114,182,.1);border-color:rgba(244,114,182,.4);color:#f472b6}
+.cbtn.snack:hover{background:rgba(244,114,182,.2)}
 .tc[data-c="sunrise"]{border-right:3px solid var(--or)}
 .tctime{font-size:.67rem;color:var(--mu);font-weight:700;min-width:60px;text-align:left;padding-top:2px;direction:ltr;flex-shrink:0}
 .tcico{font-size:1.1rem;width:32px;height:32px;display:flex;align-items:center;justify-content:center;border-radius:8px;background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.1);flex-shrink:0}
@@ -211,6 +214,22 @@ body{font-family:'Cairo',sans-serif;background:var(--bg);color:var(--tx);directi
 .ai-session-title{font-size:.82rem;font-weight:700;color:var(--tx)}
 .ai-session-meta{font-size:.66rem;color:var(--mu);margin-top:2px}
 .ai-session-del{background:rgba(239,68,68,.1);border:1px solid rgba(239,68,68,.3);color:#f87171;border-radius:6px;padding:4px 8px;font-size:.68rem;cursor:pointer;flex-shrink:0}
+
+/* Session sidebar — Gemini-style slide-in, layered above the chat panel (not a mode
+   inside aiBody like the old history view). Independently open/closeable so switching
+   sessions never requires leaving/losing the current chat's scroll position. */
+@keyframes sidebarSlideIn{from{transform:translateX(105%)}to{transform:translateX(0)}}
+[dir="rtl"] #aiSidebar{animation:sidebarSlideInRtl .28s cubic-bezier(.2,.9,.3,1.1)}
+@keyframes sidebarSlideInRtl{from{transform:translateX(-105%)}to{transform:translateX(0)}}
+#aiSidebarOverlay{position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:10010;display:none}
+#aiSidebarOverlay.open{display:block}
+#aiSidebar{position:fixed;top:0;right:0;bottom:0;width:min(320px,86vw);background:var(--c2);border-left:2px solid var(--br);z-index:10011;display:none;flex-direction:column;box-shadow:-8px 0 30px rgba(0,0,0,.5)}
+#aiSidebar.open{display:flex;animation:sidebarSlideInRtl .28s cubic-bezier(.2,.9,.3,1.1)}
+.ai-sidebar-head{display:flex;justify-content:space-between;align-items:center;padding:14px 16px;border-bottom:1px solid var(--br);flex-shrink:0}
+.ai-sidebar-title{font-weight:900;font-size:.95rem}
+.ai-sidebar-newbtn{margin:12px 16px;padding:10px;background:rgba(139,92,246,.14);border:1px solid rgba(139,92,246,.4);border-radius:10px;color:#c4b5fd;font-family:'Cairo',sans-serif;font-weight:800;font-size:.82rem;cursor:pointer;text-align:center}
+.ai-sidebar-newbtn:hover{background:rgba(139,92,246,.24)}
+.ai-sidebar-list{flex:1;overflow-y:auto;padding:0 12px 12px}
 </style>
 </head>
 <body>
@@ -296,6 +315,19 @@ body{font-family:'Cairo',sans-serif;background:var(--bg);color:var(--tx);directi
     <textarea class="ai-input" id="aiInput" rows="1" placeholder="اكتب أمرك... مثال: انقل الجيم لبكرة الساعة ٨"></textarea>
     <button class="ai-send" id="aiSendBtn" type="button">إرسال</button>
   </div>
+</div>
+
+<!-- Session Sidebar — Gemini-style: independent slide-in panel, not a mode swap
+     inside the chat body. Opening it never touches the active chat's scroll/state;
+     closing it returns to exactly where the chat was. -->
+<div id="aiSidebarOverlay"></div>
+<div id="aiSidebar">
+  <div class="ai-sidebar-head">
+    <div class="ai-sidebar-title">🗂️ سجل المحادثات</div>
+    <button class="ai-iconbtn" id="aiSidebarClose" type="button" title="إغلاق">✕</button>
+  </div>
+  <div class="ai-sidebar-newbtn" id="aiSidebarNewChat">➕ محادثة جديدة</div>
+  <div class="ai-sidebar-list" id="aiSidebarList"></div>
 </div>
 
 <div id="toast"></div>
@@ -468,9 +500,14 @@ const mkBr=(p)=>[p+'-br','7:00 م','recovery','🏊','مع أخوك — جاكو
 // Between-meal snacks — three fixed slots per day (mid-morning, mid-afternoon, evening) so
 // hunger between main meals is covered. Optional (0 pts, isEx=true) so they never trigger
 // punishment or block streak completion — you eat them if/when you're hungry.
-const mkSnackA=(p,t='11:15 ص')=>[p+'-sn1',t,'food','🥜','سناك ١ (بين الفطار والغدا)','حفنة مكسرات (لوز/جوز) + تفاحة — لو جعت',0,['زبادي يوناني + عسل','جزر + حمص'],null,true];
-const mkSnackB=(p,t='4:30 م')=>[p+'-sn2',t,'food','🥤','سناك ٢ (بعد الظهر)','بروتين شيك أو زبادي + موزة — لو جعت',0,['تمر + لبن','بيضة مسلوقة + خيار'],null,true];
-const mkSnackC=(p,t='9:30 م')=>[p+'-sn3',t,'food','🍇','سناك ٣ (مسائي خفيف)','فاكهة خفيفة أو حفنة مكسرات — لو جعت قبل النوم',0,['زبادي قليل الدسم','قطعة جبنة قريش صغيرة'],null,true];
+// Snacks are their own category ('snack'), not 'food'+isEx. isEx tasks are fully
+// invisible to punishment/streak math AND always worth 0pts. Snacks need a third rule:
+// never punished if skipped (like isEx), but DO award up to 5pts if done (unlike isEx).
+// getReqTasks() below filters out cat==='snack' explicitly — that's what exempts them
+// from the punishment scan without making them worth 0.
+const mkSnackA=(p,t='11:15 ص')=>[p+'-sn1',t,'snack','🥜','سناك ١ (بين الفطار والغدا)','حفنة مكسرات (لوز/جوز) + تفاحة — لو جعت',5,['زبادي يوناني + عسل','جزر + حمص'],null,false];
+const mkSnackB=(p,t='4:30 م')=>[p+'-sn2',t,'snack','🥤','سناك ٢ (بعد الظهر)','بروتين شيك أو زبادي + موزة — لو جعت',5,['تمر + لبن','بيضة مسلوقة + خيار'],null,false];
+const mkSnackC=(p,t='9:30 م')=>[p+'-sn3',t,'snack','🍇','سناك ٣ (مسائي خفيف)','فاكهة خفيفة أو حفنة مكسرات — لو جعت قبل النوم',5,['زبادي قليل الدسم','قطعة جبنة قريش صغيرة'],null,false];
 
 const PMETA={
   Fajr:{ar:'الفجر',ic:'🌙',pts:10,sunnah:'سنة الفجر (ركعتان قبل)'},
@@ -498,12 +535,12 @@ const FREE_TIME={
 
 const SCHED={
   0:{n:'الأحد',wk:'9:00 ص',bd:'11:00 م',gm:null,ts:[mkBk('sun'),mkWd('sun'),['sun-qp','10:00 ص','quran','📖','تحضير درس الاثنين','حفظ آيات جديدة + مراجعة اللوح — ٤٥ دقيقة',15,null,null,false],mkSnackA('sun'),['sun-lu','2:30 م','food','🍽️','الغدا','نص كيلو فراخ/لحمة مشوي + سلطة + بطاطس مسلوقة',5,['سمك + سلطة + رغيف أسمر','كبدة مشوية + طماطم + بصل + خبز'],null,false],mkSnackB('sun'),mkDn('sun'),mkSnackC('sun'),mkSl('sun')]},
-  1:{n:'الاثنين',wk:'10:00 ص',bd:'12:00 ص',gm:'lower',ts:[mkBk('mon','10:15 ص'),mkWd('mon','10:30 ص'),['mon-pp','11:30 ص','prog','💻','تحضير البرمجة','راجع الدرس السابق + اكتب أسئلتك — ٣٠ دقيقة',10,null,null,false],['mon-ss','12:00 م','prog','👨‍💻','سيشن البرمجة','١٢:٠٠ — ١:٠٠ م | JavaScript',15,null,null,false],['mon-hw','1:05 م','prog','📤','واجب البرمجة','ابدأ الواجب — آخر موعد الأربعاء (٢٤-٤٨ ساعة بعد السيشن)',10,null,'آخر موعد: الأربعاء',false],['mon-lu','1:30 م','food','🍽️','الغدا','نص كيلو فراخ مشوي + سلطة + بطاطس',5,['سمك دنيس + سلطة + رغيف','لحم هبر مشوي + سلطة + خبز'],null,false],['mon-ql','3:50 م','quran','🕌','درس القرآن','٣:٥٠ — ٤:٣٠ م | مباشرة بعد العصر',15,null,null,false],mkPS('mon','6:00 م'),mkGL('mon','7:00 م'),mkSw('mon','8:30 م'),mkRc('mon','9:15 م','جاكوزي + بخار — ريكفري ٤٥ دقيقة ← استثناء ✓'),mkPM('mon','10:30 م'),mkSnackC('mon','11:15 م'),mkSl('mon','12:00 ص')]},
-  2:{n:'الثلاثاء',wk:'9:00 ص',bd:'11:00 م',gm:null,ts:[mkBk('tue'),mkWd('tue'),['tue-qp','10:00 ص','quran','📖','تحضير درس الأربعاء','حفظ آيات جديدة + مراجعة اللوح — ٤٥ دقيقة',15,null,null,false],mkSnackA('tue'),['tue-lu','2:30 م','food','🍽️','الغدا','نص كيلو فراخ/لحمة مشوي + سلطة',5,['سمك + سلطة + رغيف','كبدة مشوية + سلطة + خبز'],null,false],mkSnackB('tue'),mkBr('tue'),mkDn('tue','10:15 م'),mkSl('tue')]},
-  3:{n:'الأربعاء',wk:'10:00 ص',bd:'12:00 ص',gm:'upper',ts:[mkBk('wed','10:15 ص'),mkWd('wed','10:30 ص'),['wed-lu','1:00 م','food','🍽️','الغدا','نص كيلو فراخ مشوي + سلطة + بطاطس',5,['سمك + خضار + رز نص طبق','لحم هبر مشوي + سلطة + خبز'],null,false],['wed-ql','3:50 م','quran','🕌','درس القرآن','٣:٥٠ — ٤:٣٠ م | مباشرة بعد العصر',15,null,null,false],mkPS('wed','6:00 م'),mkGU('wed','7:00 م'),mkSw('wed','8:30 م'),mkRc('wed','9:15 م','جاكوزي + بخار — ريكفري ٤٥ دقيقة ← استثناء ✓'),mkPM('wed','10:30 م'),mkSnackC('wed','11:15 م'),mkSl('wed','12:00 ص')]},
-  4:{n:'الخميس',wk:'9:00 ص',bd:'11:00 م',gm:null,ts:[mkBk('thu'),mkWd('thu'),['thu-pp','11:30 ص','prog','💻','تحضير البرمجة','راجع الدرس السابق + اكتب أسئلتك — ٣٠ دقيقة',10,null,null,false],['thu-ss','12:00 م','prog','👨‍💻','سيشن البرمجة','١٢:٠٠ — ١:٠٠ م | JavaScript',15,null,null,false],['thu-hw','1:05 م','prog','📤','واجب البرمجة','ابدأ الواجب — آخر موعد السبت (٢٤-٤٨ ساعة بعد السيشن)',10,null,'آخر موعد: السبت',false],['thu-lu','1:30 م','food','🍽️','الغدا','نص كيلو فراخ/لحمة مشوي + سلطة',5,['سمك + سلطة + بطاطس','كبدة مشوية + سلطة + خبز'],null,false],mkSnackB('thu'),mkBr('thu'),mkDn('thu','10:15 م'),mkSl('thu')]},
+  1:{n:'الاثنين',wk:'10:00 ص',bd:'12:00 ص',gm:'lower',ts:[mkBk('mon','10:15 ص'),mkWd('mon','10:30 ص'),mkSnackA('mon','11:00 ص'),['mon-pp','11:30 ص','prog','💻','تحضير البرمجة','راجع الدرس السابق + اكتب أسئلتك — ٣٠ دقيقة',10,null,null,false],['mon-ss','12:00 م','prog','👨‍💻','سيشن البرمجة','١٢:٠٠ — ١:٠٠ م | JavaScript',15,null,null,false],['mon-hw','1:05 م','prog','📤','واجب البرمجة','ابدأ الواجب — آخر موعد الأربعاء (٢٤-٤٨ ساعة بعد السيشن)',10,null,'آخر موعد: الأربعاء',false],['mon-lu','1:30 م','food','🍽️','الغدا','نص كيلو فراخ مشوي + سلطة + بطاطس',5,['سمك دنيس + سلطة + رغيف','لحم هبر مشوي + سلطة + خبز'],null,false],mkSnackB('mon','3:15 م'),['mon-ql','3:50 م','quran','🕌','درس القرآن','٣:٥٠ — ٤:٣٠ م | مباشرة بعد العصر',15,null,null,false],mkPS('mon','6:00 م'),mkGL('mon','7:00 م'),mkSw('mon','8:30 م'),mkRc('mon','9:15 م','جاكوزي + بخار — ريكفري ٤٥ دقيقة ← استثناء ✓'),mkPM('mon','10:30 م'),mkSnackC('mon','11:30 م'),mkSl('mon','12:00 ص')]},
+  2:{n:'الثلاثاء',wk:'9:00 ص',bd:'11:00 م',gm:null,ts:[mkBk('tue'),mkWd('tue'),['tue-qp','10:00 ص','quran','📖','تحضير درس الأربعاء','حفظ آيات جديدة + مراجعة اللوح — ٤٥ دقيقة',15,null,null,false],mkSnackA('tue'),['tue-lu','2:30 م','food','🍽️','الغدا','نص كيلو فراخ/لحمة مشوي + سلطة',5,['سمك + سلطة + رغيف','كبدة مشوية + سلطة + خبز'],null,false],mkSnackB('tue'),mkBr('tue'),mkSnackC('tue','8:45 م'),mkDn('tue','10:15 م'),mkSl('tue')]},
+  3:{n:'الأربعاء',wk:'10:00 ص',bd:'12:00 ص',gm:'upper',ts:[mkBk('wed','10:15 ص'),mkWd('wed','10:30 ص'),mkSnackA('wed','11:15 ص'),['wed-lu','1:00 م','food','🍽️','الغدا','نص كيلو فراخ مشوي + سلطة + بطاطس',5,['سمك + خضار + رز نص طبق','لحم هبر مشوي + سلطة + خبز'],null,false],mkSnackB('wed','2:45 م'),['wed-ql','3:50 م','quran','🕌','درس القرآن','٣:٥٠ — ٤:٣٠ م | مباشرة بعد العصر',15,null,null,false],mkPS('wed','6:00 م'),mkGU('wed','7:00 م'),mkSw('wed','8:30 م'),mkRc('wed','9:15 م','جاكوزي + بخار — ريكفري ٤٥ دقيقة ← استثناء ✓'),mkPM('wed','10:30 م'),mkSnackC('wed','11:30 م'),mkSl('wed','12:00 ص')]},
+  4:{n:'الخميس',wk:'9:00 ص',bd:'11:00 م',gm:null,ts:[mkBk('thu'),mkWd('thu'),mkSnackA('thu','11:00 ص'),['thu-pp','11:30 ص','prog','💻','تحضير البرمجة','راجع الدرس السابق + اكتب أسئلتك — ٣٠ دقيقة',10,null,null,false],['thu-ss','12:00 م','prog','👨‍💻','سيشن البرمجة','١٢:٠٠ — ١:٠٠ م | JavaScript',15,null,null,false],['thu-hw','1:05 م','prog','📤','واجب البرمجة','ابدأ الواجب — آخر موعد السبت (٢٤-٤٨ ساعة بعد السيشن)',10,null,'آخر موعد: السبت',false],['thu-lu','1:30 م','food','🍽️','الغدا','نص كيلو فراخ/لحمة مشوي + سلطة',5,['سمك + سلطة + بطاطس','كبدة مشوية + سلطة + خبز'],null,false],mkSnackB('thu','4:45 م'),mkBr('thu'),mkSnackC('thu','8:45 م'),mkDn('thu','10:15 م'),mkSl('thu')]},
   5:{n:'الجمعة',wk:'9:00 ص',bd:'11:00 م',gm:null,ts:[mkBk('fri'),mkWd('fri'),mkSnackA('fri'),['fri-jm','12:00 م','prayer','🕌','صلاة الجمعة','اخرج مبكر ← يعادل الظهر',15,null,null,false],['fri-lu','1:30 م','food','🍽️','الغدا','يوم حر — ما تبالغش في الكارب',5,['محشي + فراخ مشوي','كنتاكي مرة الأسبوع مقبول 🍗'],null,false],mkSnackB('fri'),mkDn('fri'),mkSnackC('fri'),mkSl('fri')]},
-  6:{n:'السبت',wk:'9:00 ص',bd:'11:00 م',gm:'upper',ts:[mkBk('sat'),mkWd('sat'),mkSnackA('sat','12:15 م'),mkPS('sat','2:15 م'),mkGU('sat','3:00 م'),mkSw('sat','4:00 م'),mkRc('sat','4:45 م','جاكوزي + بخار/ساونا — ريكفري حتى ٥:٣٠ م ← استثناء ✓'),mkPM('sat','5:45 م'),['sat-di','7:30 م','food','🍽️','الغدا','نص كيلو سمك/فراخ/لحمة مشوي + سلطة + بطاطس',5,['جمبري ١٥٠جم + سلطة + خبز أسمر','كفتة مشوي + سلطة'],null,false],mkSnackC('sat','9:45 م'),mkSl('sat')]}
+  6:{n:'السبت',wk:'9:00 ص',bd:'11:00 م',gm:'upper',ts:[mkBk('sat'),mkWd('sat'),mkSnackA('sat','12:15 م'),mkPS('sat','2:15 م'),mkGU('sat','3:00 م'),mkSw('sat','4:00 م'),mkRc('sat','4:45 م','جاكوزي + بخار/ساونا — ريكفري حتى ٥:٣٠ م ← استثناء ✓'),mkPM('sat','5:45 م'),['sat-di','7:30 م','food','🍽️','الغدا','نص كيلو سمك/فراخ/لحمة مشوي + سلطة + بطاطس',5,['جمبري ١٥٠جم + سلطة + خبز أسمر','كفتة مشوي + سلطة'],null,false],mkSnackB('sat','8:45 م'),mkSnackC('sat','9:45 م'),mkSl('sat')]}
 };
 
 function buildPTasks(jd){
@@ -538,7 +575,12 @@ function getAllTasks(jd,iso){
 }
 function getReqTasks(jd,iso){
   const effIso=iso||dateForWeekday(jd,TODAY);
-  const base=[...buildPTasks(jd),...(SCHED[jd]?.ts||[])].filter(t=>!t[9]&&t[6]>0);
+  // cat==='snack' is excluded here — this is the actual mechanism that exempts snacks
+  // from both the punishment scan (applyPunishmentOnce loops over getReqTasks) and the
+  // streak "all required tasks done" check (checkStreak also uses getReqTasks). Snacks
+  // still carry pts>0 and are fully completable via their own button; they just never
+  // appear in the "required" list that punishment/streak logic reads.
+  const base=[...buildPTasks(jd),...(SCHED[jd]?.ts||[])].filter(t=>!t[9]&&t[6]>0&&t[2]!=='snack');
   return applyUserEditsToTasks(base,effIso).filter(t=>!t._deleted).sort((a,b)=>sortKey(a)-sortKey(b));
 }
 
@@ -1054,25 +1096,45 @@ function clearScheduledNotifs(){
   NOTIF_TIMERS=[];
 }
 
-// Schedules browser notifications for every remaining, not-yet-done task today.
-// Each task now gets up to TWO reminders instead of one:
-//   1. "starting soon" — fires 30 minutes BEFORE the task's start time
-//   2. "starting now"  — fires exactly AT the task's start time
-// Previously there was only the at-start-time notification, which is why it always
-// felt like it arrived "after the fact" rather than as an advance warning.
-// Re-run whenever today's task list changes (task completed, edit applied) so
-// already-done tasks stop being scheduled.
+// Schedules browser notifications for every remaining, not-yet-done, non-exception
+// task today. Each task now gets up to THREE reminders:
+//   1. "starting soon"   — fires 30 min BEFORE the task's start time
+//   2. "starting now"    — fires exactly AT the task's start time
+//   3. "ending soon"     — fires 30 min BEFORE the task's effective end time (only for
+//                          tasks that actually have a defined end — prayers use their
+//                          window end from getState(); other tasks default to a
+//                          60-minute duration since most task blocks don't have an
+//                          explicit end time stored anywhere in the schedule data)
+// isEx (exception) tasks are explicitly skipped — per instruction, exceptions never
+// get scheduled at all, only real required tasks and snacks.
+// Re-run whenever today's task list changes so already-done tasks stop being reminded.
 //
 // Known platform limit, not a bug: these are setTimeout-based, so they only fire
 // while this tab/PWA is actually open (or the OS keeps the PWA process alive). A
 // closed tab means no timer runs. True background delivery needs server-sent Web
 // Push, which is out of scope for a static GitHub Pages site with no backend.
 const NOTIF_LEAD_MIN=30;
+const NOTIF_END_LEAD_MIN=30;
+const NOTIF_DEFAULT_DURATION_MIN=60; // fallback task length when no explicit end exists
+
+function notifTaskEndMin(task){
+  const start=toMin(task[10]||task[1]);
+  if(isPrayer(task)){
+    const pk=(task[0].split('-')[2])||'';
+    if(pk==='Fajr')return toMin(PRYT.Sunrise||FALLBK.Sunrise);
+    if(pk==='Dhuhr')return toMin(PRYT.Asr||FALLBK.Asr);
+    if(pk==='Asr')return toMin(PRYT.Maghrib||FALLBK.Maghrib);
+    if(pk==='Maghrib')return toMin(PRYT.Isha||FALLBK.Isha);
+    if(pk==='Isha')return 24*60;
+    if(task[0].includes('fri-jm'))return toMin(PRYT.Asr||FALLBK.Asr);
+  }
+  return start+NOTIF_DEFAULT_DURATION_MIN;
+}
 
 function scheduleTodayNotifications(){
   clearScheduledNotifs();
   if(!NOTIF_ENABLED) return;
-  if(isIOS() && !isStandalonePWA()) return; // silently no-op here; the toast explaining why already fired at the permission-request step
+  if(isIOS() && !isStandalonePWA()) return; // blocked — surfaced explicitly to the user at toggle-time instead of silently here, see requestNotifPermission/btn-notif-toggle
   if(typeof Notification==='undefined' || Notification.permission!=='granted') return;
 
   const jd=todayJD();
@@ -1082,6 +1144,8 @@ function scheduleTodayNotifications(){
   for(const t of tasks){
     if(t._deleted) continue;
     if(t[2]==='free') continue;
+    const isEx=t[9];
+    if(isEx) continue; // exceptions are explicitly excluded from all reminders
     const id=t[0];
     if(DONE[id]!==undefined && DONE[id]!==false) continue; // already done, no need to remind
     const startMin=toMin(t[10]||t[1]);
@@ -1116,6 +1180,29 @@ function scheduleTodayNotifications(){
         }catch(e){console.warn('notification fire failed',e);}
       },ms);
       NOTIF_TIMERS.push(timer);
+    }
+
+    // Reminder 3: fires NOTIF_END_LEAD_MIN before the task's effective end — the
+    // "30 minutes remaining" reminder. Skipped for sleep (no meaningful "ending
+    // soon" concept) and skipped if it would fire before/at the start reminder
+    // already has (very short tasks), to avoid a nonsensical "30 min left" notice
+    // seconds after "starting now".
+    if(t[2]!=='sleep'){
+      const endMin=notifTaskEndMin(t);
+      const endLeadDelta=(endMin-NOTIF_END_LEAD_MIN)-nowMin;
+      if(endLeadDelta>startDelta && endLeadDelta>=0 && endLeadDelta<=16*60){
+        const ms=endLeadDelta*60*1000;
+        const timer=setTimeout(()=>{
+          try{
+            new Notification('⌛ باقي ٣٠ دقيقة',{
+              body:`${t[4]} — هتخلص وقتها قريب`,
+              icon:'data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"%3E%3Ctext y="75" font-size="80"%3E%E2%8C%9B%3C/text%3E%3C/svg%3E',
+              tag:id+'-ending'
+            });
+          }catch(e){console.warn('notification fire failed',e);}
+        },ms);
+        NOTIF_TIMERS.push(timer);
+      }
     }
   }
 }
@@ -1222,6 +1309,14 @@ function renderOpts(opts,logKey){
 async function finishPrayerFlow(){
   const modal=document.getElementById('prayerModal');
   if(modal) modal.classList.remove('open');
+  // iOS Safari keeps focus on whatever modal button was last tapped even after the
+  // modal is hidden; when renderPanels() below rebuilds the DOM under that phantom
+  // focus, Safari sometimes auto-scrolls/zooms toward the (now-gone) focused element.
+  // Explicitly blurring before the re-render, and pinning scroll position across it,
+  // is what actually stops that — the animation classes themselves were never the
+  // cause, this is a focus/scroll-restoration quirk specific to mobile Safari.
+  if(document.activeElement && document.activeElement.blur) document.activeElement.blur();
+  const scrollYBefore=window.scrollY;
   const total=activePrayer.basePts+activePrayer.bonus;
   DONE[activePrayer.id]=total;
   const dk=SELECTED_DATE;
@@ -1241,7 +1336,10 @@ async function finishPrayerFlow(){
     console.error('saveAll failed after prayer completion:',err);
     showToast('⚠️ حصل خطأ أثناء حفظ الصلاة — جرب تاني أو أعد تحميل الصفحة',4000,'warn');
   }
-  try{ renderPanels();switchDay(getJDfromISO(SELECTED_DATE));updateUI(); }catch(err){ console.error('re-render failed:',err); }
+  try{
+    renderPanels();switchDay(getJDfromISO(SELECTED_DATE));updateUI();
+    window.scrollTo(0,scrollYBefore);
+  }catch(err){ console.error('re-render failed:',err); }
   activePrayer=null;
 }
 
@@ -1275,7 +1373,8 @@ const REPORT_CAT_META={
   quran:{label:'📿 القرآن',order:6},
   prog:{label:'💻 البرمجة',order:7},
   sleep:{label:'🌙 النوم',order:8},
-  free:{label:'🎮 وقت حر',order:9}
+  free:{label:'🎮 وقت حر',order:9},
+  snack:{label:'🍎 سناكس (اختياري)',order:10}
 };
 
 function buildWeekReportData(){
@@ -1531,6 +1630,7 @@ function renderCard(task,isToday){
 
   if(cat==='free')return`<div class="tc" data-c="free"><div class="tctime">${arTime}</div><div class="tcico">${ico}</div><div class="tcbody"><div class="tcname" style="color:#6366f1">${name}</div><div class="tcdesc">${task[5]}</div></div></div>`;
 
+  const isSnack=cat==='snack';
   let act='';
   if(isEx){act=`<div class="excbadge">🔓 استثناء</div>`;}
   else if(isToday){
@@ -1541,12 +1641,20 @@ function renderCard(task,isToday){
       const half=Math.floor(pts/2);
       act=`<button class="cbtn qada" data-action="qada" data-id="${id}" data-pts="${pts}">قضاء (50%)<span class="ptslbl">+${half}⭐</span></button>`;
     }else if(state==='EXPIRED'){
-      act=`<div class="cbtn exp">فات الوقت</div>`;
+      // Snacks never truly "expire" into a punishable state — they just stop being
+      // clickable once very late, same visual as other expired tasks but never fed
+      // into punishment math (getReqTasks excludes cat==='snack' entirely).
+      act=isSnack?`<div class="excbadge">🍎 فات وقته — مفيش خصم</div>`:`<div class="cbtn exp">فات الوقت</div>`;
+    }else if(isSnack){
+      // Distinct button: separate CSS class + label from both the normal confirm
+      // button and the exception badge. Uses the same 'confirm' action handler
+      // (DONE[id]=pts, no punishment linkage since getReqTasks never lists it).
+      act=`<button class="cbtn snack" data-action="confirm" data-id="${id}" data-pts="${pts}">🍎 سناك ✓<span class="ptslbl">+${pts}⭐ (اختياري)</span></button>`;
     }else{
       act=`<button class="cbtn" data-action="confirm" data-id="${id}" data-pts="${pts}">تأكيد ✓<span class="ptslbl">+${pts}⭐</span></button>`;
     }
   }else{
-    act=isDone?`<div class="cbtn done">✅</div>`:`<div class="ptsbdg">${pts}⭐</div>`;
+    act=isDone?`<div class="cbtn done">✅</div>`:(isSnack?`<div class="ptsbdg">🍎 ${pts}⭐ اختياري</div>`:`<div class="ptsbdg">${pts}⭐</div>`);
   }
 
   const altH=(alts&&alts.length&&isToday&&!isDone)?
@@ -1822,6 +1930,127 @@ function aiGenId(prefix){return`${prefix}-${Date.now()}-${Math.floor(Math.random
 
 // The parser: returns {action, ...params, reply} or null if nothing recognized.
 // Order matters — more specific patterns are checked before generic ones.
+// Maps spoken prayer names (Arabic + English, with common misspellings/transliterations)
+// to the PMETA key used internally. "الجمعة"/"jumaa" is intentionally excluded here —
+// Friday prayer has its own separate id/flow (fri-jm) matched via aiFindTask instead,
+// since it isn't one of the 5 daily prayers in PMETA and has no sunnah step.
+const AI_PRAYER_NAME_MAP={
+  'الفجر':'Fajr','فجر':'Fajr','fajr':'Fajr',
+  'الظهر':'Dhuhr','ظهر':'Dhuhr','dhuhr':'Dhuhr','duhr':'Dhuhr','zuhr':'Dhuhr',
+  'العصر':'Asr','عصر':'Asr','asr':'Asr',
+  'المغرب':'Maghrib','مغرب':'Maghrib','maghrib':'Maghrib','maghreb':'Maghrib',
+  'العشاء':'Isha','العشا':'Isha','عشاء':'Isha','عشا':'Isha','isha':'Isha','ishaa':'Isha'
+};
+
+// Detects whether a message is about completing a specific daily prayer at all —
+// used to gate the more expensive detail-parsing below, and to distinguish "صليت
+// المغرب" (prayer completion) from unrelated messages that happen to contain a
+// prayer-adjacent word.
+function aiDetectPrayerKey(low){
+  for(const[word,pk] of Object.entries(AI_PRAYER_NAME_MAP)){
+    if(low.includes(word)) return pk;
+  }
+  return null;
+}
+
+// Parses completion-detail language into the SAME {key,choice,pts} log entries the
+// modal buttons produce, reusing the modal's own option tables so points always match
+// what tapping through the modal would give — one source of truth for point values,
+// never a second hardcoded copy that could drift out of sync.
+const AI_PRAYER_STEP_OPTS={
+  location:[{label:'المسجد 🕌',pts:5,gold:true},{label:'البيت 🏠',pts:3,gold:false},{label:'الجيم 🏋️',pts:2,gold:false},{label:'أخرى 📍',pts:1,gold:false}],
+  style:[{label:'جماعة 👥',pts:4,gold:true},{label:'منفرد 🧍',pts:2,gold:false}],
+  dhikr:[{label:'نعم ✅',pts:3,gold:true},{label:'لا ❌',pts:1,gold:false}],
+  sunnah:[{label:'نعم ✅',pts:3,gold:true},{label:'لا ❌',pts:1,gold:false}]
+};
+
+function aiParsePrayerDetailLog(low,wantsMax){
+  const log=[];
+  // location: مسجد mentioned -> المسجد; بيت/البيت -> البيت; جيم -> الجيم
+  if(/مسجد|جامع|mosque/.test(low)) log.push({key:'location',...AI_PRAYER_STEP_OPTS.location[0]});
+  else if(/بيت|home|house/.test(low)) log.push({key:'location',...AI_PRAYER_STEP_OPTS.location[1]});
+  else if(/جيم|gym/.test(low)) log.push({key:'location',...AI_PRAYER_STEP_OPTS.location[2]});
+
+  // style: جماعة -> جماعة; منفرد/لوحدي -> منفرد
+  if(/جماعة|جماعه|congregation/.test(low)) log.push({key:'style',...AI_PRAYER_STEP_OPTS.style[0]});
+  else if(/منفرد|لوحدي|alone|individually/.test(low)) log.push({key:'style',...AI_PRAYER_STEP_OPTS.style[1]});
+
+  // dhikr: أذكار mentioned as done
+  if(/أذكار|اذكار|dhikr|athkar/.test(low)) log.push({key:'dhikr',...AI_PRAYER_STEP_OPTS.dhikr[0]});
+
+  // sunnah: سنة mentioned as done
+  if(/سنة|سنه|sunnah/.test(low)) log.push({key:'sunnah',...AI_PRAYER_STEP_OPTS.sunnah[0]});
+
+  // "max points" / "أقصى نقاط" without other detail = fill every remaining step gold.
+  if(wantsMax){
+    for(const stepKey of['location','style','dhikr','sunnah']){
+      if(!log.some(l=>l.key===stepKey)){
+        const gold=AI_PRAYER_STEP_OPTS[stepKey].find(o=>o.gold);
+        log.push({key:stepKey,...gold});
+      }
+    }
+  }
+  return log;
+}
+
+// Opens the real prayer modal (same one the card-tap flow uses) pre-seeded with the
+// parsed log entries, landing on the first step NOT already answered by the parsed
+// text. Nothing is silently applied — the modal still requires a tap to advance/
+// confirm each remaining step, per Abdullah's explicit choice for this behavior.
+function aiOpenPrayerFlowPrefilled(task,iso,parsedLog){
+  const id=task[0];
+  const parts=id.split('-');
+  const pk=parts[2]||'';
+  const pts=task[6];
+  let bonus=0;
+  for(const l of parsedLog) bonus+=l.pts;
+  activePrayer={id,name:task[4],pk,basePts:parseInt(pts,10),bonus,x:window.innerWidth/2,y:window.innerHeight/2,
+    step:parsedLog.length,log:[...parsedLog],late:false};
+  // If the parsed log already answered every applicable step (incl. sunnah where it
+  // exists), finishPrayerFlow's own step>=totalSteps check in showPrayerStep will fire
+  // and complete it — but only once the modal has been shown/advanced, never skipping
+  // the UI outright when opened from chat.
+  SELECTED_DATE=iso; // ensure the flow writes to the right day's historyData
+  showPrayerStep();
+}
+
+// Top-level check: is this message about completing one of the 5 daily prayers, with
+// enough context (a completion verb OR explicit detail language) to treat it as a
+// completion attempt rather than an unrelated mention of a prayer's name? Returns an
+// intent object (action:'openPrayerModal') or null to fall through to other branches.
+function aiParsePrayerDetail(raw,low){
+  const pk=aiDetectPrayerKey(low);
+  if(!pk) return null;
+
+  const hasCompletionVerb=/صليت|صليتها|صلّيت|prayed|pray$|i prayed|mark.*(done|complete)|خلصت|عملت/.test(low);
+  const hasDetailWord=/مسجد|جامع|mosque|بيت|home|house|جيم|gym|جماعة|جماعه|congregation|منفرد|لوحدي|alone|أذكار|اذكار|dhikr|athkar|سنة|سنه|sunnah|max|أقصى|اقصى|كامل|كل النقاط/.test(low);
+  if(!hasCompletionVerb && !hasDetailWord) return null; // just mentions a prayer name, not a completion
+
+  // Resolve which date this prayer instance is on — same day-word resolution the rest
+  // of the assistant uses, defaulting to whatever day is currently selected/viewed.
+  const targetIso=aiResolveDate(raw)||SELECTED_DATE;
+  const targetJd=getJDfromISO(targetIso);
+  const dKey=DKEYS[targetJd];
+  const taskId=`pr-${dKey}-${pk}`;
+  const task=aiFindTaskByIdOnDate(taskId,targetIso);
+  if(!task){
+    return{action:'unrecognizedTask',reply:`مش لاقي صلاة ${PMETA[pk]?.ar||pk} في جدول يوم ${targetIso}.`};
+  }
+
+  const existingDone=(historyData[targetIso]||{}).done?.[taskId];
+  if(existingDone!==undefined && existingDone!==false){
+    return{action:'alreadyDone',reply:`صلاة ${PMETA[pk]?.ar||task[4]} يوم ${targetIso} مسجلة كمُنجزة بالفعل. لو عايز تعدّلها، لازم تشيلها الأول من الجدول.`};
+  }
+
+  const wantsMax=/max|أقصى|اقصى|كامل النقاط|كل النقاط|maximum/.test(low);
+  const parsedLog=aiParsePrayerDetailLog(low,wantsMax);
+
+  return{action:'openPrayerModal',task,iso:targetIso,parsedLog,
+    reply:parsedLog.length
+      ?`فتحت لك نافذة تأكيد ${PMETA[pk]?.ar||task[4]} ومعبّي اللي قلته — كمّل باقي الأسئلة وأكّد 🕌`
+      :`فتحت لك نافذة تأكيد ${PMETA[pk]?.ar||task[4]} — جاوب على الأسئلة عشان تاخد النقاط الصح 🕌`};
+}
+
 function aiParseIntent(msg){
   const raw=msg.trim();
   const low=raw.toLowerCase();
@@ -1835,7 +2064,22 @@ function aiParseIntent(msg){
       reply:`تمام، هفتكر إن ${rememberMatch[1].trim()} ✅`};
   }
 
-  // 1. Mark as done (retroactively) — "عملت الجيم" / "خلصت الغدا" / "i did the gym"
+  // 1. Prayer completion with detail — "صليت المغرب جماعة في المسجد وقريت الأذكار
+  // والسنة" / "mark maghrib as done with max points". This is checked BEFORE the
+  // generic mark-done branch because prayers have a richer completion model (location/
+  // congregation/dhikr/sunnah, each worth bonus points) that flat markDone can't
+  // represent — that's the actual bug behind "AI doesn't understand I prayed in
+  // congregation": there was no code path reading that language at all, it fell to
+  // markDone (flat base points) or was refused outright ("I can't execute commands").
+  // Per Abdullah's explicit choice: this NEVER silently applies points — it always
+  // opens the real prayer modal, pre-filled from whatever detail was parsed, landed on
+  // the first still-unanswered question. He taps through to confirm/adjust, same modal
+  // he'd get from clicking the card directly, just fast-forwarded past what he already
+  // stated in words.
+  const prayerDetailIntent=aiParsePrayerDetail(raw,low);
+  if(prayerDetailIntent) return prayerDetailIntent;
+
+  // 1b. Mark as done (retroactively) — "عملت الجيم" / "خلصت الغدا" / "i did the gym"
   if(/عملت|خلصت|سويت|انجزت|أنجزت|i did|done|completed|finished/.test(low)){
     const found=aiFindTask(raw,SELECTED_DATE);
     if(found){
@@ -1915,6 +2159,23 @@ async function aiMoveTaskExec(task,fromIso,toDate,toTime){
 
 async function aiExecuteAction(intent){
   const{action}=intent;
+  if(action==='openPrayerModal'){
+    // Deliberately does NOT write to DONE/historyData/STATS.pts here — it only opens
+    // the modal (pre-filled). All actual data mutation happens inside the modal's own
+    // finishPrayerFlow(), exactly like a manual card tap, so there is exactly one code
+    // path that writes prayer completions no matter how the modal was opened.
+    const{task,iso,parsedLog}=intent;
+    // Switch the visible day/panel to match the prayer being confirmed, so what's
+    // behind the modal lines up with what's being edited.
+    if(iso!==SELECTED_DATE){
+      saveDay();
+      SELECTED_DATE=iso;
+      loadDay();
+      renderTabs();renderPanels();switchDay(getJDfromISO(iso));updateUI();
+    }
+    aiOpenPrayerFlowPrefilled(task,iso,parsedLog);
+    return true;
+  }
   if(action==='rememberFact'){
     aiMemoryAdd(intent.fact);
     await saveUserMemory();
@@ -2129,12 +2390,11 @@ async function aiCallLiveModel(){
 
 // aiViewMode toggles between the live chat view, the session-history list view, and
 // the memory list view — all inside the same panel body.
-let AI_VIEW_MODE='chat'; // 'chat' | 'history' | 'memory'
+let AI_VIEW_MODE='chat'; // 'chat' | 'memory' — history is now a separate sidebar, not a body mode
 
 function aiRenderMessages(){
   const body=document.getElementById('aiBody');
   if(!body) return;
-  if(AI_VIEW_MODE==='history'){ aiRenderHistoryList(); return; }
   if(AI_VIEW_MODE==='memory'){ aiRenderMemoryList(); return; }
   const session=aiGetActiveSession();
   if(!session.messages.length){
@@ -2149,18 +2409,18 @@ function aiRenderMessages(){
   body.scrollTop=body.scrollHeight;
 }
 
-// Renders the "🗂️ سجل المحادثات" (chat history) list: every session, newest-first,
-// with a title guessed from its first message, a message-count + last-active
-// timestamp, a delete button, and a click-to-reopen row.
-function aiRenderHistoryList(){
-  const body=document.getElementById('aiBody');
-  if(!body) return;
+// Renders the session list into the SIDEBAR (not aiBody) — every session, newest-
+// first, with a guessed title, message-count + last-active time, delete button, and
+// click-to-reopen row. Independent of chat body state entirely.
+function aiRenderSidebarList(){
+  const list=document.getElementById('aiSidebarList');
+  if(!list) return;
   if(!AI_SESSIONS.length){
-    body.innerHTML=`<div class="ai-empty">لا يوجد محادثات محفوظة بعد.</div>`;
+    list.innerHTML=`<div class="ai-empty">لا يوجد محادثات محفوظة بعد.</div>`;
     return;
   }
   const sorted=[...AI_SESSIONS].sort((a,b)=>b.lastMsgAt-a.lastMsgAt);
-  body.innerHTML=sorted.map(s=>`
+  list.innerHTML=sorted.map(s=>`
     <div class="ai-session-item${s.id===AI_ACTIVE_SESSION_ID?' active':''}" data-session-id="${s.id}">
       <div>
         <div class="ai-session-title">${aiSessionTitle(s).replace(/</g,'&lt;')}</div>
@@ -2169,6 +2429,20 @@ function aiRenderHistoryList(){
       <button class="ai-session-del" data-session-del="${s.id}" type="button">🗑️</button>
     </div>
   `).join('');
+}
+
+function aiOpenSidebar(){
+  aiRenderSidebarList();
+  document.getElementById('aiSidebarOverlay')?.classList.add('open');
+  document.getElementById('aiSidebar')?.classList.add('open');
+}
+function aiCloseSidebar(){
+  document.getElementById('aiSidebarOverlay')?.classList.remove('open');
+  document.getElementById('aiSidebar')?.classList.remove('open');
+}
+function aiToggleSidebar(){
+  const isOpen=document.getElementById('aiSidebar')?.classList.contains('open');
+  if(isOpen) aiCloseSidebar(); else aiOpenSidebar();
 }
 
 // Renders the "🧠 ما يتذكره عنك" (what it remembers about you) list — full
@@ -2210,7 +2484,7 @@ function aiToggleMemoryView(){
 // the actual instruction ("أنا مشغول النهاردة و شيل كذا"), so requiring the verb to be
 // the first word was too strict and caused the entire split to be discarded whenever
 // any natural preamble was present, silently falling back to single-command parsing.
-const AI_ACTION_VERBS_ANY=/(انقل|حرك|غير وقت|move|reschedule|احذف|امسح|شيل|delete|remove|عملت|خلصت|سويت|انجزت|أنجزت|i did|done|completed|finished|ضيف|اضف|أضف|add task|new task|افتكر|اتذكر|سجل عني|تذكر|remember)/i;
+const AI_ACTION_VERBS_ANY=/(انقل|حرك|غير وقت|move|reschedule|احذف|امسح|شيل|delete|remove|عملت|خلصت|سويت|انجزت|أنجزت|i did|done|completed|finished|ضيف|اضف|أضف|add task|new task|افتكر|اتذكر|سجل عني|تذكر|remember|صليت|صلّيت|prayed)/i;
 
 function aiSplitCommands(msg){
   // Split on " و " / " and " / "، " / "," — commas and conjunctions between clauses.
@@ -2256,10 +2530,10 @@ async function aiProcessClause(clauseText){
   // locally and deterministically through the real data functions — never through
   // the LLM. This is intentional: correctness and safety for actual data mutations
   // matter more than routing everything through one code path.
-  if(['markDone','moveTask','deleteTask','editPoints','addCustomTask','rememberFact','unrecognizedTask','needMoreInfo'].includes(intent.action)){
+  if(['markDone','moveTask','deleteTask','editPoints','addCustomTask','rememberFact','openPrayerModal','alreadyDone','unrecognizedTask','needMoreInfo'].includes(intent.action)){
     let tone='ok';
     try{
-      if(['markDone','moveTask','deleteTask','editPoints','addCustomTask','rememberFact'].includes(intent.action)){
+      if(['markDone','moveTask','deleteTask','editPoints','addCustomTask','rememberFact','openPrayerModal'].includes(intent.action)){
         await aiExecuteAction(intent);
       }else{
         tone='err';
@@ -2269,7 +2543,7 @@ async function aiProcessClause(clauseText){
       intent.reply='⚠️ حصل خطأ أثناء تنفيذ التغيير — جرب تاني.';
       tone='err';
     }
-    return{tone,reply:intent.reply,handled:true};
+    return{tone,reply:intent.reply,handled:true,_opensModal:intent.action==='openPrayerModal'&&tone==='ok'};
   }
 
   return{handled:false}; // not a recognized structured command
@@ -2311,11 +2585,17 @@ async function aiHandleSend(){
       anyHandled=true;
       if(r.tone!=='err') anyMutated=true;
       results.push(r);
+      // A prayer modal is now open and needs a tap before anything else can happen —
+      // don't silently process further clauses behind it, and don't re-render panels
+      // over an open modal (that's what caused the mobile zoom/scroll glitch: a
+      // re-render firing while the modal transition was still animating).
+      if(r._opensModal) break;
     }
   }
 
+  const modalJustOpened=results.some(r=>r._opensModal);
   if(anyHandled){
-    if(anyMutated){
+    if(anyMutated && !modalJustOpened){
       try{ renderPanels();switchDay(getJDfromISO(SELECTED_DATE));updateUI(); }catch(e){ console.error('re-render after AI action(s) failed:',e); }
     }
     // Combine every clause's reply into one message, numbered if there was more than
@@ -2359,7 +2639,10 @@ async function aiOpenPanel(){
   await saveAiChat();
   setTimeout(()=>document.getElementById('aiInput')?.focus(),50);
 }
-function aiClosePanel(){document.getElementById('aiPanel')?.classList.remove('open');}
+function aiClosePanel(){
+  document.getElementById('aiPanel')?.classList.remove('open');
+  aiCloseSidebar();
+}
 
 async function aiStartNewChat(){
   aiCreateSession();
@@ -2368,16 +2651,12 @@ async function aiStartNewChat(){
   await saveAiChat();
 }
 
-function aiToggleHistoryView(){
-  AI_VIEW_MODE=AI_VIEW_MODE==='history'?'chat':'history';
-  aiRenderMessages();
-}
-
 async function aiOpenSession(id){
   if(!AI_SESSIONS.some(s=>s.id===id)) return;
   AI_ACTIVE_SESSION_ID=id;
   AI_VIEW_MODE='chat';
   aiRenderMessages();
+  aiCloseSidebar(); // opening a session from the sidebar closes it, returning focus to chat
   await saveAiChat();
 }
 
@@ -2388,8 +2667,9 @@ async function aiDeleteSession(id){
   if(AI_ACTIVE_SESSION_ID===id){
     AI_ACTIVE_SESSION_ID=AI_SESSIONS[0]?AI_SESSIONS[0].id:null;
     if(!AI_SESSIONS.length) aiCreateSession();
+    aiRenderMessages(); // active session changed underneath the open chat — refresh it
   }
-  aiRenderHistoryList();
+  aiRenderSidebarList();
   await saveAiChat();
 }
 
@@ -2406,13 +2686,20 @@ document.body.addEventListener('click',async e=>{
   const tgt=e.target;
   const closest=sel=>tgt.closest(sel);
 
-  if(tgt.id==='aiFab'){await aiOpenPanel();return;}
-  if(tgt.id==='aiCloseBtn'){aiClosePanel();return;}
-  if(tgt.id==='aiSendBtn'){await aiHandleSend();return;}
-  if(tgt.id==='aiNewChatBtn'){await aiStartNewChat();return;}
-  if(tgt.id==='aiHistoryBtn'){aiToggleHistoryView();return;}
-  if(tgt.id==='aiMemoryBtn'){aiToggleMemoryView();return;}
-  if(tgt.id==='aiFullToggleBtn'){aiToggleFullScreen();return;}
+  // closest(), not tgt.id — buttons containing emoji/text can report the click's
+  // target as an inner text node rather than the button itself on some mobile
+  // browsers, which is why tgt.id==='aiHistoryBtn' silently never matched and the
+  // history button appeared completely dead despite its listener being correct.
+  if(closest('#aiFab')){await aiOpenPanel();return;}
+  if(closest('#aiCloseBtn')){aiClosePanel();return;}
+  if(closest('#aiSendBtn')){await aiHandleSend();return;}
+  if(closest('#aiNewChatBtn')){await aiStartNewChat();return;}
+  if(closest('#aiHistoryBtn')){aiToggleSidebar();return;}
+  if(closest('#aiMemoryBtn')){aiToggleMemoryView();return;}
+  if(closest('#aiFullToggleBtn')){aiToggleFullScreen();return;}
+  if(closest('#aiSidebarClose')){aiCloseSidebar();return;}
+  if(closest('#aiSidebarNewChat')){await aiStartNewChat();aiCloseSidebar();return;}
+  if(closest('#aiSidebarOverlay')){aiCloseSidebar();return;}
 
   const memDel=closest('[data-memory-del]');
   if(memDel){
@@ -2615,6 +2902,21 @@ document.body.addEventListener('keydown',async e=>{
   if(e.target && e.target.id==='aiInput' && e.key==='Enter' && !e.shiftKey){
     e.preventDefault();
     await aiHandleSend();
+  }
+});
+
+// Re-arms notification timers whenever the tab/PWA regains visibility. This does NOT
+// make notifications fire while the phone is locked or the tab is backgrounded — that
+// requires server-sent Web Push, which is out of scope for a static GitHub Pages site
+// with no backend (documented limit, not a bug). What this DOES fix: setTimeout timers
+// scheduled hours in advance are frequently throttled/dropped by mobile browsers during
+// backgrounding, so a reminder whose time already passed while the tab was backgrounded
+// silently never fires and is never rescheduled. Re-checking on every foreground-return
+// means the very next time the app is actually open, still-relevant reminders (those
+// whose time hasn't passed yet) get correctly re-armed instead of staying orphaned.
+document.addEventListener('visibilitychange',()=>{
+  if(document.visibilityState==='visible' && NOTIF_ENABLED && SELECTED_DATE===TODAY){
+    try{ scheduleTodayNotifications(); }catch(e){ console.warn('notif re-arm on visibility failed',e); }
   }
 });
 
