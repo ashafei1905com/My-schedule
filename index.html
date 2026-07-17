@@ -1742,7 +1742,7 @@ function renderCard(task,isToday){
       const lbl=typeof done==='number'?`✅ +${done}⭐`:'✅';
       act=`<div class="cbtn done">${lbl}</div>`;
     }else if(state==='NOTYET'){
-      act=`<div class="cbtn exp">⏳ لسه معاش وقتها</div>`;
+      act=`<div class="cbtn exp">⏳ لسه مجاش وقتها</div>`;
     }else if(state==='QADA'){
       const half=Math.floor(pts/2);
       act=`<button class="cbtn qada" data-action="qada" data-id="${id}" data-pts="${pts}">قضاء (50%)<span class="ptslbl">+${half}⭐</span></button>`;
