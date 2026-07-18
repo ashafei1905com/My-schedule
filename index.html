@@ -732,8 +732,12 @@ function getReqTasks(jd,iso){
 }
 
 // ===== State =====
-const LS={stats:'sc:stats2',history:'sc:history2',reports:'sc:reports2',penalized:'sc:penalized2',firstSeen:'sc:firstSeen1',userEdits:'sc:userEdits1',aiChat:'sc:aiChat1',userMemory:'sc:userMemory1',mealOptions:'sc:mealOptions1'};
+const LS={stats:'sc:stats2',history:'sc:history2',reports:'sc:reports2',penalized:'sc:penalized2',firstSeen:'sc:firstSeen1',userEdits:'sc:userEdits1',aiChat:'sc:aiChat1',userMemory:'sc:userMemory1',mealOptions:'sc:mealOptions1',weeklyPtsHistory:'sc:weeklyPtsHistory1'};
 let STATS={cur:0,best:0,pts:0,lc:null,lf:null,lastPtsWeekStart:null};
+// {weekStartISO: finalPointsTotal} — archive of past weeks' final point totals,
+// written right before resetWeeklyPointsIfNewWeek() zeroes STATS.pts, so a week's
+// total is never silently destroyed with zero trace when the week rolls over.
+let weeklyPointsHistory={};
 let DONE={};
 // SELECTED_ALTS removed — the old static alts-picker system is gone, replaced by the
 // per-meal food-log system (historyData[iso].foodLog). `alts` key kept read-only in
@@ -1035,6 +1039,7 @@ async function loadAll() {
     USER_EDITS = (await sGet(LS.userEdits)) || emptyUserEdits();
     USER_MEMORY = (await sGet(LS.userMemory)) || [];
     MEAL_OPTIONS = (await sGet(LS.mealOptions)) || {};
+    weeklyPointsHistory = (await sGet(LS.weeklyPtsHistory)) || {};
     aiLoadSessionsFromRaw(await sGet(LS.aiChat));
     if (!FIRST_SEEN) {
         // First time this browser/localStorage has ever run the app.
@@ -1064,6 +1069,7 @@ async function saveAll(){
   await sSet(LS.penalized,penalizedDates);
   await sSet(LS.userEdits,USER_EDITS);
   await sSet(LS.mealOptions,MEAL_OPTIONS);
+  await sSet(LS.weeklyPtsHistory,weeklyPointsHistory);
 
   const user=fbAuth.currentUser;
   if(!user)return;
@@ -1081,7 +1087,8 @@ async function saveAll(){
       penalizedDates:penalizedDates,
       firstSeen:FIRST_SEEN,
       userEdits:USER_EDITS,
-      mealOptions:MEAL_OPTIONS
+      mealOptions:MEAL_OPTIONS,
+      weeklyPointsHistory:weeklyPointsHistory
     },{merge:true});
   }catch(e){console.warn('cloud save failed',e);}
 }
@@ -1186,9 +1193,15 @@ function checkStreak(){
 // STATS.cur or STATS.best — the streak is a separate, cross-week concept and must
 // keep counting through week boundaries. Idempotent: safe to call on every load,
 // only fires once per week because it stamps STATS.lastPtsWeekStart.
+// Archives the outgoing week's final total before zeroing — previously the number
+// was overwritten with no trace anywhere, so a reset firing at an unexpected moment
+// destroyed it permanently with no recovery path.
 function resetWeeklyPointsIfNewWeek(){
   const thisWeekStart=currentWeekStartISO(TODAY);
   if(STATS.lastPtsWeekStart!==thisWeekStart){
+    if(STATS.lastPtsWeekStart){
+      weeklyPointsHistory[STATS.lastPtsWeekStart]=STATS.pts;
+    }
     STATS.pts=0;
     STATS.lastPtsWeekStart=thisWeekStart;
   }
@@ -1297,7 +1310,7 @@ async function fetchPrayers(){
 // "must stay open" requirement once permission is granted. isIOS()/isStandalonePWA()
 // below are therefore still load-bearing, not legacy leftovers.
 const LS_NOTIF_PREF='sc:notifPref1';
-const VAPID_PUBLIC_KEY='REPLACE_WITH_YOUR_VAPID_PUBLIC_KEY'; // same public key set in wrangler.toml [vars]
+const VAPID_PUBLIC_KEY='BJY-WY3oi2ypIAvR-ZIUmgXJBZxNkatg4uUVXMsb1ft-uv4xslN94W1K2PX25SslYti-AgUPFm8bdTc-2AFPkUY'; // matches wrangler.toml [vars] VAPID_PUBLIC_KEY
 let NOTIF_ENABLED=false;
 let PUSH_SUBSCRIPTION=null;
 
@@ -1330,7 +1343,7 @@ async function registerServiceWorker(){
   try{
     // Registered at the ROOT relative to this page so its scope covers the whole
     // site — sw.js must physically live alongside index.html for this to work.
-    return await navigator.serviceWorker.register('./sw.js');
+    return await navigator.serviceWorker.register('./service-worker.js');
   }catch(e){
     console.warn('service worker registration failed',e);
     return null;
@@ -3648,6 +3661,7 @@ if (typeof onAuthStateChanged !== 'undefined' && typeof fbAuth !== 'undefined') 
           if(d.userEdits) USER_EDITS={...emptyUserEdits(),...d.userEdits};
           if(d.userMemory) USER_MEMORY=d.userMemory;
           if(d.mealOptions) MEAL_OPTIONS=d.mealOptions;
+          if(d.weeklyPointsHistory) weeklyPointsHistory={...weeklyPointsHistory,...d.weeklyPointsHistory};
           if(d.aiChat) aiLoadSessionsFromRaw({sessions:d.aiChat,activeId:d.aiActiveSessionId});
           // firstSeen from the cloud is authoritative once it exists — this is what makes
           // "sign in on a fresh browser" not reset the account's age. If the cloud has no
