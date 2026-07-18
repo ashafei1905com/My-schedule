@@ -1,0 +1,12 @@
+{
+  "name": "abdullah-schedule-push",
+  "private": true,
+  "type": "module",
+
+  "dependencies": {
+    "web-push-neo": "^0.1.2"
+  }
+}
+
+
+

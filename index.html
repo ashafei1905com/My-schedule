@@ -444,6 +444,32 @@ body{font-family:'Cairo',sans-serif;background:var(--bg);color:var(--tx);directi
 <script type="module">
 'use strict';
 
+// ===== Web Push (background reminders via Service Worker) =====
+// Real background push needs a Service Worker + push subscriptions.
+// This app uses a Cloudflare Worker for AI only; push messages will be
+// delivered by your future push-sender Worker endpoint.
+//
+// VAPID_PUBLIC_KEY is safe to embed in the frontend.
+const VAPID_PUBLIC_KEY = 'BJY-WY3oi2ypIAvR-ZIUmgXJBZxNkatg4uUVXMsb1ft-uv4xslN94W1K2PX25SslYti-AgUPFm8bdTc-2AFPkUY';
+
+async function registerServiceWorker() {
+  if (!('serviceWorker' in navigator)) return null;
+  try {
+    return await navigator.serviceWorker.register('/service-worker.js');
+  } catch (e) {
+    console.warn('SW registration failed', e);
+    return null;
+  }
+}
+
+function urlBase64ToUint8Array(base64String) {
+  const padding = '='.repeat((4 - (base64String.length % 4)) % 4);
+  const base64 = (base64String + padding).replace(/-/g, '+').replace(/_/g, '/');
+  const rawData = atob(base64);
+  return Uint8Array.from([...rawData].map(ch => ch.charCodeAt(0)));
+}
+
+
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
 import { getAuth, GoogleAuthProvider, signInWithPopup, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
 import { getFirestore, doc, setDoc, getDoc } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
@@ -1304,27 +1330,20 @@ function clearScheduledNotifs(){
 }
 
 // Schedules browser notifications for every remaining, not-yet-done, non-exception
-// task today. Each task now gets up to THREE reminders:
-//   1. "starting soon"   — fires 30 min BEFORE the task's start time
-//   2. "starting now"    — fires exactly AT the task's start time
-//   3. "ending soon"     — fires 30 min BEFORE the task's effective end time (only for
-//                          tasks that actually have a defined end — prayers use their
-//                          window end from getState(); other tasks default to a
-//                          60-minute duration since most task blocks don't have an
-//                          explicit end time stored anywhere in the schedule data)
-// isEx (exception) tasks are explicitly skipped — per instruction, exceptions never
-// get scheduled at all, only real required tasks and snacks.
+// task today.
+//
+// NOTE: You requested removing the "30 min before start" reminders.
+// This means we only keep "starting now" reminders (at task start).
+//
+// isEx (exception) tasks are explicitly skipped.
 // Re-run whenever today's task list changes so already-done tasks stop being reminded.
 //
-// Known platform limit, not a bug: these are setTimeout-based, so they only fire
-// while this tab/PWA is actually open (or the OS keeps the PWA process alive). A
-// closed tab means no timer runs. True background delivery needs server-sent Web
-// Push, which is out of scope for a static GitHub Pages site with no backend.
-const NOTIF_LEAD_MIN=30;
-const NOTIF_END_LEAD_MIN=30;
+// Known platform limit: these are setTimeout-based, so they only fire while this
+// tab/PWA is actually open. True background delivery requires Push.
 const NOTIF_DEFAULT_DURATION_MIN=60; // fallback task length when no explicit end exists
 
 function notifTaskEndMin(task){
+
   const start=toMin(task[10]||task[1]);
   if(isPrayer(task)){
     const pk=(task[0].split('-')[2])||'';
@@ -1357,23 +1376,7 @@ function scheduleTodayNotifications(){
     if(DONE[id]!==undefined && DONE[id]!==false) continue; // already done, no need to remind
     const startMin=toMin(t[10]||t[1]);
 
-    // Reminder 1: fires NOTIF_LEAD_MIN before start ("starting soon").
-    const leadDelta=(startMin-NOTIF_LEAD_MIN)-nowMin;
-    if(leadDelta>=0 && leadDelta<=16*60){
-      const ms=leadDelta*60*1000;
-      const timer=setTimeout(()=>{
-        try{
-          new Notification('⏳ بعد 30 دقيقة',{
-            body:`${t[4]} هتبدأ الساعة ${t[1]}`,
-            icon:'data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"%3E%3Ctext y="75" font-size="80"%3E%E2%8F%B3%3C/text%3E%3C/svg%3E',
-            tag:id+'-soon'
-          });
-        }catch(e){console.warn('notification fire failed',e);}
-      },ms);
-      NOTIF_TIMERS.push(timer);
-    }
-
-    // Reminder 2: fires exactly at start time ("starting now").
+    // Reminder: fires exactly at start time ("starting now").
     const startDelta=startMin-nowMin;
     if(startDelta>=0 && startDelta<=16*60){
       const ms=startDelta*60*1000;
@@ -1389,28 +1392,6 @@ function scheduleTodayNotifications(){
       NOTIF_TIMERS.push(timer);
     }
 
-    // Reminder 3: fires NOTIF_END_LEAD_MIN before the task's effective end — the
-    // "30 minutes remaining" reminder. Skipped for sleep (no meaningful "ending
-    // soon" concept) and skipped if it would fire before/at the start reminder
-    // already has (very short tasks), to avoid a nonsensical "30 min left" notice
-    // seconds after "starting now".
-    if(t[2]!=='sleep'){
-      const endMin=notifTaskEndMin(t);
-      const endLeadDelta=(endMin-NOTIF_END_LEAD_MIN)-nowMin;
-      if(endLeadDelta>startDelta && endLeadDelta>=0 && endLeadDelta<=16*60){
-        const ms=endLeadDelta*60*1000;
-        const timer=setTimeout(()=>{
-          try{
-            new Notification('⌛ باقي ٣٠ دقيقة',{
-              body:`${t[4]} — هتخلص وقتها قريب`,
-              icon:'data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"%3E%3Ctext y="75" font-size="80"%3E%E2%8C%9B%3C/text%3E%3C/svg%3E',
-              tag:id+'-ending'
-            });
-          }catch(e){console.warn('notification fire failed',e);}
-        },ms);
-        NOTIF_TIMERS.push(timer);
-      }
-    }
   }
 }
 
