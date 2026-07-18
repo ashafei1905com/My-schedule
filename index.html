@@ -1068,15 +1068,68 @@ async function loadAll() {
         IS_BRAND_NEW_SESSION = true;
         await sSet(LS.firstSeen, FIRST_SEEN);
     }
-    
+
+    // --- TEMP FIX 1: restore correct chronological order by clearing any
+    // time-scrambling overlay moves for recurring tasks.
+    // We intentionally keep deletions + point overrides + custom tasks.
+    try {
+        if (USER_EDITS && USER_EDITS.moves) {
+            USER_EDITS.moves = Object.fromEntries(
+                Object.entries(USER_EDITS.moves).filter(([id, mv]) => {
+                    const isMovedTask = !!mv && typeof mv === 'object' && mv.toDate && mv.toTime;
+                    if (!isMovedTask) return true;
+                    // Only reset moves for built-in tasks (non-custom generated ids).
+                    if (String(id).startsWith('custom-')) return true;
+                    return false;
+                })
+            );
+        }
+    } catch (e) {
+        console.warn('USER_EDITS move cleanup failed', e);
+    }
+
+    // --- TEMP FIX 2: inject a "Test Notification" task 2 minutes from now
+    // so you can quickly test the new Web Push flow.
+    try {
+        const now = new Date();
+        const target = new Date(now.getTime() + 2 * 60 * 1000);
+        // Format target time as app display format: H:MM ص/م
+        const hh24 = target.getHours();
+        const mm = String(target.getMinutes()).padStart(2, '0');
+        const pm = hh24 >= 12;
+        const h12 = hh24 % 12 || 12;
+        const toTime = `${h12}:${mm} ${pm ? 'م' : 'ص'}`;
+
+        // Use UTC-based app ISO date for today.
+        const iso = todayStr();
+        // Avoid duplicate injection if reloads happen multiple times.
+        const TEST_ID = 'custom-test-notification';
+        USER_EDITS.customTasks = (USER_EDITS.customTasks || []).filter(t => t.id !== TEST_ID);
+        USER_EDITS.customTasks.push({
+            id: TEST_ID,
+            date: iso,
+            time: toTime,
+            cat: 'free',
+            ico: '🔔',
+            name: 'Test Notification',
+            desc: 'مهمة اختبار Web Push بعد دقيقتين',
+            pts: 0,
+            createdAt: Date.now(),
+        });
+    } catch (e) {
+        console.warn('Test Notification injection failed', e);
+    }
+
+
     // Rescue any task data incorrectly saved under future dates due to the tab-offset bug.
     rescueFutureDatedEntries();
-    
+
     // Perform migration immediately after loading from storage
     migrateSavedReports();
-    
+
     loadDay();
 }
+
 
 async function saveAll(){
   saveDay();
