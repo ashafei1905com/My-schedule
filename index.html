@@ -108,10 +108,6 @@ body{font-family:'Cairo',sans-serif;background:var(--bg);color:var(--tx);directi
 .altbtn{margin-top:5px;padding:5px 10px;background:rgba(59,130,246,.18);border:1px solid rgba(59,130,246,.5);border-radius:6px;font-size:.68rem;font-weight:800;color:#60a5fa;cursor:pointer;display:inline-flex;align-items:center;gap:4px;font-family:'Cairo',sans-serif;transition:all .2s}
 .altbtn:hover{background:rgba(59,130,246,.3)}
 .altbtn:disabled{opacity:.5;cursor:not-allowed}
-.altlist{display:none;margin-top:6px;padding:8px;background:rgba(0,0,0,.2);border-radius:6px;border:1px solid var(--br)}
-.altlist.open{display:block}
-.altitem{font-size:.72rem;color:#cbd5e1;padding:4px 2px;display:flex;gap:6px;cursor:pointer;font-weight:600}
-.altitem::before{content:'←';color:var(--ac)}
 .cbtn{flex-shrink:0;padding:6px 10px;background:rgba(16,185,129,.1);border:1px solid rgba(16,185,129,.4);border-radius:8px;cursor:pointer;font-family:'Cairo',sans-serif;font-size:.73rem;font-weight:700;color:var(--gr);transition:all .2s;display:flex;flex-direction:column;align-items:center;gap:1px}
 .cbtn:hover{background:rgba(16,185,129,.2)}
 .cbtn.done{background:rgba(16,185,129,.06);border-color:rgba(16,185,129,.2);color:var(--mu);cursor:default}
@@ -155,6 +151,25 @@ body{font-family:'Cairo',sans-serif;background:var(--bg);color:var(--tx);directi
 .opt-pts{font-size:.72rem;direction:ltr;opacity:.9;white-space:nowrap}
 .modal-back-btn{margin-top:16px;padding:9px 18px;background:rgba(239,68,68,.12);border:2px solid rgba(239,68,68,.45);border-radius:10px;color:#ef4444;font-family:'Cairo',sans-serif;font-weight:800;font-size:.82rem;cursor:pointer;transition:all .2s}
 .modal-back-btn:hover{background:rgba(239,68,68,.22)}
+
+/* Food Log Modal */
+.fl-opts{display:flex;flex-direction:column;gap:8px;margin-bottom:14px;max-height:180px;overflow-y:auto}
+.fl-opt{padding:11px 14px;border-radius:10px;cursor:pointer;font-family:'Cairo',sans-serif;font-size:.82rem;font-weight:700;border:2px solid var(--br);background:var(--c);color:var(--tx);transition:all .15s;text-align:right;display:flex;justify-content:space-between;align-items:center;gap:8px}
+.fl-opt:hover{border-color:var(--gr);background:rgba(16,185,129,.08)}
+.fl-opt-macro{font-size:.65rem;color:var(--mu);font-weight:600;white-space:nowrap;direction:ltr}
+.fl-divider{display:flex;align-items:center;gap:10px;margin:14px 0 10px;font-size:.68rem;color:var(--mu);font-weight:700}
+.fl-divider::before,.fl-divider::after{content:'';flex:1;height:1px;background:var(--br)}
+.fl-textarea{width:100%;background:var(--c);border:1px solid var(--br);border-radius:10px;padding:10px 12px;color:var(--tx);font-family:'Cairo',sans-serif;font-size:.85rem;resize:none;margin-bottom:12px}
+.fl-textarea:focus{outline:none;border-color:var(--gr)}
+.fl-submit-btn{width:100%;padding:12px;background:linear-gradient(135deg,#10b981,#059669);border:none;color:#fff;border-radius:10px;cursor:pointer;font-family:'Cairo',sans-serif;font-weight:800;font-size:.88rem;margin-bottom:8px}
+.fl-submit-btn:hover{opacity:.92}
+.fl-macro-result{background:rgba(16,185,129,.08);border:1px solid rgba(16,185,129,.25);border-radius:10px;padding:12px 14px;margin-bottom:12px;font-size:.8rem;color:var(--tx);display:flex;flex-wrap:wrap;gap:10px;justify-content:center}
+.fl-macro-result b{color:var(--gr)}
+.fl-verdict{background:rgba(59,130,246,.08);border:1px solid rgba(59,130,246,.25);border-radius:10px;padding:12px 14px;margin-bottom:12px;font-size:.78rem;color:#93c5fd;line-height:1.7;text-align:right}
+.fl-save-row{display:flex;justify-content:space-between;align-items:center;gap:10px;background:var(--c);border:1px solid var(--br);border-radius:10px;padding:10px 14px;margin-bottom:8px;font-size:.78rem;color:var(--so);font-weight:700}
+.fl-mini-btn{padding:6px 14px;border-radius:8px;font-family:'Cairo',sans-serif;font-weight:800;font-size:.76rem;cursor:pointer;border:1px solid var(--br)}
+.fl-mini-yes{background:rgba(16,185,129,.15);border-color:rgba(16,185,129,.4);color:var(--gr)}
+.fl-mini-no{background:rgba(100,116,139,.1);border-color:var(--br);color:var(--mu)}
 
 /* Weekly Report / History Modal */
 .report-overlay{position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(10,14,26,.95);display:none;align-items:flex-start;justify-content:center;z-index:10001;padding:40px 20px;overflow-y:auto}
@@ -314,6 +329,57 @@ body{font-family:'Cairo',sans-serif;background:var(--bg);color:var(--tx);directi
     <div class="modal-sub" id="modalSub"></div>
     <div class="modal-opts" id="modalOpts"></div>
     <button id="btn-prayer-back" class="modal-back-btn" type="button">← رجوع</button>
+  </div>
+</div>
+
+<!-- Food Log Modal — replaces the old static "alternatives" system. Tapping a food/
+     snack task opens this: pick a saved option for this exact meal slot, or type what
+     was actually eaten. Submission goes to the Cloudflare Worker for precise macro
+     calculation, returns a verdict against today's remaining target + USER_MEMORY
+     context, then offers to save the entry as a future quick-pick option for this
+     meal slot only (gym/rest scoped, never shared across meal types). -->
+<div id="foodLogModal" class="modal-overlay">
+  <div class="modal-box" style="max-width:460px;text-align:right">
+    <div class="modal-step-ind" id="flStepInd">تسجيل الأكل</div>
+    <div class="modal-title" id="flTitle">إيه اللي أكلته؟</div>
+    <div class="modal-sub" id="flSub"></div>
+
+    <!-- Step: choose from saved options or type free text -->
+    <div id="flChooseStep">
+      <div id="flSavedOpts" class="fl-opts"></div>
+      <div class="fl-divider"><span>أو اكتب إيه اللي أكلته بالظبط</span></div>
+      <textarea id="flFreeText" class="fl-textarea" rows="3" placeholder="مثال: طبق فراخ مشوي مع رز وسلطة، وكوب لبن"></textarea>
+      <button id="flSubmitBtn" class="fl-submit-btn" type="button">احسب واحفظ ✅</button>
+      <button id="flCancelBtn" class="modal-back-btn" type="button">إلغاء</button>
+    </div>
+
+    <!-- Step: loading while the worker computes macros -->
+    <div id="flLoadingStep" style="display:none;padding:24px 0;text-align:center">
+      <div style="width:34px;height:34px;border:3px solid #1e2d45;border-top-color:#10b981;border-radius:50%;animation:spin .8s linear infinite;margin:0 auto 12px"></div>
+      <div style="color:var(--mu);font-size:.82rem">بيحسب القيم الغذائية بدقة...</div>
+    </div>
+
+    <!-- Step: result + verdict + save-as-option prompt -->
+    <div id="flResultStep" style="display:none">
+      <div id="flMacroResult" class="fl-macro-result"></div>
+      <div id="flVerdict" class="fl-verdict"></div>
+      <div id="flSaveOptRow" class="fl-save-row">
+        <span>تحفظها كخيار سريع للمرة الجاية؟</span>
+        <div style="display:flex;gap:8px">
+          <button id="flSaveOptYes" class="fl-mini-btn fl-mini-yes" type="button">نعم ✅</button>
+          <button id="flSaveOptNo" class="fl-mini-btn fl-mini-no" type="button">لا</button>
+        </div>
+      </div>
+      <button id="flDoneBtn" class="fl-submit-btn" type="button" style="margin-top:10px">تمام 👍</button>
+    </div>
+
+    <!-- Step: AI follow-up question (rare — only if the description is too ambiguous
+         to compute confidently) -->
+    <div id="flAskStep" style="display:none">
+      <div class="modal-sub" id="flAskQuestion" style="margin-bottom:14px"></div>
+      <textarea id="flAskAnswer" class="fl-textarea" rows="2" placeholder="اكتب إجابتك هنا..."></textarea>
+      <button id="flAskSubmitBtn" class="fl-submit-btn" type="button">إرسال ✅</button>
+    </div>
   </div>
 </div>
 
@@ -527,8 +593,12 @@ function pickRandom(arr){return arr[Math.floor(Math.random()*arr.length)];}
 // ===== Macro data (per Abdullah's two nutrition tables — gym days vs rest days) =====
 // Format: {p:protein_g, c:carbs_g, f:fat_g, k:kcal}. Applied uniformly across a task's
 // alt options too, per explicit instruction — no separate per-alt estimation.
+// middaySnack ("سناك منتصف النهار" — Snack 1, between breakfast and lunch) — a single
+// fixed figure Abdullah specified directly, applied identically on gym and rest days
+// since he gave one number for it, not two separate tables.
 const MACROS_GYM={
   breakfast:{p:26,c:75,f:17,k:560},
+  middaySnack:{p:5,c:25,f:10,k:200},
   lunch:{p:45,c:40,f:15,k:480},
   preGymSnack:{p:21,c:67,f:24,k:570},
   dinner:{p:33,c:28,f:17.5,k:400},
@@ -536,24 +606,35 @@ const MACROS_GYM={
 };
 const MACROS_REST={
   breakfast:{p:31,c:41,f:19,k:465},
+  middaySnack:{p:5,c:25,f:10,k:200},
   lunch:{p:45,c:45,f:15,k:500},
   afternoonSnack:{p:2,c:35,f:1,k:150},
   dinner:{p:27,c:23,f:16.5,k:350},
   bedtimeSnack:{p:11,c:15,f:16,k:250}
 };
-const mkBk=(p,t='9:15 ص',isGym)=>[p+'-bk',t,'food','🧀','الفطار','جبنة قريش ١٥٠جم + زيت زيتون + رغيفين أسمر + طماطم + خيار',5,['لبنة ٤ ملاعق + بيضتين مسلوقتين + رغيف أسمر','جبنة دمياطي ١٠٠جم + بيضة + خبز أسمر'],null,false,null,isGym?MACROS_GYM.breakfast:MACROS_REST.breakfast];
+// Task tuple layout: [id,time,cat,ico,name,desc,pts,alts(REMOVED,now always null),
+//   hw,isEx,_unused10,macros,mealKey]
+// Index 7 ("alts") is kept as null everywhere instead of deleted, avoiding a
+// renumbering of every t[6]/t[9]/t[11] reference across the file. It's dead data —
+// nothing reads it anymore. Index 12 (NEW) = mealKey: identifies which recurring meal
+// slot this task is ('breakfast'|'middaySnack'|'lunch'|'preGymSnack'|
+// 'afternoonSnack'|'dinner'|'bedtimeSnack'), scoped separately per gym/rest day via
+// mealKeyFor(). Drives the new food-logging modal's per-mealtype saved-options list,
+// replacing the old static alts system entirely.
+function mealKeyFor(base,isGym){return(isGym?'gym':'rest')+':'+base;}
+const mkBk=(p,t='9:15 ص',isGym)=>[p+'-bk',t,'food','🧀','الفطار','جبنة قريش ١٥٠جم + زيت زيتون + رغيفين أسمر + طماطم + خيار',5,null,null,false,null,isGym?MACROS_GYM.breakfast:MACROS_REST.breakfast,mealKeyFor('breakfast',isGym)];
 const mkWd=(p,t='9:30 ص')=>[p+'-wd',t,'quran','📿','الورد اليومي','١٥ دقيقة قراءة قرآن يومياً',10,null,null,false];
-const mkDn=(p,t='8:00 م',isGym)=>[p+'-dn',t,'food','🧀','العشا','جبنة قريش ١٥٠جم + جبنة دمياطي ٨٠جم + خيار + طماطم',5,['لبنة ٤ ملاعق + جبنة دمياطي مكعبين + خيار','بيضتين مسلوقتين + جبنة قريش ١٠٠جم'],null,false,null,isGym?MACROS_GYM.dinner:MACROS_REST.dinner];
+const mkDn=(p,t='8:00 م',isGym)=>[p+'-dn',t,'food','🧀','العشا','جبنة قريش ١٥٠جم + جبنة دمياطي ٨٠جم + خيار + طماطم',5,null,null,false,null,isGym?MACROS_GYM.dinner:MACROS_REST.dinner,mealKeyFor('dinner',isGym)];
 const mkSl=(p,t='11:00 م')=>[p+'-sl',t,'sleep','🌙','نوم على الوقت','نام على الوقت — النوم المنتظم ضروري للعضل والتخسيس',10,null,null,false];
 const mkSw=(p,t)=>[p+'-sw',t,'swim','🏊','سباحة مع الكوتش','تقنية + drills ← استثناء ✓',0,null,null,true];
 const mkRc=(p,t,d)=>[p+'-rc',t,'recovery','♨️','جاكوزي + بخار/ساونا',d||'ريكفري ← استثناء ✓',0,null,null,true];
 const mkGU=(p,t)=>[p+'-gm',t,'gym','🏋️','جيم — Upper Body','صدر · كتف · ترايسبس · ظهر · بايسبس · Negative pull-ups · مشي ٢٠د',25,null,null,false];
 const mkGL=(p,t)=>[p+'-gm',t,'gym','🏋️','جيم — Lower Body','Leg press · Leg curl · Leg extension · Calf · Tibialis · مشي ٢٠د',25,null,null,false];
-const mkPS=(p,t)=>[p+'-ps',t,'food','🍌','سناك قبل الجيم','موزة + ٣ تمرات (٤٥ دقيقة قبل التمرين)',5,['تمرتين + كوب عصير طبيعي','خبز أسمر + زبدة فول سوداني'],null,false,null,MACROS_GYM.preGymSnack];
+const mkPS=(p,t)=>[p+'-ps',t,'food','🍌','سناك قبل الجيم','موزة + ٣ تمرات (٤٥ دقيقة قبل التمرين)',5,null,null,false,null,MACROS_GYM.preGymSnack,mealKeyFor('preGymSnack',true)];
 // mkPM ("وجبة بعد التمرين") is the functional dinner-equivalent on gym days — gym-day
 // schedules never call mkDn at all, so this meal carries the gym table's dinner
 // macros, not the bedtime-snack figure (that belongs to snackC instead, see below).
-const mkPM=(p,t)=>[p+'-pm',t,'food','🍳','وجبة بعد التمرين','٣ بيضات مسلوقة + خيار + طماطم',5,['جبنة قريش ١٥٠جم + خبز أسمر','لبنة ٤ ملاعق + بيضتين'],null,false,null,MACROS_GYM.dinner];
+const mkPM=(p,t)=>[p+'-pm',t,'food','🍳','وجبة بعد التمرين','٣ بيضات مسلوقة + خيار + طماطم',5,null,null,false,null,MACROS_GYM.dinner,mealKeyFor('dinner',true)];
 const mkBr=(p)=>[p+'-br','7:00 م','recovery','🏊','مع أخوك — جاكوزي + بخار','٧:٠٠ — ١٠:٠٠ م ← استثناء ✓',0,null,null,true];
 // Between-meal snacks — three fixed slots per day (mid-morning, mid-afternoon, evening) so
 // hunger between main meals is covered. Optional (0 pts, isEx=true) so they never trigger
@@ -563,17 +644,11 @@ const mkBr=(p)=>[p+'-br','7:00 م','recovery','🏊','مع أخوك — جاكو
 // never punished if skipped (like isEx), but DO award up to 5pts if done (unlike isEx).
 // getReqTasks() below filters out cat==='snack' explicitly — that's what exempts them
 // from the punishment scan without making them worth 0.
-// Snack A (mid-morning, before lunch) has no dedicated row in either table. The table
-// only defines ONE snack slot for rest days (سناك العصر / afternoon) and two for gym
-// days (pre-gym + bedtime) — Snack A matches none of these on either day type, so it
-// carries no macro data at all, exactly as the table shows nothing for it. Snack B
-// (afternoon) carries the rest-day table's single snack figure; Snack C (bedtime)
-// carries each table's bedtime-snack figure. On gym days, Snack A/B are both null —
-// gym-day snack macros live entirely on mkPS (pre-gym) and mkSnackC (bedtime),
-// matching the table's exact two gym-day snack rows.
-const mkSnackA=(p,t='11:15 ص',isGym)=>[p+'-sn1',t,'snack','🥜','سناك ١ (بين الفطار والغدا)','حفنة مكسرات (لوز/جوز) + تفاحة — لو جعت',5,['زبادي يوناني + عسل','جزر + حمص'],null,false,null,null];
-const mkSnackB=(p,t='4:30 م',isGym)=>[p+'-sn2',t,'snack','🥤','سناك ٢ (بعد الظهر)','بروتين شيك أو زبادي + موزة — لو جعت',5,['تمر + لبن','بيضة مسلوقة + خيار'],null,false,null,isGym?null:MACROS_REST.afternoonSnack];
-const mkSnackC=(p,t='9:30 م',isGym)=>[p+'-sn3',t,'snack','🍇','سناك ٣ (مسائي خفيف)','فاكهة خفيفة أو حفنة مكسرات — لو جعت قبل النوم',5,['زبادي قليل الدسم','قطعة جبنة قريش صغيرة'],null,false,null,isGym?MACROS_GYM.bedtimeSnack:MACROS_REST.bedtimeSnack];
+// Snack A ("سناك منتصف النهار" — mid-morning, before lunch) carries the fixed
+// middaySnack figure Abdullah specified directly, identical on gym/rest days.
+const mkSnackA=(p,t='11:15 ص',isGym)=>[p+'-sn1',t,'snack','🥜','سناك منتصف النهار','حفنة مكسرات نيئة (لوز/كاجو) + ثمرة فاكهة (تفاحة/موزة)',5,null,null,false,null,isGym?MACROS_GYM.middaySnack:MACROS_REST.middaySnack,mealKeyFor('middaySnack',isGym)];
+const mkSnackB=(p,t='4:30 م',isGym)=>[p+'-sn2',t,'snack','🥤','سناك ٢ (بعد الظهر)','بروتين شيك أو زبادي + موزة — لو جعت',5,null,null,false,null,isGym?null:MACROS_REST.afternoonSnack,mealKeyFor('afternoonSnack',isGym)];
+const mkSnackC=(p,t='9:30 م',isGym)=>[p+'-sn3',t,'snack','🍇','سناك ٣ (مسائي خفيف)','فاكهة خفيفة أو حفنة مكسرات — لو جعت قبل النوم',5,null,null,false,null,isGym?MACROS_GYM.bedtimeSnack:MACROS_REST.bedtimeSnack,mealKeyFor('bedtimeSnack',isGym)];
 
 const PMETA={
   Fajr:{ar:'الفجر',ic:'🌙',pts:10,sunnah:'سنة الفجر (ركعتان قبل)'},
@@ -600,13 +675,13 @@ const FREE_TIME={
 };
 
 const SCHED={
-  0:{n:'الأحد',wk:'9:00 ص',bd:'11:00 م',gm:null,ts:[mkBk('sun',undefined,false),mkWd('sun'),['sun-qp','10:00 ص','quran','📖','تحضير درس الاثنين','حفظ آيات جديدة + مراجعة اللوح — ٤٥ دقيقة',15,null,null,false],mkSnackA('sun',undefined,false),['sun-lu','2:30 م','food','🍽️','الغدا','نص كيلو فراخ/لحمة مشوي + سلطة + بطاطس مسلوقة',5,['سمك + سلطة + رغيف أسمر','كبدة مشوية + طماطم + بصل + خبز'],null,false,null,MACROS_REST.lunch],mkSnackB('sun',undefined,false),mkDn('sun',undefined,false),mkSnackC('sun',undefined,false),mkSl('sun')]},
-  1:{n:'الاثنين',wk:'10:00 ص',bd:'12:00 ص',gm:'lower',ts:[mkBk('mon','10:15 ص',true),mkWd('mon','10:30 ص'),mkSnackA('mon','11:00 ص',true),['mon-pp','11:30 ص','prog','💻','تحضير البرمجة','راجع الدرس السابق + اكتب أسئلتك — ٣٠ دقيقة',10,null,null,false],['mon-ss','12:00 م','prog','👨‍💻','سيشن البرمجة','١٢:٠٠ — ١:٠٠ م | JavaScript',15,null,null,false],['mon-hw','1:05 م','prog','📤','واجب البرمجة','ابدأ الواجب — آخر موعد الأربعاء (٢٤-٤٨ ساعة بعد السيشن)',10,null,'آخر موعد: الأربعاء',false],['mon-lu','1:30 م','food','🍽️','الغدا','نص كيلو فراخ مشوي + سلطة + بطاطس',5,['سمك دنيس + سلطة + رغيف','لحم هبر مشوي + سلطة + خبز'],null,false,null,MACROS_GYM.lunch],mkSnackB('mon','3:15 م',true),['mon-ql','3:50 م','quran','🕌','درس القرآن','٣:٥٠ — ٤:٣٠ م | مباشرة بعد العصر',15,null,null,false],mkPS('mon','6:00 م'),mkGL('mon','7:00 م'),mkSw('mon','8:30 م'),mkRc('mon','9:15 م','جاكوزي + بخار — ريكفري ٤٥ دقيقة ← استثناء ✓'),mkPM('mon','10:30 م'),mkSnackC('mon','11:30 م',true),mkSl('mon','12:00 ص')]},
-  2:{n:'الثلاثاء',wk:'9:00 ص',bd:'11:00 م',gm:null,ts:[mkBk('tue',undefined,false),mkWd('tue'),['tue-qp','10:00 ص','quran','📖','تحضير درس الأربعاء','حفظ آيات جديدة + مراجعة اللوح — ٤٥ دقيقة',15,null,null,false],mkSnackA('tue',undefined,false),['tue-lu','2:30 م','food','🍽️','الغدا','نص كيلو فراخ/لحمة مشوي + سلطة',5,['سمك + سلطة + رغيف','كبدة مشوية + سلطة + خبز'],null,false,null,MACROS_REST.lunch],mkSnackB('tue',undefined,false),mkBr('tue'),mkSnackC('tue','8:45 م',false),mkDn('tue','10:15 م',false),mkSl('tue')]},
-  3:{n:'الأربعاء',wk:'10:00 ص',bd:'12:00 ص',gm:'upper',ts:[mkBk('wed','10:15 ص',true),mkWd('wed','10:30 ص'),mkSnackA('wed','11:15 ص',true),['wed-lu','1:00 م','food','🍽️','الغدا','نص كيلو فراخ مشوي + سلطة + بطاطس',5,['سمك + خضار + رز نص طبق','لحم هبر مشوي + سلطة + خبز'],null,false,null,MACROS_GYM.lunch],mkSnackB('wed','2:45 م',true),['wed-ql','3:50 م','quran','🕌','درس القرآن','٣:٥٠ — ٤:٣٠ م | مباشرة بعد العصر',15,null,null,false],mkPS('wed','6:00 م'),mkGU('wed','7:00 م'),mkSw('wed','8:30 م'),mkRc('wed','9:15 م','جاكوزي + بخار — ريكفري ٤٥ دقيقة ← استثناء ✓'),mkPM('wed','10:30 م'),mkSnackC('wed','11:30 م',true),mkSl('wed','12:00 ص')]},
-  4:{n:'الخميس',wk:'9:00 ص',bd:'11:00 م',gm:null,ts:[mkBk('thu',undefined,false),mkWd('thu'),mkSnackA('thu','11:00 ص',false),['thu-pp','11:30 ص','prog','💻','تحضير البرمجة','راجع الدرس السابق + اكتب أسئلتك — ٣٠ دقيقة',10,null,null,false],['thu-ss','12:00 م','prog','👨‍💻','سيشن البرمجة','١٢:٠٠ — ١:٠٠ م | JavaScript',15,null,null,false],['thu-hw','1:05 م','prog','📤','واجب البرمجة','ابدأ الواجب — آخر موعد السبت (٢٤-٤٨ ساعة بعد السيشن)',10,null,'آخر موعد: السبت',false],['thu-lu','1:30 م','food','🍽️','الغدا','نص كيلو فراخ/لحمة مشوي + سلطة',5,['سمك + سلطة + بطاطس','كبدة مشوية + سلطة + خبز'],null,false,null,MACROS_REST.lunch],mkSnackB('thu','4:45 م',false),mkBr('thu'),mkSnackC('thu','8:45 م',false),mkDn('thu','10:15 م',false),mkSl('thu')]},
-  5:{n:'الجمعة',wk:'9:00 ص',bd:'11:00 م',gm:null,ts:[mkBk('fri',undefined,false),mkWd('fri'),mkSnackA('fri',undefined,false),['fri-jm','12:00 م','prayer','🕌','صلاة الجمعة','اخرج مبكر ← يعادل الظهر',15,null,null,false],['fri-lu','1:30 م','food','🍽️','الغدا','يوم حر — ما تبالغش في الكارب',5,['محشي + فراخ مشوي','كنتاكي مرة الأسبوع مقبول 🍗'],null,false,null,MACROS_REST.lunch],mkSnackB('fri',undefined,false),mkDn('fri',undefined,false),mkSnackC('fri',undefined,false),mkSl('fri')]},
-  6:{n:'السبت',wk:'9:00 ص',bd:'11:00 م',gm:'upper',ts:[mkBk('sat',undefined,true),mkWd('sat'),mkSnackA('sat','12:15 م',true),mkPS('sat','2:15 م'),mkGU('sat','3:00 م'),mkSw('sat','4:00 م'),mkRc('sat','4:45 م','جاكوزي + بخار/ساونا — ريكفري حتى ٥:٣٠ م ← استثناء ✓'),mkPM('sat','5:45 م'),['sat-di','7:30 م','food','🍽️','الغدا','نص كيلو سمك/فراخ/لحمة مشوي + سلطة + بطاطس',5,['جمبري ١٥٠جم + سلطة + خبز أسمر','كفتة مشوي + سلطة'],null,false,null,MACROS_GYM.lunch],mkSnackB('sat','8:45 م',true),mkSnackC('sat','9:45 م',true),mkSl('sat')]}
+  0:{n:'الأحد',wk:'9:00 ص',bd:'11:00 م',gm:null,ts:[mkBk('sun',undefined,false),mkWd('sun'),['sun-qp','10:00 ص','quran','📖','تحضير درس الاثنين','حفظ آيات جديدة + مراجعة اللوح — ٤٥ دقيقة',15,null,null,false],mkSnackA('sun',undefined,false),['sun-lu','2:30 م','food','🍽️','الغدا','نص كيلو فراخ/لحمة مشوي + سلطة + بطاطس مسلوقة',5,null,null,false,null,MACROS_REST.lunch,mealKeyFor('lunch',false)],mkSnackB('sun',undefined,false),mkDn('sun',undefined,false),mkSnackC('sun',undefined,false),mkSl('sun')]},
+  1:{n:'الاثنين',wk:'10:00 ص',bd:'12:00 ص',gm:'lower',ts:[mkBk('mon','10:15 ص',true),mkWd('mon','10:30 ص'),mkSnackA('mon','11:00 ص',true),['mon-pp','11:30 ص','prog','💻','تحضير البرمجة','راجع الدرس السابق + اكتب أسئلتك — ٣٠ دقيقة',10,null,null,false],['mon-ss','12:00 م','prog','👨‍💻','سيشن البرمجة','١٢:٠٠ — ١:٠٠ م | JavaScript',15,null,null,false],['mon-hw','1:05 م','prog','📤','واجب البرمجة','ابدأ الواجب — آخر موعد الأربعاء (٢٤-٤٨ ساعة بعد السيشن)',10,null,'آخر موعد: الأربعاء',false],['mon-lu','1:30 م','food','🍽️','الغدا','نص كيلو فراخ مشوي + سلطة + بطاطس',5,null,null,false,null,MACROS_GYM.lunch,mealKeyFor('lunch',true)],mkSnackB('mon','3:15 م',true),['mon-ql','3:50 م','quran','🕌','درس القرآن','٣:٥٠ — ٤:٣٠ م | مباشرة بعد العصر',15,null,null,false],mkPS('mon','6:00 م'),mkGL('mon','7:00 م'),mkSw('mon','8:30 م'),mkRc('mon','9:15 م','جاكوزي + بخار — ريكفري ٤٥ دقيقة ← استثناء ✓'),mkPM('mon','10:30 م'),mkSnackC('mon','11:30 م',true),mkSl('mon','12:00 ص')]},
+  2:{n:'الثلاثاء',wk:'9:00 ص',bd:'11:00 م',gm:null,ts:[mkBk('tue',undefined,false),mkWd('tue'),['tue-qp','10:00 ص','quran','📖','تحضير درس الأربعاء','حفظ آيات جديدة + مراجعة اللوح — ٤٥ دقيقة',15,null,null,false],mkSnackA('tue',undefined,false),['tue-lu','2:30 م','food','🍽️','الغدا','نص كيلو فراخ/لحمة مشوي + سلطة',5,null,null,false,null,MACROS_REST.lunch,mealKeyFor('lunch',false)],mkSnackB('tue',undefined,false),mkBr('tue'),mkSnackC('tue','8:45 م',false),mkDn('tue','10:15 م',false),mkSl('tue')]},
+  3:{n:'الأربعاء',wk:'10:00 ص',bd:'12:00 ص',gm:'upper',ts:[mkBk('wed','10:15 ص',true),mkWd('wed','10:30 ص'),mkSnackA('wed','11:15 ص',true),['wed-lu','1:00 م','food','🍽️','الغدا','نص كيلو فراخ مشوي + سلطة + بطاطس',5,null,null,false,null,MACROS_GYM.lunch,mealKeyFor('lunch',true)],mkSnackB('wed','2:45 م',true),['wed-ql','3:50 م','quran','🕌','درس القرآن','٣:٥٠ — ٤:٣٠ م | مباشرة بعد العصر',15,null,null,false],mkPS('wed','6:00 م'),mkGU('wed','7:00 م'),mkSw('wed','8:30 م'),mkRc('wed','9:15 م','جاكوزي + بخار — ريكفري ٤٥ دقيقة ← استثناء ✓'),mkPM('wed','10:30 م'),mkSnackC('wed','11:30 م',true),mkSl('wed','12:00 ص')]},
+  4:{n:'الخميس',wk:'9:00 ص',bd:'11:00 م',gm:null,ts:[mkBk('thu',undefined,false),mkWd('thu'),mkSnackA('thu','11:00 ص',false),['thu-pp','11:30 ص','prog','💻','تحضير البرمجة','راجع الدرس السابق + اكتب أسئلتك — ٣٠ دقيقة',10,null,null,false],['thu-ss','12:00 م','prog','👨‍💻','سيشن البرمجة','١٢:٠٠ — ١:٠٠ م | JavaScript',15,null,null,false],['thu-hw','1:05 م','prog','📤','واجب البرمجة','ابدأ الواجب — آخر موعد السبت (٢٤-٤٨ ساعة بعد السيشن)',10,null,'آخر موعد: السبت',false],['thu-lu','1:30 م','food','🍽️','الغدا','نص كيلو فراخ/لحمة مشوي + سلطة',5,null,null,false,null,MACROS_REST.lunch,mealKeyFor('lunch',false)],mkSnackB('thu','4:45 م',false),mkBr('thu'),mkSnackC('thu','8:45 م',false),mkDn('thu','10:15 م',false),mkSl('thu')]},
+  5:{n:'الجمعة',wk:'9:00 ص',bd:'11:00 م',gm:null,ts:[mkBk('fri',undefined,false),mkWd('fri'),mkSnackA('fri',undefined,false),['fri-jm','12:00 م','prayer','🕌','صلاة الجمعة','اخرج مبكر ← يعادل الظهر',15,null,null,false],['fri-lu','1:30 م','food','🍽️','الغدا','يوم حر — ما تبالغش في الكارب',5,null,null,false,null,MACROS_REST.lunch,mealKeyFor('lunch',false)],mkSnackB('fri',undefined,false),mkDn('fri',undefined,false),mkSnackC('fri',undefined,false),mkSl('fri')]},
+  6:{n:'السبت',wk:'9:00 ص',bd:'11:00 م',gm:'upper',ts:[mkBk('sat',undefined,true),mkWd('sat'),mkSnackA('sat','12:15 م',true),mkPS('sat','2:15 م'),mkGU('sat','3:00 م'),mkSw('sat','4:00 م'),mkRc('sat','4:45 م','جاكوزي + بخار/ساونا — ريكفري حتى ٥:٣٠ م ← استثناء ✓'),mkPM('sat','5:45 م'),['sat-di','7:30 م','food','🍽️','الغدا','نص كيلو سمك/فراخ/لحمة مشوي + سلطة + بطاطس',5,null,null,false,null,MACROS_GYM.lunch,mealKeyFor('lunch',true)],mkSnackB('sat','8:45 م',true),mkSnackC('sat','9:45 م',true),mkSl('sat')]}
 };
 
 function buildPTasks(jd){
@@ -651,10 +726,13 @@ function getReqTasks(jd,iso){
 }
 
 // ===== State =====
-const LS={stats:'sc:stats2',history:'sc:history2',reports:'sc:reports2',penalized:'sc:penalized2',firstSeen:'sc:firstSeen1',userEdits:'sc:userEdits1',aiChat:'sc:aiChat1',userMemory:'sc:userMemory1'};
+const LS={stats:'sc:stats2',history:'sc:history2',reports:'sc:reports2',penalized:'sc:penalized2',firstSeen:'sc:firstSeen1',userEdits:'sc:userEdits1',aiChat:'sc:aiChat1',userMemory:'sc:userMemory1',mealOptions:'sc:mealOptions1'};
 let STATS={cur:0,best:0,pts:0,lc:null,lf:null,lastPtsWeekStart:null};
 let DONE={};
-let SELECTED_ALTS={};
+// SELECTED_ALTS removed — the old static alts-picker system is gone, replaced by the
+// per-meal food-log system (historyData[iso].foodLog). `alts` key kept read-only in
+// historyData/cloud docs for backward compatibility with old saved days, but nothing
+// new is ever written to it.
 let SELECTED_DATE=TODAY;
 let historyData={};
 let savedReports=[];
@@ -728,6 +806,34 @@ async function saveUserEdits(){
   try{
     await setDoc(doc(fbDb,'users',user.uid),{userEdits:USER_EDITS},{merge:true});
   }catch(e){console.warn('userEdits cloud save failed',e);}
+}
+
+// ===== Saved meal options (replaces the old static "alts" system) =====
+// Per Abdullah's explicit instruction: options are scoped to the MEAL SLOT itself
+// (e.g. "gym:breakfast"), not to a specific calendar day — so saving a new breakfast
+// option on one gym day makes it available on every gym day's breakfast, but never
+// bleeds into rest-day breakfast or any other meal slot. Keyed by the same mealKey
+// values produced by mealKeyFor() (e.g. "gym:breakfast", "rest:middaySnack").
+// Shape: { [mealKey]: [ {description, macro:{p,c,f,k}, addedAt} , ... ] }
+let MEAL_OPTIONS={};
+
+async function saveMealOptions(){
+  await sSet(LS.mealOptions,MEAL_OPTIONS);
+  const user=fbAuth.currentUser;
+  if(!user)return; // guests never sync saved options anywhere
+  try{
+    await setDoc(doc(fbDb,'users',user.uid),{mealOptions:MEAL_OPTIONS},{merge:true});
+  }catch(e){console.warn('mealOptions cloud save failed',e);}
+}
+
+function addMealOption(mealKey,description,macro){
+  if(!mealKey||!description) return;
+  if(!MEAL_OPTIONS[mealKey]) MEAL_OPTIONS[mealKey]=[];
+  // No exact-text dupes for the same meal slot.
+  if(MEAL_OPTIONS[mealKey].some(o=>o.description.trim().toLowerCase()===description.trim().toLowerCase())) return;
+  MEAL_OPTIONS[mealKey].push({description,macro,addedAt:Date.now()});
+  // Keep each meal slot's saved list from growing unbounded.
+  if(MEAL_OPTIONS[mealKey].length>25) MEAL_OPTIONS[mealKey].shift();
 }
 let IS_BRAND_NEW_SESSION=false; // true only for the very session that creates FIRST_SEEN
 // (FIRST_SEEN itself: no day before it is ever eligible for punishment, and the day
@@ -823,8 +929,8 @@ async function saveAiChat(){
 async function sGet(k){try{const r=localStorage.getItem(k);return r?JSON.parse(r):null}catch{return null}}
 async function sSet(k,v){try{localStorage.setItem(k,JSON.stringify(v))}catch{}}
 
-function loadDay(){const dk=SELECTED_DATE;const day=historyData[dk]||{};DONE={...day.done||{}};SELECTED_ALTS={...day.alts||{}};}
-function saveDay(){const dk=SELECTED_DATE;if(!historyData[dk])historyData[dk]={};historyData[dk].done={...DONE};historyData[dk].alts={...SELECTED_ALTS};}
+function loadDay(){const dk=SELECTED_DATE;const day=historyData[dk]||{};DONE={...day.done||{}};}
+function saveDay(){const dk=SELECTED_DATE;if(!historyData[dk])historyData[dk]={};historyData[dk].done={...DONE};}
 
 // Legacy savedReports entries (pre-weekStart schema) get deduplicated by content signature,
 // since the old code appended a new entry every time the modal was opened.
@@ -914,6 +1020,7 @@ async function loadAll() {
     FIRST_SEEN = await sGet(LS.firstSeen);
     USER_EDITS = (await sGet(LS.userEdits)) || emptyUserEdits();
     USER_MEMORY = (await sGet(LS.userMemory)) || [];
+    MEAL_OPTIONS = (await sGet(LS.mealOptions)) || {};
     aiLoadSessionsFromRaw(await sGet(LS.aiChat));
     if (!FIRST_SEEN) {
         // First time this browser/localStorage has ever run the app.
@@ -942,6 +1049,7 @@ async function saveAll(){
   await sSet(LS.reports,savedReports);
   await sSet(LS.penalized,penalizedDates);
   await sSet(LS.userEdits,USER_EDITS);
+  await sSet(LS.mealOptions,MEAL_OPTIONS);
 
   const user=fbAuth.currentUser;
   if(!user)return;
@@ -958,7 +1066,8 @@ async function saveAll(){
       historyData:historyData,
       penalizedDates:penalizedDates,
       firstSeen:FIRST_SEEN,
-      userEdits:USER_EDITS
+      userEdits:USER_EDITS,
+      mealOptions:MEAL_OPTIONS
     },{merge:true});
   }catch(e){console.warn('cloud save failed',e);}
 }
@@ -972,7 +1081,19 @@ let PENALTY_FLASH_PENDING=false;
 
 function getPunishRate(){return (STATS.cur||0)>=3 ? 0.15 : 0.35;}
 
+// In-flight lock — onAuthStateChanged can legitimately fire more than once during a
+// single page session (initial resolution, token refresh, tab regaining focus), and
+// each firing calls initAppFlow() -> applyPunishmentOnce() again. Without this lock,
+// two overlapping calls could both read penalizedDates BEFORE either one's saveAll()
+// had persisted the "already penalized" flag, so both would deduct points for the
+// same missed day — this is what caused the mid-day "-16 points, then it fixed
+// itself" symptom: a second concurrent punishment pass firing before the first pass's
+// save had landed, later overwritten by a subsequent, correct save.
+let PUNISHMENT_IN_PROGRESS=false;
+
 async function applyPunishmentOnce(){
+  if(PUNISHMENT_IN_PROGRESS)return; // a concurrent call is already mid-flight — skip entirely rather than race it
+  PUNISHMENT_IN_PROGRESS=true;
   try{
     // Brand-new account/browser: never punish on the very session that created it.
     // This prevents "sign up today, get docked tonight for a day you never used the app."
@@ -988,6 +1109,12 @@ async function applyPunishmentOnce(){
     const rate=getPunishRate();
     let ded=0,missedCount=0;
     for(const t of tasks){if(!dayDone[t[0]]&&t[6]>0){ded+=Math.round(t[6]*rate);missedCount++;}}
+    // Stamp the ledger BEFORE the async saveAll() call below, not after — this closes
+    // the remaining race window where a second call (even with the lock above, e.g.
+    // if the lock were ever bypassed by a code path that doesn't go through this
+    // function) could still see a stale in-memory penalizedDates while this save is
+    // still in flight.
+    penalizedDates[yesterday]=true;
     if(ded>0 && STATS.pts!==undefined){
       STATS.pts=STATS.pts-ded;
       const rateLabel=rate<0.2?'مخفف (إنت مستمر على استريك)':'أعلى (مش على استريك حالياً)';
@@ -996,9 +1123,9 @@ async function applyPunishmentOnce(){
       if(!historyData[yesterday])historyData[yesterday]={};
       historyData[yesterday].penalty={rate,ded,missedCount};
     }
-    penalizedDates[yesterday]=true;
     await saveAll(); // persists the ledger to Firestore immediately so no other device can re-apply it
   }catch(e){console.error(e);}
+  finally{ PUNISHMENT_IN_PROGRESS=false; }
 }
 
 // ===== Streak =====
@@ -1463,13 +1590,15 @@ function buildWeekReportData(){
 
     const day=historyData[iso]||{};
     const dayDone=day.done||{};
-    const dayAlts=day.alts||{};
+    const dayFoodLog=day.foodLog||{};
     const prayerLogs=day.prayerLogs||{};
 
     // Macro accounting for this day — uses getAllTasks (not getReqTasks) so snacks
     // are included in nutrition totals even though they're excluded from the points/
     // streak "required tasks" list. Mirrors computeDayMacros() exactly so the weekly
-    // report and the live daily tracker never disagree about what counts.
+    // report and the live daily tracker never disagree about what counts. Prefers the
+    // actually-logged macro for a task (what was really eaten, from the food-log
+    // modal) over the generic table figure, when one exists.
     const dayMacroTasks=getAllTasks(jd,iso).filter(t=>!t._deleted);
     const dayMacroTarget={p:0,c:0,f:0,k:0};
     const dayMacroConsumed={p:0,c:0,f:0,k:0};
@@ -1478,7 +1607,9 @@ function buildWeekReportData(){
       if(!macro) continue;
       dayMacroTarget.p+=macro.p;dayMacroTarget.c+=macro.c;dayMacroTarget.f+=macro.f;dayMacroTarget.k+=macro.k;
       if(dayDone[mt[0]]!==undefined && dayDone[mt[0]]!==false){
-        dayMacroConsumed.p+=macro.p;dayMacroConsumed.c+=macro.c;dayMacroConsumed.f+=macro.f;dayMacroConsumed.k+=macro.k;
+        const logged=dayFoodLog[mt[0]]?.macro;
+        const m=logged||macro;
+        dayMacroConsumed.p+=m.p;dayMacroConsumed.c+=m.c;dayMacroConsumed.f+=m.f;dayMacroConsumed.k+=m.k;
       }
     }
     weekMacroTarget.p+=dayMacroTarget.p;weekMacroTarget.c+=dayMacroTarget.c;weekMacroTarget.f+=dayMacroTarget.f;weekMacroTarget.k+=dayMacroTarget.k;
@@ -1502,13 +1633,11 @@ function buildWeekReportData(){
       const cat=t[2]||'free';
       if(!byCat[cat]) byCat[cat]=[];
 
-      // Always resolve what was actually eaten/done — the chosen alternative if one
-      // was picked, otherwise the task's default/main description. Previously this
-      // only showed anything when an alt was explicitly chosen, so "ate the default
-      // meal" produced zero detail in the report — this is the actual fix.
-      const altChoice=dayAlts[t[0]];
-      const usedAlt=t[7]&&altChoice&&t[7].includes(altChoice);
-      const contentLine=usedAlt?altChoice:(t[5]||'');
+      // Always resolve what was actually eaten/done — the logged food description if
+      // this meal went through the food-log modal, otherwise the task's default/main
+      // description.
+      const loggedEntry=dayFoodLog[t[0]];
+      const contentLine=(loggedEntry&&loggedEntry.description)?loggedEntry.description:(t[5]||'');
       const movedNote=t._movedFrom?` <span class="badge-alt">🔀 نُقلت من ${t._movedFrom}</span>`:'';
       const customNote=t._custom?` <span class="badge-alt" style="background:rgba(139,92,246,.15);color:#a78bfa">✨ مخصصة</span>`:'';
 
@@ -1723,14 +1852,22 @@ async function deleteSavedReport(idx){
 }
 
 // ===== UI =====
-function getDisplayDesc(task){const chosen=SELECTED_ALTS[task[0]];if(task[7]&&chosen&&task[7].includes(chosen))return chosen;return task[5];}
-function toggleAlts(id){document.getElementById('al-'+id)?.classList.toggle('open');}
+// getDisplayDesc: the old alt-selection system is gone. If this exact task instance
+// was logged today via the new food-log modal, show what was actually eaten (and its
+// computed macros) instead of the generic table description — otherwise fall back to
+// the task's default description exactly as before.
+function getDisplayDesc(task,iso){
+  const log=(historyData[iso]||{}).foodLog?.[task[0]];
+  if(log && log.description) return log.description;
+  return task[5];
+}
 
 function renderCard(task,isToday){
-  const[id,arTime,cat,ico,name,,pts,alts,hw,isEx]=task;
+  const[id,arTime,cat,ico,name,,pts,,hw,isEx]=task;
   const done=DONE[id];
   const isDone=done!==undefined&&done!==false;
   const state=getState(task);
+  const isFoodLoggable=(cat==='food'||cat==='snack')&&!!task[11]; // has macro data => goes through the log modal
 
   if(cat==='free')return`<div class="tc" data-c="free"><div class="tctime">${arTime}</div><div class="tcico">${ico}</div><div class="tcbody"><div class="tcname" style="color:#6366f1">${name}</div><div class="tcdesc">${task[5]}</div></div></div>`;
 
@@ -1751,10 +1888,13 @@ function renderCard(task,isToday){
       // clickable once very late, same visual as other expired tasks but never fed
       // into punishment math (getReqTasks excludes cat==='snack' entirely).
       act=isSnack?`<div class="excbadge">🍎 فات وقته — مفيش خصم</div>`:`<div class="cbtn exp">فات الوقت</div>`;
+    }else if(isFoodLoggable){
+      // Food/snack tasks with macro data open the food-log modal instead of
+      // confirming directly — replaces the old alt-picker entirely.
+      const lbl=isSnack?'🍎 سناك — سجل الأكل':'🍽️ سجل الأكل';
+      const optLbl=isSnack?` (اختياري)`:'';
+      act=`<button class="cbtn${isSnack?' snack':''}" data-action="logfood" data-id="${id}" data-pts="${pts}">${lbl}<span class="ptslbl">+${pts}⭐${optLbl}</span></button>`;
     }else if(isSnack){
-      // Distinct button: separate CSS class + label from both the normal confirm
-      // button and the exception badge. Uses the same 'confirm' action handler
-      // (DONE[id]=pts, no punishment linkage since getReqTasks never lists it).
       act=`<button class="cbtn snack" data-action="confirm" data-id="${id}" data-pts="${pts}">🍎 سناك ✓<span class="ptslbl">+${pts}⭐ (اختياري)</span></button>`;
     }else{
       act=`<button class="cbtn" data-action="confirm" data-id="${id}" data-pts="${pts}">تأكيد ✓<span class="ptslbl">+${pts}⭐</span></button>`;
@@ -1762,10 +1902,6 @@ function renderCard(task,isToday){
   }else{
     act=isDone?`<div class="cbtn done">✅</div>`:(isSnack?`<div class="ptsbdg">🍎 ${pts}⭐ اختياري</div>`:`<div class="ptsbdg">${pts}⭐</div>`);
   }
-
-  const altH=(alts&&alts.length&&isToday&&!isDone)?
-    `<button class="altbtn" data-action="alts" data-id="${id}">🔄 بدائل (${alts.length})</button>`+
-    `<div class="altlist" id="al-${id}">${alts.map(a=>`<div class="altitem" data-action="pickalt" data-id="${id}" data-alt="${String(a).replace(/"/g,'"')}">${a}</div>`).join('')}</div>`:'';
 
   const hwH=hw?`<div class="hwtag">⏰ ${hw}</div>`:'';
 
@@ -1778,9 +1914,15 @@ function renderCard(task,isToday){
   const deletedBadge=isDeleted?`<div class="hwtag">🗑️ محذوفة</div>`:'';
   if(isDeleted) act=`<div class="cbtn exp" style="opacity:.6">🗑️ محذوفة</div>`;
 
+  // If a food entry was actually logged, show its computed macros under the
+  // description as a compact badge — makes the card itself carry the real intake,
+  // not just the day-level totals.
+  const loggedMacro=(historyData[SELECTED_DATE||TODAY]||{}).foodLog?.[id]?.macro;
+  const loggedBadge=loggedMacro?`<div class="hwtag" style="background:rgba(16,185,129,.12);border-color:rgba(16,185,129,.3);color:#34d399">🍽️ ${Math.round(loggedMacro.k)} سعرة · ب${Math.round(loggedMacro.p)} · ك${Math.round(loggedMacro.c)} · د${Math.round(loggedMacro.f)}</div>`:'';
+
   return`<div class="tc${isDone?' done':''}${isEx?' excx':''}${isDeleted?' excx':''}" data-c="${cat}" id="c-${id}" ${isDeleted?'style="opacity:.5"':''}>
     <div class="tctime">${arTime}</div><div class="tcico">${ico}</div>
-    <div class="tcbody"><div class="tcname">${name}</div><div class="tcdesc">${getDisplayDesc(task)}</div>${hwH}${movedBadge}${customBadge}${deletedBadge}${altH}</div>
+    <div class="tcbody"><div class="tcname">${name}</div><div class="tcdesc">${getDisplayDesc(task,SELECTED_DATE||TODAY)}</div>${hwH}${movedBadge}${customBadge}${deletedBadge}${loggedBadge}</div>
     ${act}
   </div>`;
 }
@@ -1857,20 +1999,25 @@ function renderPanels(){
 // optional/unpunished). A task only contributes if it carries macro data at index 11 —
 // tasks without macro data (prayers, gym, quran, etc.) are silently skipped, exactly
 // like they're already skipped from getReqTasks' point totals for non-food categories
-// would be if this were points math. Alts intentionally reuse the same macro figure as
-// the task's main option, per instruction — no separate alt-macro lookup.
+// would be if this were points math. When a task was actually logged through the new
+// food-log modal (historyData[iso].foodLog[id]), its computed macro is used for
+// CONSUMED instead of the generic table figure — the target still uses the table
+// figure, since the target represents "the plan", not what you actually ate.
 function computeDayMacros(jd,iso){
   const allTasks=getAllTasks(jd,iso).filter(t=>!t._deleted);
   const target={p:0,c:0,f:0,k:0};
   const consumed={p:0,c:0,f:0,k:0};
   const dayDone=(historyData[iso]||{}).done||(iso===SELECTED_DATE?DONE:{});
+  const dayFoodLog=(historyData[iso]||{}).foodLog||{};
   for(const t of allTasks){
     const macro=t[11];
     if(!macro) continue;
     target.p+=macro.p;target.c+=macro.c;target.f+=macro.f;target.k+=macro.k;
     const v=dayDone[t[0]];
     if(v!==undefined && v!==false){
-      consumed.p+=macro.p;consumed.c+=macro.c;consumed.f+=macro.f;consumed.k+=macro.k;
+      const logged=dayFoodLog[t[0]]?.macro;
+      const m=logged||macro;
+      consumed.p+=m.p;consumed.c+=m.c;consumed.f+=m.f;consumed.k+=m.k;
     }
   }
   return{target,consumed};
@@ -2506,6 +2653,242 @@ Rules: "before X" means schedule at least 15 minutes earlier than X's time, same
   }
 }
 
+// ===== Food Log Modal (replaces the old static "alts" system) =====
+// State for whichever task the modal is currently open for.
+let FL_ACTIVE_TASK=null;
+
+function fmtMacroShort(m){
+  const r1=n=>Math.round(n*10)/10;
+  return `${r1(m.k)} سعرة · ب${r1(m.p)} · ك${r1(m.c)} · د${r1(m.f)}`;
+}
+
+function openFoodLogModal(task){
+  FL_ACTIVE_TASK=task;
+  const modal=document.getElementById('foodLogModal');
+  const titleEl=document.getElementById('flTitle');
+  const subEl=document.getElementById('flSub');
+  if(titleEl) titleEl.textContent=`إيه اللي أكلته في "${task[4]}"؟`;
+  if(subEl) subEl.textContent='اختار من الخيارات المحفوظة، أو اكتب إيه اللي أكلته بالظبط';
+
+  // Reset to the choose step every time it opens.
+  document.getElementById('flChooseStep').style.display='block';
+  document.getElementById('flLoadingStep').style.display='none';
+  document.getElementById('flResultStep').style.display='none';
+  document.getElementById('flAskStep').style.display='none';
+  document.getElementById('flFreeText').value='';
+
+  // Render saved options scoped to THIS meal slot only (gym:breakfast vs
+  // rest:breakfast never mix, per Abdullah's explicit instruction).
+  const mealKey=task[12];
+  const opts=mealKey?(MEAL_OPTIONS[mealKey]||[]):[];
+  const optsEl=document.getElementById('flSavedOpts');
+  if(!opts.length){
+    optsEl.innerHTML=`<div style="color:var(--mu);font-size:.76rem;text-align:center;padding:6px">لسه مفيش خيارات محفوظة للوجبة دي — اكتب إيه اللي أكلته وهيتحفظ لو عايز</div>`;
+  }else{
+    optsEl.innerHTML=opts.slice().reverse().map((o,i)=>{
+      const realIdx=opts.length-1-i;
+      return `<div class="fl-opt" data-opt-idx="${realIdx}"><span>${o.description.replace(/</g,'&lt;')}</span><span class="fl-opt-macro">${fmtMacroShort(o.macro)}</span></div>`;
+    }).join('');
+  }
+
+  if(modal) modal.classList.add('open');
+}
+
+function closeFoodLogModal(){
+  document.getElementById('foodLogModal')?.classList.remove('open');
+  FL_ACTIVE_TASK=null;
+}
+
+// Picking a saved option skips the worker call entirely — the macro is already known
+// from when it was first computed and saved, so this is instant.
+async function flPickSavedOption(idx){
+  if(!FL_ACTIVE_TASK) return;
+  const mealKey=FL_ACTIVE_TASK[12];
+  const opt=(MEAL_OPTIONS[mealKey]||[])[idx];
+  if(!opt) return;
+  await flFinalizeLog(FL_ACTIVE_TASK,opt.description,opt.macro,null,false); // no verdict re-shown for a repeat pick, no re-save prompt
+}
+
+// Builds the system prompt for the macro-computation + verdict call. Asks for a
+// strict JSON response so the result can be parsed and validated deterministically,
+// same defensive pattern as aiResolveRelativeMove — a malformed/hallucinated
+// response should never silently corrupt nutrition data.
+function flBuildSystemPrompt(task,dayTarget,dayConsumed){
+  const r1=n=>Math.round(n*10)/10;
+  const remaining={p:r1(dayTarget.p-dayConsumed.p),c:r1(dayTarget.c-dayConsumed.c),f:r1(dayTarget.f-dayConsumed.f),k:r1(dayTarget.k-dayConsumed.k)};
+  return `You are a precise nutrition estimator embedded in Abdullah's habit-tracking app. You will receive a description (in Arabic or English, possibly informal) of a meal he actually ate for "${task[4]}", plus his daily nutrition target and what he's consumed so far today.
+
+Respond with ONLY a raw JSON object, nothing else — no markdown fences, no explanation outside the JSON:
+{"macro":{"p":<protein grams, number>,"c":<carb grams, number>,"f":<fat grams, number>,"k":<calories, number>},"verdict":"<2-3 sentences in Egyptian Arabic, direct and formal per his mentoring style, judging whether this specific meal is a good or bad fit given his remaining target for today and what you know about him>","needsClarification":<true or false>,"clarifyingQuestion":"<if needsClarification is true, one short specific Arabic question to ask him; otherwise empty string>"}
+
+Rules:
+- Estimate macros as accurately as you reasonably can from the description. Use standard nutritional values for common foods/portions. If a portion size isn't stated, assume a normal single-adult serving.
+- Only set needsClarification to true if the description is genuinely too vague to estimate at all (e.g. just "food" or "أكلت حاجة") — do NOT ask clarifying questions for normal descriptions with minor ambiguity; make a reasonable assumption instead and state it briefly in the verdict.
+- The verdict must reference the actual numbers: how this meal compares to what's left in his daily target (remaining today: ${JSON.stringify(remaining)}), not generic advice.
+- Never fabricate facts about Abdullah beyond what's given to you below.
+- k (calories) should be consistent with p*4 + c*4 + f*9 approximately.${aiMemoryBlock()}
+
+Abdullah's daily nutrition target: ${JSON.stringify({p:r1(dayTarget.p),c:r1(dayTarget.c),f:r1(dayTarget.f),k:r1(dayTarget.k)})}
+Already consumed today (before this meal): ${JSON.stringify({p:r1(dayConsumed.p),c:r1(dayConsumed.c),f:r1(dayConsumed.f),k:r1(dayConsumed.k)})}`;
+}
+
+// Sends the free-text description (optionally with a prior clarifying Q&A appended)
+// to the Cloudflare Worker, parses+validates the JSON response.
+async function flComputeMacro(task,description,priorQA){
+  if(!AI_WORKER_URL || AI_WORKER_URL==='REPLACE_WITH_YOUR_WORKER_URL'){
+    return{ok:false,error:'⚠️ المساعد الذكي لسه مش متوصل بالسيرفر.'};
+  }
+  const jd=getJDfromISO(SELECTED_DATE);
+  const{target,consumed}=computeDayMacros(jd,SELECTED_DATE);
+  const sys=flBuildSystemPrompt(task,target,consumed);
+  let userMsg=`Meal description: ${description}`;
+  if(priorQA) userMsg+=`\n\nFollow-up question you asked: ${priorQA.question}\nHis answer: ${priorQA.answer}`;
+  try{
+    const res=await fetch(AI_WORKER_URL,{
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({system:sys,messages:[{role:'user',content:userMsg}]})
+    });
+    const data=await res.json();
+    if(!res.ok || data.error) return{ok:false,error:'⚠️ حصل خطأ من السيرفر — جرب تاني.'};
+    let raw=(data.text||'').trim().replace(/^```json\s*|```$/g,'').trim();
+    let parsed;
+    try{ parsed=JSON.parse(raw); }catch{ return{ok:false,error:'⚠️ مش فاهم الوصف ده كويس — جرب تكتبه بشكل أوضح.'}; }
+    if(parsed.needsClarification && parsed.clarifyingQuestion){
+      return{ok:true,needsClarification:true,question:parsed.clarifyingQuestion};
+    }
+    const m=parsed.macro;
+    if(!m || typeof m.p!=='number' || typeof m.c!=='number' || typeof m.f!=='number' || typeof m.k!=='number'){
+      return{ok:false,error:'⚠️ مش قادر أحسب القيم الغذائية من الوصف ده — جرب توصف أكتر.'};
+    }
+    return{ok:true,macro:{p:m.p,c:m.c,f:m.f,k:m.k},verdict:parsed.verdict||''};
+  }catch(e){
+    console.error('food macro compute failed',e);
+    return{ok:false,error:'⚠️ مش قادر أوصل للسيرفر دلوقتي.'};
+  }
+}
+
+// Finalizes logging: marks the task done (if not already), stores the food-log entry
+// for today, adds the macro to the day's consumed total (via foodLog, read by
+// computeDayMacros), awards points, saves, re-renders. showVerdictUI controls whether
+// the result/verdict/save-prompt screen is shown (skipped for instant saved-option
+// picks) — pass null verdict to skip the verdict line.
+async function flFinalizeLog(task,description,macro,verdict,showVerdictUI){
+  const id=task[0];
+  const iso=SELECTED_DATE;
+  const pts=task[6]||0;
+
+  if(!historyData[iso]) historyData[iso]={};
+  if(!historyData[iso].foodLog) historyData[iso].foodLog={};
+  historyData[iso].foodLog[id]={description,macro,loggedAt:Date.now()};
+
+  const alreadyDone=DONE[id]!==undefined && DONE[id]!==false;
+  if(!alreadyDone){
+    DONE[id]=pts;
+    if(iso===TODAY) STATS.pts=(STATS.pts||0)+pts;
+    try{ checkStreak(); }catch(err){ console.error('checkStreak failed, saving anyway:',err); }
+  }
+
+  try{
+    await saveAll();
+  }catch(err){
+    console.error('saveAll failed after food log:',err);
+    showToast('⚠️ حصل خطأ أثناء الحفظ — جرب تاني أو أعد تحميل الصفحة',4000,'warn');
+  }
+  try{ renderPanels();switchDay(getJDfromISO(SELECTED_DATE));updateUI(); }catch(err){ console.error('re-render failed:',err); }
+
+  if(showVerdictUI){
+    document.getElementById('flChooseStep').style.display='none';
+    document.getElementById('flLoadingStep').style.display='none';
+    document.getElementById('flAskStep').style.display='none';
+    const resStep=document.getElementById('flResultStep');
+    resStep.style.display='block';
+    document.getElementById('flMacroResult').innerHTML=`<span><b>${Math.round(macro.k)}</b> سعرة</span><span>بروتين <b>${Math.round(macro.p)}</b>جم</span><span>كارب <b>${Math.round(macro.c)}</b>جم</span><span>دهون <b>${Math.round(macro.f)}</b>جم</span>`;
+    const verdictEl=document.getElementById('flVerdict');
+    if(verdict){verdictEl.style.display='block';verdictEl.textContent=verdict;}
+    else{verdictEl.style.display='none';}
+    // Only offer to save as a quick-pick option if it isn't already saved for this
+    // exact meal slot (avoids duplicate save prompts for something already there).
+    const mealKey=task[12];
+    const alreadySaved=mealKey && (MEAL_OPTIONS[mealKey]||[]).some(o=>o.description.trim().toLowerCase()===description.trim().toLowerCase());
+    document.getElementById('flSaveOptRow').style.display=alreadySaved?'none':'flex';
+  }else{
+    closeFoodLogModal();
+    showToast(`🍽️ تم تسجيل "${description}" ✅`,2600);
+  }
+}
+
+async function flHandleSubmit(){
+  if(!FL_ACTIVE_TASK) return;
+  const text=document.getElementById('flFreeText').value.trim();
+  if(!text){showToast('اكتب إيه اللي أكلته الأول',2200,'warn');return;}
+
+  document.getElementById('flChooseStep').style.display='none';
+  document.getElementById('flLoadingStep').style.display='block';
+
+  const result=await flComputeMacro(FL_ACTIVE_TASK,text,null);
+
+  if(!result.ok){
+    document.getElementById('flLoadingStep').style.display='none';
+    document.getElementById('flChooseStep').style.display='block';
+    showToast(result.error,3800,'warn');
+    return;
+  }
+
+  if(result.needsClarification){
+    document.getElementById('flLoadingStep').style.display='none';
+    const askStep=document.getElementById('flAskStep');
+    askStep.style.display='block';
+    document.getElementById('flAskQuestion').textContent=result.question;
+    askStep.dataset.origText=text;
+    return;
+  }
+
+  document.getElementById('flLoadingStep').style.display='none';
+  await flFinalizeLog(FL_ACTIVE_TASK,text,result.macro,result.verdict,true);
+}
+
+async function flHandleAskAnswer(){
+  if(!FL_ACTIVE_TASK) return;
+  const askStep=document.getElementById('flAskStep');
+  const answer=document.getElementById('flAskAnswer').value.trim();
+  if(!answer){showToast('اكتب إجابتك الأول',2000,'warn');return;}
+  const origText=askStep.dataset.origText||'';
+
+  askStep.style.display='none';
+  document.getElementById('flLoadingStep').style.display='block';
+
+  const result=await flComputeMacro(FL_ACTIVE_TASK,origText,{question:document.getElementById('flAskQuestion').textContent,answer});
+
+  if(!result.ok || result.needsClarification){
+    // Don't loop clarifying questions indefinitely — if it's still unclear after one
+    // follow-up, fall back to asking him to just retype the description plainly.
+    document.getElementById('flLoadingStep').style.display='none';
+    document.getElementById('flChooseStep').style.display='block';
+    showToast(result.error||'لسه مش واضح — جرب تكتب وصف مختصر وواضح للوجبة',3800,'warn');
+    return;
+  }
+
+  document.getElementById('flLoadingStep').style.display='none';
+  const combinedDesc=`${origText} (${answer})`;
+  await flFinalizeLog(FL_ACTIVE_TASK,combinedDesc,result.macro,result.verdict,true);
+}
+
+async function flHandleSaveOptYes(){
+  if(!FL_ACTIVE_TASK) return;
+  const mealKey=FL_ACTIVE_TASK[12];
+  const macroText=document.getElementById('flMacroResult');
+  // Recover description+macro from the last logged entry for this task today, since
+  // that's the exact data that was just finalized.
+  const entry=(historyData[SELECTED_DATE]||{}).foodLog?.[FL_ACTIVE_TASK[0]];
+  if(entry && mealKey){
+    addMealOption(mealKey,entry.description,entry.macro);
+    try{ await saveMealOptions(); }catch(e){ console.warn('saveMealOptions failed',e); }
+    showToast('💾 اتحفظت كخيار سريع لنفس الوجبة دي',2400);
+  }
+  document.getElementById('flSaveOptRow').style.display='none';
+}
+
 async function aiCallLiveModel(){
   if(!AI_WORKER_URL || AI_WORKER_URL==='REPLACE_WITH_YOUR_WORKER_URL'){
     return{ok:false,text:'⚠️ المساعد الذكي لسه مش متوصل بالسيرفر (Cloudflare Worker). لازم تركّب الـ Worker وتحط رابطه في الكود الأول.'};
@@ -2842,6 +3225,20 @@ document.body.addEventListener('click',async e=>{
   const tgt=e.target;
   const closest=sel=>tgt.closest(sel);
 
+  // ===== Food Log Modal wiring =====
+  const flOpt=closest('.fl-opt');
+  if(flOpt){
+    const idx=parseInt(flOpt.getAttribute('data-opt-idx'),10);
+    await flPickSavedOption(idx);
+    return;
+  }
+  if(closest('#flSubmitBtn')){await flHandleSubmit();return;}
+  if(closest('#flCancelBtn')){closeFoodLogModal();return;}
+  if(closest('#flDoneBtn')){closeFoodLogModal();return;}
+  if(closest('#flSaveOptYes')){await flHandleSaveOptYes();return;}
+  if(closest('#flSaveOptNo')){document.getElementById('flSaveOptRow').style.display='none';return;}
+  if(closest('#flAskSubmitBtn')){await flHandleAskAnswer();return;}
+
   // closest(), not tgt.id — buttons containing emoji/text can report the click's
   // target as an inner text node rather than the button itself on some mobile
   // browsers, which is why tgt.id==='aiHistoryBtn' silently never matched and the
@@ -2916,17 +3313,18 @@ document.body.addEventListener('click',async e=>{
       localStorage.removeItem(LS.userEdits);
       localStorage.removeItem(LS.aiChat);
       localStorage.removeItem(LS.userMemory);
+      localStorage.removeItem(LS.mealOptions);
 
       // Clear any in-memory state
       STATS={cur:0,best:0,pts:0,lc:null,lf:null};
       DONE={};
-      SELECTED_ALTS={};
       historyData={};
       savedReports=[];
       penalizedDates={};
       FIRST_SEEN=null;
       USER_EDITS=emptyUserEdits();
       USER_MEMORY=[];
+      MEAL_OPTIONS={};
       AI_SESSIONS=[];
       AI_ACTIVE_SESSION_ID=null;
       AI_VIEW_MODE='chat';
@@ -2989,11 +3387,10 @@ document.body.addEventListener('click',async e=>{
   const id=actionEl.getAttribute('data-id');
   const ptsAttr=actionEl.getAttribute('data-pts');
 
-  if(action==='alts'){toggleAlts(id);return;}
-  if(action==='pickalt'){
-    const alt=actionEl.getAttribute('data-alt');if(!alt)return;
-    SELECTED_ALTS[id]=alt;await saveAll();renderPanels();switchDay(getJDfromISO(SELECTED_DATE));
-    showToast('🔄 تم اختيار البديل',2200);
+  if(action==='logfood'){
+    const jd=getJDfromISO(SELECTED_DATE);
+    const taskObj=getAllTasks(jd,SELECTED_DATE).find(t=>t[0]===id);
+    if(taskObj) openFoodLogModal(taskObj);
     return;
   }
 
@@ -3169,7 +3566,10 @@ if (typeof onAuthStateChanged !== 'undefined' && typeof fbAuth !== 'undefined') 
               const localDay=historyData[dateKey]||{};
               historyData[dateKey]={
                 done:{...(localDay.done||{}),...(cloudDay.done||{})},
+                // alts kept read-only for old saved days from before the alts system
+                // was removed — nothing writes to it anymore, but old data isn't lost.
                 alts:{...(localDay.alts||{}),...(cloudDay.alts||{})},
+                foodLog:{...(localDay.foodLog||{}),...(cloudDay.foodLog||{})},
                 prayerLogs:{...(localDay.prayerLogs||{}),...(cloudDay.prayerLogs||{})},
                 // Critical fix: Ensure penalty is explicitly null if it doesn't exist,
                 // preventing 'undefined' from being sent to Firestore.
@@ -3183,6 +3583,7 @@ if (typeof onAuthStateChanged !== 'undefined' && typeof fbAuth !== 'undefined') 
           // userEdits yet (brand-new account), keep whatever local value we have.
           if(d.userEdits) USER_EDITS={...emptyUserEdits(),...d.userEdits};
           if(d.userMemory) USER_MEMORY=d.userMemory;
+          if(d.mealOptions) MEAL_OPTIONS=d.mealOptions;
           if(d.aiChat) aiLoadSessionsFromRaw({sessions:d.aiChat,activeId:d.aiActiveSessionId});
           // firstSeen from the cloud is authoritative once it exists — this is what makes
           // "sign in on a fresh browser" not reset the account's age. If the cloud has no
