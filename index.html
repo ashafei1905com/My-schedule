@@ -52,6 +52,7 @@ body{font-family:'Cairo',sans-serif;background:var(--bg);color:var(--tx);directi
 .macrofx-p{background:linear-gradient(90deg,#10b981,#34d399)}
 .macrofx-c{background:linear-gradient(90deg,#f59e0b,#fbbf24)}
 .macrofx-f{background:linear-gradient(90deg,#8b5cf6,#a78bfa)}
+.macrofx-b{background:linear-gradient(90deg,#06b6d4,#22d3ee)}
 .macroval{font-size:.65rem;color:var(--so);font-weight:700;min-width:62px;text-align:left;direction:ltr;flex-shrink:0}
 .tw{overflow-x:auto;scrollbar-width:none;padding:10px 16px 4px}
 .tw::-webkit-scrollbar{display:none}
@@ -307,6 +308,11 @@ body{font-family:'Cairo',sans-serif;background:var(--bg);color:var(--tx);directi
         <div class="macrolbl">دهون</div>
         <div class="macrobg"><div class="macrofx macrofx-f" id="macroFillF" style="width:0"></div></div>
         <div class="macroval" id="macroValF">٠/٠جم</div>
+      </div>
+      <div class="macrorow">
+        <div class="macrolbl">ألياف</div>
+        <div class="macrobg"><div class="macrofx macrofx-b" id="macroFillB" style="width:0"></div></div>
+        <div class="macroval" id="macroValB">٠/٠جم</div>
       </div>
     </div>
   </div>
@@ -594,23 +600,23 @@ function pickRandom(arr){return arr[Math.floor(Math.random()*arr.length)];}
 // Format: {p:protein_g, c:carbs_g, f:fat_g, k:kcal}. Applied uniformly across a task's
 // alt options too, per explicit instruction — no separate per-alt estimation.
 // middaySnack ("سناك منتصف النهار" — Snack 1, between breakfast and lunch) — a single
-// fixed figure Abdullah specified directly, applied identically on gym and rest days
-// since he gave one number for it, not two separate tables.
+// fixed figure Abdullah specified directly, applied identically on gym and rest days.
+// Updated to Abdullah's latest table (adds fiber `b` to every entry; drops the
+// bedtime-snack row entirely — mkSnackC below keeps existing as a task, just with no
+// macro figure attached, per his explicit instruction not to remove the task itself).
 const MACROS_GYM={
-  breakfast:{p:26,c:75,f:17,k:560},
-  middaySnack:{p:5,c:25,f:10,k:200},
-  lunch:{p:45,c:40,f:15,k:480},
-  preGymSnack:{p:21,c:67,f:24,k:570},
-  dinner:{p:33,c:28,f:17.5,k:400},
-  bedtimeSnack:{p:8,c:12,f:8,k:150}
+  breakfast:{p:26,c:75,f:17,b:8,k:560},
+  middaySnack:{p:5,c:25,f:10,b:4,k:200},
+  lunch:{p:45,c:40,f:15,b:6,k:480},
+  preGymSnack:{p:21,c:67,f:24,b:5,k:570},
+  dinner:{p:33,c:28,f:17,b:5,k:400}
 };
 const MACROS_REST={
-  breakfast:{p:31,c:41,f:19,k:465},
-  middaySnack:{p:5,c:25,f:10,k:200},
-  lunch:{p:45,c:45,f:15,k:500},
-  afternoonSnack:{p:2,c:35,f:1,k:150},
-  dinner:{p:27,c:23,f:16.5,k:350},
-  bedtimeSnack:{p:11,c:15,f:16,k:250}
+  breakfast:{p:31,c:41,f:19,b:5,k:465},
+  middaySnack:{p:5,c:25,f:10,b:4,k:200},
+  lunch:{p:45,c:45,f:15,b:6,k:500},
+  afternoonSnack:{p:2,c:35,f:1,b:5,k:150},
+  dinner:{p:27,c:23,f:16,b:5,k:350}
 };
 // Task tuple layout: [id,time,cat,ico,name,desc,pts,alts(REMOVED,now always null),
 //   hw,isEx,_unused10,macros,mealKey]
@@ -648,7 +654,7 @@ const mkBr=(p)=>[p+'-br','7:00 م','recovery','🏊','مع أخوك — جاكو
 // middaySnack figure Abdullah specified directly, identical on gym/rest days.
 const mkSnackA=(p,t='11:15 ص',isGym)=>[p+'-sn1',t,'snack','🥜','سناك منتصف النهار','حفنة مكسرات نيئة (لوز/كاجو) + ثمرة فاكهة (تفاحة/موزة)',5,null,null,false,null,isGym?MACROS_GYM.middaySnack:MACROS_REST.middaySnack,mealKeyFor('middaySnack',isGym)];
 const mkSnackB=(p,t='4:30 م',isGym)=>[p+'-sn2',t,'snack','🥤','سناك ٢ (بعد الظهر)','بروتين شيك أو زبادي + موزة — لو جعت',5,null,null,false,null,isGym?null:MACROS_REST.afternoonSnack,mealKeyFor('afternoonSnack',isGym)];
-const mkSnackC=(p,t='9:30 م',isGym)=>[p+'-sn3',t,'snack','🍇','سناك ٣ (مسائي خفيف)','فاكهة خفيفة أو حفنة مكسرات — لو جعت قبل النوم',5,null,null,false,null,isGym?MACROS_GYM.bedtimeSnack:MACROS_REST.bedtimeSnack,mealKeyFor('bedtimeSnack',isGym)];
+const mkSnackC=(p,t='9:30 م',isGym)=>[p+'-sn3',t,'snack','🍇','سناك ٣ (مسائي خفيف)','فاكهة خفيفة أو حفنة مكسرات — لو جعت قبل النوم',5,null,null,false,null,null,mealKeyFor('bedtimeSnack',isGym)];
 
 const PMETA={
   Fajr:{ar:'الفجر',ic:'🌙',pts:10,sunnah:'سنة الفجر (ركعتان قبل)'},
@@ -930,7 +936,15 @@ async function sGet(k){try{const r=localStorage.getItem(k);return r?JSON.parse(r
 async function sSet(k,v){try{localStorage.setItem(k,JSON.stringify(v))}catch{}}
 
 function loadDay(){const dk=SELECTED_DATE;const day=historyData[dk]||{};DONE={...day.done||{}};}
-function saveDay(){const dk=SELECTED_DATE;if(!historyData[dk])historyData[dk]={};historyData[dk].done={...DONE};}
+// saveDay MERGES DONE into historyData[dk].done rather than replacing it outright.
+// Replacing was the root cause of cross-device completion loss: if a completion was
+// synced in from another device (e.g. marking Fajr done on the phone) but this
+// device's in-memory DONE hadn't picked it up yet, a plain overwrite would wipe that
+// completion out of historyData/Firestore on the very next save from this device —
+// even though the load-side merge logic was already correct. Merging here closes
+// that gap: nothing already recorded for this day can be silently dropped by a save
+// that simply doesn't know about it yet.
+function saveDay(){const dk=SELECTED_DATE;if(!historyData[dk])historyData[dk]={};historyData[dk].done={...(historyData[dk].done||{}),...DONE};}
 
 // Legacy savedReports entries (pre-weekStart schema) get deduplicated by content signature,
 // since the old code appended a new entry every time the modal was opened.
@@ -1578,8 +1592,8 @@ function buildWeekReportData(){
   let totalPts=0,totalMissed=0,totalQada=0,totalDone=0,totalTasks=0;
   const dayBlocks=[];
   let rangeStart=null,rangeEnd=null;
-  const weekMacroTarget={p:0,c:0,f:0,k:0};
-  const weekMacroConsumed={p:0,c:0,f:0,k:0};
+  const weekMacroTarget={p:0,c:0,f:0,b:0,k:0};
+  const weekMacroConsumed={p:0,c:0,f:0,b:0,k:0};
 
   for(const dKey of order){
     const jd=mapJD[dKey];
@@ -1600,20 +1614,20 @@ function buildWeekReportData(){
     // actually-logged macro for a task (what was really eaten, from the food-log
     // modal) over the generic table figure, when one exists.
     const dayMacroTasks=getAllTasks(jd,iso).filter(t=>!t._deleted);
-    const dayMacroTarget={p:0,c:0,f:0,k:0};
-    const dayMacroConsumed={p:0,c:0,f:0,k:0};
+    const dayMacroTarget={p:0,c:0,f:0,b:0,k:0};
+    const dayMacroConsumed={p:0,c:0,f:0,b:0,k:0};
     for(const mt of dayMacroTasks){
       const macro=mt[11];
       if(!macro) continue;
-      dayMacroTarget.p+=macro.p;dayMacroTarget.c+=macro.c;dayMacroTarget.f+=macro.f;dayMacroTarget.k+=macro.k;
+      dayMacroTarget.p+=macro.p;dayMacroTarget.c+=macro.c;dayMacroTarget.f+=macro.f;dayMacroTarget.b+=(macro.b||0);dayMacroTarget.k+=macro.k;
       if(dayDone[mt[0]]!==undefined && dayDone[mt[0]]!==false){
         const logged=dayFoodLog[mt[0]]?.macro;
         const m=logged||macro;
-        dayMacroConsumed.p+=m.p;dayMacroConsumed.c+=m.c;dayMacroConsumed.f+=m.f;dayMacroConsumed.k+=m.k;
+        dayMacroConsumed.p+=m.p;dayMacroConsumed.c+=m.c;dayMacroConsumed.f+=m.f;dayMacroConsumed.b+=(m.b||0);dayMacroConsumed.k+=m.k;
       }
     }
-    weekMacroTarget.p+=dayMacroTarget.p;weekMacroTarget.c+=dayMacroTarget.c;weekMacroTarget.f+=dayMacroTarget.f;weekMacroTarget.k+=dayMacroTarget.k;
-    weekMacroConsumed.p+=dayMacroConsumed.p;weekMacroConsumed.c+=dayMacroConsumed.c;weekMacroConsumed.f+=dayMacroConsumed.f;weekMacroConsumed.k+=dayMacroConsumed.k;
+    weekMacroTarget.p+=dayMacroTarget.p;weekMacroTarget.c+=dayMacroTarget.c;weekMacroTarget.f+=dayMacroTarget.f;weekMacroTarget.b+=dayMacroTarget.b;weekMacroTarget.k+=dayMacroTarget.k;
+    weekMacroConsumed.p+=dayMacroConsumed.p;weekMacroConsumed.c+=dayMacroConsumed.c;weekMacroConsumed.f+=dayMacroConsumed.f;weekMacroConsumed.b+=dayMacroConsumed.b;weekMacroConsumed.k+=dayMacroConsumed.k;
     // getReqTasks already applies USER_EDITS (moves/deletes/custom/point overrides),
     // so the report automatically reflects any changes made via the AI assistant —
     // no separate merge logic needed here.
@@ -1722,6 +1736,7 @@ function renderReportSummaryHtml(data){
       <div class="macrorow"><div class="macrolbl">بروتين</div><div class="macrobg"><div class="macrofx macrofx-p" style="width:${Math.min(100,pctOf(c.p,t.p))}%"></div></div><div class="macroval">${r1(c.p)}/${r1(t.p)}جم</div></div>
       <div class="macrorow"><div class="macrolbl">كارب</div><div class="macrobg"><div class="macrofx macrofx-c" style="width:${Math.min(100,pctOf(c.c,t.c))}%"></div></div><div class="macroval">${r1(c.c)}/${r1(t.c)}جم</div></div>
       <div class="macrorow"><div class="macrolbl">دهون</div><div class="macrobg"><div class="macrofx macrofx-f" style="width:${Math.min(100,pctOf(c.f,t.f))}%"></div></div><div class="macroval">${r1(c.f)}/${r1(t.f)}جم</div></div>
+      <div class="macrorow"><div class="macrolbl">ألياف</div><div class="macrobg"><div class="macrofx macrofx-b" style="width:${Math.min(100,pctOf(c.b,t.b))}%"></div></div><div class="macroval">${r1(c.b)}/${r1(t.b)}جم</div></div>
     </div>`;
   }
   return `
@@ -1918,7 +1933,7 @@ function renderCard(task,isToday){
   // description as a compact badge — makes the card itself carry the real intake,
   // not just the day-level totals.
   const loggedMacro=(historyData[SELECTED_DATE||TODAY]||{}).foodLog?.[id]?.macro;
-  const loggedBadge=loggedMacro?`<div class="hwtag" style="background:rgba(16,185,129,.12);border-color:rgba(16,185,129,.3);color:#34d399">🍽️ ${Math.round(loggedMacro.k)} سعرة · ب${Math.round(loggedMacro.p)} · ك${Math.round(loggedMacro.c)} · د${Math.round(loggedMacro.f)}</div>`:'';
+  const loggedBadge=loggedMacro?`<div class="hwtag" style="background:rgba(16,185,129,.12);border-color:rgba(16,185,129,.3);color:#34d399">🍽️ ${Math.round(loggedMacro.k)} سعرة · ب${Math.round(loggedMacro.p)} · ك${Math.round(loggedMacro.c)} · د${Math.round(loggedMacro.f)} · أ${Math.round(loggedMacro.b||0)}</div>`:'';
 
   return`<div class="tc${isDone?' done':''}${isEx?' excx':''}${isDeleted?' excx':''}" data-c="${cat}" id="c-${id}" ${isDeleted?'style="opacity:.5"':''}>
     <div class="tctime">${arTime}</div><div class="tcico">${ico}</div>
@@ -2005,19 +2020,22 @@ function renderPanels(){
 // figure, since the target represents "the plan", not what you actually ate.
 function computeDayMacros(jd,iso){
   const allTasks=getAllTasks(jd,iso).filter(t=>!t._deleted);
-  const target={p:0,c:0,f:0,k:0};
-  const consumed={p:0,c:0,f:0,k:0};
+  const target={p:0,c:0,f:0,b:0,k:0};
+  const consumed={p:0,c:0,f:0,b:0,k:0};
   const dayDone=(historyData[iso]||{}).done||(iso===SELECTED_DATE?DONE:{});
   const dayFoodLog=(historyData[iso]||{}).foodLog||{};
   for(const t of allTasks){
     const macro=t[11];
     if(!macro) continue;
-    target.p+=macro.p;target.c+=macro.c;target.f+=macro.f;target.k+=macro.k;
+    target.p+=macro.p;target.c+=macro.c;target.f+=macro.f;target.b+=(macro.b||0);target.k+=macro.k;
     const v=dayDone[t[0]];
     if(v!==undefined && v!==false){
       const logged=dayFoodLog[t[0]]?.macro;
       const m=logged||macro;
-      consumed.p+=m.p;consumed.c+=m.c;consumed.f+=m.f;consumed.k+=m.k;
+      // (m.b||0) — old foodLog entries saved before fiber tracking existed won't
+      // have a b field; treat that as 0 rather than NaN so old logged days still
+      // add up correctly instead of corrupting the running total.
+      consumed.p+=m.p;consumed.c+=m.c;consumed.f+=m.f;consumed.b+=(m.b||0);consumed.k+=m.k;
     }
   }
   return{target,consumed};
@@ -2037,6 +2055,7 @@ function updateMacroUI(){
   setBar('macroFillP','macroValP',consumed.p,target.p,'جم');
   setBar('macroFillC','macroValC',consumed.c,target.c,'جم');
   setBar('macroFillF','macroValF',consumed.f,target.f,'جم');
+  setBar('macroFillB','macroValB',consumed.b,target.b,'جم');
   const kcalEl=document.getElementById('macroKcal');
   if(kcalEl) kcalEl.textContent=`${r1(consumed.k)}/${r1(target.k)} سعرة`;
 }
@@ -2659,7 +2678,7 @@ let FL_ACTIVE_TASK=null;
 
 function fmtMacroShort(m){
   const r1=n=>Math.round(n*10)/10;
-  return `${r1(m.k)} سعرة · ب${r1(m.p)} · ك${r1(m.c)} · د${r1(m.f)}`;
+  return `${r1(m.k)} سعرة · ب${r1(m.p)} · ك${r1(m.c)} · د${r1(m.f)} · أ${r1(m.b||0)}`;
 }
 
 function openFoodLogModal(task){
@@ -2715,21 +2734,21 @@ async function flPickSavedOption(idx){
 // response should never silently corrupt nutrition data.
 function flBuildSystemPrompt(task,dayTarget,dayConsumed){
   const r1=n=>Math.round(n*10)/10;
-  const remaining={p:r1(dayTarget.p-dayConsumed.p),c:r1(dayTarget.c-dayConsumed.c),f:r1(dayTarget.f-dayConsumed.f),k:r1(dayTarget.k-dayConsumed.k)};
+  const remaining={p:r1(dayTarget.p-dayConsumed.p),c:r1(dayTarget.c-dayConsumed.c),f:r1(dayTarget.f-dayConsumed.f),b:r1(dayTarget.b-dayConsumed.b),k:r1(dayTarget.k-dayConsumed.k)};
   return `You are a precise nutrition estimator embedded in Abdullah's habit-tracking app. You will receive a description (in Arabic or English, possibly informal) of a meal he actually ate for "${task[4]}", plus his daily nutrition target and what he's consumed so far today.
 
 Respond with ONLY a raw JSON object, nothing else — no markdown fences, no explanation outside the JSON:
-{"macro":{"p":<protein grams, number>,"c":<carb grams, number>,"f":<fat grams, number>,"k":<calories, number>},"verdict":"<2-3 sentences in Egyptian Arabic, direct and formal per his mentoring style, judging whether this specific meal is a good or bad fit given his remaining target for today and what you know about him>","needsClarification":<true or false>,"clarifyingQuestion":"<if needsClarification is true, one short specific Arabic question to ask him; otherwise empty string>"}
+{"macro":{"p":<protein grams, number>,"c":<carb grams, number>,"f":<fat grams, number>,"b":<fiber grams, number>,"k":<calories, number>},"verdict":"<2-3 sentences in Egyptian Arabic, direct and formal per his mentoring style, judging whether this specific meal is a good or bad fit given his remaining target for today and what you know about him>","needsClarification":<true or false>,"clarifyingQuestion":"<if needsClarification is true, one short specific Arabic question to ask him; otherwise empty string>"}
 
 Rules:
-- Estimate macros as accurately as you reasonably can from the description. Use standard nutritional values for common foods/portions. If a portion size isn't stated, assume a normal single-adult serving.
+- Estimate macros AND fiber as accurately as you reasonably can from the description. Use standard nutritional values for common foods/portions. If a portion size isn't stated, assume a normal single-adult serving.
 - Only set needsClarification to true if the description is genuinely too vague to estimate at all (e.g. just "food" or "أكلت حاجة") — do NOT ask clarifying questions for normal descriptions with minor ambiguity; make a reasonable assumption instead and state it briefly in the verdict.
 - The verdict must reference the actual numbers: how this meal compares to what's left in his daily target (remaining today: ${JSON.stringify(remaining)}), not generic advice.
 - Never fabricate facts about Abdullah beyond what's given to you below.
 - k (calories) should be consistent with p*4 + c*4 + f*9 approximately.${aiMemoryBlock()}
 
-Abdullah's daily nutrition target: ${JSON.stringify({p:r1(dayTarget.p),c:r1(dayTarget.c),f:r1(dayTarget.f),k:r1(dayTarget.k)})}
-Already consumed today (before this meal): ${JSON.stringify({p:r1(dayConsumed.p),c:r1(dayConsumed.c),f:r1(dayConsumed.f),k:r1(dayConsumed.k)})}`;
+Abdullah's daily nutrition target: ${JSON.stringify({p:r1(dayTarget.p),c:r1(dayTarget.c),f:r1(dayTarget.f),b:r1(dayTarget.b),k:r1(dayTarget.k)})}
+Already consumed today (before this meal): ${JSON.stringify({p:r1(dayConsumed.p),c:r1(dayConsumed.c),f:r1(dayConsumed.f),b:r1(dayConsumed.b),k:r1(dayConsumed.k)})}`;
 }
 
 // Sends the free-text description (optionally with a prior clarifying Q&A appended)
@@ -2761,7 +2780,11 @@ async function flComputeMacro(task,description,priorQA){
     if(!m || typeof m.p!=='number' || typeof m.c!=='number' || typeof m.f!=='number' || typeof m.k!=='number'){
       return{ok:false,error:'⚠️ مش قادر أحسب القيم الغذائية من الوصف ده — جرب توصف أكتر.'};
     }
-    return{ok:true,macro:{p:m.p,c:m.c,f:m.f,k:m.k},verdict:parsed.verdict||''};
+    // b (fiber) validated loosely — default to 0 rather than rejecting the whole
+    // response if the model ever omits it, since fiber is a secondary field and
+    // shouldn't block an otherwise-valid macro estimate.
+    const b=typeof m.b==='number'?m.b:0;
+    return{ok:true,macro:{p:m.p,c:m.c,f:m.f,b,k:m.k},verdict:parsed.verdict||''};
   }catch(e){
     console.error('food macro compute failed',e);
     return{ok:false,error:'⚠️ مش قادر أوصل للسيرفر دلوقتي.'};
@@ -2803,7 +2826,7 @@ async function flFinalizeLog(task,description,macro,verdict,showVerdictUI){
     document.getElementById('flAskStep').style.display='none';
     const resStep=document.getElementById('flResultStep');
     resStep.style.display='block';
-    document.getElementById('flMacroResult').innerHTML=`<span><b>${Math.round(macro.k)}</b> سعرة</span><span>بروتين <b>${Math.round(macro.p)}</b>جم</span><span>كارب <b>${Math.round(macro.c)}</b>جم</span><span>دهون <b>${Math.round(macro.f)}</b>جم</span>`;
+    document.getElementById('flMacroResult').innerHTML=`<span><b>${Math.round(macro.k)}</b> سعرة</span><span>بروتين <b>${Math.round(macro.p)}</b>جم</span><span>كارب <b>${Math.round(macro.c)}</b>جم</span><span>دهون <b>${Math.round(macro.f)}</b>جم</span><span>ألياف <b>${Math.round(macro.b||0)}</b>جم</span>`;
     const verdictEl=document.getElementById('flVerdict');
     if(verdict){verdictEl.style.display='block';verdictEl.textContent=verdict;}
     else{verdictEl.style.display='none';}
@@ -3541,21 +3564,6 @@ if (typeof onAuthStateChanged !== 'undefined' && typeof fbAuth !== 'undefined') 
               lastPtsWeekStart:laterDate(cloudStats.lastPtsWeekStart,localStats.lastPtsWeekStart),
               bestFixed:cloudStats.bestFixed||localStats.bestFixed||false
             };
-          }
-          // ONE-TIME manual recovery for the points lost to the STATS-overwrite bug
-          // above (fixed in this same update). Abdullah reported 468 points before two
-          // separate corruption incidents zeroed it out; Firestore has no point-in-time
-          // recovery on the Spark plan, so there's no way to pull the real prior value
-          // back programmatically — this restores the number he confirmed.
-          // This app is single-user (Abdullah's personal schedule, not multi-tenant),
-          // so gating on "any signed-in user" is safe here — but the check is written
-          // explicitly rather than implicitly, and guarded so it can never re-fire
-          // after the first successful save, and never re-lower an already-higher
-          // value (strict no-op if run twice, or if pts are already above 468 by the
-          // time this loads). Safe to delete this whole block once confirmed working.
-          if(!STATS._recovery468Applied && (STATS.pts||0)<468){
-            STATS.pts=468;
-            STATS._recovery468Applied=true;
           }
           if(d.reports) savedReports=d.reports;
           // Cloud historyData/penalizedDates now genuinely merge in — this is what
