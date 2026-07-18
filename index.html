@@ -444,32 +444,6 @@ body{font-family:'Cairo',sans-serif;background:var(--bg);color:var(--tx);directi
 <script type="module">
 'use strict';
 
-// ===== Web Push (background reminders via Service Worker) =====
-// Real background push needs a Service Worker + push subscriptions.
-// This app uses a Cloudflare Worker for AI only; push messages will be
-// delivered by your future push-sender Worker endpoint.
-//
-// VAPID_PUBLIC_KEY is safe to embed in the frontend.
-const VAPID_PUBLIC_KEY = 'BJY-WY3oi2ypIAvR-ZIUmgXJBZxNkatg4uUVXMsb1ft-uv4xslN94W1K2PX25SslYti-AgUPFm8bdTc-2AFPkUY';
-
-async function registerServiceWorker() {
-  if (!('serviceWorker' in navigator)) return null;
-  try {
-    return await navigator.serviceWorker.register('/service-worker.js');
-  } catch (e) {
-    console.warn('SW registration failed', e);
-    return null;
-  }
-}
-
-function urlBase64ToUint8Array(base64String) {
-  const padding = '='.repeat((4 - (base64String.length % 4)) % 4);
-  const base64 = (base64String + padding).replace(/-/g, '+').replace(/_/g, '/');
-  const rawData = atob(base64);
-  return Uint8Array.from([...rawData].map(ch => ch.charCodeAt(0)));
-}
-
-
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
 import { getAuth, GoogleAuthProvider, signInWithPopup, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
 import { getFirestore, doc, setDoc, getDoc } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
@@ -1068,68 +1042,15 @@ async function loadAll() {
         IS_BRAND_NEW_SESSION = true;
         await sSet(LS.firstSeen, FIRST_SEEN);
     }
-
-    // --- TEMP FIX 1: restore correct chronological order by clearing any
-    // time-scrambling overlay moves for recurring tasks.
-    // We intentionally keep deletions + point overrides + custom tasks.
-    try {
-        if (USER_EDITS && USER_EDITS.moves) {
-            USER_EDITS.moves = Object.fromEntries(
-                Object.entries(USER_EDITS.moves).filter(([id, mv]) => {
-                    const isMovedTask = !!mv && typeof mv === 'object' && mv.toDate && mv.toTime;
-                    if (!isMovedTask) return true;
-                    // Only reset moves for built-in tasks (non-custom generated ids).
-                    if (String(id).startsWith('custom-')) return true;
-                    return false;
-                })
-            );
-        }
-    } catch (e) {
-        console.warn('USER_EDITS move cleanup failed', e);
-    }
-
-    // --- TEMP FIX 2: inject a "Test Notification" task 2 minutes from now
-    // so you can quickly test the new Web Push flow.
-    try {
-        const now = new Date();
-        const target = new Date(now.getTime() + 2 * 60 * 1000);
-        // Format target time as app display format: H:MM ص/م
-        const hh24 = target.getHours();
-        const mm = String(target.getMinutes()).padStart(2, '0');
-        const pm = hh24 >= 12;
-        const h12 = hh24 % 12 || 12;
-        const toTime = `${h12}:${mm} ${pm ? 'م' : 'ص'}`;
-
-        // Use UTC-based app ISO date for today.
-        const iso = todayStr();
-        // Avoid duplicate injection if reloads happen multiple times.
-        const TEST_ID = 'custom-test-notification';
-        USER_EDITS.customTasks = (USER_EDITS.customTasks || []).filter(t => t.id !== TEST_ID);
-        USER_EDITS.customTasks.push({
-            id: TEST_ID,
-            date: iso,
-            time: toTime,
-            cat: 'free',
-            ico: '🔔',
-            name: 'Test Notification',
-            desc: 'مهمة اختبار Web Push بعد دقيقتين',
-            pts: 0,
-            createdAt: Date.now(),
-        });
-    } catch (e) {
-        console.warn('Test Notification injection failed', e);
-    }
-
-
+    
     // Rescue any task data incorrectly saved under future dates due to the tab-offset bug.
     rescueFutureDatedEntries();
-
+    
     // Perform migration immediately after loading from storage
     migrateSavedReports();
-
+    
     loadDay();
 }
-
 
 async function saveAll(){
   saveDay();
@@ -1361,15 +1282,24 @@ async function fetchPrayers(){
   }catch{PRYT={...FALLBK};}
 }
 
-// ===== Notifications =====
-// Client-side only — reminders fire via setTimeout while this tab/PWA is open, using
-// the browser Notification API. This is NOT true background push (that requires a push
-// server, out of scope for a static GitHub Pages site with no backend) — but it covers
-// the actual use case: keep the app/tab open (or installed as a PWA) and get reminded
-// as each task's time approaches, same as any local reminder app.
+// ===== Notifications (Web Push) =====
+// Replaces the old client-side setTimeout system entirely. Reminders are computed
+// here (same three-reminder-per-task logic as before: lead/start/ending) but are no
+// longer FIRED here — they're sent to the Cloudflare Worker, stored in D1, and fired
+// server-side by a per-minute Cron Trigger via real Web Push. That is what makes
+// delivery survive the tab being backgrounded, locked, or fully closed: the OS/
+// browser's push service wakes the service worker independently of whether this page
+// is running at all.
+//
+// iOS constraint UNCHANGED by this migration: Apple still requires the PWA to be
+// installed to the Home Screen (iOS 16.4+) for the Notification/Push API to exist at
+// all in that context — Web Push doesn't remove that requirement, it only removes the
+// "must stay open" requirement once permission is granted. isIOS()/isStandalonePWA()
+// below are therefore still load-bearing, not legacy leftovers.
 const LS_NOTIF_PREF='sc:notifPref1';
+const VAPID_PUBLIC_KEY='REPLACE_WITH_YOUR_VAPID_PUBLIC_KEY'; // same public key set in wrangler.toml [vars]
 let NOTIF_ENABLED=false;
-let NOTIF_TIMERS=[];
+let PUSH_SUBSCRIPTION=null;
 
 async function loadNotifPref(){
   const v=await sGet(LS_NOTIF_PREF);
@@ -1377,26 +1307,129 @@ async function loadNotifPref(){
 }
 async function saveNotifPref(){await sSet(LS_NOTIF_PREF,NOTIF_ENABLED);}
 
-function clearScheduledNotifs(){
-  NOTIF_TIMERS.forEach(t=>clearTimeout(t));
-  NOTIF_TIMERS=[];
+function isIOS(){
+  return /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
+}
+function isStandalonePWA(){
+  return window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone===true;
 }
 
-// Schedules browser notifications for every remaining, not-yet-done, non-exception
-// task today.
-//
-// NOTE: You requested removing the "30 min before start" reminders.
-// This means we only keep "starting now" reminders (at task start).
-//
-// isEx (exception) tasks are explicitly skipped.
-// Re-run whenever today's task list changes so already-done tasks stop being reminded.
-//
-// Known platform limit: these are setTimeout-based, so they only fire while this
-// tab/PWA is actually open. True background delivery requires Push.
-const NOTIF_DEFAULT_DURATION_MIN=60; // fallback task length when no explicit end exists
+// Converts the VAPID public key (base64url string) into the Uint8Array format
+// pushManager.subscribe() requires for applicationServerKey.
+function urlBase64ToUint8Array(base64String){
+  const padding='='.repeat((4-base64String.length%4)%4);
+  const base64=(base64String+padding).replace(/-/g,'+').replace(/_/g,'/');
+  const rawData=atob(base64);
+  const outputArray=new Uint8Array(rawData.length);
+  for(let i=0;i<rawData.length;i++) outputArray[i]=rawData.charCodeAt(i);
+  return outputArray;
+}
+
+async function registerServiceWorker(){
+  if(typeof navigator==='undefined' || !('serviceWorker' in navigator)) return null;
+  try{
+    // Registered at the ROOT relative to this page so its scope covers the whole
+    // site — sw.js must physically live alongside index.html for this to work.
+    return await navigator.serviceWorker.register('./sw.js');
+  }catch(e){
+    console.warn('service worker registration failed',e);
+    return null;
+  }
+}
+
+async function requestNotifPermission(){
+  // Same iOS constraint as before — see the block comment above this section.
+  if(isIOS() && !isStandalonePWA()){
+    showToast('📱 على الآيفون، الإشعارات بتشتغل بس لو ضفت الموقع للشاشة الرئيسية:\n(مشاركة ⬆️ ← أضف إلى الشاشة الرئيسية) وبعدين افتحه من الأيقونة',6500,'warn');
+    return false;
+  }
+  if(typeof Notification==='undefined'){
+    showToast('المتصفح ده مش بيدعم الإشعارات',3500,'warn');
+    return false;
+  }
+  if(Notification.permission==='denied'){
+    showToast('الإشعارات متبلوكة من إعدادات المتصفح — لازم تفعّلها يدوياً من هناك',4200,'warn');
+    return false;
+  }
+  if(Notification.permission!=='granted'){
+    try{
+      const perm=await Notification.requestPermission();
+      if(perm!=='granted') return false;
+    }catch{return false;}
+  }
+
+  const reg=await registerServiceWorker();
+  if(!reg){
+    showToast('⚠️ مش قادر أسجل الـ service worker — جرب تعيد تحميل الصفحة',4000,'warn');
+    return false;
+  }
+
+  if(!VAPID_PUBLIC_KEY || VAPID_PUBLIC_KEY==='REPLACE_WITH_YOUR_VAPID_PUBLIC_KEY'){
+    showToast('⚠️ مفتاح الإشعارات (VAPID) لسه مش متظبط في الكود',4200,'warn');
+    return false;
+  }
+
+  try{
+    let sub=await reg.pushManager.getSubscription();
+    if(!sub){
+      sub=await reg.pushManager.subscribe({
+        userVisibleOnly:true,
+        applicationServerKey:urlBase64ToUint8Array(VAPID_PUBLIC_KEY)
+      });
+    }
+    PUSH_SUBSCRIPTION=sub.toJSON();
+    return true;
+  }catch(e){
+    console.warn('push subscribe failed',e);
+    showToast('⚠️ حصل خطأ أثناء الاشتراك في الإشعارات — جرب تاني',4000,'warn');
+    return false;
+  }
+}
+
+// Builds the SAME three reminders-per-task (lead/start/ending) the old setTimeout
+// system computed, but as plain data sent to the server instead of local timers.
+// Kept as a pure function with identical timing math to the old scheduleTodayNotifications
+// so the actual reminder behavior (WHEN each fires) is unchanged — only WHERE it fires
+// from has moved server-side.
+function buildTodayReminderPayload(){
+  const jd=todayJD();
+  const tasks=getAllTasks(jd,TODAY);
+  const reminders=[];
+
+  const minToHHMM=m=>{
+    m=((m%1440)+1440)%1440; // clamp/wrap within a 24h day
+    const h=Math.floor(m/60),mm=m%60;
+    return `${String(h).padStart(2,'0')}:${String(mm).padStart(2,'0')}`;
+  };
+
+  for(const t of tasks){
+    if(t._deleted) continue;
+    if(t[2]==='free') continue;
+    const isEx=t[9];
+    if(isEx) continue;
+    const id=t[0];
+    if(DONE[id]!==undefined && DONE[id]!==false) continue;
+    const startMin=toMin(t[10]||t[1]);
+
+    reminders.push({taskId:id,taskName:t[4],type:'lead',date:TODAY,time:minToHHMM(startMin-NOTIF_LEAD_MIN)});
+    reminders.push({taskId:id,taskName:t[4],type:'start',date:TODAY,time:minToHHMM(startMin)});
+
+    if(t[2]!=='sleep'){
+      const endMin=notifTaskEndMin(t);
+      const endLeadMin=endMin-NOTIF_END_LEAD_MIN;
+      if(endLeadMin>startMin){ // skip nonsensical "ending soon" before the task even starts
+        reminders.push({taskId:id,taskName:t[4],type:'ending',date:TODAY,time:minToHHMM(endLeadMin)});
+      }
+    }
+  }
+  return reminders;
+}
+
+const NOTIF_LEAD_MIN=30;
+const NOTIF_END_LEAD_MIN=30;
+const NOTIF_DEFAULT_DURATION_MIN=60;
 
 function notifTaskEndMin(task){
-
   const start=toMin(task[10]||task[1]);
   if(isPrayer(task)){
     const pk=(task[0].split('-')[2])||'';
@@ -1410,76 +1443,40 @@ function notifTaskEndMin(task){
   return start+NOTIF_DEFAULT_DURATION_MIN;
 }
 
-function scheduleTodayNotifications(){
-  clearScheduledNotifs();
+// Sends the subscription (if we have one) + this reminder payload to the Worker,
+// which stores it in D1. Called after enabling notifications and whenever today's
+// task list changes (same trigger points the old scheduleTodayNotifications had).
+async function syncPushSchedule(){
   if(!NOTIF_ENABLED) return;
-  if(isIOS() && !isStandalonePWA()) return; // blocked — surfaced explicitly to the user at toggle-time instead of silently here, see requestNotifPermission/btn-notif-toggle
-  if(typeof Notification==='undefined' || Notification.permission!=='granted') return;
-
-  const jd=todayJD();
-  const tasks=getAllTasks(jd,TODAY);
-  const nowMin=getKuwaitNow();
-
-  for(const t of tasks){
-    if(t._deleted) continue;
-    if(t[2]==='free') continue;
-    const isEx=t[9];
-    if(isEx) continue; // exceptions are explicitly excluded from all reminders
-    const id=t[0];
-    if(DONE[id]!==undefined && DONE[id]!==false) continue; // already done, no need to remind
-    const startMin=toMin(t[10]||t[1]);
-
-    // Reminder: fires exactly at start time ("starting now").
-    const startDelta=startMin-nowMin;
-    if(startDelta>=0 && startDelta<=16*60){
-      const ms=startDelta*60*1000;
-      const timer=setTimeout(()=>{
-        try{
-          new Notification('⏰ حان الوقت',{
-            body:`${t[4]} — الساعة ${t[1]}`,
-            icon:'data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"%3E%3Ctext y="75" font-size="80"%3E%F0%9F%8F%8B%EF%B8%8F%3C/text%3E%3C/svg%3E',
-            tag:id+'-now'
-          });
-        }catch(e){console.warn('notification fire failed',e);}
-      },ms);
-      NOTIF_TIMERS.push(timer);
+  const user=fbAuth.currentUser;
+  if(!user){
+    showToast('لازم تسجل دخول عشان التذكيرات تتزامن مع السيرفر 🔒',3200,'warn');
+    return;
+  }
+  if(!PUSH_SUBSCRIPTION){
+    const reg=await (navigator.serviceWorker ? navigator.serviceWorker.ready.catch(()=>null) : null);
+    if(reg){
+      try{
+        const sub=await reg.pushManager.getSubscription();
+        if(sub) PUSH_SUBSCRIPTION=sub.toJSON();
+      }catch{}
     }
+  }
+  if(!PUSH_SUBSCRIPTION) return; // not actually subscribed yet — nothing to sync
 
-  }
-}
-
-function isIOS(){
-  return /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
-}
-function isStandalonePWA(){
-  return window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone===true;
-}
-
-async function requestNotifPermission(){
-  // iOS Safari (regular browser tab, not installed to Home Screen) has NO Notification/
-  // Push API at all — this isn't a permission issue, the API object literally doesn't
-  // exist in that context. This is the actual reason notifications silently did nothing
-  // before: the constructor call was failing inside a try/catch that swallowed it.
-  // Apple only enables it once the site is added to the Home Screen (iOS 16.4+) and
-  // opened from that icon, in standalone mode.
-  if(isIOS() && !isStandalonePWA()){
-    showToast('📱 على الآيفون، الإشعارات بتشتغل بس لو ضفت الموقع للشاشة الرئيسية:\n(مشاركة ⬆️ ← أضف إلى الشاشة الرئيسية) وبعدين افتحه من الأيقونة',6500,'warn');
-    return false;
-  }
-  if(typeof Notification==='undefined'){
-    showToast('المتصفح ده مش بيدعم الإشعارات',3500,'warn');
-    return false;
-  }
-  if(Notification.permission==='granted') return true;
-  if(Notification.permission==='denied'){
-    showToast('الإشعارات متبلوكة من إعدادات المتصفح — لازم تفعّلها يدوياً من هناك',4200,'warn');
-    return false;
-  }
+  const reminders=buildTodayReminderPayload();
   try{
-    const perm=await Notification.requestPermission();
-    return perm==='granted';
-  }catch{return false;}
+    await fetch(AI_WORKER_URL+'/api/save-subscription',{
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({uid:user.uid,subscription:PUSH_SUBSCRIPTION,reminders})
+    });
+  }catch(e){
+    console.warn('push schedule sync failed',e);
+  }
 }
+
+
 
 // ===== Prayer Modal =====
 let activePrayer=null;
@@ -2124,9 +2121,10 @@ function updateUI(){
   updateMacroUI();
 
   // Keep today's scheduled reminders in sync with actual completion state — a task
-  // just marked done should stop having a pending notification.
+  // just marked done should stop having a pending push. Re-syncs to the Worker's D1
+  // store rather than rescheduling local timers.
   if(SELECTED_DATE===TODAY && NOTIF_ENABLED){
-    try{ scheduleTodayNotifications(); }catch(e){ console.warn('notif reschedule failed',e); }
+    try{ syncPushSchedule(); }catch(e){ console.warn('push schedule sync failed',e); }
   }
 }
 
@@ -2435,8 +2433,15 @@ function aiParseIntent(msg){
   const prayerDetailIntent=aiParsePrayerDetail(raw,low);
   if(prayerDetailIntent) return prayerDetailIntent;
 
-  // 1b. Mark as done (retroactively) — "عملت الجيم" / "خلصت الغدا" / "i did the gym"
-  if(/عملت|خلصت|سويت|انجزت|أنجزت|i did|done|completed|finished/.test(low)){
+  // 1b. Mark as done (retroactively) — "عملت الجيم" / "خلصت الغدا" / "i did the gym" /
+  // "mark fajr as done" / "set gym to done" / "check off lunch". The original regex
+  // only matched "i did"/"done"/"completed"/"finished" as bare tokens, which missed
+  // the extremely common "mark X as done" construction entirely — that phrase falls
+  // through to the LLM fallback instead of the real local action parser, which is why
+  // it replied "I can't execute commands" even though this exact action IS supported.
+  // Added as explicit multi-word patterns (not a bare "mark") to avoid false-positives
+  // from unrelated sentences that happen to contain "mark" as a name or noun.
+  if(/عملت|خلصت|سويت|انجزت|أنجزت|i did|done|completed|finished|mark.*as\s*done|mark.*done|set.*(to\s*)?done|check\s*off|marked\s*as\s*done/.test(low)){
     const found=aiFindTask(raw,SELECTED_DATE);
     if(found){
       return{action:'markDone',task:found.task,iso:found.iso,jd:found.jd,
@@ -3080,7 +3085,7 @@ function aiToggleMemoryView(){
 // the actual instruction ("أنا مشغول النهاردة و شيل كذا"), so requiring the verb to be
 // the first word was too strict and caused the entire split to be discarded whenever
 // any natural preamble was present, silently falling back to single-command parsing.
-const AI_ACTION_VERBS_ANY=/(انقل|حرك|غير وقت|move|reschedule|احذف|امسح|شيل|delete|remove|عملت|خلصت|سويت|انجزت|أنجزت|i did|done|completed|finished|ضيف|اضف|أضف|add task|new task|افتكر|اتذكر|سجل عني|تذكر|remember|صليت|صلّيت|prayed)/i;
+const AI_ACTION_VERBS_ANY=/(انقل|حرك|غير وقت|move|reschedule|احذف|امسح|شيل|delete|remove|عملت|خلصت|سويت|انجزت|أنجزت|i did|done|completed|finished|mark.*as\s*done|mark.*done|set.*(to\s*)?done|check\s*off|marked\s*as\s*done|ضيف|اضف|أضف|add task|new task|افتكر|اتذكر|سجل عني|تذكر|remember|صليت|صلّيت|prayed)/i;
 
 function aiSplitCommands(msg){
   // Split on " و " / " and " / "، " / "," — commas and conjunctions between clauses.
@@ -3336,12 +3341,21 @@ document.body.addEventListener('click',async e=>{
       if(!granted)return;
       NOTIF_ENABLED=true;
       await saveNotifPref();
-      scheduleTodayNotifications();
-      showToast('🔔 التذكيرات اشتغلت — هتوصلك إشعارات للمهام النهاردة',3000);
+      await syncPushSchedule();
+      showToast('🔔 التذكيرات اشتغلت — هتوصلك إشعارات حتى لو التطبيق مقفول',3000);
     }else{
       NOTIF_ENABLED=false;
       await saveNotifPref();
-      clearScheduledNotifs();
+      // Unsubscribe the browser's push manager so the OS/browser stops holding this
+      // endpoint alive — the Worker-side row will naturally stop being useful too
+      // once no new reminders are synced, but explicitly unsubscribing is cleaner
+      // than leaving a dangling subscription the user thinks is off.
+      try{
+        const reg=await navigator.serviceWorker?.getRegistration?.();
+        const sub=await reg?.pushManager?.getSubscription?.();
+        if(sub) await sub.unsubscribe();
+      }catch(e){console.warn('push unsubscribe failed',e);}
+      PUSH_SUBSCRIPTION=null;
       showToast('🔕 التذكيرات اتقفلت',2200);
     }
     updateAuthUI(fbAuth.currentUser);
@@ -3524,11 +3538,10 @@ document.body.addEventListener('keydown',async e=>{
 // silently never fires and is never rescheduled. Re-checking on every foreground-return
 // means the very next time the app is actually open, still-relevant reminders (those
 // whose time hasn't passed yet) get correctly re-armed instead of staying orphaned.
-document.addEventListener('visibilitychange',()=>{
-  if(document.visibilityState==='visible' && NOTIF_ENABLED && SELECTED_DATE===TODAY){
-    try{ scheduleTodayNotifications(); }catch(e){ console.warn('notif re-arm on visibility failed',e); }
-  }
-});
+// visibilitychange re-arm handler REMOVED — it existed specifically to counter
+// setTimeout throttling during tab backgrounding, which no longer applies now that
+// reminder delivery is server-side (Cloudflare cron -> Web Push), not a local timer.
+// Nothing to re-arm on foreground-return anymore.
 
 // ===== Init =====
 // Single shared "app is ready" reveal — used by both the success and error paths of
@@ -3543,10 +3556,19 @@ function revealApp(){
 
 function initAppFlow(user){
   updateAuthUI(user);
-  fetchPrayers().then(()=>applyPunishmentOnce()).then(async ()=>{
+  fetchPrayers().then(async ()=>{
+    // Weekly points reset MUST run before punishment. Previously punishment ran
+    // first and deducted from last week's leftover STATS.pts, which the reset then
+    // discarded a moment later — so a Saturday-morning deduction for Friday's missed
+    // tasks was computed against the wrong balance and its visible effect vanished
+    // the instant the reset fired. Resetting first means punishment always deducts
+    // from the correct, already-current week's starting balance (0, right after
+    // reset), so Friday's missed-task penalty is the ONLY thing that can move it
+    // away from 0 on Saturday morning — not a leftover of last week's total.
     const ptsBefore=STATS.pts;
     resetWeeklyPointsIfNewWeek();
     if(STATS.pts!==ptsBefore){ try{ await saveAll(); }catch(e){ console.warn('weekly reset save failed',e); } }
+  }).then(()=>applyPunishmentOnce()).then(async ()=>{
     checkStreak();
     renderTabs();renderPanels();switchDay(todayJD());updateUI();
     revealApp();
@@ -3554,7 +3576,7 @@ function initAppFlow(user){
     await loadNotifPref();
     updateAuthUI(user);
     if(NOTIF_ENABLED && typeof Notification!=='undefined' && Notification.permission==='granted'){
-      scheduleTodayNotifications();
+      try{ await syncPushSchedule(); }catch(e){ console.warn('startup push sync failed',e); }
     }
   }).catch(e=>{
     console.warn('Init error bypass:',e);

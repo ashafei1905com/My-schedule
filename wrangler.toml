@@ -1,18 +1,24 @@
 name = "falling-frost-7656"
 main = "worker.js"
-compatibility_date = "2024-03-20"
+compatibility_date = "2026-07-13"
+# nodejs_compat intentionally NOT set -- @block65/webcrypto-web-push is built on the
+# Web Crypto API natively available in Workers, unlike web-push-neo/node web-push
+# which need Node's crypto module shimmed. Fewer moving parts, fewer failure points.
 
-compatibility_flags = ["nodejs_compat"]
-
-
-# Runs the scheduled() function every minute to check for gym alarms
 [triggers]
 crons = ["* * * * *"]
 
-# Binds the D1 Database we created earlier
+# Reusing the D1 database Abdullah already created -- same database_id as before.
 [[d1_databases]]
 binding = "DB"
 database_name = "abdullah-schedule-push"
 database_id = "ee636566-8632-4cc7-b879-92be3bb48547"
 
+# Secrets (set via `wrangler secret put NAME` -- never written in this file):
+#   GROQ_API_KEY        -- existing
+#   VAPID_PRIVATE_KEY    -- new, paste the PRIVATE key from your VAPID keypair
 
+[vars]
+VAPID_PUBLIC_KEY = "BJY-WY3oi2ypIAvR-ZIUmgXJBZxNkatg4uUVXMsb1ft-uv4xslN94W1K2PX25SslYti-AgUPFm8bdTc-2AFPkUY"
+VAPID_SUBJECT = "mailto:ashafei1905@gmail.com"
+ALLOWED_ORIGIN = "https://ashafei1905com.github.io"

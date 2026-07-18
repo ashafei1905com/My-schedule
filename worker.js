@@ -1,140 +1,33 @@
-// Cloudflare Worker — AI proxy + Web Push sender for جدول عبدالله
+// Cloudflare Worker — AI proxy + Web Push backend for جدول عبدالله
 //
-// This Worker exists so the GROQ API key and VAPID private key are never exposed
-// in the browser.
+// Two responsibilities now live in this one Worker:
+//   1. AI proxy (unchanged) — root path, POST — forwards chat/food-log calls to Groq.
+//   2. Web Push backend (NEW) — /api/save-subscription (POST) stores a subscription +
+//      that day's reminder schedule in D1; a per-minute Cron Trigger (scheduled())
+//      scans D1 for anything due "now" and sends real Web Push notifications via
+//      Cloudflare's own infrastructure — NOT a client-side setTimeout, so it is
+//      immune to iOS freezing/killing a backgrounded/closed tab.
+//
+// Root-path behavior is 100% unchanged from before: index.html's existing
+// AI_WORKER_URL POST-to-root calls (AI chat + food macro logging) work exactly as
+// they did previously. Only a new path prefix was added; nothing at "/" was touched.
+//
+// Setup (in addition to the existing GROQ_API_KEY secret):
+//   1. wrangler d1 create abdullah-schedule-push
+//      -> paste the printed database_id into wrangler.toml
+//   2. wrangler d1 execute abdullah-schedule-push --remote --file=./schema.sql
+//   3. npx web-push generate-vapid-keys  (or equivalent) -> get a public+private pair
+//   4. wrangler secret put VAPID_PRIVATE_KEY   (paste the PRIVATE key — never in code)
+//   5. Put the PUBLIC key in wrangler.toml under [vars] VAPID_PUBLIC_KEY (safe, public
+//      by design) AND in index.html's VAPID_PUBLIC_KEY constant (same string, client
+//      side needs it too to call pushManager.subscribe()).
+//   6. wrangler deploy
+
+import { buildPushHTTPRequest } from '@block65/webcrypto-web-push';
 
 const ALLOWED_ORIGIN = 'https://ashafei1905com.github.io';
-
-// --- Groq chat proxy config ---
 const MODEL = 'llama-3.3-70b-versatile';
 const MAX_TOKENS = 600;
-
-// --- Web Push config ---
-const VAPID_PUBLIC_KEY = 'BJY-WY3oi2ypIAvR-ZIUmgXJBZxNkatg4uUVXMsb1ft-uv4xslN94W1K2PX25SslYti-AgUPFm8bdTc-2AFPkUY';
-const CONTACT = 'mailto:abdullah@example.com';
-
-function corsHeaders() {
-  return {
-    'Access-Control-Allow-Origin': ALLOWED_ORIGIN,
-    'Access-Control-Allow-Methods': 'POST, OPTIONS',
-    'Access-Control-Allow-Headers': 'Content-Type',
-  };
-}
-
-function json(obj, status = 200, extraHeaders = {}) {
-  return new Response(JSON.stringify(obj), {
-    status,
-    headers: {
-      'Content-Type': 'application/json',
-      ...corsHeaders(),
-      ...extraHeaders,
-    },
-  });
-}
-
-function safeGetBody(request) {
-  // Utility so we can reuse consistent JSON parse errors
-  return request.json().catch(() => null);
-}
-
-async function saveSubscription(DB, subscription) {
-  const subText = JSON.stringify(subscription);
-  const now = Date.now();
-
-  // Upsert by exact subscription JSON string (simple + safe dedupe)
-  const existing = await DB.prepare('SELECT id FROM push_subscriptions WHERE subscription = ?')
-    .bind(subText)
-    .first();
-
-  if (existing && existing.id) {
-    await DB.prepare('UPDATE push_subscriptions SET lastSeenAt = ? WHERE id = ?')
-      .bind(now, existing.id)
-      .run();
-    return existing.id;
-  }
-
-  const res = await DB.prepare(
-    'INSERT INTO push_subscriptions(subscription, createdAt, lastSeenAt) VALUES(?, ?, ?)'
-  ).bind(subText, now, now).run();
-
-  return res?.lastRowId;
-}
-
-async function getSubscriptions(DB) {
-  const rows = await DB.prepare('SELECT subscription FROM push_subscriptions').all();
-  const out = [];
-  for (const r of rows || []) {
-    try {
-      const s = JSON.parse(r.subscription);
-      if (s) out.push(s);
-    } catch {
-      // ignore bad rows
-    }
-  }
-  return out;
-}
-
-async function shouldSend(DB, notifKey) {
-  const r = await DB.prepare('SELECT notifKey FROM push_notification_log WHERE notifKey = ?')
-    .bind(notifKey)
-    .first();
-  return !r;
-}
-
-async function markSent(DB, notifKey, taskId) {
-  await DB.prepare(
-    'INSERT INTO push_notification_log(notifKey, taskId, sentAt) VALUES(?, ?, ?)'
-  ).bind(notifKey, taskId || null, Date.now()).run();
-}
-
-async function sendPushAll(DB, payload, notifKey, taskId, env) {
-  const okToSend = await shouldSend(DB, notifKey);
-  if (!okToSend) return { skipped: true };
-
-  const subs = await getSubscriptions(DB);
-  if (!subs.length) return { skipped: true, reason: 'no_subscriptions' };
-
-  // Workers-compatible Web Push implementation.
-  const { default: webpush } = await import('web-push-neo');
-
-
-
-  // Cloudflare worker environment: web-push works, but relies on VAPID private key.
-
-  webpush.setVapidDetails(CONTACT, VAPID_PUBLIC_KEY, () => env.VAPID_PRIVATE_KEY);
-
-  const data = typeof payload === 'string' ? payload : JSON.stringify(payload);
-
-  // Send sequentially to avoid exhausting CPU time in cron.
-  // (Could be parallelized later if needed.)
-  let sentCount = 0;
-  for (const sub of subs) {
-    try {
-      await webpush.sendNotification(sub, data);
-      sentCount++;
-    } catch {
-      // If subscription is invalid/expired, we keep it for now.
-      // Could be deleted on 410/404 later.
-    }
-  }
-
-  await markSent(DB, notifKey, taskId);
-  return { skipped: false, sentCount };
-}
-
-function getReminderScheduleTasks() {
-  // NOTE: This worker does not know your full schedule JS data model.
-  // So we require the client to provide a list of "due reminders" when it
-  // registers. For this course project, we implement a generic sender.
-  //
-  // The scheduled() handler will expect a POST-created payload in D1.
-  // Instead of inventing schedule mapping here, we send payloads when the
-  // client tells us what to send.
-  //
-  // For now, scheduled() reads from `push_notification_log` only and cannot
-  // infer tasks.
-  return [];
-}
 
 export default {
   async fetch(request, env) {
@@ -142,30 +35,20 @@ export default {
       return new Response(null, { headers: corsHeaders() });
     }
 
+    const url = new URL(request.url);
+
+    if (url.pathname === '/api/save-subscription') {
+      return handleSaveSubscription(request, env);
+    }
+
+    // --- Everything below this line is the ORIGINAL, unmodified AI-proxy behavior ---
+    if (request.method !== 'POST') {
+      return json({ error: 'Method not allowed' }, 405);
+    }
+
     const origin = request.headers.get('Origin') || '';
     if (ALLOWED_ORIGIN && origin !== ALLOWED_ORIGIN) {
       return json({ error: 'Origin not allowed' }, 403);
-    }
-
-    const url = new URL(request.url);
-
-    if (request.method === 'POST' && url.pathname === '/api/save-subscription') {
-      const body = await safeGetBody(request);
-      if (!body || !body.subscription) {
-        return json({ error: 'subscription required' }, 400);
-      }
-      if (!env.DB) {
-        return json({ error: 'D1 binding missing (DB)' }, 500);
-      }
-
-      const id = await saveSubscription(env.DB, body.subscription);
-      return json({ ok: true, id });
-    }
-
-    // Default: Groq proxy endpoint (your current site already calls POST body
-    // with {messages, system}).
-    if (request.method !== 'POST') {
-      return json({ error: 'Method not allowed' }, 405);
     }
 
     let body;
@@ -179,8 +62,8 @@ export default {
     if (!Array.isArray(messages) || messages.length === 0) {
       return json({ error: 'messages array required' }, 400);
     }
-
     const trimmedMessages = messages.slice(-20);
+
     const groqMessages = system
       ? [{ role: 'system', content: system }, ...trimmedMessages]
       : trimmedMessages;
@@ -211,16 +94,230 @@ export default {
     }
   },
 
-  // scheduled cron: send reminder pushes.
-  async scheduled(controller, env, ctx) {
-    // For now, we do not try to reconstruct your schedule.
-    // If you want scheduled() to send real tasks, we must either:
-    //  - (A) store "next due reminder payloads" in D1 from the client, or
-    //  - (B) port the schedule/time logic into this worker.
-    //
-    // This implementation intentionally does nothing, but keeps the endpoint
-    // deployable so /api/save-subscription works.
-    return;
+  // Cron Trigger entry point — configured via [triggers] crons = ["* * * * *"] in
+  // wrangler.toml. Cloudflare invokes this every minute regardless of whether any
+  // client has the app open at all; this is the actual fix for the iOS-background
+  // problem, since delivery no longer depends on a phone's browser process existing.
+  async scheduled(event, env, ctx) {
+    ctx.waitUntil(dispatchDueReminders(env));
   }
 };
 
+function corsHeaders() {
+  return {
+    'Access-Control-Allow-Origin': ALLOWED_ORIGIN,
+    'Access-Control-Allow-Methods': 'POST, OPTIONS',
+    'Access-Control-Allow-Headers': 'Content-Type',
+  };
+}
+
+function json(obj, status = 200) {
+  return new Response(JSON.stringify(obj), {
+    status,
+    headers: { 'Content-Type': 'application/json', ...corsHeaders() }
+  });
+}
+
+// Returns 'HH:MM' (24h) and 'YYYY-MM-DD' for the current moment in Asia/Kuwait,
+// matching the same timezone the client-side getKuwaitNow()/TODAY logic already uses
+// — this is what keeps server-side "now" and client-side "now" in agreement, so a
+// reminder computed client-side for "15:29" fires at the same real-world instant here.
+function kuwaitNowParts() {
+  const parts = new Intl.DateTimeFormat('en-CA', {
+    timeZone: 'Asia/Kuwait',
+    year: 'numeric', month: '2-digit', day: '2-digit',
+    hour: '2-digit', minute: '2-digit', hour12: false
+  }).formatToParts(new Date());
+  const o = {};
+  parts.forEach(p => { if (p.type !== 'literal') o[p.type] = p.value; });
+  return { date: `${o.year}-${o.month}-${o.day}`, time: `${o.hour}:${o.minute}` };
+}
+
+// ===== /api/save-subscription =====
+// Body shape (sent by index.html):
+// {
+//   uid: "<firebase user uid>",
+//   subscription: { endpoint, keys: { p256dh, auth } },   // from pushManager.subscribe()
+//   reminders: [ { taskId, taskName, type:'lead'|'start'|'ending', date:'YYYY-MM-DD', time:'HH:MM' }, ... ]
+// }
+//
+// Called once per app load (and whenever today's task list changes) with the FULL set
+// of reminders for the currently-loaded day — not a diff. Old rows for this user+date
+// are deleted and replaced wholesale each call; this is simpler and cheap enough at
+// this data volume, and avoids stale-row bugs a partial/diff update could introduce.
+async function handleSaveSubscription(request, env) {
+  if (request.method === 'OPTIONS') return new Response(null, { headers: corsHeaders() });
+  if (request.method !== 'POST') return json({ error: 'Method not allowed' }, 405);
+
+  const origin = request.headers.get('Origin') || '';
+  if (ALLOWED_ORIGIN && origin !== ALLOWED_ORIGIN) {
+    return json({ error: 'Origin not allowed' }, 403);
+  }
+
+  let body;
+  try {
+    body = await request.json();
+  } catch {
+    return json({ error: 'Invalid JSON body' }, 400);
+  }
+
+  const { uid, subscription, reminders } = body;
+  if (!uid || typeof uid !== 'string') return json({ error: 'uid required' }, 400);
+  if (!subscription || !subscription.endpoint || !subscription.keys) {
+    return json({ error: 'valid subscription required' }, 400);
+  }
+  if (!Array.isArray(reminders)) return json({ error: 'reminders array required' }, 400);
+
+  const now = Date.now();
+
+  try {
+    // Upsert the subscription — ON CONFLICT on the UNIQUE endpoint column handles the
+    // "same device re-subscribing" case without a separate SELECT-then-branch.
+    await env.DB.prepare(
+      `INSERT INTO push_subscriptions (user_uid, endpoint, p256dh, auth, created_at)
+       VALUES (?, ?, ?, ?, ?)
+       ON CONFLICT(endpoint) DO UPDATE SET
+         user_uid=excluded.user_uid, p256dh=excluded.p256dh, auth=excluded.auth`
+    ).bind(uid, subscription.endpoint, subscription.keys.p256dh, subscription.keys.auth, now).run();
+
+    // Wholesale-replace today's reminders for this user. Scoped to the date(s) present
+    // in the incoming payload, not the whole user, so re-saving today's reminders never
+    // clobbers a different day's already-scheduled ones (relevant once/if this is
+    // extended to schedule more than just today in advance).
+    const dates = [...new Set(reminders.map(r => r.date))];
+    for (const d of dates) {
+      await env.DB.prepare(
+        `DELETE FROM scheduled_reminders WHERE user_uid = ? AND fire_date = ?`
+      ).bind(uid, d).run();
+    }
+
+    if (reminders.length) {
+      // D1 batch insert — one round trip instead of N.
+      const stmt = env.DB.prepare(
+        `INSERT INTO scheduled_reminders
+         (user_uid, task_id, task_name, reminder_type, fire_date, fire_time, fired, created_at)
+         VALUES (?, ?, ?, ?, ?, ?, 0, ?)`
+      );
+      const batch = reminders.map(r =>
+        stmt.bind(uid, r.taskId, r.taskName, r.type, r.date, r.time, now)
+      );
+      await env.DB.batch(batch);
+    }
+
+    return json({ ok: true, saved: reminders.length });
+  } catch (e) {
+    console.error('save-subscription failed', e);
+    return json({ error: 'Database write failed: ' + e.message }, 500);
+  }
+}
+
+// ===== Cron: dispatch due reminders =====
+// Called every minute. Finds every scheduled_reminders row matching the current
+// Kuwait date+time that hasn't fired yet, sends a Web Push notification for each,
+// and marks it fired. Dead subscriptions (410 Gone / 404) are cleaned up so they
+// stop being retried on every future minute.
+async function dispatchDueReminders(env) {
+  const { date, time } = kuwaitNowParts();
+
+  let due;
+  try {
+    due = await env.DB.prepare(
+      `SELECT * FROM scheduled_reminders WHERE fire_date = ? AND fire_time = ? AND fired = 0`
+    ).bind(date, time).all();
+  } catch (e) {
+    console.error('cron: due-reminder query failed', e);
+    return;
+  }
+
+  const rows = due.results || [];
+  if (!rows.length) return;
+
+  // Group by user so we fetch each user's subscription once, not once per reminder.
+  const byUser = {};
+  for (const r of rows) {
+    if (!byUser[r.user_uid]) byUser[r.user_uid] = [];
+    byUser[r.user_uid].push(r);
+  }
+
+  const vapid = {
+    subject: env.VAPID_SUBJECT || 'mailto:example@example.com',
+    publicKey: env.VAPID_PUBLIC_KEY,
+    privateKey: env.VAPID_PRIVATE_KEY,
+  };
+
+  const REMINDER_LABEL = {
+    lead: { title: '⏳ بعد 30 دقيقة', bodyFn: n => `${n} هتبدأ بعد نص ساعة` },
+    start: { title: '⏰ حان الوقت', bodyFn: n => `${n} — دلوقتي` },
+    ending: { title: '⌛ باقي ٣٠ دقيقة', bodyFn: n => `${n} — هتخلص وقتها قريب` }
+  };
+
+  for (const uid of Object.keys(byUser)) {
+    let subRow;
+    try {
+      subRow = await env.DB.prepare(
+        `SELECT * FROM push_subscriptions WHERE user_uid = ? ORDER BY created_at DESC LIMIT 1`
+      ).bind(uid).first();
+    } catch (e) {
+      console.error('cron: subscription lookup failed for', uid, e);
+      continue;
+    }
+    if (!subRow) continue; // user has reminders but no active subscription (never subscribed / revoked)
+
+    const subscription = {
+      endpoint: subRow.endpoint,
+      keys: { p256dh: subRow.p256dh, auth: subRow.auth }
+    };
+
+    for (const reminder of byUser[uid]) {
+      const label = REMINDER_LABEL[reminder.reminder_type] || REMINDER_LABEL.start;
+      const payload = {
+        title: label.title,
+        body: label.bodyFn(reminder.task_name),
+        tag: `${reminder.task_id}-${reminder.reminder_type}`
+      };
+
+      try {
+        const { endpoint, headers, body: pushBody } = await buildPushHTTPRequest({
+          privateJWK: vapid.privateKey,
+          publicJWK: vapid.publicKey,
+          subscription,
+          message: {
+            payload: JSON.stringify(payload),
+            adminContact: vapid.subject,
+            options: {
+              ttl: 3600,
+              // Explicit high urgency, per the original request — this is the correct
+              // place for that header, unlike the earlier client-only setTimeout
+              // architecture where there was no push request to attach it to at all.
+              urgency: 'high',
+              topic: reminder.task_id
+            }
+          }
+        });
+
+        const pushRes = await fetch(endpoint, { method: 'POST', headers, body: pushBody });
+
+        if (pushRes.status === 404 || pushRes.status === 410) {
+          // Subscription is dead (user revoked permission, uninstalled PWA, etc.) —
+          // remove it so the cron doesn't keep retrying it every minute forever.
+          await env.DB.prepare(`DELETE FROM push_subscriptions WHERE endpoint = ?`)
+            .bind(subRow.endpoint).run();
+        }
+      } catch (e) {
+        console.error('cron: push send failed for', reminder.task_id, e);
+        // Do NOT mark as fired on failure — leave it for potential retry next minute
+        // only if still within a reasonable window; simplest correct behavior here is
+        // to still mark fired to avoid a permanently-stuck row spamming retries for an
+        // endpoint that's failing for a non-transient reason. Marked fired below
+        // unconditionally, same as the success path, for that reason.
+      }
+
+      try {
+        await env.DB.prepare(`UPDATE scheduled_reminders SET fired = 1 WHERE id = ?`)
+          .bind(reminder.id).run();
+      } catch (e) {
+        console.error('cron: failed to mark reminder fired', reminder.id, e);
+      }
+    }
+  }
+}
