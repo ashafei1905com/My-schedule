@@ -628,15 +628,15 @@ const MACROS_REST={
 // mealKeyFor(). Drives the new food-logging modal's per-mealtype saved-options list,
 // replacing the old static alts system entirely.
 function mealKeyFor(base,isGym){return(isGym?'gym':'rest')+':'+base;}
-const mkBk=(p,t='9:15 ص',isGym)=>[p+'-bk',t,'food','🧀','الفطار','جبنة قريش ١٥٠جم + زيت زيتون + رغيفين أسمر + طماطم + خيار',5,null,null,false,null,isGym?MACROS_GYM.breakfast:MACROS_REST.breakfast,mealKeyFor('breakfast',isGym)];
+const mkBk=(p,t='9:15 ص',isGym)=>[p+'-bk',t,'food','🧀','الفطار',isGym?'٢٥٠جم فول + ١ م.ك زيت زيتون + رغيف أسمر + خيار وطماطم':'١٥٠جم جبنة قريش + ٢ شريحة توست أسمر + كوب حليب + خيار',5,null,null,false,null,isGym?MACROS_GYM.breakfast:MACROS_REST.breakfast,mealKeyFor('breakfast',isGym)];
 const mkWd=(p,t='9:30 ص')=>[p+'-wd',t,'quran','📿','الورد اليومي','١٥ دقيقة قراءة قرآن يومياً',10,null,null,false];
-const mkDn=(p,t='8:00 م',isGym)=>[p+'-dn',t,'food','🧀','العشا','جبنة قريش ١٥٠جم + جبنة دمياطي ٨٠جم + خيار + طماطم',5,null,null,false,null,isGym?MACROS_GYM.dinner:MACROS_REST.dinner,mealKeyFor('dinner',isGym)];
+const mkDn=(p,t='8:00 م',isGym)=>[p+'-dn',t,'food','🧀','العشا',isGym?'٢٥٠جم جبنة قريش + خيار وطماطم + نصف رغيف أسمر':'٢٠٠جم جبنة قريش + نصف رغيف أسمر + خيار وطماطم',5,null,null,false,null,isGym?MACROS_GYM.dinner:MACROS_REST.dinner,mealKeyFor('dinner',isGym)];
 const mkSl=(p,t='11:00 م')=>[p+'-sl',t,'sleep','🌙','نوم على الوقت','نام على الوقت — النوم المنتظم ضروري للعضل والتخسيس',10,null,null,false];
 const mkSw=(p,t)=>[p+'-sw',t,'swim','🏊','سباحة مع الكوتش','تقنية + drills ← استثناء ✓',0,null,null,true];
 const mkRc=(p,t,d)=>[p+'-rc',t,'recovery','♨️','جاكوزي + بخار/ساونا',d||'ريكفري ← استثناء ✓',0,null,null,true];
 const mkGU=(p,t)=>[p+'-gm',t,'gym','🏋️','جيم — Upper Body','صدر · كتف · ترايسبس · ظهر · بايسبس · Negative pull-ups · مشي ٢٠د',25,null,null,false];
 const mkGL=(p,t)=>[p+'-gm',t,'gym','🏋️','جيم — Lower Body','Leg press · Leg curl · Leg extension · Calf · Tibialis · مشي ٢٠د',25,null,null,false];
-const mkPS=(p,t)=>[p+'-ps',t,'food','🍌','سناك قبل الجيم','موزة + ٣ تمرات (٤٥ دقيقة قبل التمرين)',5,null,null,false,null,MACROS_GYM.preGymSnack,mealKeyFor('preGymSnack',true)];
+const mkPS=(p,t)=>[p+'-ps',t,'food','🥤','سناك قبل الجيم (السموثي الخارق)','سموثي: شوفان + حليب + موزة + زبدة فول سوداني',5,null,null,false,null,MACROS_GYM.preGymSnack,mealKeyFor('preGymSnack',true)];
 // mkPM ("وجبة بعد التمرين") is the functional dinner-equivalent on gym days — gym-day
 // schedules never call mkDn at all, so this meal carries the gym table's dinner
 // macros, not the bedtime-snack figure (that belongs to snackC instead, see below).
@@ -652,8 +652,8 @@ const mkBr=(p)=>[p+'-br','7:00 م','recovery','🏊','مع أخوك — جاكو
 // from the punishment scan without making them worth 0.
 // Snack A ("سناك منتصف النهار" — mid-morning, before lunch) carries the fixed
 // middaySnack figure Abdullah specified directly, identical on gym/rest days.
-const mkSnackA=(p,t='11:15 ص',isGym)=>[p+'-sn1',t,'snack','🥜','سناك منتصف النهار','حفنة مكسرات نيئة (لوز/كاجو) + ثمرة فاكهة (تفاحة/موزة)',5,null,null,false,null,isGym?MACROS_GYM.middaySnack:MACROS_REST.middaySnack,mealKeyFor('middaySnack',isGym)];
-const mkSnackB=(p,t='4:30 م',isGym)=>[p+'-sn2',t,'snack','🥤','سناك ٢ (بعد الظهر)','بروتين شيك أو زبادي + موزة — لو جعت',5,null,null,false,null,isGym?null:MACROS_REST.afternoonSnack,mealKeyFor('afternoonSnack',isGym)];
+const mkSnackA=(p,t='11:15 ص',isGym)=>[p+'-sn1',t,'snack','🥜','سناك منتصف النهار','حفنة مكسرات نيئة + ثمرة فاكهة',5,null,null,false,null,isGym?MACROS_GYM.middaySnack:MACROS_REST.middaySnack,mealKeyFor('middaySnack',isGym)];
+const mkSnackB=(p,t='4:30 م',isGym)=>[p+'-sn2',t,'snack','🥤','سناك ٢ (بعد الظهر)',isGym?'إضافي اختياري — لو لسه جعت قبل التمرين':'فشار منزلي أو سلطة فواكه',5,null,null,false,null,isGym?null:MACROS_REST.afternoonSnack,mealKeyFor('afternoonSnack',isGym)];
 const mkSnackC=(p,t='9:30 م',isGym)=>[p+'-sn3',t,'snack','🍇','سناك ٣ (مسائي خفيف)','فاكهة خفيفة أو حفنة مكسرات — لو جعت قبل النوم',5,null,null,false,null,null,mealKeyFor('bedtimeSnack',isGym)];
 
 const PMETA={
@@ -681,13 +681,13 @@ const FREE_TIME={
 };
 
 const SCHED={
-  0:{n:'الأحد',wk:'9:00 ص',bd:'11:00 م',gm:null,ts:[mkBk('sun',undefined,false),mkWd('sun'),['sun-qp','10:00 ص','quran','📖','تحضير درس الاثنين','حفظ آيات جديدة + مراجعة اللوح — ٤٥ دقيقة',15,null,null,false],mkSnackA('sun',undefined,false),['sun-lu','2:30 م','food','🍽️','الغدا','نص كيلو فراخ/لحمة مشوي + سلطة + بطاطس مسلوقة',5,null,null,false,null,MACROS_REST.lunch,mealKeyFor('lunch',false)],mkSnackB('sun',undefined,false),mkDn('sun',undefined,false),mkSnackC('sun',undefined,false),mkSl('sun')]},
-  1:{n:'الاثنين',wk:'10:00 ص',bd:'12:00 ص',gm:'lower',ts:[mkBk('mon','10:15 ص',true),mkWd('mon','10:30 ص'),mkSnackA('mon','11:00 ص',true),['mon-pp','11:30 ص','prog','💻','تحضير البرمجة','راجع الدرس السابق + اكتب أسئلتك — ٣٠ دقيقة',10,null,null,false],['mon-ss','12:00 م','prog','👨‍💻','سيشن البرمجة','١٢:٠٠ — ١:٠٠ م | JavaScript',15,null,null,false],['mon-hw','1:05 م','prog','📤','واجب البرمجة','ابدأ الواجب — آخر موعد الأربعاء (٢٤-٤٨ ساعة بعد السيشن)',10,null,'آخر موعد: الأربعاء',false],['mon-lu','1:30 م','food','🍽️','الغدا','نص كيلو فراخ مشوي + سلطة + بطاطس',5,null,null,false,null,MACROS_GYM.lunch,mealKeyFor('lunch',true)],mkSnackB('mon','3:15 م',true),['mon-ql','3:50 م','quran','🕌','درس القرآن','٣:٥٠ — ٤:٣٠ م | مباشرة بعد العصر',15,null,null,false],mkPS('mon','6:00 م'),mkGL('mon','7:00 م'),mkSw('mon','8:30 م'),mkRc('mon','9:15 م','جاكوزي + بخار — ريكفري ٤٥ دقيقة ← استثناء ✓'),mkPM('mon','10:30 م'),mkSnackC('mon','11:30 م',true),mkSl('mon','12:00 ص')]},
-  2:{n:'الثلاثاء',wk:'9:00 ص',bd:'11:00 م',gm:null,ts:[mkBk('tue',undefined,false),mkWd('tue'),['tue-qp','10:00 ص','quran','📖','تحضير درس الأربعاء','حفظ آيات جديدة + مراجعة اللوح — ٤٥ دقيقة',15,null,null,false],mkSnackA('tue',undefined,false),['tue-lu','2:30 م','food','🍽️','الغدا','نص كيلو فراخ/لحمة مشوي + سلطة',5,null,null,false,null,MACROS_REST.lunch,mealKeyFor('lunch',false)],mkSnackB('tue',undefined,false),mkBr('tue'),mkSnackC('tue','8:45 م',false),mkDn('tue','10:15 م',false),mkSl('tue')]},
-  3:{n:'الأربعاء',wk:'10:00 ص',bd:'12:00 ص',gm:'upper',ts:[mkBk('wed','10:15 ص',true),mkWd('wed','10:30 ص'),mkSnackA('wed','11:15 ص',true),['wed-lu','1:00 م','food','🍽️','الغدا','نص كيلو فراخ مشوي + سلطة + بطاطس',5,null,null,false,null,MACROS_GYM.lunch,mealKeyFor('lunch',true)],mkSnackB('wed','2:45 م',true),['wed-ql','3:50 م','quran','🕌','درس القرآن','٣:٥٠ — ٤:٣٠ م | مباشرة بعد العصر',15,null,null,false],mkPS('wed','6:00 م'),mkGU('wed','7:00 م'),mkSw('wed','8:30 م'),mkRc('wed','9:15 م','جاكوزي + بخار — ريكفري ٤٥ دقيقة ← استثناء ✓'),mkPM('wed','10:30 م'),mkSnackC('wed','11:30 م',true),mkSl('wed','12:00 ص')]},
-  4:{n:'الخميس',wk:'9:00 ص',bd:'11:00 م',gm:null,ts:[mkBk('thu',undefined,false),mkWd('thu'),mkSnackA('thu','11:00 ص',false),['thu-pp','11:30 ص','prog','💻','تحضير البرمجة','راجع الدرس السابق + اكتب أسئلتك — ٣٠ دقيقة',10,null,null,false],['thu-ss','12:00 م','prog','👨‍💻','سيشن البرمجة','١٢:٠٠ — ١:٠٠ م | JavaScript',15,null,null,false],['thu-hw','1:05 م','prog','📤','واجب البرمجة','ابدأ الواجب — آخر موعد السبت (٢٤-٤٨ ساعة بعد السيشن)',10,null,'آخر موعد: السبت',false],['thu-lu','1:30 م','food','🍽️','الغدا','نص كيلو فراخ/لحمة مشوي + سلطة',5,null,null,false,null,MACROS_REST.lunch,mealKeyFor('lunch',false)],mkSnackB('thu','4:45 م',false),mkBr('thu'),mkSnackC('thu','8:45 م',false),mkDn('thu','10:15 م',false),mkSl('thu')]},
+  0:{n:'الأحد',wk:'9:00 ص',bd:'11:00 م',gm:null,ts:[mkBk('sun',undefined,false),mkWd('sun'),['sun-qp','10:00 ص','quran','📖','تحضير درس الاثنين','حفظ آيات جديدة + مراجعة اللوح — ٤٥ دقيقة',15,null,null,false],mkSnackA('sun',undefined,false),['sun-lu','2:30 م','food','🍽️','الغدا','غداء البيت أو دليفري (بروتين + كارب) + طبق سلطة كبير',5,null,null,false,null,MACROS_REST.lunch,mealKeyFor('lunch',false)],mkSnackB('sun',undefined,false),mkDn('sun',undefined,false),mkSnackC('sun',undefined,false),mkSl('sun')]},
+  1:{n:'الاثنين',wk:'10:00 ص',bd:'12:00 ص',gm:'lower',ts:[mkBk('mon','10:15 ص',true),mkWd('mon','10:30 ص'),mkSnackA('mon','11:00 ص',true),['mon-pp','11:30 ص','prog','💻','تحضير البرمجة','راجع الدرس السابق + اكتب أسئلتك — ٣٠ دقيقة',10,null,null,false],['mon-ss','12:00 م','prog','👨‍💻','سيشن البرمجة','١٢:٠٠ — ١:٠٠ م | JavaScript',15,null,null,false],['mon-hw','1:05 م','prog','📤','واجب البرمجة','ابدأ الواجب — آخر موعد الأربعاء (٢٤-٤٨ ساعة بعد السيشن)',10,null,'آخر موعد: الأربعاء',false],['mon-lu','1:30 م','food','🍽️','الغدا','غداء البيت أو دليفري (بروتين + كارب) + طبق سلطة كبير',5,null,null,false,null,MACROS_GYM.lunch,mealKeyFor('lunch',true)],mkSnackB('mon','3:15 م',true),['mon-ql','3:50 م','quran','🕌','درس القرآن','٣:٥٠ — ٤:٣٠ م | مباشرة بعد العصر',15,null,null,false],mkPS('mon','6:00 م'),mkGL('mon','7:00 م'),mkSw('mon','8:30 م'),mkRc('mon','9:15 م','جاكوزي + بخار — ريكفري ٤٥ دقيقة ← استثناء ✓'),mkPM('mon','10:30 م'),mkSnackC('mon','11:30 م',true),mkSl('mon','12:00 ص')]},
+  2:{n:'الثلاثاء',wk:'9:00 ص',bd:'11:00 م',gm:null,ts:[mkBk('tue',undefined,false),mkWd('tue'),['tue-qp','10:00 ص','quran','📖','تحضير درس الأربعاء','حفظ آيات جديدة + مراجعة اللوح — ٤٥ دقيقة',15,null,null,false],mkSnackA('tue',undefined,false),['tue-lu','2:30 م','food','🍽️','الغدا','غداء البيت أو دليفري (بروتين + كارب) + طبق سلطة كبير',5,null,null,false,null,MACROS_REST.lunch,mealKeyFor('lunch',false)],mkSnackB('tue',undefined,false),mkBr('tue'),mkSnackC('tue','8:45 م',false),mkDn('tue','10:15 م',false),mkSl('tue')]},
+  3:{n:'الأربعاء',wk:'10:00 ص',bd:'12:00 ص',gm:'upper',ts:[mkBk('wed','10:15 ص',true),mkWd('wed','10:30 ص'),mkSnackA('wed','11:15 ص',true),['wed-lu','1:00 م','food','🍽️','الغدا','غداء البيت أو دليفري (بروتين + كارب) + طبق سلطة كبير',5,null,null,false,null,MACROS_GYM.lunch,mealKeyFor('lunch',true)],mkSnackB('wed','2:45 م',true),['wed-ql','3:50 م','quran','🕌','درس القرآن','٣:٥٠ — ٤:٣٠ م | مباشرة بعد العصر',15,null,null,false],mkPS('wed','6:00 م'),mkGU('wed','7:00 م'),mkSw('wed','8:30 م'),mkRc('wed','9:15 م','جاكوزي + بخار — ريكفري ٤٥ دقيقة ← استثناء ✓'),mkPM('wed','10:30 م'),mkSnackC('wed','11:30 م',true),mkSl('wed','12:00 ص')]},
+  4:{n:'الخميس',wk:'9:00 ص',bd:'11:00 م',gm:null,ts:[mkBk('thu',undefined,false),mkWd('thu'),mkSnackA('thu','11:00 ص',false),['thu-pp','11:30 ص','prog','💻','تحضير البرمجة','راجع الدرس السابق + اكتب أسئلتك — ٣٠ دقيقة',10,null,null,false],['thu-ss','12:00 م','prog','👨‍💻','سيشن البرمجة','١٢:٠٠ — ١:٠٠ م | JavaScript',15,null,null,false],['thu-hw','1:05 م','prog','📤','واجب البرمجة','ابدأ الواجب — آخر موعد السبت (٢٤-٤٨ ساعة بعد السيشن)',10,null,'آخر موعد: السبت',false],['thu-lu','1:30 م','food','🍽️','الغدا','غداء البيت أو دليفري (بروتين + كارب) + طبق سلطة كبير',5,null,null,false,null,MACROS_REST.lunch,mealKeyFor('lunch',false)],mkSnackB('thu','4:45 م',false),mkBr('thu'),mkSnackC('thu','8:45 م',false),mkDn('thu','10:15 م',false),mkSl('thu')]},
   5:{n:'الجمعة',wk:'9:00 ص',bd:'11:00 م',gm:null,ts:[mkBk('fri',undefined,false),mkWd('fri'),mkSnackA('fri',undefined,false),['fri-jm','12:00 م','prayer','🕌','صلاة الجمعة','اخرج مبكر ← يعادل الظهر',15,null,null,false],['fri-lu','1:30 م','food','🍽️','الغدا','يوم حر — ما تبالغش في الكارب',5,null,null,false,null,MACROS_REST.lunch,mealKeyFor('lunch',false)],mkSnackB('fri',undefined,false),mkDn('fri',undefined,false),mkSnackC('fri',undefined,false),mkSl('fri')]},
-  6:{n:'السبت',wk:'9:00 ص',bd:'11:00 م',gm:'upper',ts:[mkBk('sat',undefined,true),mkWd('sat'),mkSnackA('sat','12:15 م',true),mkPS('sat','2:15 م'),mkGU('sat','3:00 م'),mkSw('sat','4:00 م'),mkRc('sat','4:45 م','جاكوزي + بخار/ساونا — ريكفري حتى ٥:٣٠ م ← استثناء ✓'),mkPM('sat','5:45 م'),['sat-di','7:30 م','food','🍽️','الغدا','نص كيلو سمك/فراخ/لحمة مشوي + سلطة + بطاطس',5,null,null,false,null,MACROS_GYM.lunch,mealKeyFor('lunch',true)],mkSnackB('sat','8:45 م',true),mkSnackC('sat','9:45 م',true),mkSl('sat')]}
+  6:{n:'السبت',wk:'9:00 ص',bd:'11:00 م',gm:'upper',ts:[mkBk('sat',undefined,true),mkWd('sat'),mkSnackA('sat','12:15 م',true),['sat-lu','1:00 م','food','🍽️','الغدا','غداء البيت أو دليفري (بروتين + كارب) + طبق سلطة كبير',5,null,null,false,null,MACROS_GYM.lunch,mealKeyFor('lunch',true)],mkSnackB('sat','1:45 م',true),mkPS('sat','2:15 م'),mkGU('sat','3:00 م'),mkSw('sat','4:00 م'),mkRc('sat','4:45 م','جاكوزي + بخار/ساونا — ريكفري حتى ٥:٣٠ م ← استثناء ✓'),mkPM('sat','5:45 م'),mkSnackC('sat','9:45 م',true),mkSl('sat')]}
 };
 
 function buildPTasks(jd){
@@ -1100,7 +1100,15 @@ if (typeof getJDfromISO !== 'function') window.getJDfromISO=function(iso){return
 // ===== Punishment =====
 let PENALTY_FLASH_PENDING=false;
 
-function getPunishRate(){return (STATS.cur||0)>=3 ? 0.15 : 0.35;}
+// STATS.punishRateOverride lets the AI assistant set a fixed punishment rate that
+// replaces the streak-based 0.15/0.35 split entirely. undefined/null = use the default
+// streak-based logic (original behavior, unchanged for anyone who never touches this).
+// Stored on STATS itself (not a separate LS key) so it rides along with the existing
+// STATS save/load/cloud-sync path for free, with no new persistence plumbing needed.
+function getPunishRate(){
+  if(STATS.punishRateOverride!=null) return STATS.punishRateOverride;
+  return (STATS.cur||0)>=3 ? 0.15 : 0.35;
+}
 
 // In-flight lock — onAuthStateChanged can legitimately fire more than once during a
 // single page session (initial resolution, token refresh, tab regaining focus), and
@@ -1343,7 +1351,12 @@ async function registerServiceWorker(){
   try{
     // Registered at the ROOT relative to this page so its scope covers the whole
     // site — sw.js must physically live alongside index.html for this to work.
-    return await navigator.serviceWorker.register('./service-worker.js');
+    // Filename corrected to './sw.js' -- the actual deployed file is named sw.js, not
+    // service-worker.js. The mismatched filename was causing every registration
+    // attempt to 404 and throw, which is the exact "مش قادر أسجل الـ service worker"
+    // error being shown: it wasn't a permissions/PWA issue, the file being requested
+    // simply didn't exist at that path.
+    return await navigator.serviceWorker.register('./sw.js');
   }catch(e){
     console.warn('service worker registration failed',e);
     return null;
@@ -2486,8 +2499,12 @@ function aiParseIntent(msg){
       reply:`تم حذف "${found.task[4]}" من ${found.iso} (لسه ظاهرة بس متعلّم عليها كمحذوفة) 🗑️`};
   }
 
-  // 4. Edit points — "خلي الجيم بـ 30 نقطة" / "set gym points to 30"
-  if(/(نقطة|نقاط|points?)/.test(low) && /(\d+)/.test(low)){
+  // 4. Edit points — "خلي الجيم بـ 30 نقطة" / "set gym points to 30". Explicitly
+  // excludes STATS-level phrasing (streak/best-streak/my-points/punishment-rate) so
+  // this never risks matching those by relying on aiFindTask happening to fail to
+  // find a same-named task — it now defers to branch 6/7 by construction, not luck.
+  const isStatsLevelPhrase=/أعلى\s*استريك|اعلى\s*استريك|best\s*streak|highest\s*streak|استريك|streak|نقاطي|رصيدي|my\s*points|my\s*score|نسبة\s*الخصم|معدل\s*الخصم|punishment\s*rate|penalty\s*rate/i.test(low);
+  if(!isStatsLevelPhrase && /(نقطة|نقاط|points?)/.test(low) && /(\d+)/.test(low)){
     const found=aiFindTask(raw,SELECTED_DATE);
     const numMatch=raw.match(/(\d+)/);
     if(found && numMatch){
@@ -2510,6 +2527,44 @@ function aiParseIntent(msg){
     if(!name) name='مهمة جديدة';
     return{action:'addCustomTask',date:newDate,time:newTime,pts,name,
       reply:`تم إضافة "${name}" يوم ${newDate} الساعة ${newTime} بـ ${pts}⭐ ✅`};
+  }
+
+  // 6. Edit streak/points/best-streak directly -- writes straight to STATS, not a
+  // task, so matched before the generic points regex which requires a task match and
+  // would otherwise silently no-op here. "best streak" must be checked before the
+  // plain "streak" pattern since the latter is a substring match of the former.
+  if(/أعلى\s*استريك|اعلى\s*استريك|highest\s*streak|best\s*streak/.test(low) && /\d+/.test(low)){
+    const numMatch=raw.match(/(\d+)/);
+    if(numMatch){
+      const val=parseInt(numMatch[1],10);
+      return{action:'setBestStreak',value:val,reply:`تم تغيير أعلى استريك إلى ${val} يوم ✅`};
+    }
+  }
+  if(!/أعلى\s*استريك|اعلى\s*استريك|best\s*streak|highest\s*streak/.test(low) && /استريك|streak/i.test(low) && /\d+/.test(low)){
+    const numMatch=raw.match(/(\d+)/);
+    if(numMatch){
+      const val=parseInt(numMatch[1],10);
+      return{action:'setCurStreak',value:val,reply:`تم تغيير الاستريك الحالي إلى ${val} يوم ✅`};
+    }
+  }
+  if(/نقاطي|رصيدي|my\s*points|my\s*score/.test(low) && /\d+/.test(low) && !/(نقطة|نقاط|points?)\s*ل/.test(low)){
+    const numMatch=raw.match(/(-?\d+)/);
+    if(numMatch){
+      const val=parseInt(numMatch[1],10);
+      return{action:'setWeeklyPoints',value:val,reply:`تم تغيير رصيد النقاط الأسبوعي إلى ${val}⭐ ✅`};
+    }
+  }
+
+  // 7. Edit punishment rate -- accepts either a percent-style number ("20" meaning
+  // 20%) or a raw decimal ("0.2"); stored internally as a fraction of the point value.
+  if(/(نسبة\s*الخصم|معدل\s*الخصم|punishment\s*rate|penalty\s*rate)/.test(low) && /\d/.test(low)){
+    const numMatch=raw.match(/(\d+(?:\.\d+)?)/);
+    if(numMatch){
+      let val=parseFloat(numMatch[1]);
+      if(val>1) val=val/100;
+      val=Math.max(0,Math.min(1,val));
+      return{action:'setPunishRate',value:val,reply:`تم تغيير نسبة الخصم إلى ${Math.round(val*100)}٪ ✅`};
+    }
   }
 
   return{action:'llmFallback',reply:null};
@@ -2591,6 +2646,39 @@ async function aiExecuteAction(intent){
     await saveUserEdits();
     return true;
   }
+  // ===== Direct STATS edits (streak / weekly points / punishment rate) =====
+  // Per explicit instruction, these execute immediately and are reported in the same
+  // chat reply, same as every other AI edit above -- no separate confirmation step.
+  // Writes go straight to STATS, which already flows through the existing saveAll()
+  // sync path (localStorage + Firestore merge-max logic), so nothing new to persist.
+  if(action==='setCurStreak'){
+    const{value}=intent;
+    STATS.cur=Math.max(0,value);
+    STATS.best=Math.max(STATS.best||0,STATS.cur);
+    await saveAll();
+    try{ updateUI(); }catch(e){ console.error(e); }
+    return true;
+  }
+  if(action==='setBestStreak'){
+    const{value}=intent;
+    STATS.best=Math.max(0,value);
+    await saveAll();
+    try{ updateUI(); }catch(e){ console.error(e); }
+    return true;
+  }
+  if(action==='setWeeklyPoints'){
+    const{value}=intent;
+    STATS.pts=value;
+    await saveAll();
+    try{ updateUI(); }catch(e){ console.error(e); }
+    return true;
+  }
+  if(action==='setPunishRate'){
+    const{value}=intent;
+    STATS.punishRateOverride=value;
+    await saveAll();
+    return true;
+  }
   return false; // unrecognized / needMoreInfo / unknown — nothing to execute
 }
 
@@ -2652,7 +2740,7 @@ LENGTH RULES:
 
 ENGAGEMENT: Give direct answers first — never withhold the actual answer to force him to guess. After the direct answer, walk him through the underlying reasoning. End explanations with a sharp, specific question that pushes him to think further, not a generic "what do you think?"
 
-CONTEXT: You can also discuss his schedule app (prayers, gym, meals, points, streaks) if he asks, but you are not the one executing schedule commands (moving/deleting/marking tasks done) — a separate system handles those. If he asks you to do something schedule-related that sounds like a command rather than a question, tell him to phrase it as a direct instruction (e.g. "انقل الجيم لبكرة الساعة ٨").
+CONTEXT: You are embedded in an app that CAN directly edit Abdullah's schedule, points, streak, best streak, punishment rate, and nutrition tracking — a separate deterministic system (not you) actually executes those edits when his message matches a recognized command pattern. You only ever receive a message AFTER that system already tried and found no matching pattern — meaning his phrasing genuinely wasn't recognized, not that the capability doesn't exist. NEVER tell him you/the app "can't" execute schedule commands or that a "separate system" handles it as if that's a limitation — that capability is real and already active. Instead, if his intent is clear, tell him the exact phrasing that WILL work (e.g. "انقل الجيم لبكرة الساعة ٨" for moves, "خلي الجيم ٣٠ نقطة" for points, "خلي الاستريك ١٠" for streak, "خلي أعلى استريك ٢٠" for best streak, "خلي نسبة الخصم ٢٠٪" for punishment rate, "احذف السباحة" to delete, "ضيف مهمة..." to add). If several instructions are in one message, tell him to separate each with a comma so all of them execute, not just the first.
 
 You have no web search or real-time data access. If something requires current/verifiable facts you're not certain of, say so plainly instead of guessing.
 
@@ -3098,17 +3186,43 @@ function aiToggleMemoryView(){
 // the actual instruction ("أنا مشغول النهاردة و شيل كذا"), so requiring the verb to be
 // the first word was too strict and caused the entire split to be discarded whenever
 // any natural preamble was present, silently falling back to single-command parsing.
-const AI_ACTION_VERBS_ANY=/(انقل|حرك|غير وقت|move|reschedule|احذف|امسح|شيل|delete|remove|عملت|خلصت|سويت|انجزت|أنجزت|i did|done|completed|finished|mark.*as\s*done|mark.*done|set.*(to\s*)?done|check\s*off|marked\s*as\s*done|ضيف|اضف|أضف|add task|new task|افتكر|اتذكر|سجل عني|تذكر|remember|صليت|صلّيت|prayed)/i;
+// Expanded to cover EVERY action aiParseIntent actually recognizes, not just move/
+// delete/mark-done/add/remember/prayer. The original list silently excluded points-
+// edit, streak-edit, best-streak-edit, and punishment-rate-edit keywords, which meant
+// a multi-command message containing one of those (e.g. "خلي الجيم ٣٠ نقطة والاستريك
+// ١٠") had those clauses mistaken for filler and dropped instead of executed -- this
+// was the actual mechanism behind "I told it to do 5 things and it only did 1": any
+// clause whose verb wasn't in this list never even reached aiParseIntent as its own
+// clause, it was merged away as non-command text.
+const AI_ACTION_VERBS_ANY=/(انقل|حرك|غير وقت|move|reschedule|احذف|امسح|شيل|delete|remove|عملت|خلصت|سويت|انجزت|أنجزت|i did|done|completed|finished|mark.*as\s*done|mark.*done|set.*(to\s*)?done|check\s*off|marked\s*as\s*done|ضيف|اضف|أضف|add task|new task|افتكر|اتذكر|سجل عني|تذكر|remember|صليت|صلّيت|prayed|خلي|نقطة|نقاط|points?|استريك|streak|نقاطي|رصيدي|my\s*points|my\s*score|نسبة\s*الخصم|معدل\s*الخصم|punishment\s*rate|penalty\s*rate|set\b)/i;
 
 function aiSplitCommands(msg){
-  // Split on " و " / " and " / "، " / "," — commas and conjunctions between clauses.
-  const rough=msg.split(/\s*(?:،|,)\s*|\s+و\s+(?=\S)|\s+and\s+(?=\S)/i);
+  // Split on commas, " and ", standalone " و ", AND the attached-prefix Arabic form
+  // (والاستريك، واحذف، وضيف — و glued directly onto the next word with no space).
+  // The attached form is how "and" is written before a verb in natural Arabic FAR
+  // more often than a standalone " و " with spaces on both sides, so the original
+  // regex (which only matched the spaced form) silently failed to split the most
+  // common real-world phrasing at all -- this was the dominant cause of multi-command
+  // messages executing only the first instruction and dropping the rest as filler.
+  // Guarded to only fire on و immediately followed by one of the known command verbs,
+  // so it doesn't falsely split ordinary words that happen to start with و (e.g. لا
+  // "وقت" wouldn't split since "قت" isn't a verb start, but this is still deliberately
+  // narrow -- see the verb alternation below, kept in sync with AI_ACTION_VERBS_ANY's
+  // core verbs).
+  const AI_ATTACHED_WAW_RE=/\s+(?=و(?:انقل|احذف|امسح|شيل|ضيف|اضف|أضف|خلي|افتكر|اتذكر|سجل|خلصت|عملت|سويت))/;
+  const rough=msg.split(/\s*(?:،|,)\s*|\s+و\s+(?=\S)|\s+and\s+(?=\S)/i)
+                  .flatMap(piece=>piece.split(AI_ATTACHED_WAW_RE));
   if(rough.length<=1) return[msg.trim()];
 
   // Keep only pieces that actually contain a command verb somewhere — pure filler
   // pieces ("أنا مشغول جدًا فقولنا مش مهم النهاردة") are dropped rather than merged
   // into the next piece or used to invalidate the whole split.
-  const commandPieces=rough.map(p=>p.trim()).filter(p=>p && AI_ACTION_VERBS_ANY.test(p));
+  // Strip a leading attached و (e.g. "واحذف السباحة" -> "احذف السباحة") so downstream
+  // verb-regex matching in aiParseIntent sees the clean command word, not a
+  // conjunction-prefixed one it wouldn't otherwise match.
+  const commandPieces=rough.map(p=>p.trim().replace(/^و(?=(?:انقل|احذف|امسح|شيل|ضيف|اضف|أضف|خلي|افتكر|اتذكر|سجل|خلصت|عملت|سويت))/,''))
+                            .map(p=>p.trim())
+                            .filter(p=>p && AI_ACTION_VERBS_ANY.test(p));
 
   // Need at least 2 genuine command pieces to treat this as multi-command; a single
   // command piece plus filler should just be handled as one command via the normal
@@ -3144,10 +3258,10 @@ async function aiProcessClause(clauseText){
   // locally and deterministically through the real data functions — never through
   // the LLM. This is intentional: correctness and safety for actual data mutations
   // matter more than routing everything through one code path.
-  if(['markDone','moveTask','deleteTask','editPoints','addCustomTask','rememberFact','openPrayerModal','alreadyDone','unrecognizedTask','needMoreInfo'].includes(intent.action)){
+  if(['markDone','moveTask','deleteTask','editPoints','addCustomTask','rememberFact','openPrayerModal','setCurStreak','setBestStreak','setWeeklyPoints','setPunishRate','alreadyDone','unrecognizedTask','needMoreInfo'].includes(intent.action)){
     let tone='ok';
     try{
-      if(['markDone','moveTask','deleteTask','editPoints','addCustomTask','rememberFact','openPrayerModal'].includes(intent.action)){
+      if(['markDone','moveTask','deleteTask','editPoints','addCustomTask','rememberFact','openPrayerModal','setCurStreak','setBestStreak','setWeeklyPoints','setPunishRate'].includes(intent.action)){
         await aiExecuteAction(intent);
       }else{
         tone='err';
@@ -3631,7 +3745,12 @@ if (typeof onAuthStateChanged !== 'undefined' && typeof fbAuth !== 'undefined') 
               lc:laterDate(cloudStats.lc,localStats.lc),
               lf:laterDate(cloudStats.lf,localStats.lf),
               lastPtsWeekStart:laterDate(cloudStats.lastPtsWeekStart,localStats.lastPtsWeekStart),
-              bestFixed:cloudStats.bestFixed||localStats.bestFixed||false
+              bestFixed:cloudStats.bestFixed||localStats.bestFixed||false,
+              // punishRateOverride is a deliberate one-off setting, not a monotonic
+              // counter like pts/cur/best -- no "max" makes sense for it. Prefer
+              // whichever side actually has a value set, cloud taking priority since
+              // it's more likely to be the most recently-synced device's choice.
+              punishRateOverride:(cloudStats.punishRateOverride!=null)?cloudStats.punishRateOverride:(localStats.punishRateOverride!=null?localStats.punishRateOverride:null)
             };
           }
           if(d.reports) savedReports=d.reports;
