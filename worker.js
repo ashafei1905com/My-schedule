@@ -212,18 +212,37 @@ async function handleSaveSubscription(request, env) {
 }
 
 // ===== Cron: dispatch due reminders =====
-// Called every minute. Finds every scheduled_reminders row matching the current
-// Kuwait date+time that hasn't fired yet, sends a Web Push notification for each,
+// Called every minute. Finds every scheduled_reminders row DUE (at or before the
+// current Kuwait time) that hasn't fired yet, sends a Web Push notification for each,
 // and marks it fired. Dead subscriptions (410 Gone / 404) are cleaned up so they
 // stop being retried on every future minute.
+//
+// FIXED BUG: this used to match fire_time with exact equality (WHERE fire_time = ?).
+// Cloudflare Cron Triggers are explicitly documented as best-effort — they typically
+// fire within the minute but are NOT guaranteed to land on the exact :00 second, and
+// under load can occasionally skip or shift by a minute. With an exact-time match,
+// any reminder whose minute the cron didn't land on exactly was permanently missed —
+// fired stayed 0 forever, and the one minute that would have matched it never came
+// back around. This is the actual root cause of "used to get notifications, just not
+// perfectly on time, now I get none at all" — the miss rate compounds silently over
+// time with zero visible symptom until it's total. Fixed by matching everything due
+// AT OR BEFORE now (fire_time <= current), bounded to a 30-minute lookback window so
+// a very old missed reminder doesn't fire hours late, but a same-cycle miss now
+// self-heals on the very next minute's cron run instead of being lost forever.
 async function dispatchDueReminders(env) {
   const { date, time } = kuwaitNowParts();
+  const [nowH, nowM] = time.split(':').map(Number);
+  let lookbackH = nowH, lookbackM = nowM - 30;
+  if (lookbackM < 0) { lookbackM += 60; lookbackH -= 1; }
+  if (lookbackH < 0) { lookbackH = 0; lookbackM = 0; } // clamp — don't reach into yesterday
+  const lookbackTime = `${String(lookbackH).padStart(2,'0')}:${String(lookbackM).padStart(2,'0')}`;
 
   let due;
   try {
     due = await env.DB.prepare(
-      `SELECT * FROM scheduled_reminders WHERE fire_date = ? AND fire_time = ? AND fired = 0`
-    ).bind(date, time).all();
+      `SELECT * FROM scheduled_reminders
+       WHERE fire_date = ? AND fire_time <= ? AND fire_time >= ? AND fired = 0`
+    ).bind(date, time, lookbackTime).all();
   } catch (e) {
     console.error('cron: due-reminder query failed', e);
     return;

@@ -248,6 +248,9 @@ body{font-family:'Cairo',sans-serif;background:var(--bg);color:var(--tx);directi
 .ai-msg.bot{align-self:flex-start;background:var(--c);border:1px solid var(--br);color:var(--tx);border-bottom-right-radius:4px}
 .ai-msg.bot.err{border-color:rgba(239,68,68,.4);background:rgba(239,68,68,.08)}
 .ai-msg.bot.ok{border-color:rgba(16,185,129,.4);background:rgba(16,185,129,.08)}
+.ai-undo-btn{padding:5px 12px;background:rgba(245,158,11,.12);border:1px solid rgba(245,158,11,.4);color:var(--or);border-radius:8px;font-family:'Cairo',sans-serif;font-size:.72rem;font-weight:800;cursor:pointer;transition:all .15s}
+.ai-undo-btn:hover{background:rgba(245,158,11,.22)}
+.ai-undo-btn:disabled{opacity:.55;cursor:default}
 .ai-empty{color:var(--mu);text-align:center;padding:30px 10px;font-size:.8rem;line-height:1.8}
 .ai-inputrow{display:flex;gap:8px;padding:12px;border-top:1px solid var(--br);flex-shrink:0}
 .ai-input{flex:1;background:var(--c);border:1px solid var(--br);border-radius:10px;padding:10px 14px;color:var(--tx);font-family:'Cairo',sans-serif;font-size:.85rem;resize:none;max-height:90px}
@@ -1523,10 +1526,6 @@ async function syncPushSchedule(){
         if(sub){
           PUSH_SUBSCRIPTION=sub.toJSON();
         }else if(VAPID_PUBLIC_KEY && VAPID_PUBLIC_KEY!=='REPLACE_WITH_YOUR_VAPID_PUBLIC_KEY' && typeof Notification!=='undefined' && Notification.permission==='granted'){
-          // Permission was already granted in a past session but the subscription
-          // itself never got recreated for THIS registration — re-subscribe rather
-          // than silently giving up, since permission being granted means we're
-          // allowed to.
           const newSub=await activeReg.pushManager.subscribe({
             userVisibleOnly:true,
             applicationServerKey:urlBase64ToUint8Array(VAPID_PUBLIC_KEY)
@@ -1535,10 +1534,18 @@ async function syncPushSchedule(){
         }
       }
     }catch(e){
+      // FIX: this was a silent console.warn — invisible on a phone with no devtools
+      // open. A subscription failure here means notifications will NEVER arrive and
+      // there was previously zero way to know why. Now surfaces visibly.
       console.warn('push subscription recovery failed',e);
+      showToast('⚠️ فشل تفعيل التذكيرات — جرب تقفل وتفتح التطبيق تاني، ولو استمرت المشكلة جرب تلغي وتفعّل التذكيرات من جديد',4500,'warn');
+      return;
     }
   }
-  if(!PUSH_SUBSCRIPTION) return; // still not subscribed — genuinely nothing to sync
+  if(!PUSH_SUBSCRIPTION){
+    showToast('⚠️ التذكيرات مش متسجلة فعلياً — جرب تلغي وتفعّلها تاني من الزرار',4000,'warn');
+    return; // still not subscribed — genuinely nothing to sync
+  }
 
   const reminders=buildTodayReminderPayload();
   try{
@@ -1547,9 +1554,13 @@ async function syncPushSchedule(){
       headers:{'Content-Type':'application/json'},
       body:JSON.stringify({uid:user.uid,subscription:PUSH_SUBSCRIPTION,reminders})
     });
-    if(!res.ok) console.warn('push schedule sync: server rejected',res.status);
+    if(!res.ok){
+      console.warn('push schedule sync: server rejected',res.status);
+      showToast(`⚠️ السيرفر رفض حفظ التذكيرات (${res.status}) — جرب تاني كمان شوية`,4000,'warn');
+    }
   }catch(e){
     console.warn('push schedule sync failed',e);
+    showToast('⚠️ فشل الاتصال بالسيرفر لحفظ التذكيرات — تأكد من النت وجرب تاني',4000,'warn');
   }
 }
 
@@ -2012,17 +2023,25 @@ function renderCard(task,isToday){
     }else if(state==='QADA'){
       const half=Math.floor(pts/2);
       act=`<button class="cbtn qada" data-action="qada" data-id="${id}" data-pts="${pts}">قضاء (50%)<span class="ptslbl">+${half}⭐</span></button>`;
-    }else if(state==='EXPIRED'){
+    }else if(state==='EXPIRED' && !isFoodLoggable){
       // Snacks never truly "expire" into a punishable state — they just stop being
       // clickable once very late, same visual as other expired tasks but never fed
       // into punishment math (getReqTasks excludes cat==='snack' entirely).
       act=isSnack?`<div class="excbadge">🍎 فات وقته — مفيش خصم</div>`:`<div class="cbtn exp">فات الوقت</div>`;
     }else if(isFoodLoggable){
-      // Food/snack tasks with macro data open the food-log modal instead of
-      // confirming directly — replaces the old alt-picker entirely.
-      const lbl=isSnack?'🍎 سناك — سجل الأكل':'🍽️ سجل الأكل';
-      const optLbl=isSnack?` (اختياري)`:'';
-      act=`<button class="cbtn${isSnack?' snack':''}" data-action="logfood" data-id="${id}" data-pts="${pts}">${lbl}<span class="ptslbl">+${pts}⭐${optLbl}</span></button>`;
+      // Food/snack tasks with macro data ALWAYS stay loggable, even past the 3-hour
+      // expiry window that closes every other task type. Forgetting to log a meal
+      // the same day and coming back hours later is a completely normal, common
+      // case (this is exactly the scenario behind "أكلت وجبة... بس نسيت اسجلها") —
+      // nutrition tracking has real value independent of whether points still count,
+      // so the ability to record what was actually eaten should never disappear.
+      // A late log still visually distinguishes itself (different label/color) so
+      // it's clear this is a late entry, separate from the normal on-time flow.
+      const isLateLog=state==='EXPIRED';
+      const lbl=isLateLog?(isSnack?'🍎 سناك متأخر — سجله':'⏰ متأخر — سجل الأكل'):(isSnack?'🍎 سناك — سجل الأكل':'🍽️ سجل الأكل');
+      const optLbl=isSnack?` (اختياري)`:(isLateLog?' (متأخر)':'');
+      const lateStyle=isLateLog?'style="background:rgba(245,158,11,.1);border-color:rgba(245,158,11,.4);color:var(--or)"':'';
+      act=`<button class="cbtn${isSnack?' snack':''}" ${lateStyle} data-action="logfood" data-id="${id}" data-pts="${pts}">${lbl}<span class="ptslbl">+${pts}⭐${optLbl}</span></button>`;
     }else if(isSnack){
       act=`<button class="cbtn snack" data-action="confirm" data-id="${id}" data-pts="${pts}">🍎 سناك ✓<span class="ptslbl">+${pts}⭐ (اختياري)</span></button>`;
     }else{
@@ -2532,20 +2551,40 @@ function aiParseIntent(msg){
   if(prayerDetailIntent) return prayerDetailIntent;
 
   // 1b. Mark as done (retroactively) — "عملت الجيم" / "خلصت الغدا" / "i did the gym" /
-  // "mark fajr as done" / "set gym to done" / "check off lunch". The original regex
-  // only matched "i did"/"done"/"completed"/"finished" as bare tokens, which missed
-  // the extremely common "mark X as done" construction entirely — that phrase falls
-  // through to the LLM fallback instead of the real local action parser, which is why
-  // it replied "I can't execute commands" even though this exact action IS supported.
-  // Added as explicit multi-word patterns (not a bare "mark") to avoid false-positives
-  // from unrelated sentences that happen to contain "mark" as a name or noun.
-  if(/عملت|خلصت|سويت|انجزت|أنجزت|i did|done|completed|finished|mark.*as\s*done|mark.*done|set.*(to\s*)?done|check\s*off|marked\s*as\s*done/.test(low)){
+  // "mark fajr as done" / "set gym to done" / "check off lunch" / "أكلت وجبة قبل
+  // التمرين". "أكلت"/"اكلت" (ate) was previously MISSING from this verb list entirely
+  // — a message like "أنا أكلت وجبة قبل التمرين امبارح لكن نسيت اسجلها" matched
+  // nothing here and fell all the way through to the live LLM fallback, which has no
+  // tool access and can only describe a (often made-up) way to phrase it, never
+  // actually act. That's the root cause of the AI "not doing anything" for food
+  // completion phrased with "أكلت" instead of "عملت"/"خلصت".
+  if(/عملت|خلصت|سويت|انجزت|أنجزت|أكلت|اكلت|كلت|شربت|i did|done|completed|finished|ate|drank|mark.*as\s*done|mark.*done|set.*(to\s*)?done|check\s*off|marked\s*as\s*done/.test(low)){
     const found=aiFindTask(raw,SELECTED_DATE);
-    if(found){
-      return{action:'markDone',task:found.task,iso:found.iso,jd:found.jd,
-        reply:`تمام، سجلت "${found.task[4]}" بتاريخ ${found.iso} كمُنجزة ✅`};
+    if(!found) return{action:'unrecognizedTask',reply:'مش لاقي المهمة دي في الجدول. ممكن تقولي اسمها بالظبط زي ما هي ظاهرة؟'};
+    // Food/snack tasks need macro computation (protein/carbs/fat/calories), not a
+    // flat point award — markDone never touched foodLog at all, so even when the
+    // verb DID match before, completing a meal through chat silently skipped
+    // nutrition tracking entirely, which is a real gap on its own besides the
+    // missing-verb bug above. Route these through the SAME food-log modal the card
+    // tap uses, pre-filled with whatever description was in the message, instead.
+    const isFoodTask=(found.task[2]==='food'||found.task[2]==='snack')&&!!found.task[11];
+    if(isFoodTask){
+      const alreadyLogged=(historyData[found.iso]||{}).foodLog?.[found.task[0]];
+      if(alreadyLogged){
+        return{action:'alreadyDone',reply:`"${found.task[4]}" مسجلة بالفعل في ${found.iso}. لو عايز تعدّلها استخدم زرار ✏️ تعديل على الكارت.`};
+      }
+      // Best-effort strip of the task name + control words from the raw message to
+      // guess the actual food description — imperfect on purpose, exactly like
+      // addCustomTask's name-guessing below; the modal shows it in an editable
+      // textarea so nothing is silently trusted, he can correct it before submitting.
+      let guessedDesc=raw.replace(found.task[4],'')
+        .replace(/عملت|خلصت|سويت|انجزت|أنجزت|أكلت|اكلت|كلت|شربت|لكن نسيت اسجلها|بس نسيت اسجلها|نسيت اسجلها|امبارح|النهاردة|بكرة/gi,'')
+        .trim();
+      return{action:'openFoodLogModal',task:found.task,iso:found.iso,guessedDesc,
+        reply:`فتحت لك نافذة تسجيل "${found.task[4]}" — راجع الوصف واحسب القيم ✅`};
     }
-    return{action:'unrecognizedTask',reply:'مش لاقي المهمة دي في الجدول. ممكن تقولي اسمها بالظبط زي ما هي ظاهرة؟'};
+    return{action:'markDone',task:found.task,iso:found.iso,jd:found.jd,
+      reply:`تمام، سجلت "${found.task[4]}" بتاريخ ${found.iso} كمُنجزة ✅`};
   }
 
   // 2. Move a task — "انقل الجيم لبكرة الساعة ٨" / "move gym to tomorrow 8pm"
@@ -2707,6 +2746,24 @@ async function aiExecuteAction(intent){
       renderTabs();renderPanels();switchDay(getJDfromISO(iso));updateUI();
     }
     aiOpenPrayerFlowPrefilled(task,iso,parsedLog);
+    return true;
+  }
+  if(action==='openFoodLogModal'){
+    // Same pattern as openPrayerModal above: deliberately does NOT write DONE/
+    // foodLog/points itself — it only opens the real food-log modal (same one the
+    // card-tap "سجل الأكل" button opens), pre-filled with a best-effort guessed
+    // description. All actual macro computation + save still happens through the
+    // modal's own flHandleSubmit -> flFinalizeLog path, exactly like tapping the
+    // card, so there's exactly one code path that ever writes a food-log entry no
+    // matter how the modal was opened.
+    const{task,iso,guessedDesc}=intent;
+    if(iso!==SELECTED_DATE){
+      saveDay();
+      SELECTED_DATE=iso;
+      loadDay();
+      renderTabs();renderPanels();switchDay(getJDfromISO(iso));updateUI();
+    }
+    openFoodLogModal(task, undefined, guessedDesc||'');
     return true;
   }
   if(action==='rememberFact'){
@@ -2872,7 +2929,7 @@ LENGTH RULES:
 
 ENGAGEMENT: Give direct answers first — never withhold the actual answer to force him to guess. After the direct answer, walk him through the underlying reasoning. End explanations with a sharp, specific question that pushes him to think further, not a generic "what do you think?"
 
-CONTEXT: You are embedded in an app that CAN directly edit Abdullah's schedule, points, streak, best streak, punishment rate, and nutrition tracking — a separate deterministic system (not you) actually executes those edits when his message matches a recognized command pattern. You only ever receive a message AFTER that system already tried and found no matching pattern — meaning his phrasing genuinely wasn't recognized, not that the capability doesn't exist. NEVER tell him you/the app "can't" execute schedule commands or that a "separate system" handles it as if that's a limitation — that capability is real and already active. Instead, if his intent is clear, tell him the exact phrasing that WILL work (e.g. "انقل الجيم لبكرة الساعة ٨" for moves, "خلي الجيم ٣٠ نقطة" for points, "خلي الاستريك ١٠" for streak, "خلي أعلى استريك ٢٠" for best streak, "خلي نسبة الخصم ٢٠٪" for punishment rate, "احذف السباحة" to delete, "ضيف مهمة..." to add). If several instructions are in one message, tell him to separate each with a comma so all of them execute, not just the first.
+CONTEXT: You are embedded in an app that directly edits Abdullah's schedule, points, streak, best streak, punishment rate, and nutrition tracking. A separate tool-calling system handles ALL of that — it understands any phrasing (formal, casual, dialect, English, mixed, whatever) and executes directly, with an undo button attached to every change. You are ONLY ever reached for messages that system already determined are NOT commands at all (questions, opinions, small talk, discussion). Because of this, you should NEVER interpret a message as an unrecognized command or tell him how to phrase something — if you're seeing it, it's genuinely conversational. Just answer it directly, as yourself.
 
 You have no web search or real-time data access. If something requires current/verifiable facts you're not certain of, say so plainly instead of guessing.
 
@@ -2944,7 +3001,341 @@ Rules: "before X" means schedule at least 15 minutes earlier than X's time, same
   }
 }
 
-// ===== Food Log Modal (replaces the old static "alts" system) =====
+// =====================================================================================
+// ===== Full LLM tool-calling system (replaces the regex parser as the primary path) ==
+// =====================================================================================
+//
+// Per explicit instruction: the live model itself now decides and executes EVERY
+// action — mark done, move, delete, restore, edit points, add task, edit streak/
+// points/punishment rate, remember a fact, log food — not just relative-position
+// moves. This is a deliberate tradeoff Abdullah accepted explicitly: natural language
+// understanding (any phrasing, casual/formal/mixed Arabic-English) in exchange for
+// the model occasionally getting something wrong, since it's the free Groq Llama
+// 3.3 70B model, not a top-tier reasoning model. Two things make this survivable:
+//   1. Every tool call is validated against REAL task data before executing (a
+//      hallucinated taskId can never silently corrupt anything — see
+//      aiValidateToolCall below), same defensive pattern the old relative-move
+//      resolver already used safely.
+//   2. Every execution snapshots full mutable state FIRST, and the chat bubble that
+//      reports the action carries an "↩️ تراجع" (undo) button wired to that exact
+//      snapshot — so any single wrong action is a one-tap, byte-exact revert, not a
+//      manual cleanup job.
+//
+// The old regex parser (aiParseIntent) is NOT deleted — it still runs, but only as a
+// zero-latency fast path for exact known phrasings (kept for speed/free API-call
+// conservation on the Groq free tier's daily budget), and its actions ALSO now
+// receive undo snapshots+buttons, so this protection applies universally regardless
+// of which path handled the message.
+
+// ----- Generic state snapshot / restore -----
+// Every AI-driven mutation (from either the regex fast path OR the tool-calling path)
+// touches some subset of: USER_EDITS, STATS, DONE, historyData, MEAL_OPTIONS. Rather
+// than writing bespoke "reverse this specific action" logic per action type (error-
+// prone, easy to miss a field, hard to keep in sync as actions evolve), this captures
+// a full deep-clone of all five BEFORE any tool call executes, and undo simply
+// restores that exact snapshot wholesale. This guarantees the post-undo state is
+// byte-identical to pre-action, not a best-effort reverse-engineered guess.
+function aiSnapshotState(){
+  return {
+    userEdits: JSON.parse(JSON.stringify(USER_EDITS)),
+    stats: JSON.parse(JSON.stringify(STATS)),
+    done: JSON.parse(JSON.stringify(DONE)),
+    historyData: JSON.parse(JSON.stringify(historyData)),
+    mealOptions: JSON.parse(JSON.stringify(MEAL_OPTIONS)),
+    selectedDate: SELECTED_DATE
+  };
+}
+
+async function aiRestoreSnapshot(snap){
+  if(!snap) return false;
+  USER_EDITS = snap.userEdits;
+  STATS = snap.stats;
+  DONE = snap.done;
+  historyData = snap.historyData;
+  MEAL_OPTIONS = snap.mealOptions;
+  SELECTED_DATE = snap.selectedDate;
+  try{
+    await saveAll();
+    await saveUserEdits();
+    await saveMealOptions();
+  }catch(e){
+    console.error('undo: save after restore failed',e);
+  }
+  try{
+    loadDay();
+    renderTabs();renderPanels();switchDay(getJDfromISO(SELECTED_DATE));updateUI();
+  }catch(e){
+    console.error('undo: re-render after restore failed',e);
+  }
+  return true;
+}
+
+// ----- Tool definitions given to the model -----
+// One tool per action the app can perform. The model must respond with a JSON object
+// naming exactly one tool + its arguments — never prose, never multiple tools at
+// once (multi-instruction messages are still split into clauses beforehand by
+// aiSplitCommands, same as the regex path, so each clause gets its own tool call).
+const AI_TOOL_DEFS = `Available tools (respond with EXACTLY ONE of these as a JSON object, nothing else — no markdown fences, no prose before or after):
+
+{"tool":"markDone","taskId":"<id from the task list>"}
+{"tool":"unmarkDone","taskId":"<id>"}
+{"tool":"logFood","taskId":"<id — must be a food or snack task>","description":"<what was eaten, in his own words>"}
+{"tool":"moveTask","taskId":"<id>","toDate":"YYYY-MM-DD","toTime":"H:MM ص" or "H:MM م"}
+{"tool":"deleteTask","taskId":"<id>"}
+{"tool":"restoreTask","taskId":"<id — must currently be deleted>"}
+{"tool":"editPoints","taskId":"<id>","points":<integer>}
+{"tool":"addCustomTask","date":"YYYY-MM-DD","time":"H:MM ص" or "H:MM م","name":"<short name>","points":<integer, default 5>}
+{"tool":"setStreak","value":<integer>}
+{"tool":"setBestStreak","value":<integer>}
+{"tool":"setWeeklyPoints","value":<integer>}
+{"tool":"setPunishRate","value":<number between 0 and 1, e.g. 0.15 for 15%>}
+{"tool":"rememberFact","fact":"<durable personal fact, stated plainly in third person>"}
+{"tool":"none","reason":"<short Arabic explanation of why no tool applies — e.g. this is a question, not a command>"}
+
+Rules:
+- ONLY use a taskId that appears in the provided task list. NEVER invent one.
+- "logFood" is for ANY food/snack completion, however phrased — "أكلت", "اكلت", "خلصت الغدا", "ate", casual or formal, doesn't matter. Never use markDone for a food/snack task; always use logFood so nutrition gets tracked properly.
+- If the message clearly refers to something ALREADY missing from the task list (e.g. asking to restore something not currently deleted, or edit a task that doesn't exist), still pick the closest tool and let validation reject it — do not use "none" just because you're not 100% certain, only use "none" for messages that are genuinely not instructions at all (questions, small talk, opinions).
+- If a date/day isn't stated, assume he means the currently selected/viewed date given below.
+- Understand ANY phrasing — formal Arabic, Egyptian/Gulf/any dialect, English, mixed, typos, casual shorthand. The regex-based fast path already handles the most common exact phrasings before you're even called; you are specifically here for everything that ISN'T an exact common phrasing, so err toward actually resolving intent rather than deferring.`;
+
+function aiBuildToolCallSystemPrompt(context, selectedDate){
+  return `You translate Abdullah's natural-language message into exactly one structured tool call against his real schedule data.
+
+${AI_TOOL_DEFS}
+
+Currently selected/viewed date: ${selectedDate}
+
+Full week's task list (id, name, category, time, date, done status, deleted status):
+${JSON.stringify(context)}`;
+}
+
+// Validates a parsed tool-call object against REAL task data before anything is
+// allowed to execute. This is the actual safety mechanism that makes handing the
+// model full execution power survivable — a hallucinated taskId, an impossible date,
+// or a nonsensical value is rejected here, not trusted. Returns {ok:true, ...} or
+// {ok:false, reply:'...'}.
+function aiValidateToolCall(parsed, allTasksFlat){
+  if(!parsed || typeof parsed!=='object') return{ok:false,reply:'⚠️ رد الذكاء الاصطناعي مش مفهوم — جرب تاني.'};
+  const tool=parsed.tool;
+  if(!tool) return{ok:false,reply:'⚠️ رد الذكاء الاصطناعي مش مفهوم — جرب تاني.'};
+
+  if(tool==='none'){
+    return{ok:true,tool:'none',reply:null}; // not a command — falls through to normal chat reply
+  }
+
+  const findTask=id=>allTasksFlat.find(t=>t.id===id);
+
+  switch(tool){
+    case 'markDone':
+    case 'unmarkDone':
+    case 'deleteTask':
+    case 'restoreTask': {
+      const t=findTask(parsed.taskId);
+      if(!t) return{ok:false,reply:'⚠️ المهمة اللي حددها الذكاء الاصطناعي مش موجودة في الجدول الحقيقي — جرب تكتب اسمها بشكل أوضح.'};
+      if(tool==='restoreTask' && !t.deleted) return{ok:false,reply:`"${t.name}" مش محذوفة أصلاً.`};
+      if(tool==='deleteTask' && t.deleted) return{ok:false,reply:`"${t.name}" محذوفة بالفعل.`};
+      return{ok:true,tool,taskId:t.id,taskName:t.name,iso:t.date};
+    }
+    case 'logFood': {
+      const t=findTask(parsed.taskId);
+      if(!t) return{ok:false,reply:'⚠️ المهمة اللي حددها الذكاء الاصطناعي مش موجودة في الجدول الحقيقي.'};
+      if(t.cat!=='food' && t.cat!=='snack') return{ok:false,reply:`"${t.name}" مش وجبة — استخدم markDone لها بدل logFood.`};
+      if(!parsed.description || !String(parsed.description).trim()) return{ok:false,reply:'⚠️ مش واضح إيه اللي اتاكل بالظبط — قول الوصف.'};
+      return{ok:true,tool,taskId:t.id,taskName:t.name,iso:t.date,description:String(parsed.description).trim()};
+    }
+    case 'moveTask': {
+      const t=findTask(parsed.taskId);
+      if(!t) return{ok:false,reply:'⚠️ المهمة اللي حددها الذكاء الاصطناعي مش موجودة في الجدول الحقيقي.'};
+      if(!parsed.toDate || !/^\d{4}-\d{2}-\d{2}$/.test(parsed.toDate)) return{ok:false,reply:'⚠️ مش قادر أحدد التاريخ الصحيح — قول اليوم بالظبط.'};
+      if(!parsed.toTime || !/\d{1,2}:\d{2}\s*[صم]/.test(parsed.toTime)) return{ok:false,reply:'⚠️ مش قادر أحدد الوقت الصحيح — قول الساعة بالظبط.'};
+      return{ok:true,tool,taskId:t.id,taskName:t.name,fromIso:t.date,toDate:parsed.toDate,toTime:parsed.toTime};
+    }
+    case 'editPoints': {
+      const t=findTask(parsed.taskId);
+      if(!t) return{ok:false,reply:'⚠️ المهمة اللي حددها الذكاء الاصطناعي مش موجودة في الجدول الحقيقي.'};
+      const pts=parseInt(parsed.points,10);
+      if(!Number.isFinite(pts) || pts<0 || pts>500) return{ok:false,reply:'⚠️ قيمة النقاط دي مش منطقية — قول رقم واضح.'};
+      return{ok:true,tool,taskId:t.id,taskName:t.name,points:pts};
+    }
+    case 'addCustomTask': {
+      if(!parsed.date || !/^\d{4}-\d{2}-\d{2}$/.test(parsed.date)) return{ok:false,reply:'⚠️ مش قادر أحدد التاريخ الصحيح — قول اليوم بالظبط.'};
+      if(!parsed.time || !/\d{1,2}:\d{2}\s*[صم]/.test(parsed.time)) return{ok:false,reply:'⚠️ مش قادر أحدد الوقت الصحيح — قول الساعة بالظبط.'};
+      if(!parsed.name || !String(parsed.name).trim()) return{ok:false,reply:'⚠️ مش واضح اسم المهمة الجديدة.'};
+      const pts=Number.isFinite(parseInt(parsed.points,10))?Math.max(0,Math.min(500,parseInt(parsed.points,10))):5;
+      return{ok:true,tool,date:parsed.date,time:parsed.time,name:String(parsed.name).trim(),points:pts};
+    }
+    case 'setStreak':
+    case 'setBestStreak':
+    case 'setWeeklyPoints': {
+      const v=parseInt(parsed.value,10);
+      if(!Number.isFinite(v) || v<0 || v>9999) return{ok:false,reply:'⚠️ القيمة دي مش منطقية — قول رقم واضح.'};
+      return{ok:true,tool,value:v};
+    }
+    case 'setPunishRate': {
+      let v=parsed.value;
+      if(typeof v==='string') v=parseFloat(v.replace('%',''))/(v.includes('%')?100:1);
+      if(!Number.isFinite(v)) return{ok:false,reply:'⚠️ القيمة دي مش منطقية.'};
+      if(v>1) v=v/100; // tolerate "20" meaning 20%
+      if(v<0||v>1) return{ok:false,reply:'⚠️ نسبة الخصم لازم تكون بين ٠ و ١٠٠٪.'};
+      return{ok:true,tool,value:v};
+    }
+    case 'rememberFact': {
+      if(!parsed.fact || !String(parsed.fact).trim()) return{ok:false,reply:'⚠️ مش واضح إيه اللي المفروض أفتكره.'};
+      return{ok:true,tool,fact:String(parsed.fact).trim()};
+    }
+    default:
+      return{ok:false,reply:'⚠️ الذكاء الاصطناعي طلب حاجة مش معروفة — جرب تصيغ طلبك بشكل تاني.'};
+  }
+}
+
+// Builds the flat, richly-annotated task list (across the whole week, both directions
+// from today) the model needs to ground every decision in real data — includes done/
+// deleted status so the model can correctly judge things like "this is already done"
+// or "this isn't currently deleted" itself, in addition to the hard validation gate
+// in aiValidateToolCall above.
+function aiBuildFullToolContext(){
+  const flat=[];
+  for(let jd=0;jd<7;jd++){
+    const iso=dateForWeekday(jd,TODAY);
+    const tasks=getAllTasks(jd,iso).filter(t=>t[2]!=='free');
+    for(const t of tasks){
+      flat.push({
+        id:t[0], name:t[4], cat:t[2], time:t[1], date:iso,
+        done:!!(historyData[iso]||{}).done?.[t[0]],
+        deleted:!!t._deleted
+      });
+    }
+  }
+  return flat;
+}
+
+// Sends one message (already split into a single clause by aiSplitCommands upstream)
+// to the live model for full tool-call resolution, validates the response against
+// real data, and returns a normalized {ok, tool, ...fields, reply} — never executes
+// anything itself, execution stays in aiExecuteToolCall so there's exactly one path
+// that ever mutates state, same discipline as every other action in this file.
+async function aiResolveToolCall(msg){
+  if(!AI_WORKER_URL || AI_WORKER_URL==='REPLACE_WITH_YOUR_WORKER_URL'){
+    return{ok:false,reply:'⚠️ المساعد الذكي لسه مش متوصل بالسيرفر.'};
+  }
+  const context=aiBuildFullToolContext();
+  const sys=aiBuildToolCallSystemPrompt(context, SELECTED_DATE);
+  try{
+    const res=await fetch(AI_WORKER_URL,{
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({system:sys,messages:[{role:'user',content:msg}]})
+    });
+    const data=await res.json();
+    if(!res.ok || data.error) return{ok:false,reply:'⚠️ حصل خطأ من السيرفر — جرب تاني.'};
+    let raw=(data.text||'').trim().replace(/^```json\s*|```$/g,'').trim();
+    let parsed;
+    try{ parsed=JSON.parse(raw); }catch{ return{ok:false,reply:'⚠️ مش فاهم الطلب ده كويس — جرب تصيغه بشكل أوضح.'}; }
+    return aiValidateToolCall(parsed, context);
+  }catch(e){
+    console.error('tool call resolve failed',e);
+    return{ok:false,reply:'⚠️ مش قادر أوصل للسيرفر دلوقتي.'};
+  }
+}
+
+// Executes a VALIDATED tool call (already passed through aiValidateToolCall). Takes a
+// snapshot first so the caller can attach an undo button, then performs the single
+// deterministic mutation for that tool — reusing the exact same underlying functions
+// the regex path and manual UI already use (saveUserEdits/saveAll/flFinalizeLog/etc.)
+// so there is never a second, divergent implementation of what e.g. "delete a task"
+// actually means.
+async function aiExecuteToolCall(v){
+  const snapshot=aiSnapshotState();
+  switch(v.tool){
+    case 'markDone': {
+      if(!historyData[v.iso]) historyData[v.iso]={};
+      if(!historyData[v.iso].done) historyData[v.iso].done={};
+      const jd=getJDfromISO(v.iso);
+      const taskObj=getAllTasks(jd,v.iso).find(t=>t[0]===v.taskId);
+      const pts=taskObj?taskObj[6]:0;
+      if(historyData[v.iso].done[v.taskId]===undefined || historyData[v.iso].done[v.taskId]===false){
+        historyData[v.iso].done[v.taskId]=pts||true;
+        if(v.iso===SELECTED_DATE) DONE[v.taskId]=pts||true;
+        if(v.iso===TODAY) STATS.pts=(STATS.pts||0)+(typeof pts==='number'?pts:0);
+        try{ checkStreak(); }catch(e){ console.error(e); }
+      }
+      await saveAll();
+      break;
+    }
+    case 'unmarkDone': {
+      const prevVal=(historyData[v.iso]||{}).done?.[v.taskId];
+      if(historyData[v.iso] && historyData[v.iso].done){
+        const jd=getJDfromISO(v.iso);
+        const taskObj=getAllTasks(jd,v.iso).find(t=>t[0]===v.taskId);
+        const basePts=taskObj?taskObj[6]:0;
+        const earned=typeof prevVal==='number'?prevVal:(prevVal==='qada'?Math.floor((basePts||0)/2):(basePts||0));
+        delete historyData[v.iso].done[v.taskId];
+        if(v.iso===SELECTED_DATE) delete DONE[v.taskId];
+        if(v.iso===TODAY) STATS.pts=(STATS.pts||0)-earned;
+        if(historyData[v.iso].foodLog) delete historyData[v.iso].foodLog[v.taskId];
+        if(historyData[v.iso].prayerLogs) delete historyData[v.iso].prayerLogs[v.taskId];
+        try{ checkStreak(); }catch(e){ console.error(e); }
+      }
+      await saveAll();
+      break;
+    }
+    case 'logFood': {
+      // Reuses the SAME macro-computation pipeline the modal uses (flComputeMacro +
+      // flFinalizeLog) rather than a separate flat point award, so AI-driven food
+      // logging gets identical nutrition tracking to the manual flow.
+      const jd=getJDfromISO(v.iso);
+      const taskObj=getAllTasks(jd,v.iso).find(t=>t[0]===v.taskId);
+      if(taskObj){
+        const wasSelected=SELECTED_DATE;
+        SELECTED_DATE=v.iso;
+        const result=await flComputeMacro(taskObj, v.description, null);
+        SELECTED_DATE=wasSelected;
+        if(result.ok && !result.needsClarification){
+          const prevSelected=SELECTED_DATE;
+          SELECTED_DATE=v.iso;
+          await flFinalizeLog(taskObj, v.description, result.macro, result.verdict, false);
+          SELECTED_DATE=prevSelected;
+        }
+      }
+      break;
+    }
+    case 'moveTask': {
+      const fullTask=aiFindTaskByIdOnDate(v.taskId, v.fromIso);
+      if(fullTask) await aiMoveTaskExec(fullTask, v.fromIso, v.toDate, v.toTime);
+      break;
+    }
+    case 'deleteTask': {
+      USER_EDITS.deletes[v.taskId]=true;
+      await saveUserEdits();
+      break;
+    }
+    case 'restoreTask': {
+      delete USER_EDITS.deletes[v.taskId];
+      await saveUserEdits();
+      break;
+    }
+    case 'editPoints': {
+      USER_EDITS.pointOverrides[v.taskId]=v.points;
+      await saveUserEdits();
+      break;
+    }
+    case 'addCustomTask': {
+      USER_EDITS.customTasks.push({id:aiGenId('custom'),date:v.date,time:v.time,cat:'free',ico:'✨',name:v.name,desc:'أُضيفت بواسطة المساعد',pts:v.points,createdAt:Date.now()});
+      await saveUserEdits();
+      break;
+    }
+    case 'setStreak': { STATS.cur=v.value; await saveAll(); break; }
+    case 'setBestStreak': { STATS.best=v.value; await saveAll(); break; }
+    case 'setWeeklyPoints': { STATS.pts=v.value; await saveAll(); break; }
+    case 'setPunishRate': { STATS.punishRateOverride=v.value; await saveAll(); break; }
+    case 'rememberFact': { aiMemoryAdd(v.fact); await saveUserMemory(); break; }
+  }
+  try{ renderPanels();switchDay(getJDfromISO(SELECTED_DATE));updateUI(); }catch(e){ console.error('re-render after tool exec failed',e); }
+  return snapshot;
+}
+
+
 // State for whichever task the modal is currently open for.
 let FL_ACTIVE_TASK=null;
 
@@ -2953,29 +3344,30 @@ function fmtMacroShort(m){
   return `${r1(m.k)} سعرة · ب${r1(m.p)} · ك${r1(m.c)} · د${r1(m.f)} · أ${r1(m.b||0)}`;
 }
 
-function openFoodLogModal(task,existingEntry){
+function openFoodLogModal(task,existingEntry,prefillText){
   FL_ACTIVE_TASK=task;
   const modal=document.getElementById('foodLogModal');
   const titleEl=document.getElementById('flTitle');
   const subEl=document.getElementById('flSub');
   const isEdit=!!existingEntry;
   if(titleEl) titleEl.textContent=isEdit?`تعديل "${task[4]}"`:`إيه اللي أكلته في "${task[4]}"؟`;
-  if(subEl) subEl.textContent=isEdit?'عدّل الوصف واحسب القيم من جديد — هيستبدل التسجيل القديم بالكامل':'اختار من الخيارات المحفوظة، أو اكتب إيه اللي أكلته بالظبط';
+  if(subEl) subEl.textContent=isEdit?'عدّل الوصف واحسب القيم من جديد — هيستبدل التسجيل القديم بالكامل':(prefillText?'راجع الوصف اللي فهمته من كلامك، وعدّله لو محتاج، وبعدين احسب':'اختار من الخيارات المحفوظة، أو اكتب إيه اللي أكلته بالظبط');
 
   // Reset to the choose step every time it opens.
   document.getElementById('flChooseStep').style.display='block';
   document.getElementById('flLoadingStep').style.display='none';
   document.getElementById('flResultStep').style.display='none';
   document.getElementById('flAskStep').style.display='none';
-  // Edit mode pre-fills the free-text box with what was actually logged before, so
-  // Abdullah can tweak a wrong entry instead of retyping the whole meal from scratch.
-  document.getElementById('flFreeText').value=isEdit?(existingEntry.description||''):'';
+  // Edit mode pre-fills from the previous log; a fresh AI-routed log (from chat, e.g.
+  // "أكلت وجبة بعد التمرين امبارح") pre-fills from the best-effort guessed description
+  // instead — either way nothing is silently trusted, it's an editable textarea he
+  // reviews before submitting.
+  document.getElementById('flFreeText').value=isEdit?(existingEntry.description||''):(prefillText||'');
 
   // Render saved options scoped to THIS meal slot only (gym:breakfast vs
-  // rest:breakfast never mix, per Abdullah's explicit instruction). Hidden in edit
-  // mode — picking a different saved option to REPLACE an existing log is a separate
-  // action from picking one fresh, and mixing the two flows in one screen invites
-  // mistakes; edit mode is free-text-only, by design.
+  // rest:breakfast never mix, per Abdullah's explicit instruction). Hidden only in
+  // true edit mode — a fresh AI-routed log still shows saved options same as a normal
+  // card tap would, since it's not replacing anything yet.
   const optsWrap=document.getElementById('flSavedOpts');
   const dividerEl=document.querySelector('#flChooseStep .fl-divider');
   if(isEdit){
@@ -3263,19 +3655,43 @@ async function aiCallLiveModel(){
 // the memory list view — all inside the same panel body.
 let AI_VIEW_MODE='chat'; // 'chat' | 'memory' — history is now a separate sidebar, not a body mode
 
+// Snapshots are kept OUT of persisted chat history (saveAiChat only serializes
+// message text/tone/etc.) — a full deep-clone of USER_EDITS/STATS/DONE/historyData
+// per action would bloat every save and serves no purpose once the session ends
+// (undoing something from days ago against data that's moved on since isn't safe or
+// meaningful anyway). Snapshots live only in-memory for the current page load, keyed
+// by a short-lived id stamped onto the message; only a boolean 'hasUndo' flag is
+// persisted so a reload correctly shows no (dead) undo button instead of a
+// non-functional one.
+const AI_UNDO_SNAPSHOTS=new Map();
+let AI_UNDO_ID_COUNTER=0;
+function aiRegisterUndoSnapshot(snap){
+  const id='undo-'+(++AI_UNDO_ID_COUNTER)+'-'+Date.now();
+  AI_UNDO_SNAPSHOTS.set(id,snap);
+  return id;
+}
+
 function aiRenderMessages(){
   const body=document.getElementById('aiBody');
   if(!body) return;
   if(AI_VIEW_MODE==='memory'){ aiRenderMemoryList(); return; }
   const session=aiGetActiveSession();
   if(!session.messages.length){
-    body.innerHTML=`<div class="ai-empty">👋 أهلاً! اسألني أي حاجة، أو جرب أوامر زي:<br>"عملت الجيم"<br>"انقل الغدا لبكرة الساعة ٢"<br>"احذف السباحة النهاردة"<br>"ضيف مهمة مذاكرة الساعة ٧ بـ 10 نقاط"<br><br>التغييرات دي خاصة بحسابك بس، ومتزامنة على كل أجهزتك.</div>`;
+    body.innerHTML=`<div class="ai-empty">👋 أهلاً! قولّي أي حاجة عايز تعملها في جدولك بأي طريقة عايزها — رسمي، عامي، عربي، إنجليزي، مفيش فرق. مثال: "عملت الجيم" أو "ممكن تنقلّي الغدا بكرة الساعة ٢؟" أو "شيل السباحة النهاردة".<br><br>كل تغيير بيعمله المساعد بييجيله زرار ↩️ تراجع تحت الرد، تقدر تستخدمه لو حصل غلط.<br><br>التغييرات دي خاصة بحسابك بس، ومتزامنة على كل أجهزتك.</div>`;
     return;
   }
   body.innerHTML=session.messages.map(m=>{
     if(m.tone==='typing') return`<div class="ai-msg bot" style="opacity:.6">⏳ بيفكر...</div>`;
     const cls=m.role==='user'?'user':`bot${m.tone?' '+m.tone:''}`;
-    return`<div class="ai-msg ${cls}">${m.text.replace(/</g,'&lt;')}</div>`;
+    // undoIds is stamped fresh each render (see aiHandleSend) from the live
+    // AI_UNDO_SNAPSHOTS map — a message carrying hasUndo:true from a PRIOR page load
+    // (after a reload) has no live snapshot to restore, so no button renders for it;
+    // only same-session undos are ever offered, since restoring against data that's
+    // moved on since a reload isn't guaranteed safe.
+    const undoBtns=(m.undoIds&&m.undoIds.length)
+      ?`<div style="margin-top:6px;display:flex;gap:6px;flex-wrap:wrap">${m.undoIds.map((uid,i)=>`<button class="ai-undo-btn" data-undo-id="${uid}" type="button">↩️ تراجع${m.undoIds.length>1?' #'+(i+1):''}</button>`).join('')}</div>`
+      :'';
+    return`<div class="ai-msg ${cls}">${m.text.replace(/</g,'&lt;')}${undoBtns}</div>`;
   }).join('');
   body.scrollTop=body.scrollHeight;
 }
@@ -3363,7 +3779,7 @@ function aiToggleMemoryView(){
 // was the actual mechanism behind "I told it to do 5 things and it only did 1": any
 // clause whose verb wasn't in this list never even reached aiParseIntent as its own
 // clause, it was merged away as non-command text.
-const AI_ACTION_VERBS_ANY=/(انقل|حرك|غير وقت|move|reschedule|احذف|امسح|شيل|delete|remove|عملت|خلصت|سويت|انجزت|أنجزت|i did|done|completed|finished|mark.*as\s*done|mark.*done|set.*(to\s*)?done|check\s*off|marked\s*as\s*done|ضيف|اضف|أضف|add task|new task|افتكر|اتذكر|سجل عني|تذكر|remember|صليت|صلّيت|prayed|خلي|نقطة|نقاط|points?|استريك|streak|نقاطي|رصيدي|my\s*points|my\s*score|نسبة\s*الخصم|معدل\s*الخصم|punishment\s*rate|penalty\s*rate|set\b|رجعها|رجّعها|ارجع|رجع|استرجع|undo|restore|bring.*back|الغي|unmark)/i;
+const AI_ACTION_VERBS_ANY=/(انقل|حرك|غير وقت|move|reschedule|احذف|امسح|شيل|delete|remove|عملت|خلصت|سويت|انجزت|أنجزت|أكلت|اكلت|كلت|شربت|ate|drank|i did|done|completed|finished|mark.*as\s*done|mark.*done|set.*(to\s*)?done|check\s*off|marked\s*as\s*done|ضيف|اضف|أضف|add task|new task|افتكر|اتذكر|سجل عني|تذكر|remember|صليت|صلّيت|prayed|خلي|نقطة|نقاط|points?|استريك|streak|نقاطي|رصيدي|my\s*points|my\s*score|نسبة\s*الخصم|معدل\s*الخصم|punishment\s*rate|penalty\s*rate|set\b|رجعها|رجّعها|ارجع|رجع|استرجع|undo|restore|bring.*back|الغي|unmark)/i;
 
 function aiSplitCommands(msg){
   // Split on commas, " and ", standalone " و ", AND the attached-prefix Arabic form
@@ -3411,10 +3827,11 @@ async function aiProcessClause(clauseText){
     if(!resolved.ok) return{tone:'err',reply:resolved.reply,handled:true};
     const task=aiFindTaskByIdOnDate(resolved.taskId,resolved.fromIso);
     if(!task) return{tone:'err',reply:'⚠️ المهمة مش موجودة على التاريخ المتوقع — جرب تاني.',handled:true};
+    const snapshot=aiSnapshotState();
     try{
       await aiMoveTaskExec(task,resolved.fromIso,resolved.toDate,resolved.toTime);
       const why=resolved.reasoning?` (${resolved.reasoning})`:'';
-      return{tone:'ok',reply:`تم نقل "${resolved.taskName}" إلى ${resolved.toDate} الساعة ${resolved.toTime}${why} ✅`,handled:true};
+      return{tone:'ok',reply:`تم نقل "${resolved.taskName}" إلى ${resolved.toDate} الساعة ${resolved.toTime}${why} ✅`,handled:true,undoSnapshot:snapshot};
     }catch(e){
       console.error('relative move exec failed',e);
       return{tone:'err',reply:'⚠️ حصل خطأ أثناء تنفيذ النقل — جرب تاني.',handled:true};
@@ -3427,10 +3844,19 @@ async function aiProcessClause(clauseText){
   // locally and deterministically through the real data functions — never through
   // the LLM. This is intentional: correctness and safety for actual data mutations
   // matter more than routing everything through one code path.
-  if(['markDone','moveTask','deleteTask','restoreTask','unmarkDone','editPoints','addCustomTask','rememberFact','openPrayerModal','setCurStreak','setBestStreak','setWeeklyPoints','setPunishRate','alreadyDone','unrecognizedTask','needMoreInfo'].includes(intent.action)){
+  if(['markDone','moveTask','deleteTask','restoreTask','unmarkDone','editPoints','addCustomTask','rememberFact','openPrayerModal','openFoodLogModal','setCurStreak','setBestStreak','setWeeklyPoints','setPunishRate','alreadyDone','unrecognizedTask','needMoreInfo'].includes(intent.action)){
     let tone='ok';
+    let snapshot=null;
+    const mutatingActions=['markDone','moveTask','deleteTask','restoreTask','unmarkDone','editPoints','addCustomTask','rememberFact','setCurStreak','setBestStreak','setWeeklyPoints','setPunishRate'];
     try{
-      if(['markDone','moveTask','deleteTask','restoreTask','unmarkDone','editPoints','addCustomTask','rememberFact','openPrayerModal','setCurStreak','setBestStreak','setWeeklyPoints','setPunishRate'].includes(intent.action)){
+      if(mutatingActions.includes(intent.action)){
+        snapshot=aiSnapshotState(); // taken BEFORE execution so undo restores the true prior state
+        await aiExecuteAction(intent);
+      }else if(['openPrayerModal','openFoodLogModal'].includes(intent.action)){
+        // Modals don't get a pre-emptive snapshot here — they don't mutate anything
+        // themselves (see aiExecuteAction), the modal's own confirm flow does, and
+        // that flow already has its own existing UI (e.g. the ✏️ تعديل edit button)
+        // rather than a chat-level undo, so no snapshot is needed for these two.
         await aiExecuteAction(intent);
       }else{
         tone='err';
@@ -3440,7 +3866,7 @@ async function aiProcessClause(clauseText){
       intent.reply='⚠️ حصل خطأ أثناء تنفيذ التغيير — جرب تاني.';
       tone='err';
     }
-    return{tone,reply:intent.reply,handled:true,_opensModal:intent.action==='openPrayerModal'&&tone==='ok'};
+    return{tone,reply:intent.reply,handled:true,_opensModal:(intent.action==='openPrayerModal'||intent.action==='openFoodLogModal')&&tone==='ok',undoSnapshot:(tone==='ok'&&snapshot)?snapshot:undefined};
   }
 
   return{handled:false}; // not a recognized structured command
@@ -3472,22 +3898,51 @@ async function aiHandleSend(){
   // instructions ("انقل الجيم لبكرة واحذف السباحة النهاردة") executes ALL of them,
   // not just whichever pattern matched first.
   const clauses=aiSplitCommands(text);
-  const results=[];
+  const results=[]; // each entry: {tone, reply, undoSnapshot?, _opensModal?}
   let anyHandled=false;
   let anyMutated=false;
 
   for(const clause of clauses){
+    // FAST PATH FIRST: the zero-latency local regex parser still gets first crack at
+    // each clause — exact known phrasings resolve instantly and for free, conserving
+    // the Groq free tier's daily call budget for everything else. This is purely a
+    // performance/cost optimization now, NOT the safety boundary it used to be — see
+    // the fallback below.
     const r=await aiProcessClause(clause);
     if(r.handled){
       anyHandled=true;
       if(r.tone!=='err') anyMutated=true;
+      // Attach an undo snapshot to fast-path mutations too, so the undo button is
+      // universal regardless of which path handled the message. aiProcessClause's
+      // existing actions already execute before returning, so the snapshot has to be
+      // taken there — see the aiProcessClause edit below that adds this.
       results.push(r);
-      // A prayer modal is now open and needs a tap before anything else can happen —
-      // don't silently process further clauses behind it, and don't re-render panels
-      // over an open modal (that's what caused the mobile zoom/scroll glitch: a
-      // re-render firing while the modal transition was still animating).
       if(r._opensModal) break;
+      continue;
     }
+
+    // FULL TOOL-CALLING PATH: per explicit instruction, the live model itself now
+    // decides AND executes anything the fast path didn't recognize — any phrasing,
+    // casual/formal/mixed Arabic-English, not just a fixed set of keywords. Every
+    // tool call is validated against real task data before executing (see
+    // aiValidateToolCall), and a full state snapshot is taken immediately before
+    // execution so the chat bubble can carry a real, byte-exact undo button.
+    const resolved=await aiResolveToolCall(clause);
+    if(!resolved.ok){
+      results.push({tone:'err',reply:resolved.reply,handled:true});
+      anyHandled=true;
+      continue;
+    }
+    if(resolved.tool==='none'){
+      // Genuinely not a command (a question, small talk, etc.) — don't mark as
+      // handled, let it fall through to the normal conversational reply below so the
+      // user still gets a real answer instead of an empty confirmation.
+      continue;
+    }
+    const snapshot=await aiExecuteToolCall(resolved);
+    anyHandled=true;
+    anyMutated=true;
+    results.push({tone:'ok',reply:aiToolCallReplyText(resolved),undoSnapshot:snapshot,handled:true});
   }
 
   const modalJustOpened=results.some(r=>r._opensModal);
@@ -3496,20 +3951,24 @@ async function aiHandleSend(){
       try{ renderPanels();switchDay(getJDfromISO(SELECTED_DATE));updateUI(); }catch(e){ console.error('re-render after AI action(s) failed:',e); }
     }
     // Combine every clause's reply into one message, numbered if there was more than
-    // one command, so a multi-instruction message gets one clear combined confirmation
-    // instead of several separate bubbles.
+    // one command. When exactly one result carries an undo snapshot, attach it
+    // directly to the combined message; when multiple clauses each mutated state,
+    // attach an array so each can be undone independently (see aiRenderMessages).
     const combinedText=results.length>1
       ?results.map((r,i)=>`${i+1}. ${r.reply}`).join('\n')
       :results[0].reply;
     const overallTone=results.some(r=>r.tone==='err')?(results.every(r=>r.tone==='err')?'err':null):'ok';
-    session.messages.push({role:'bot',text:combinedText,ts:Date.now(),tone:overallTone});
+    const undoSnapshots=results.filter(r=>r.undoSnapshot).map(r=>r.undoSnapshot);
+    const undoIds=undoSnapshots.map(s=>aiRegisterUndoSnapshot(s));
+    session.messages.push({role:'bot',text:combinedText,ts:Date.now(),tone:overallTone,undoIds:undoIds.length?undoIds:undefined,hasUndo:undoIds.length>0});
     session.lastMsgAt=Date.now();
     aiRenderMessages();
     await saveAiChat();
     return;
   }
 
-  // Nothing in the message matched a known command pattern — treat the whole
+  // Nothing in the message matched a known command pattern AND the tool resolver
+  // determined it's genuinely not an instruction (tool:'none') — treat the whole
   // original message as general conversation and send it to the live model.
   session.messages.push({role:'bot',text:'...',ts:Date.now(),tone:'typing'});
   aiRenderMessages();
@@ -3520,6 +3979,28 @@ async function aiHandleSend(){
   session.lastMsgAt=Date.now();
   aiRenderMessages();
   await saveAiChat();
+}
+
+// Human-readable Arabic confirmation for a successfully executed tool call — mirrors
+// the reply strings the old regex intents produced, so the chat feel stays identical
+// regardless of which path (fast regex or full tool-calling) actually handled it.
+function aiToolCallReplyText(v){
+  switch(v.tool){
+    case 'markDone': return `تمام، سجلت "${v.taskName}" بتاريخ ${v.iso} كمُنجزة ✅`;
+    case 'unmarkDone': return `تم إلغاء تسجيل "${v.taskName}" كمُنجزة في ${v.iso} ✅`;
+    case 'logFood': return `تم تسجيل "${v.description}" في "${v.taskName}" ✅`;
+    case 'moveTask': return `تم نقل "${v.taskName}" إلى ${v.toDate} الساعة ${v.toTime} ✅`;
+    case 'deleteTask': return `تم حذف "${v.taskName}" (لسه ظاهرة بس معلّم عليها كمحذوفة) 🗑️`;
+    case 'restoreTask': return `تم إرجاع "${v.taskName}" ✅`;
+    case 'editPoints': return `تم تغيير نقاط "${v.taskName}" إلى ${v.points}⭐ ✅`;
+    case 'addCustomTask': return `تم إضافة "${v.name}" يوم ${v.date} الساعة ${v.time} بـ ${v.points}⭐ ✅`;
+    case 'setStreak': return `تم تغيير الاستريك الحالي إلى ${v.value} 🔥`;
+    case 'setBestStreak': return `تم تغيير أعلى استريك إلى ${v.value} 🏆`;
+    case 'setWeeklyPoints': return `تم تغيير نقاط الأسبوع إلى ${v.value}⭐`;
+    case 'setPunishRate': return `تم تغيير نسبة الخصم إلى ${Math.round(v.value*100)}٪`;
+    case 'rememberFact': return `تمام، هفتكر إن ${v.fact} ✅`;
+    default: return 'تم ✅';
+  }
 }
 
 async function aiOpenPanel(){
@@ -3611,6 +4092,29 @@ document.body.addEventListener('click',async e=>{
   if(closest('#aiSidebarClose')){aiCloseSidebar();return;}
   if(closest('#aiSidebarNewChat')){await aiStartNewChat();aiCloseSidebar();return;}
   if(closest('#aiSidebarOverlay')){aiCloseSidebar();return;}
+
+  const undoBtn=closest('[data-undo-id]');
+  if(undoBtn){
+    const uid=undoBtn.getAttribute('data-undo-id');
+    const snap=AI_UNDO_SNAPSHOTS.get(uid);
+    if(!snap){
+      showToast('⚠️ التراجع ده مش متاح دلوقتي (يمكن الصفحة اتحدثت من ساعتها)',3200,'warn');
+      return;
+    }
+    undoBtn.disabled=true;
+    undoBtn.textContent='...جاري التراجع';
+    const ok=await aiRestoreSnapshot(snap);
+    if(ok){
+      AI_UNDO_SNAPSHOTS.delete(uid); // one-time use — prevents undoing an undo into a confusing double-revert
+      undoBtn.textContent='✅ اتراجع';
+      showToast('↩️ تم التراجع عن التغيير',2400);
+    }else{
+      undoBtn.disabled=false;
+      undoBtn.textContent='↩️ تراجع';
+      showToast('⚠️ فشل التراجع — جرب تاني',3000,'warn');
+    }
+    return;
+  }
 
   const memDel=closest('[data-memory-del]');
   if(memDel){
