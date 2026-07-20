@@ -23,7 +23,7 @@
 //      side needs it too to call pushManager.subscribe()).
 //   6. wrangler deploy
 
-import { buildPushHTTPRequest } from '@block65/webcrypto-web-push';
+import { buildPushPayload } from '@block65/webcrypto-web-push';
 
 const ALLOWED_ORIGIN = 'https://ashafei1905com.github.io';
 const MODEL = 'llama-3.3-70b-versatile';
@@ -296,13 +296,9 @@ async function dispatchDueReminders(env) {
       };
 
       try {
-        const { endpoint, headers, body: pushBody } = await buildPushHTTPRequest({
-          privateJWK: vapid.privateKey,
-          publicJWK: vapid.publicKey,
-          subscription,
-          message: {
-            payload: JSON.stringify(payload),
-            adminContact: vapid.subject,
+        const { headers, method, body } = await buildPushPayload(
+          {
+            data: payload,
             options: {
               ttl: 3600,
               // Explicit high urgency, per the original request — this is the correct
@@ -311,10 +307,16 @@ async function dispatchDueReminders(env) {
               urgency: 'high',
               topic: reminder.task_id
             }
+          },
+          subscription,
+          {
+            subject: vapid.subject,
+            publicKey: vapid.publicKey,
+            privateKey: vapid.privateKey
           }
-        });
+        );
 
-        const pushRes = await fetch(endpoint, { method: 'POST', headers, body: pushBody });
+        const pushRes = await fetch(subscription.endpoint, { method, headers, body });
 
         if (pushRes.status === 404 || pushRes.status === 410) {
           // Subscription is dead (user revoked permission, uninstalled PWA, etc.) —

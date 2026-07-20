@@ -1,9 +1,8 @@
 name = "falling-frost-7656"
 main = "worker.js"
 compatibility_date = "2026-07-13"
-# nodejs_compat intentionally NOT set -- @block65/webcrypto-web-push is built on the
-# Web Crypto API natively available in Workers, unlike web-push-neo/node web-push
-# which need Node's crypto module shimmed. Fewer moving parts, fewer failure points.
+# If runtime needs Node compatibility in the future, use
+# `npx wrangler deploy --compatibility-flags nodejs_compat`
 
 [triggers]
 crons = ["* * * * *"]
