@@ -1113,7 +1113,10 @@ async function saveAll(){
       mealOptions:MEAL_OPTIONS,
       weeklyPointsHistory:weeklyPointsHistory
     },{merge:true});
-  }catch(e){console.warn('cloud save failed',e);}
+  }catch(e){
+    console.warn('cloud save failed',e);
+    showToast('⚠️ فشل مزامنة بياناتك مع Firebase — تأكد من الإنترنت وجرب تاني',4200,'warn');
+  }
 }
 
 if (typeof dateOff !== 'function') window.dateOff=function(off,d){let dt=d?new Date(d):new Date();dt.setDate(dt.getDate()+off);return dt.toISOString().split('T')[0];};
@@ -4506,15 +4509,8 @@ if (typeof onAuthStateChanged !== 'undefined' && typeof fbAuth !== 'undefined') 
           migrateSavedReports();
           loadDay();
         }
-      }catch(e){console.warn('cloud load failed',e);}
-    }
-
-    await sanitizeStats();
-    initAppFlow(user);
-  });
-} else {
-  setTimeout(async ()=>{await loadAll();await sanitizeStats();initAppFlow(null);},100);
-}
-</script>
-</body>
+  }catch(e){
+    console.warn('cloud load failed',e);
+    showToast('⚠️ فشل تحميل بياناتك من Firebase — تأكد من الاتصال وجرب تاني',4200,'warn');
+  }
 </html>
