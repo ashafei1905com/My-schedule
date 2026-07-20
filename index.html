@@ -1472,6 +1472,17 @@ function notifTaskEndMin(task){
 // Sends the subscription (if we have one) + this reminder payload to the Worker,
 // which stores it in D1. Called after enabling notifications and whenever today's
 // task list changes (same trigger points the old scheduleTodayNotifications had).
+// ROOT CAUSE of "no notifications after the first session": this function only ever
+// recovered PUSH_SUBSCRIPTION by awaiting navigator.serviceWorker.ready — but nothing
+// on a normal page load ever called navigator.serviceWorker.register() to begin with
+// (registerServiceWorker() previously only ran inside requestNotifPermission(), i.e.
+// only at the exact moment the toggle was first tapped). Without an active
+// registration for THIS page load, .ready has nothing to resolve against and can hang
+// indefinitely — so on every subsequent app open (even with NOTIF_ENABLED=true and
+// permission already granted), this function silently did nothing, forever. Fixed by
+// always explicitly registering the SW here (registration is idempotent/cheap if
+// already registered) before ever touching .ready, and by bounding the wait with a
+// timeout so a genuinely stuck browser state can never hang this call forever either.
 async function syncPushSchedule(){
   if(!NOTIF_ENABLED) return;
   const user=fbAuth.currentUser;
@@ -1480,23 +1491,43 @@ async function syncPushSchedule(){
     return;
   }
   if(!PUSH_SUBSCRIPTION){
-    const reg=await (navigator.serviceWorker ? navigator.serviceWorker.ready.catch(()=>null) : null);
-    if(reg){
-      try{
-        const sub=await reg.pushManager.getSubscription();
-        if(sub) PUSH_SUBSCRIPTION=sub.toJSON();
-      }catch{}
+    try{
+      const reg=await registerServiceWorker(); // idempotent — safe to call every time
+      if(reg){
+        const ready=await Promise.race([
+          navigator.serviceWorker.ready,
+          new Promise(res=>setTimeout(()=>res(null),6000)) // never hang forever
+        ]).catch(()=>null);
+        const activeReg=ready||reg;
+        const sub=await activeReg.pushManager.getSubscription();
+        if(sub){
+          PUSH_SUBSCRIPTION=sub.toJSON();
+        }else if(VAPID_PUBLIC_KEY && VAPID_PUBLIC_KEY!=='REPLACE_WITH_YOUR_VAPID_PUBLIC_KEY' && typeof Notification!=='undefined' && Notification.permission==='granted'){
+          // Permission was already granted in a past session but the subscription
+          // itself never got recreated for THIS registration — re-subscribe rather
+          // than silently giving up, since permission being granted means we're
+          // allowed to.
+          const newSub=await activeReg.pushManager.subscribe({
+            userVisibleOnly:true,
+            applicationServerKey:urlBase64ToUint8Array(VAPID_PUBLIC_KEY)
+          });
+          PUSH_SUBSCRIPTION=newSub.toJSON();
+        }
+      }
+    }catch(e){
+      console.warn('push subscription recovery failed',e);
     }
   }
-  if(!PUSH_SUBSCRIPTION) return; // not actually subscribed yet — nothing to sync
+  if(!PUSH_SUBSCRIPTION) return; // still not subscribed — genuinely nothing to sync
 
   const reminders=buildTodayReminderPayload();
   try{
-    await fetch(AI_WORKER_URL+'/api/save-subscription',{
+    const res=await fetch(AI_WORKER_URL+'/api/save-subscription',{
       method:'POST',
       headers:{'Content-Type':'application/json'},
       body:JSON.stringify({uid:user.uid,subscription:PUSH_SUBSCRIPTION,reminders})
     });
+    if(!res.ok) console.warn('push schedule sync: server rejected',res.status);
   }catch(e){
     console.warn('push schedule sync failed',e);
   }
@@ -1949,7 +1980,13 @@ function renderCard(task,isToday){
   else if(isToday){
     if(isDone){
       const lbl=typeof done==='number'?`✅ +${done}⭐`:'✅';
-      act=`<div class="cbtn done">${lbl}</div>`;
+      // Food/snack tasks that were logged through the food-log modal get an edit
+      // button next to the done badge — previously there was NO way back into the
+      // modal once a task was marked done, so a wrong entry (wrong meal, wrong
+      // description, mis-tapped) was stuck forever with no way to correct it.
+      const canEditFood=isFoodLoggable && !!(historyData[SELECTED_DATE||TODAY]||{}).foodLog?.[id];
+      const editBtn=canEditFood?`<button class="cbtn" data-action="editfood" data-id="${id}" style="margin-top:4px;background:rgba(59,130,246,.1);border-color:rgba(59,130,246,.4);color:#60a5fa">✏️ تعديل</button>`:'';
+      act=`<div style="display:flex;flex-direction:column;align-items:flex-end;gap:0"><div class="cbtn done">${lbl}</div>${editBtn}</div>`;
     }else if(state==='NOTYET'){
       act=`<div class="cbtn exp">⏳ لسه مجاش وقتها</div>`;
     }else if(state==='QADA'){
@@ -2321,14 +2358,29 @@ const AI_PRAYER_NAME_MAP={
   'المغرب':'Maghrib','مغرب':'Maghrib','maghrib':'Maghrib','maghreb':'Maghrib',
   'العشاء':'Isha','العشا':'Isha','عشاء':'Isha','عشا':'Isha','isha':'Isha','ishaa':'Isha'
 };
+// "العشاء/العشا/عشا" is genuinely ambiguous — it means both the Isha PRAYER and the
+// DINNER meal, and both exist as separate tasks (pr-*-Isha vs *-dn/*-pm). Previously
+// this word mapped straight to Isha unconditionally, so "صليت العشا بس نسيت اسجلها"
+// (about dinner) silently opened the Isha prayer modal instead of the dinner food-log
+// modal — confirming it wrote to the wrong task, which is why the dinner card never
+// changed no matter what was tapped. Fix: require an explicit prayer-only signal
+// before resolving to Isha, and bail if meal context is present instead.
+const AI_PRAYER_CONTEXT_RE=/صلاة|صليت|صليتها|صلّيت|prayed|pray\b|مسجد|جامع|mosque|جماعة|جماعه|congregation|منفرد|لوحدي|أذكار|اذكار|dhikr|سنة الفجر|سنة الظهر|سنة العشاء|sunnah/;
+const AI_MEAL_CONTEXT_RE=/اكلت|أكلت|كلت|عشيت|أعشيت|وجبة|meal|ate|dinner|food|جبنة|فراخ|لحمة|بيض/;
 
 // Detects whether a message is about completing a specific daily prayer at all —
 // used to gate the more expensive detail-parsing below, and to distinguish "صليت
 // المغرب" (prayer completion) from unrelated messages that happen to contain a
-// prayer-adjacent word.
+// prayer-adjacent word. For the Isha/dinner collision words, requires explicit
+// prayer context (and no meal context) before returning 'Isha'.
 function aiDetectPrayerKey(low){
   for(const[word,pk] of Object.entries(AI_PRAYER_NAME_MAP)){
-    if(low.includes(word)) return pk;
+    if(!low.includes(word)) continue;
+    if(pk==='Isha' && (word==='العشاء'||word==='العشا'||word==='عشاء'||word==='عشا')){
+      if(AI_MEAL_CONTEXT_RE.test(low)) continue;
+      if(!AI_PRAYER_CONTEXT_RE.test(low)) continue;
+    }
+    return pk;
   }
   return null;
 }
@@ -2499,6 +2551,38 @@ function aiParseIntent(msg){
       reply:`تم حذف "${found.task[4]}" من ${found.iso} (لسه ظاهرة بس متعلّم عليها كمحذوفة) 🗑️`};
   }
 
+  // 3b. Undo a delete / bring a removed task back — "رجعها" / "ارجع السباحة" /
+  // "الغي الحذف" / "undo delete" / "restore". This was completely MISSING before:
+  // there was no code path that ever cleared USER_EDITS.deletes[id], so asking to
+  // "bring it back" always fell through to the live model, which could only describe
+  // what to say next — it had no tool to actually undelete anything. Checked BEFORE
+  // the generic delete branch's verbs would otherwise never fire since "رجع" doesn't
+  // overlap them, but placed here for locality with delete.
+  if(/رجعها|رجّعها|ارجع|رجع|الغي.*(حذف|delete)|استرجع|تراجع عن.*(حذف|delete)|undo.*(delete|remove)|restore|bring.*back/.test(low)){
+    const found=aiFindTask(raw,SELECTED_DATE);
+    if(!found) return{action:'unrecognizedTask',reply:'مش لاقي مهمة محذوفة بالاسم ده. جرب تكتب اسمها زي ما هي ظاهرة في الجدول.'};
+    if(!found.task._deleted){
+      return{action:'needMoreInfo',reply:`"${found.task[4]}" مش محذوفة أصلاً — مفيش حاجة أرجعها.`};
+    }
+    return{action:'restoreTask',task:found.task,iso:found.iso,
+      reply:`تم إرجاع "${found.task[4]}" في ${found.iso} ✅`};
+  }
+
+  // 3c. Undo a completion — "الغي إنجاز الجيم" / "مسجلتش الغدا صح، امسحها" / "unmark
+  // gym as done" / "undo dinner". Same gap as restoreTask above: there was no way to
+  // clear DONE[id]/historyData[iso].done[id] once set, so a wrongly-logged completion
+  // (e.g. the Isha/dinner mixup) could never actually be corrected through chat.
+  if(/الغي.*(انجاز|إنجاز|تسجيل)|امسح.*(انجاز|إنجاز|تسجيل)|مش صح.*سجلت|غلط.*سجلت|unmark|undo.*(done|complete)|mark.*(not\s*done|undone)/.test(low)){
+    const found=aiFindTask(raw,SELECTED_DATE);
+    if(!found) return{action:'unrecognizedTask',reply:'مش لاقي المهمة دي. جرب تكتب اسمها زي ما هي ظاهرة في الجدول.'};
+    const existingDone=(historyData[found.iso]||{}).done?.[found.task[0]];
+    if(existingDone===undefined || existingDone===false){
+      return{action:'needMoreInfo',reply:`"${found.task[4]}" مش مسجلة كمُنجزة أصلاً في ${found.iso}.`};
+    }
+    return{action:'unmarkDone',task:found.task,iso:found.iso,
+      reply:`تم إلغاء تسجيل "${found.task[4]}" كمُنجزة في ${found.iso} — النقاط اتخصمت لو كانت اتضافت ✅`};
+  }
+
   // 4. Edit points — "خلي الجيم بـ 30 نقطة" / "set gym points to 30". Explicitly
   // excludes STATS-level phrasing (streak/best-streak/my-points/punishment-rate) so
   // this never risks matching those by relying on aiFindTask happening to fail to
@@ -2632,6 +2716,34 @@ async function aiExecuteAction(intent){
     const{task}=intent;
     USER_EDITS.deletes[task[0]]=true;
     await saveUserEdits();
+    return true;
+  }
+  if(action==='restoreTask'){
+    // The actual fix for "رجعها" never doing anything: clear the soft-delete flag
+    // that deleteTask set. Previously nothing in the codebase ever did this.
+    const{task}=intent;
+    delete USER_EDITS.deletes[task[0]];
+    await saveUserEdits();
+    return true;
+  }
+  if(action==='unmarkDone'){
+    // Reverses a wrongly-logged completion: clears DONE for the visible day, removes
+    // it from historyData, deducts the points that were added (only if it was today,
+    // matching how markDone only adds points for today), and re-checks the streak so
+    // an incorrectly-completed "all done" day doesn't stay incorrectly credited.
+    const{task,iso}=intent;
+    const id=task[0];
+    const prevVal=(historyData[iso]||{}).done?.[id];
+    if(historyData[iso] && historyData[iso].done){
+      const earned=typeof prevVal==='number'?prevVal:(prevVal==='qada'?Math.floor((task[6]||0)/2):(task[6]||0));
+      delete historyData[iso].done[id];
+      if(iso===SELECTED_DATE) delete DONE[id];
+      if(iso===TODAY) STATS.pts=(STATS.pts||0)-earned;
+      if(historyData[iso].foodLog) delete historyData[iso].foodLog[id];
+      if(historyData[iso].prayerLogs) delete historyData[iso].prayerLogs[id];
+      try{ checkStreak(); }catch(e){ console.error(e); }
+    }
+    await saveAll();
     return true;
   }
   if(action==='editPoints'){
@@ -2821,34 +2933,53 @@ function fmtMacroShort(m){
   return `${r1(m.k)} سعرة · ب${r1(m.p)} · ك${r1(m.c)} · د${r1(m.f)} · أ${r1(m.b||0)}`;
 }
 
-function openFoodLogModal(task){
+function openFoodLogModal(task,existingEntry){
   FL_ACTIVE_TASK=task;
   const modal=document.getElementById('foodLogModal');
   const titleEl=document.getElementById('flTitle');
   const subEl=document.getElementById('flSub');
-  if(titleEl) titleEl.textContent=`إيه اللي أكلته في "${task[4]}"؟`;
-  if(subEl) subEl.textContent='اختار من الخيارات المحفوظة، أو اكتب إيه اللي أكلته بالظبط';
+  const isEdit=!!existingEntry;
+  if(titleEl) titleEl.textContent=isEdit?`تعديل "${task[4]}"`:`إيه اللي أكلته في "${task[4]}"؟`;
+  if(subEl) subEl.textContent=isEdit?'عدّل الوصف واحسب القيم من جديد — هيستبدل التسجيل القديم بالكامل':'اختار من الخيارات المحفوظة، أو اكتب إيه اللي أكلته بالظبط';
 
   // Reset to the choose step every time it opens.
   document.getElementById('flChooseStep').style.display='block';
   document.getElementById('flLoadingStep').style.display='none';
   document.getElementById('flResultStep').style.display='none';
   document.getElementById('flAskStep').style.display='none';
-  document.getElementById('flFreeText').value='';
+  // Edit mode pre-fills the free-text box with what was actually logged before, so
+  // Abdullah can tweak a wrong entry instead of retyping the whole meal from scratch.
+  document.getElementById('flFreeText').value=isEdit?(existingEntry.description||''):'';
 
   // Render saved options scoped to THIS meal slot only (gym:breakfast vs
-  // rest:breakfast never mix, per Abdullah's explicit instruction).
-  const mealKey=task[12];
-  const opts=mealKey?(MEAL_OPTIONS[mealKey]||[]):[];
-  const optsEl=document.getElementById('flSavedOpts');
-  if(!opts.length){
-    optsEl.innerHTML=`<div style="color:var(--mu);font-size:.76rem;text-align:center;padding:6px">لسه مفيش خيارات محفوظة للوجبة دي — اكتب إيه اللي أكلته وهيتحفظ لو عايز</div>`;
+  // rest:breakfast never mix, per Abdullah's explicit instruction). Hidden in edit
+  // mode — picking a different saved option to REPLACE an existing log is a separate
+  // action from picking one fresh, and mixing the two flows in one screen invites
+  // mistakes; edit mode is free-text-only, by design.
+  const optsWrap=document.getElementById('flSavedOpts');
+  const dividerEl=document.querySelector('#flChooseStep .fl-divider');
+  if(isEdit){
+    if(optsWrap) optsWrap.style.display='none';
+    if(dividerEl) dividerEl.style.display='none';
   }else{
-    optsEl.innerHTML=opts.slice().reverse().map((o,i)=>{
-      const realIdx=opts.length-1-i;
-      return `<div class="fl-opt" data-opt-idx="${realIdx}"><span>${o.description.replace(/</g,'&lt;')}</span><span class="fl-opt-macro">${fmtMacroShort(o.macro)}</span></div>`;
-    }).join('');
+    if(optsWrap) optsWrap.style.display='flex';
+    if(dividerEl) dividerEl.style.display='flex';
+    const mealKey=task[12];
+    const opts=mealKey?(MEAL_OPTIONS[mealKey]||[]):[];
+    if(!opts.length){
+      optsWrap.innerHTML=`<div style="color:var(--mu);font-size:.76rem;text-align:center;padding:6px">لسه مفيش خيارات محفوظة للوجبة دي — اكتب إيه اللي أكلته وهيتحفظ لو عايز</div>`;
+    }else{
+      optsWrap.innerHTML=opts.slice().reverse().map((o,i)=>{
+        const realIdx=opts.length-1-i;
+        return `<div class="fl-opt" data-opt-idx="${realIdx}"><span>${o.description.replace(/</g,'&lt;')}</span><span class="fl-opt-macro">${fmtMacroShort(o.macro)}</span></div>`;
+      }).join('');
+    }
   }
+
+  // Change the submit button label in edit mode so it's clear this replaces the old
+  // entry rather than adding a second one.
+  const submitBtn=document.getElementById('flSubmitBtn');
+  if(submitBtn) submitBtn.textContent=isEdit?'احسب واستبدل ✏️':'احسب واحفظ ✅';
 
   if(modal) modal.classList.add('open');
 }
@@ -2885,7 +3016,8 @@ Rules:
 - Only set needsClarification to true if the description is genuinely too vague to estimate at all (e.g. just "food" or "أكلت حاجة") — do NOT ask clarifying questions for normal descriptions with minor ambiguity; make a reasonable assumption instead and state it briefly in the verdict.
 - The verdict must reference the actual numbers: how this meal compares to what's left in his daily target (remaining today: ${JSON.stringify(remaining)}), not generic advice.
 - Never fabricate facts about Abdullah beyond what's given to you below.
-- k (calories) should be consistent with p*4 + c*4 + f*9 approximately.${aiMemoryBlock()}
+- k (calories) should be consistent with p*4 + c*4 + f*9 approximately.
+- The "verdict" string must be ENTIRELY in Arabic script. Do not include any stray English/Latin words, transliterated fragments, or invented tokens — every word must be a real, correctly-spelled Arabic word. If you are not certain a word is correct, use a simpler Arabic word instead of guessing.${aiMemoryBlock()}
 
 Abdullah's daily nutrition target: ${JSON.stringify({p:r1(dayTarget.p),c:r1(dayTarget.c),f:r1(dayTarget.f),b:r1(dayTarget.b),k:r1(dayTarget.k)})}
 Already consumed today (before this meal): ${JSON.stringify({p:r1(dayConsumed.p),c:r1(dayConsumed.c),f:r1(dayConsumed.f),b:r1(dayConsumed.b),k:r1(dayConsumed.k)})}`;
@@ -2893,6 +3025,23 @@ Already consumed today (before this meal): ${JSON.stringify({p:r1(dayConsumed.p)
 
 // Sends the free-text description (optionally with a prior clarifying Q&A appended)
 // to the Cloudflare Worker, parses+validates the JSON response.
+// Strips stray Latin-script words from an otherwise-Arabic verdict string. The free
+// Groq model (Llama 3.3 70B) occasionally garbles a word mid-generation into a
+// meaningless Latin-script token (e.g. "lurong" appearing in an all-Arabic sentence —
+// not a translation, not a real word in any language, just a generation artifact).
+// The system prompt now explicitly forbids this, but this is a cheap backstop: any
+// isolated run of Latin letters embedded in Arabic text is almost certainly such an
+// artifact (legitimate English loanwords in this app's Arabic UI are rare and, if
+// ever needed, this only removes a single stray token, not the whole sentence).
+function cleanVerdictText(text){
+  if(!text) return text;
+  return text
+    .replace(/\b[a-zA-Z]{2,}\b/g,'')   // drop stray Latin-script words
+    .replace(/\s{2,}/g,' ')             // collapse resulting double spaces
+    .replace(/\s+([.,،؛])/g,'$1')       // fix space-before-punctuation left behind
+    .trim();
+}
+
 async function flComputeMacro(task,description,priorQA){
   if(!AI_WORKER_URL || AI_WORKER_URL==='REPLACE_WITH_YOUR_WORKER_URL'){
     return{ok:false,error:'⚠️ المساعد الذكي لسه مش متوصل بالسيرفر.'};
@@ -2924,7 +3073,7 @@ async function flComputeMacro(task,description,priorQA){
     // response if the model ever omits it, since fiber is a secondary field and
     // shouldn't block an otherwise-valid macro estimate.
     const b=typeof m.b==='number'?m.b:0;
-    return{ok:true,macro:{p:m.p,c:m.c,f:m.f,b,k:m.k},verdict:parsed.verdict||''};
+    return{ok:true,macro:{p:m.p,c:m.c,f:m.f,b,k:m.k},verdict:cleanVerdictText(parsed.verdict||'')};
   }catch(e){
     console.error('food macro compute failed',e);
     return{ok:false,error:'⚠️ مش قادر أوصل للسيرفر دلوقتي.'};
@@ -3194,7 +3343,7 @@ function aiToggleMemoryView(){
 // was the actual mechanism behind "I told it to do 5 things and it only did 1": any
 // clause whose verb wasn't in this list never even reached aiParseIntent as its own
 // clause, it was merged away as non-command text.
-const AI_ACTION_VERBS_ANY=/(انقل|حرك|غير وقت|move|reschedule|احذف|امسح|شيل|delete|remove|عملت|خلصت|سويت|انجزت|أنجزت|i did|done|completed|finished|mark.*as\s*done|mark.*done|set.*(to\s*)?done|check\s*off|marked\s*as\s*done|ضيف|اضف|أضف|add task|new task|افتكر|اتذكر|سجل عني|تذكر|remember|صليت|صلّيت|prayed|خلي|نقطة|نقاط|points?|استريك|streak|نقاطي|رصيدي|my\s*points|my\s*score|نسبة\s*الخصم|معدل\s*الخصم|punishment\s*rate|penalty\s*rate|set\b)/i;
+const AI_ACTION_VERBS_ANY=/(انقل|حرك|غير وقت|move|reschedule|احذف|امسح|شيل|delete|remove|عملت|خلصت|سويت|انجزت|أنجزت|i did|done|completed|finished|mark.*as\s*done|mark.*done|set.*(to\s*)?done|check\s*off|marked\s*as\s*done|ضيف|اضف|أضف|add task|new task|افتكر|اتذكر|سجل عني|تذكر|remember|صليت|صلّيت|prayed|خلي|نقطة|نقاط|points?|استريك|streak|نقاطي|رصيدي|my\s*points|my\s*score|نسبة\s*الخصم|معدل\s*الخصم|punishment\s*rate|penalty\s*rate|set\b|رجعها|رجّعها|ارجع|رجع|استرجع|undo|restore|bring.*back|الغي|unmark)/i;
 
 function aiSplitCommands(msg){
   // Split on commas, " and ", standalone " و ", AND the attached-prefix Arabic form
@@ -3258,10 +3407,10 @@ async function aiProcessClause(clauseText){
   // locally and deterministically through the real data functions — never through
   // the LLM. This is intentional: correctness and safety for actual data mutations
   // matter more than routing everything through one code path.
-  if(['markDone','moveTask','deleteTask','editPoints','addCustomTask','rememberFact','openPrayerModal','setCurStreak','setBestStreak','setWeeklyPoints','setPunishRate','alreadyDone','unrecognizedTask','needMoreInfo'].includes(intent.action)){
+  if(['markDone','moveTask','deleteTask','restoreTask','unmarkDone','editPoints','addCustomTask','rememberFact','openPrayerModal','setCurStreak','setBestStreak','setWeeklyPoints','setPunishRate','alreadyDone','unrecognizedTask','needMoreInfo'].includes(intent.action)){
     let tone='ok';
     try{
-      if(['markDone','moveTask','deleteTask','editPoints','addCustomTask','rememberFact','openPrayerModal','setCurStreak','setBestStreak','setWeeklyPoints','setPunishRate'].includes(intent.action)){
+      if(['markDone','moveTask','deleteTask','restoreTask','unmarkDone','editPoints','addCustomTask','rememberFact','openPrayerModal','setCurStreak','setBestStreak','setWeeklyPoints','setPunishRate'].includes(intent.action)){
         await aiExecuteAction(intent);
       }else{
         tone='err';
@@ -3589,6 +3738,14 @@ document.body.addEventListener('click',async e=>{
     const jd=getJDfromISO(SELECTED_DATE);
     const taskObj=getAllTasks(jd,SELECTED_DATE).find(t=>t[0]===id);
     if(taskObj) openFoodLogModal(taskObj);
+    return;
+  }
+
+  if(action==='editfood'){
+    const jd=getJDfromISO(SELECTED_DATE);
+    const taskObj=getAllTasks(jd,SELECTED_DATE).find(t=>t[0]===id);
+    const existing=(historyData[SELECTED_DATE]||{}).foodLog?.[id];
+    if(taskObj) openFoodLogModal(taskObj,existing);
     return;
   }
 
