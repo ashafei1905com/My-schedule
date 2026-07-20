@@ -282,6 +282,8 @@ body{font-family:'Cairo',sans-serif;background:var(--bg);color:var(--tx);directi
 .ai-sidebar-newbtn{margin:12px 16px;padding:10px;background:rgba(139,92,246,.14);border:1px solid rgba(139,92,246,.4);border-radius:10px;color:#c4b5fd;font-family:'Cairo',sans-serif;font-weight:800;font-size:.82rem;cursor:pointer;text-align:center}
 .ai-sidebar-newbtn:hover{background:rgba(139,92,246,.24)}
 .ai-sidebar-list{flex:1;overflow-y:auto;padding:0 12px 12px}
+.net-badge{padding:8px 10px;border-radius:999px;font-size:.72rem;font-weight:800;background:rgba(248,113,113,.12);color:#f87171;border:1px solid rgba(248,113,113,.25);display:inline-flex;align-items:center;gap:6px}
+.net-badge{padding:8px 10px;border-radius:999px;font-size:.72rem;font-weight:800;background:rgba(248,113,113,.12);color:#f87171;border:1px solid rgba(248,113,113,.25);display:inline-flex;align-items:center;gap:6px}
 </style>
 </head>
 <body>
@@ -293,10 +295,11 @@ body{font-family:'Cairo',sans-serif;background:var(--bg);color:var(--tx);directi
 
 <main id="app" style="display:none">
   <div id="sbar">
-    <div style="display:flex;gap:12px">
+    <div style="display:flex;gap:12px;align-items:center">
       <div class="st"><div class="sv" id="sv1">0</div><div class="sl">🔥 استريك</div></div>
       <div class="st"><div class="sv" id="sv2">0</div><div class="sl">⭐ نقاطي</div></div>
       <div class="st"><div class="sv" id="sv3">0</div><div class="sl">🏆 أعلى استريك</div></div>
+      <div id="networkStatusBadge" class="net-badge" style="display:none">⚠️ جاري التحقق...</div>
     </div>
     <div style="display:flex;flex-direction:column;align-items:flex-end;gap:6px">
       <div id="authName" style="font-size:.8rem;font-weight:700;color:var(--so)"></div>
@@ -483,8 +486,39 @@ const fbApp=initializeApp(firebaseConfig);
 const fbAuth=getAuth(fbApp);
 const fbDb=getFirestore(fbApp);
 
+let FIREBASE_ONLINE=true;
+
 const KUWAIT_TZ='Asia/Kuwait';
 const p2=n=>String(n).padStart(2,'0');
+
+function updateNetworkBadge(){
+  const el=document.getElementById('networkStatusBadge');
+  if(!el) return;
+  if(!navigator.onLine){
+    el.textContent='🔴 غير متصل';
+    el.style.display='inline-flex';
+    return;
+  }
+  if(!FIREBASE_ONLINE){
+    el.textContent='⚠️ غير متزامن (Firebase)';
+    el.style.display='inline-flex';
+    return;
+  }
+  el.style.display='none';
+}
+
+function setFirebaseOffline(){
+  FIREBASE_ONLINE=false;
+  updateNetworkBadge();
+}
+
+function setFirebaseOnline(){
+  FIREBASE_ONLINE=true;
+  updateNetworkBadge();
+}
+
+window.addEventListener('online',()=>{ setFirebaseOnline(); showToast('✅ الاتصال عاد الآن',2500); });
+window.addEventListener('offline',()=>{ updateNetworkBadge(); showToast('⚠️ لقد فقدت الاتصال بالإنترنت',3000,'warn'); });
 
 // --- UTC-Based Date Utility Functions ---
 // All date logic now uses UTC to prevent any timezone-related bugs.
@@ -1115,6 +1149,7 @@ async function saveAll(){
     },{merge:true});
   }catch(e){
     console.warn('cloud save failed',e);
+    setFirebaseOffline();
     showToast('⚠️ فشل مزامنة بياناتك مع Firebase — تأكد من الإنترنت وجرب تاني',4200,'warn');
   }
 }
@@ -4363,6 +4398,7 @@ function revealApp(){
   const ldEl=document.getElementById('ld'); if(ldEl) ldEl.style.display='none';
   const appEl=document.getElementById('app'); if(appEl) appEl.style.display='block';
   const fabEl=document.getElementById('aiFab'); if(fabEl) fabEl.classList.remove('hidden');
+  updateNetworkBadge();
 }
 
 function initAppFlow(user){
@@ -4509,8 +4545,21 @@ if (typeof onAuthStateChanged !== 'undefined' && typeof fbAuth !== 'undefined') 
           migrateSavedReports();
           loadDay();
         }
-  }catch(e){
-    console.warn('cloud load failed',e);
-    showToast('⚠️ فشل تحميل بياناتك من Firebase — تأكد من الاتصال وجرب تاني',4200,'warn');
+      }catch(e){
+        console.warn('cloud load failed',e);
+        setFirebaseOffline();
+        showToast('⚠️ فشل تحميل بياناتك من Firebase — تأكد من الاتصال وجرب تاني',4200,'warn');
+      }
+    }
+  });
+}
+
+setTimeout(()=>{
+  const ldEl=document.getElementById('ld');
+  if(ldEl && ldEl.style.display !== 'none'){
+    showToast('⚠️ التطبيق يستغرق وقتاً طويلاً للتحميل. تأكد من اتصال الإنترنت وأعد تحميل الصفحة.',6000,'warn');
+    revealApp();
   }
+},8000);
+</script>
 </html>
