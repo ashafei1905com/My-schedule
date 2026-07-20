@@ -5,6 +5,26 @@
 <meta name="viewport" content="width=device-width,initial-scale=1.0,maximum-scale=1.0,user-scalable=no">
 <title>جدول عبدالله 🏋️</title>
 <link rel="icon" href="data:," />
+<!-- Web app manifest — REQUIRED for iOS to treat "Add to Home Screen" as a real PWA
+     install rather than a plain bookmark. Without this + the apple-mobile-web-app-*
+     meta tags below, tapping the home-screen icon still opens inside Safari's UI
+     (address bar visible), and window.navigator.standalone / the
+     "(display-mode: standalone)" media query NEVER become true — meaning
+     isStandalonePWA() would report false forever, no matter how many times the site
+     is added to the home screen or opened from that icon. This was silently missing
+     entirely, which is why notifications kept reporting "مفعّلة بس مش PWA" even after
+     doing everything right. -->
+<link rel="manifest" href="./manifest.json" />
+<meta name="apple-mobile-web-app-capable" content="yes" />
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+<meta name="apple-mobile-web-app-title" content="جدول عبدالله" />
+<meta name="theme-color" content="#0a0e1a" />
+<!-- Apple-specific home-screen icon link (separate from the generic favicon above —
+     iOS ignores rel="icon" for the home-screen icon and requires rel="apple-touch-icon"
+     specifically). Uses a simple inline SVG-to-data-URI so no extra asset file is
+     needed; a real PNG would look sharper but this is enough to make installation and
+     detection work correctly, which is the actual bug being fixed here. -->
+<link rel="apple-touch-icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Crect width='100' height='100' rx='20' fill='%230a0e1a'/%3E%3Ctext x='50' y='68' font-size='60' text-anchor='middle'%3E%F0%9F%8F%8B%EF%B8%8F%3C/text%3E%3C/svg%3E" />
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;700;900&display=swap" rel="stylesheet">
@@ -3910,7 +3930,34 @@ if (typeof onAuthStateChanged !== 'undefined' && typeof fbAuth !== 'undefined') 
               punishRateOverride:(cloudStats.punishRateOverride!=null)?cloudStats.punishRateOverride:(localStats.punishRateOverride!=null?localStats.punishRateOverride:null)
             };
           }
-          if(d.reports) savedReports=d.reports;
+          // FIX: this used to be a flat overwrite (savedReports=d.reports), which is
+          // exactly what caused real, already-saved weekly reports to vanish: if
+          // Firestore's SDK returns a STALE cached snapshot (e.g. after the network
+          // couldn't reach the backend and it fell back to offline/cached data — see
+          // "Could not reach Cloud Firestore backend" in the console), d.reports can
+          // legitimately be OLDER than what's already sitting correctly in
+          // localStorage/memory from loadAll() a moment earlier. A flat overwrite then
+          // replaces good local data with stale/empty cloud data, and the very next
+          // saveAll() call makes that loss permanent everywhere. STATS already had
+          // protection against exactly this failure mode (max-merge, see above);
+          // savedReports never did. Fixed the same way: merge by weekStart, keeping
+          // whichever version of each week has more data, never silently dropping a
+          // week that exists on one side but not the other.
+          if(d.reports && Array.isArray(d.reports)){
+            const mergedMap=new Map();
+            for(const r of savedReports){ if(r && r.weekStart) mergedMap.set(r.weekStart,r); }
+            for(const r of d.reports){
+              if(!r || !r.weekStart) continue;
+              const existing=mergedMap.get(r.weekStart);
+              // Prefer whichever entry has more data (more points recorded is a cheap,
+              // effective proxy for "the more complete/recent snapshot of this week"),
+              // same heuristic migrateSavedReports() already uses elsewhere.
+              if(!existing || (r.totalPts||0)>=(existing.totalPts||0)){
+                mergedMap.set(r.weekStart,r);
+              }
+            }
+            savedReports=Array.from(mergedMap.values()).sort((a,b)=>b.weekStart.localeCompare(a.weekStart));
+          }
           // Cloud historyData/penalizedDates now genuinely merge in — this is what
           // makes a second browser/device actually see your past days.
           if(d.historyData){
