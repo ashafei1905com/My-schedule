@@ -4551,13 +4551,13 @@ if (typeof onAuthStateChanged !== 'undefined' && typeof fbAuth !== 'undefined') 
         showToast('⚠️ فشل تحميل بياناتك من Firebase — تأكد من الاتصال وجرب تاني',4200,'warn');
       }
     }
+    initAppFlow(user);
   });
 }
 
 setTimeout(()=>{
   const ldEl=document.getElementById('ld');
   if(ldEl && ldEl.style.display !== 'none'){
-    showToast('⚠️ التطبيق يستغرق وقتاً طويلاً للتحميل. تأكد من اتصال الإنترنت وأعد تحميل الصفحة.',6000,'warn');
     revealApp();
   }
 },8000);
