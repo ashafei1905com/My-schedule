@@ -1,8 +1,17 @@
 name = "falling-frost-7656"
 main = "worker.js"
 compatibility_date = "2026-07-13"
-# If runtime needs Node compatibility in the future, use
-# `npx wrangler deploy --compatibility-flags nodejs_compat`
+compatibility_flags = ["nodejs_compat"]
+# ^ REQUIRED — @block65/webcrypto-web-push depends on node:crypto, which only exists
+# in the Workers runtime when this flag is set. Without it, wrangler deploy would warn
+# and every buildPushPayload() call in dispatchDueReminders() would throw at runtime,
+# get caught by the surrounding try/catch, and silently do nothing — no error visible
+# anywhere except the Cloudflare dashboard's Worker logs. This was the actual reason
+# no push notifications were ever sent, despite D1 and both secrets being correctly
+# configured. Previously this had to be passed as a one-off CLI flag on every deploy
+# (`--compatibility-flags nodejs_compat`), which is exactly the kind of thing that's
+# easy to forget on any deploy that doesn't explicitly remember to add it — baking it
+# into wrangler.toml means every future `wrangler deploy` gets it automatically.
 
 [triggers]
 crons = ["* * * * *"]
