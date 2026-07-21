@@ -1410,7 +1410,7 @@ async function fetchPrayers(){
 // "must stay open" requirement once permission is granted. isIOS()/isStandalonePWA()
 // below are therefore still load-bearing, not legacy leftovers.
 const LS_NOTIF_PREF='sc:notifPref1';
-const VAPID_PUBLIC_KEY='BJY-WY3oi2ypIAvR-ZIUmgXJBZxNkatg4uUVXMsb1ft-uv4xslN94W1K2PX25SslYti-AgUPFm8bdTc-2AFPkUY'; // matches wrangler.toml [vars] VAPID_PUBLIC_KEY
+const VAPID_PUBLIC_KEY='BKgn0lwYCrrfdSIX6PSaaR34nEO1g9FkZ9V3mlZmBAWY_fE7LcbI4osZ9CP8tQsfU1R5vLbg4S0GhNL3QiIOSnQ'; // matches wrangler.toml [vars] VAPID_PUBLIC_KEY — regenerated 2026-07-21 after the old keypair produced "DataError: Invalid EC key in JSON Web Key" on every push send, both sides of this pair MUST always match exactly or subscriptions silently fail
 let NOTIF_ENABLED=false;
 let PUSH_SUBSCRIPTION=null;
 

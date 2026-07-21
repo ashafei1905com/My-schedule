@@ -27,6 +27,6 @@ database_id = "ee636566-8632-4cc7-b879-92be3bb48547"
 #   VAPID_PRIVATE_KEY    -- new, paste the PRIVATE key from your VAPID keypair
 
 [vars]
-VAPID_PUBLIC_KEY = "BJY-WY3oi2ypIAvR-ZIUmgXJBZxNkatg4uUVXMsb1ft-uv4xslN94W1K2PX25SslYti-AgUPFm8bdTc-2AFPkUY"
+VAPID_PUBLIC_KEY = "BKgn0lwYCrrfdSIX6PSaaR34nEO1g9FkZ9V3mlZmBAWY_fE7LcbI4osZ9CP8tQsfU1R5vLbg4S0GhNL3QiIOSnQ"
 VAPID_SUBJECT = "mailto:ashafei1905@gmail.com"
 ALLOWED_ORIGIN = "https://ashafei1905com.github.io"
