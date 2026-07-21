@@ -1,4 +1,4 @@
-<! DOCTYPE html>
+<!DOCTYPE html>
 <html lang="ar" dir="rtl">
 <head>
 <meta charset="UTF-8">
@@ -1354,10 +1354,28 @@ async function getPrayerCoords(){
   });
 }
 
+// ROOT CAUSE FIX: this fetch() previously had NO timeout at all. initAppFlow() chains
+// fetchPrayers().then(...)->...->revealApp(), so if api.aladhan.com is slow or
+// unreachable (exactly the "network is bad" scenario the browser itself warns about),
+// this single unbounded await stalls the ENTIRE app open — the loading spinner shows
+// forever and nothing below the top bar ever renders, because revealApp() is gated
+// behind this promise resolving. Browsers do NOT reliably time out fetch() on their
+// own (can take 300s+ on some networks/OSes). getPrayerCoords() also has no bound of
+// its own beyond the geolocation API's internal timeout, so both legs are now wrapped.
+// A hard 7s cap here means a bad connection now correctly falls through to the cached
+// FALLBK prayer times within seconds — exactly the same safe fallback the try/catch
+// already existed for — instead of hanging the whole app indefinitely.
 async function fetchPrayers(){
+  const withTimeout=(promise,ms)=>Promise.race([
+    promise,
+    new Promise((_,rej)=>setTimeout(()=>rej(new Error('timeout')),ms))
+  ]);
   try{
-    const {lat,lon}=await getPrayerCoords();
-    const res=await fetch(`https://api.aladhan.com/v1/timings?latitude=${lat}&longitude=${lon}&method=9&tune=${PRAYER_TUNE}`);
+    const {lat,lon}=await withTimeout(getPrayerCoords(),7000);
+    const res=await withTimeout(
+      fetch(`https://api.aladhan.com/v1/timings?latitude=${lat}&longitude=${lon}&method=9&tune=${PRAYER_TUNE}`),
+      7000
+    );
     const json=await res.json();
     if(json&&json.code===200){const t=json.data.timings;PRYT={Fajr:t.Fajr,Sunrise:t.Sunrise,Dhuhr:t.Dhuhr,Asr:t.Asr,Maghrib:t.Maghrib,Isha:t.Isha};}
     else throw new Error();
@@ -4403,6 +4421,16 @@ function revealApp(){
 
 function initAppFlow(user){
   updateAuthUI(user);
+  // Belt-and-suspenders failsafe: no single future change to this init chain (a new
+  // awaited network call, a Firestore read, etc.) should ever be able to hang the app
+  // on the loading spinner forever again. If the whole chain hasn't finished within
+  // 12s, force the reveal anyway — worst case the user sees slightly stale/fallback
+  // data for a moment, which is far better than an indefinite blank loading screen.
+  const failsafe=setTimeout(()=>{
+    console.warn('initAppFlow failsafe fired — forcing reveal after 12s');
+    revealApp();
+  },12000);
+  const clearFailsafe=()=>clearTimeout(failsafe);
   fetchPrayers().then(async ()=>{
     // Weekly points reset MUST run before punishment. Previously punishment ran
     // first and deducted from last week's leftover STATS.pts, which the reset then
@@ -4419,6 +4447,7 @@ function initAppFlow(user){
     checkStreak();
     renderTabs();renderPanels();switchDay(todayJD());updateUI();
     revealApp();
+    clearFailsafe();
     if(PENALTY_FLASH_PENDING){flashPenalty();PENALTY_FLASH_PENDING=false;}
     await loadNotifPref();
     updateAuthUI(user);
@@ -4428,6 +4457,7 @@ function initAppFlow(user){
   }).catch(e=>{
     console.warn('Init error bypass:',e);
     revealApp();
+    clearFailsafe();
   });
 }
 
