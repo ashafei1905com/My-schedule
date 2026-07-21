@@ -1130,27 +1130,40 @@ async function saveAll(){
 
   const user=fbAuth.currentUser;
   if(!user)return;
+  // ROOT CAUSE of the "desktop shows -63, phone shows 30" divergence: a single
+  // transient network hiccup during setDoc() used to permanently strand this
+  // device's data out of sync with the cloud — it would keep operating on stale
+  // local state indefinitely until someone noticed the red badge and manually
+  // reloaded. localStorage above always saves first regardless, so no data was
+  // ever actually lost, but the cloud (and therefore every OTHER device) never
+  // saw this device's numbers again after one failed write. One retry after a
+  // short delay covers the common transient case (a momentary drop, a slow
+  // connection) without adding real complexity; a second consecutive failure
+  // still surfaces the existing red badge + toast exactly as before.
+  const attemptSave=async()=>setDoc(doc(fbDb,'users',user.uid),{
+    stats:STATS,
+    reports:savedReports,
+    historyData:historyData,
+    penalizedDates:penalizedDates,
+    firstSeen:FIRST_SEEN,
+    userEdits:USER_EDITS,
+    mealOptions:MEAL_OPTIONS,
+    weeklyPointsHistory:weeklyPointsHistory
+  },{merge:true});
   try{
-    // Full historyData + penalizedDates now sync to Firestore — previously only
-    // today's task doc was pushed, which is why other devices/browsers never saw
-    // past days or the "already penalized" flag.
-    // userEdits syncs here too: this is the per-account overlay (moves/deletes/
-    // custom tasks/point overrides) that a signed-out guest never sees, since this
-    // whole block only runs when fbAuth.currentUser exists.
-    await setDoc(doc(fbDb,'users',user.uid),{
-      stats:STATS,
-      reports:savedReports,
-      historyData:historyData,
-      penalizedDates:penalizedDates,
-      firstSeen:FIRST_SEEN,
-      userEdits:USER_EDITS,
-      mealOptions:MEAL_OPTIONS,
-      weeklyPointsHistory:weeklyPointsHistory
-    },{merge:true});
-  }catch(e){
-    console.warn('cloud save failed',e);
-    setFirebaseOffline();
-    showToast('⚠️ فشل مزامنة بياناتك مع Firebase — تأكد من الإنترنت وجرب تاني',4200,'warn');
+    await attemptSave();
+    if(!FIREBASE_ONLINE) setFirebaseOnline(); // recovered from a prior failure — clear the stale red badge
+  }catch(e1){
+    console.warn('cloud save failed, retrying once',e1);
+    await new Promise(r=>setTimeout(r,1500));
+    try{
+      await attemptSave();
+      if(!FIREBASE_ONLINE) setFirebaseOnline();
+    }catch(e2){
+      console.warn('cloud save failed after retry',e2);
+      setFirebaseOffline();
+      showToast('⚠️ فشل مزامنة بياناتك مع Firebase — تأكد من الإنترنت وجرب تاني',4200,'warn');
+    }
   }
 }
 
