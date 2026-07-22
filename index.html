@@ -3585,16 +3585,15 @@ async function flLookupNutrition(items){
   if(!AI_WORKER_URL || AI_WORKER_URL==='REPLACE_WITH_YOUR_WORKER_URL'){
     return{ok:false,error:'⚠️ المساعد الذكي لسه مش متوصل بالسيرفر.'};
   }
-  // Build one natural-language query string from the structured items — Nutritionix's
-  // NLP endpoint parses free text like "1 cup boiled white rice, 200g grilled chicken
-  // breast" directly, so this is the most reliable way to hand it multiple items at
-  // once while still controlling exactly what quantity/unit was actually confirmed.
-  const query=items.map(it=>`${it.qty} ${it.unit} ${it.food}`).join(', ');
+  // Sends structured {food,qty,unit} items rather than one joined string — the
+  // Worker's /api/nutrition route (backed by API Ninjas, the platform CalorieNinjas
+  // migrated into) queries each item separately server-side for more reliable
+  // parsing than one long comma-joined multi-item string.
   try{
     const res=await fetch(AI_WORKER_URL+'/api/nutrition',{
       method:'POST',
       headers:{'Content-Type':'application/json'},
-      body:JSON.stringify({query})
+      body:JSON.stringify({items})
     });
     const data=await res.json();
     if(!res.ok || data.error){

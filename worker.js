@@ -138,22 +138,26 @@ function kuwaitNowParts() {
 }
 
 // ===== /api/nutrition =====
-// Real nutrition lookup — Nutritionix Natural Language API (free tier: 200 requests/
-// day, no credit card, sign up at developer.nutritionix.com). Replaces AI-guessed
-// macros entirely: the client sends an already-clarified, structured query string
-// (e.g. "200 g grilled chicken breast, 1 cup boiled white rice"), this Worker forwards
-// it to Nutritionix with the app credentials (kept server-side, exactly like
-// GROQ_API_KEY — never exposed to the client), and returns real measured totals.
+// Real nutrition lookup — API Ninjas Nutrition API. This is the platform CalorieNinjas
+// itself migrated into during 2025 (CalorieNinjas' free public signup is closed; the
+// same underlying food database and natural-language parsing now live here), and its
+// free tier is generous enough for this app's volume with no credit card required.
+//
+// Replaces AI-guessed macros entirely: the client sends already-clarified
+// {food, qty, unit} items (see flExtractMealInfo in index.html), this Worker queries
+// API Ninjas per item with the app's key kept server-side (never exposed to the
+// client, same pattern as GROQ_API_KEY), and returns real measured totals.
 //
 // Setup:
-//   1. Sign up free at https://developer.nutritionix.com (Track/Natural Language API,
-//      free tier — 200 req/day, no card required).
-//   2. Grab your Application ID and Application Key from the dashboard.
-//   3. wrangler secret put NUTRITIONIX_APP_ID
-//      wrangler secret put NUTRITIONIX_APP_KEY
+//   1. Sign up free at https://api-ninjas.com/register (no credit card required).
+//   2. Copy your API key from the dashboard (https://api-ninjas.com/profile).
+//   3. wrangler secret put API_NINJAS_KEY
 //   4. wrangler deploy
 //
-// Body shape: { query: "<natural language food description, English>" }
+// Body shape: { items: [{food, qty, unit}, ...] }  OR  { query: "<free text>" } —
+// both accepted; `items` is preferred (built from the AI extraction step) since it
+// lets each item be queried individually, which is more reliable against API
+// Ninjas' parser than one long comma-joined multi-item string.
 // Response: { macro: {p,c,f,b,k}, items: [{name, qty, unit, kcal}, ...] }
 async function handleNutritionLookup(request, env) {
   if (request.method === 'OPTIONS') return new Response(null, { headers: corsHeaders() });
@@ -164,8 +168,8 @@ async function handleNutritionLookup(request, env) {
     return json({ error: 'Origin not allowed' }, 403);
   }
 
-  if (!env.NUTRITIONIX_APP_ID || !env.NUTRITIONIX_APP_KEY) {
-    return json({ error: 'Nutritionix credentials not configured on the server yet.' }, 500);
+  if (!env.API_NINJAS_KEY) {
+    return json({ error: 'API Ninjas key not configured on the server yet.' }, 500);
   }
 
   let body;
@@ -175,51 +179,65 @@ async function handleNutritionLookup(request, env) {
     return json({ error: 'Invalid JSON body' }, 400);
   }
 
-  const query = (body.query || '').trim();
-  if (!query) return json({ error: 'query required' }, 400);
+  // Build one query string PER item so each gets parsed independently — API Ninjas'
+  // free-text parser handles "200g grilled chicken breast" reliably on its own, but
+  // is noticeably less reliable when several unrelated items are comma-joined into
+  // one query. Falls back to a single combined query if the caller only sent a raw
+  // "query" string (e.g. from an older client build) rather than structured items.
+  let queries;
+  if (Array.isArray(body.items) && body.items.length) {
+    queries = body.items.map(it => `${it.qty} ${it.unit} ${it.food}`.trim());
+  } else if (body.query && String(body.query).trim()) {
+    queries = [String(body.query).trim()];
+  } else {
+    return json({ error: 'items or query required' }, 400);
+  }
 
   try {
-    const nxRes = await fetch('https://trackapi.nutritionix.com/v2/natural/nutrients', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'x-app-id': env.NUTRITIONIX_APP_ID,
-        'x-app-key': env.NUTRITIONIX_APP_KEY
-      },
-      body: JSON.stringify({ query })
-    });
+    const macro = { p: 0, c: 0, f: 0, b: 0, k: 0 };
+    const items = [];
+    let anyMatched = false;
 
-    const data = await nxRes.json();
-    if (!nxRes.ok) {
-      console.error('nutritionix error', nxRes.status, data);
-      return json({ error: data?.message || 'Nutritionix lookup failed' }, nxRes.status);
+    for (const q of queries) {
+      const url = 'https://api.api-ninjas.com/v1/nutrition?query=' + encodeURIComponent(q);
+      const nxRes = await fetch(url, {
+        headers: { 'X-Api-Key': env.API_NINJAS_KEY }
+      });
+
+      if (!nxRes.ok) {
+        const errText = await nxRes.text().catch(() => '');
+        console.error('api-ninjas error', nxRes.status, errText);
+        // One bad item shouldn't fail the whole meal — skip it and keep going, but
+        // track that at least one lookup must succeed or the whole call is an error.
+        continue;
+      }
+
+      const foods = await nxRes.json();
+      if (!Array.isArray(foods) || !foods.length) continue;
+
+      for (const food of foods) {
+        // API Ninjas field names (v1/nutrition): calories, protein_g, carbohydrates_total_g,
+        // fat_total_g, fiber_g, serving_size_g, name.
+        const p = food.protein_g || 0;
+        const c = food.carbohydrates_total_g || 0;
+        const f = food.fat_total_g || 0;
+        const b = food.fiber_g || 0;
+        const k = food.calories || 0;
+        macro.p += p; macro.c += c; macro.f += f; macro.b += b; macro.k += k;
+        items.push({
+          name: food.name,
+          qty: food.serving_size_g,
+          unit: 'g',
+          kcal: Math.round(k)
+        });
+        anyMatched = true;
+      }
     }
 
-    const foods = Array.isArray(data.foods) ? data.foods : [];
-    if (!foods.length) {
+    if (!anyMatched) {
       return json({ error: 'No matching foods found' }, 404);
     }
 
-    // Sum every matched food item into one combined macro total — this is the SAME
-    // shape the app's macro tracker already expects (p/c/f/b/k), so no client-side
-    // reshaping is needed. Nutritionix's fiber field is nf_dietary_fiber; defaults to
-    // 0 when a food has no fiber data rather than dropping the whole response.
-    const macro = { p: 0, c: 0, f: 0, b: 0, k: 0 };
-    const items = [];
-    for (const food of foods) {
-      const p = food.nf_protein || 0;
-      const c = food.nf_total_carbohydrate || 0;
-      const f = food.nf_total_fat || 0;
-      const b = food.nf_dietary_fiber || 0;
-      const k = food.nf_calories || 0;
-      macro.p += p; macro.c += c; macro.f += f; macro.b += b; macro.k += k;
-      items.push({
-        name: food.food_name,
-        qty: food.serving_qty,
-        unit: food.serving_unit,
-        kcal: Math.round(k)
-      });
-    }
     const r1 = n => Math.round(n * 10) / 10;
     return json({
       macro: { p: r1(macro.p), c: r1(macro.c), f: r1(macro.f), b: r1(macro.b), k: r1(macro.k) },
