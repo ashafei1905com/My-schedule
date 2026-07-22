@@ -41,6 +41,10 @@ export default {
       return handleSaveSubscription(request, env);
     }
 
+    if (url.pathname === '/api/nutrition') {
+      return handleNutritionLookup(request, env);
+    }
+
     // --- Everything below this line is the ORIGINAL, unmodified AI-proxy behavior ---
     if (request.method !== 'POST') {
       return json({ error: 'Method not allowed' }, 405);
@@ -131,6 +135,100 @@ function kuwaitNowParts() {
   const o = {};
   parts.forEach(p => { if (p.type !== 'literal') o[p.type] = p.value; });
   return { date: `${o.year}-${o.month}-${o.day}`, time: `${o.hour}:${o.minute}` };
+}
+
+// ===== /api/nutrition =====
+// Real nutrition lookup — Nutritionix Natural Language API (free tier: 200 requests/
+// day, no credit card, sign up at developer.nutritionix.com). Replaces AI-guessed
+// macros entirely: the client sends an already-clarified, structured query string
+// (e.g. "200 g grilled chicken breast, 1 cup boiled white rice"), this Worker forwards
+// it to Nutritionix with the app credentials (kept server-side, exactly like
+// GROQ_API_KEY — never exposed to the client), and returns real measured totals.
+//
+// Setup:
+//   1. Sign up free at https://developer.nutritionix.com (Track/Natural Language API,
+//      free tier — 200 req/day, no card required).
+//   2. Grab your Application ID and Application Key from the dashboard.
+//   3. wrangler secret put NUTRITIONIX_APP_ID
+//      wrangler secret put NUTRITIONIX_APP_KEY
+//   4. wrangler deploy
+//
+// Body shape: { query: "<natural language food description, English>" }
+// Response: { macro: {p,c,f,b,k}, items: [{name, qty, unit, kcal}, ...] }
+async function handleNutritionLookup(request, env) {
+  if (request.method === 'OPTIONS') return new Response(null, { headers: corsHeaders() });
+  if (request.method !== 'POST') return json({ error: 'Method not allowed' }, 405);
+
+  const origin = request.headers.get('Origin') || '';
+  if (ALLOWED_ORIGIN && origin !== ALLOWED_ORIGIN) {
+    return json({ error: 'Origin not allowed' }, 403);
+  }
+
+  if (!env.NUTRITIONIX_APP_ID || !env.NUTRITIONIX_APP_KEY) {
+    return json({ error: 'Nutritionix credentials not configured on the server yet.' }, 500);
+  }
+
+  let body;
+  try {
+    body = await request.json();
+  } catch {
+    return json({ error: 'Invalid JSON body' }, 400);
+  }
+
+  const query = (body.query || '').trim();
+  if (!query) return json({ error: 'query required' }, 400);
+
+  try {
+    const nxRes = await fetch('https://trackapi.nutritionix.com/v2/natural/nutrients', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'x-app-id': env.NUTRITIONIX_APP_ID,
+        'x-app-key': env.NUTRITIONIX_APP_KEY
+      },
+      body: JSON.stringify({ query })
+    });
+
+    const data = await nxRes.json();
+    if (!nxRes.ok) {
+      console.error('nutritionix error', nxRes.status, data);
+      return json({ error: data?.message || 'Nutritionix lookup failed' }, nxRes.status);
+    }
+
+    const foods = Array.isArray(data.foods) ? data.foods : [];
+    if (!foods.length) {
+      return json({ error: 'No matching foods found' }, 404);
+    }
+
+    // Sum every matched food item into one combined macro total — this is the SAME
+    // shape the app's macro tracker already expects (p/c/f/b/k), so no client-side
+    // reshaping is needed. Nutritionix's fiber field is nf_dietary_fiber; defaults to
+    // 0 when a food has no fiber data rather than dropping the whole response.
+    const macro = { p: 0, c: 0, f: 0, b: 0, k: 0 };
+    const items = [];
+    for (const food of foods) {
+      const p = food.nf_protein || 0;
+      const c = food.nf_total_carbohydrate || 0;
+      const f = food.nf_total_fat || 0;
+      const b = food.nf_dietary_fiber || 0;
+      const k = food.nf_calories || 0;
+      macro.p += p; macro.c += c; macro.f += f; macro.b += b; macro.k += k;
+      items.push({
+        name: food.food_name,
+        qty: food.serving_qty,
+        unit: food.serving_unit,
+        kcal: Math.round(k)
+      });
+    }
+    const r1 = n => Math.round(n * 10) / 10;
+    return json({
+      macro: { p: r1(macro.p), c: r1(macro.c), f: r1(macro.f), b: r1(macro.b), k: r1(macro.k) },
+      items
+    });
+  } catch (e) {
+    console.error('nutrition lookup request failed', e);
+    return json({ error: 'Upstream nutrition request failed: ' + e.message }, 502);
+  }
 }
 
 // ===== /api/save-subscription =====

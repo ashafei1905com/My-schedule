@@ -3371,21 +3371,33 @@ async function aiExecuteToolCall(v){
       break;
     }
     case 'logFood': {
-      // Reuses the SAME macro-computation pipeline the modal uses (flComputeMacro +
-      // flFinalizeLog) rather than a separate flat point award, so AI-driven food
-      // logging gets identical nutrition tracking to the manual flow.
+      // Reuses the SAME real-lookup pipeline the modal uses (flExtractMealInfo +
+      // flLookupNutrition + flFinalizeLog) rather than a separate flat point award,
+      // so AI-chat-driven food logging gets identical nutrition tracking — real
+      // Nutritionix numbers, never AI-guessed — to the manual modal flow. If the
+      // description is missing info (no quantity/cooking method), this reports back
+      // to the chat asking for it rather than guessing, same missing-info gate as
+      // the modal.
       const jd=getJDfromISO(v.iso);
       const taskObj=getAllTasks(jd,v.iso).find(t=>t[0]===v.taskId);
       if(taskObj){
-        const wasSelected=SELECTED_DATE;
-        SELECTED_DATE=v.iso;
-        const result=await flComputeMacro(taskObj, v.description, null);
-        SELECTED_DATE=wasSelected;
-        if(result.ok && !result.needsClarification){
-          const prevSelected=SELECTED_DATE;
-          SELECTED_DATE=v.iso;
-          await flFinalizeLog(taskObj, v.description, result.macro, result.verdict, false);
-          SELECTED_DATE=prevSelected;
+        const extraction=await flExtractMealInfo(v.description,null);
+        if(extraction.ok && extraction.needsInfo){
+          v._chatReplyOverride=extraction.question; // surfaced back to the chat bubble by the caller
+        }else if(extraction.ok){
+          const lookup=await flLookupNutrition(extraction.items);
+          if(lookup.ok){
+            const prevSelected=SELECTED_DATE;
+            SELECTED_DATE=v.iso;
+            const{target,consumed}=computeDayMacros(jd,v.iso);
+            const verdict=await flGetVerdict(taskObj,lookup.macro,target,consumed);
+            await flFinalizeLog(taskObj, v.description, lookup.macro, verdict, false);
+            SELECTED_DATE=prevSelected;
+          }else{
+            v._chatReplyOverride=lookup.error;
+          }
+        }else{
+          v._chatReplyOverride=extraction.error;
         }
       }
       break;
@@ -3501,29 +3513,124 @@ async function flPickSavedOption(idx){
   await flFinalizeLog(FL_ACTIVE_TASK,opt.description,opt.macro,null,false); // no verdict re-shown for a repeat pick, no re-save prompt
 }
 
-// Builds the system prompt for the macro-computation + verdict call. Asks for a
-// strict JSON response so the result can be parsed and validated deterministically,
-// same defensive pattern as aiResolveRelativeMove — a malformed/hallucinated
-// response should never silently corrupt nutrition data.
-function flBuildSystemPrompt(task,dayTarget,dayConsumed){
-  const r1=n=>Math.round(n*10)/10;
-  const remaining={p:r1(dayTarget.p-dayConsumed.p),c:r1(dayTarget.c-dayConsumed.c),f:r1(dayTarget.f-dayConsumed.f),b:r1(dayTarget.b-dayConsumed.b),k:r1(dayTarget.k-dayConsumed.k)};
-  return `You are a precise nutrition estimator embedded in Abdullah's habit-tracking app. You will receive a description (in Arabic or English, possibly informal) of a meal he actually ate for "${task[4]}", plus his daily nutrition target and what he's consumed so far today.
+// ===== Nutrition extraction (Nutritionix-backed — replaces AI-guessed macros) =====
+// The model's job here is ONLY:
+//   1. Decide if the description has enough detail to look up (food item + quantity +
+//      cooking method where it changes the numbers, e.g. fried vs boiled/grilled).
+//   2. If incomplete, ask ONE short, casual follow-up question in the same dialect the
+//      user wrote in (Gulf/Khaleeji, Egyptian, or informal English) — never formal
+//      Arabic, never a multi-part interrogation.
+//   3. If complete, convert the meal into a clean list of {food, qty, unit} items in
+//      ENGLISH (Nutritionix's NLP endpoint is English-only), suitable to hand to a
+//      real nutrition API. It NEVER invents p/c/f/k numbers itself — those always come
+//      from flLookupNutrition() below, which calls the real API.
+function flBuildExtractionPrompt(){
+  return `You are a friendly, casual nutrition assistant embedded in a personal habit-tracking app. Abdullah will describe a meal in his own words — Gulf/Khaleeji Arabic, Egyptian Arabic, formal Arabic, or informal English, any mix. Talk back to him the way a real friend who happens to know nutrition would — casual, warm, short sentences, never stiff or overly formal Arabic (فصحى معقدة). No lectures.
 
-Respond with ONLY a raw JSON object, nothing else — no markdown fences, no explanation outside the JSON:
-{"macro":{"p":<protein grams, number>,"c":<carb grams, number>,"f":<fat grams, number>,"b":<fiber grams, number>,"k":<calories, number>},"verdict":"<2-3 sentences in Egyptian Arabic, direct and formal per his mentoring style, judging whether this specific meal is a good or bad fit given his remaining target for today and what you know about him>","needsClarification":<true or false>,"clarifyingQuestion":"<if needsClarification is true, one short specific Arabic question to ask him; otherwise empty string>"}
+Your ONLY job is to figure out WHAT he ate and HOW MUCH, precisely enough to look up in a nutrition database. You never estimate or state calorie/macro numbers yourself — that always comes from a real lookup done separately.
 
-Rules:
-- Estimate macros AND fiber as accurately as you reasonably can from the description. Use standard nutritional values for common foods/portions. If a portion size isn't stated, assume a normal single-adult serving.
-- Only set needsClarification to true if the description is genuinely too vague to estimate at all (e.g. just "food" or "أكلت حاجة") — do NOT ask clarifying questions for normal descriptions with minor ambiguity; make a reasonable assumption instead and state it briefly in the verdict.
-- The verdict must reference the actual numbers: how this meal compares to what's left in his daily target (remaining today: ${JSON.stringify(remaining)}), not generic advice.
-- Never fabricate facts about Abdullah beyond what's given to you below.
-- k (calories) should be consistent with p*4 + c*4 + f*9 approximately.
-- The "verdict" string must be ENTIRELY in Arabic script. Do not include any stray English/Latin words, transliterated fragments, or invented tokens — every word must be a real, correctly-spelled Arabic word. If you are not certain a word is correct, use a simpler Arabic word instead of guessing.${aiMemoryBlock()}
+Respond with ONLY a raw JSON object, nothing else — no markdown fences, no text outside the JSON:
+{"status":"needs_info" | "ready","followUpQuestion":"<if needs_info: ONE short casual question in his own dialect/language asking for the missing detail — otherwise empty string>","items":[{"food":"<plain English food name, e.g. 'grilled chicken breast'>","qty":<number>,"unit":"<e.g. 'g','oz','cup','piece','tbsp'>"}]}
 
-Abdullah's daily nutrition target: ${JSON.stringify({p:r1(dayTarget.p),c:r1(dayTarget.c),f:r1(dayTarget.f),b:r1(dayTarget.b),k:r1(dayTarget.k)})}
-Already consumed today (before this meal): ${JSON.stringify({p:r1(dayConsumed.p),c:r1(dayConsumed.c),f:r1(dayConsumed.f),b:r1(dayConsumed.b),k:r1(dayConsumed.k)})}`;
+Rules for deciding needs_info vs ready:
+- Missing QUANTITY entirely (no size/count/weight mentioned at all) -> needs_info. Ask casually, e.g. "قد ايه تقريبا؟ كوباية؟ طبق؟" or "how much roughly — a cup, a plate?"
+- Missing COOKING METHOD when it meaningfully changes the calories (fried vs grilled/boiled/baked for meat, chicken, fish, eggs, potatoes) -> needs_info. Ask casually, e.g. "مقلي ولا مشوي؟" or "fried or grilled?"
+- Vague quantity words like "a bit", "شوية", "حبة" for a countable item (e.g. "حبة موز") are FINE — treat "a piece/حبة" as qty:1, unit:"piece" and proceed to ready. Don't ask for more precision than a normal person would give.
+- Foods where cooking method doesn't change calories much (raw fruit, raw vegetables, nuts, dairy, bread) never need a method follow-up.
+- If he gives multiple items in one message, resolve ALL of them — only ask about whichever ones are actually missing info; items with complete info go straight into "items".
+- Never ask more than ONE combined question per turn, even if multiple things are missing — combine into one natural sentence.
+- Once qty + (method, if relevant) are both known for every item, status is "ready" and items must be filled in — translate food names and units into plain English food-database terms (e.g. "رز أبيض مسلوق" -> {"food":"boiled white rice","qty":1,"unit":"cup"}), even though he spoke to you in Arabic/dialect.${aiMemoryBlock()}`;
 }
+
+// Calls flBuildExtractionPrompt via the Worker (still using the free Groq/Llama
+// proxy — this call has nothing to do with actual nutrition numbers, only language
+// understanding, so the free-tier model is perfectly fine here).
+async function flExtractMealInfo(description,priorTurns){
+  if(!AI_WORKER_URL || AI_WORKER_URL==='REPLACE_WITH_YOUR_WORKER_URL'){
+    return{ok:false,error:'⚠️ المساعد الذكي لسه مش متوصل بالسيرفر.'};
+  }
+  const sys=flBuildExtractionPrompt();
+  // priorTurns carries the running back-and-forth for this single meal entry, so a
+  // multi-round clarification (rare — only for genuinely ambiguous meals) has full
+  // context rather than restarting blind each round.
+  const messages=[...(priorTurns||[]),{role:'user',content:description}];
+  try{
+    const res=await fetch(AI_WORKER_URL,{
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({system:sys,messages})
+    });
+    const data=await res.json();
+    if(!res.ok || data.error) return{ok:false,error:'⚠️ حصل خطأ من السيرفر — جرب تاني.'};
+    let raw=(data.text||'').trim().replace(/^```json\s*|```$/g,'').trim();
+    let parsed;
+    try{ parsed=JSON.parse(raw); }catch{ return{ok:false,error:'⚠️ مش فاهم الوصف ده كويس — جرب تكتبه بشكل أوضح.'}; }
+    if(parsed.status==='needs_info'){
+      return{ok:true,needsInfo:true,question:parsed.followUpQuestion||'ممكن توضح أكتر؟',rawModelText:data.text};
+    }
+    if(!Array.isArray(parsed.items) || !parsed.items.length){
+      return{ok:false,error:'⚠️ مش قادر أحدد إيه اللي اتاكل بالظبط — جرب توصف تاني.'};
+    }
+    return{ok:true,needsInfo:false,items:parsed.items};
+  }catch(e){
+    console.error('meal extraction failed',e);
+    return{ok:false,error:'⚠️ مش قادر أوصل للسيرفر دلوقتي.'};
+  }
+}
+
+// Sends the extracted {food,qty,unit} items to the Worker's /api/nutrition endpoint,
+// which calls the real Nutritionix Natural Language API server-side (key never
+// touches the client) and returns real, measured macro totals — never AI-guessed.
+async function flLookupNutrition(items){
+  if(!AI_WORKER_URL || AI_WORKER_URL==='REPLACE_WITH_YOUR_WORKER_URL'){
+    return{ok:false,error:'⚠️ المساعد الذكي لسه مش متوصل بالسيرفر.'};
+  }
+  // Build one natural-language query string from the structured items — Nutritionix's
+  // NLP endpoint parses free text like "1 cup boiled white rice, 200g grilled chicken
+  // breast" directly, so this is the most reliable way to hand it multiple items at
+  // once while still controlling exactly what quantity/unit was actually confirmed.
+  const query=items.map(it=>`${it.qty} ${it.unit} ${it.food}`).join(', ');
+  try{
+    const res=await fetch(AI_WORKER_URL+'/api/nutrition',{
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({query})
+    });
+    const data=await res.json();
+    if(!res.ok || data.error){
+      console.error('nutrition lookup failed',data.error||res.status);
+      return{ok:false,error:'⚠️ مش لاقي بيانات غذائية دقيقة للوصف ده — جرب تبسطه أكتر (مثلاً: "200 جرام فراخ مشوية").'};
+    }
+    return{ok:true,macro:data.macro,items:data.items};
+  }catch(e){
+    console.error('nutrition lookup request failed',e);
+    return{ok:false,error:'⚠️ مش قادر أوصل للسيرفر دلوقتي.'};
+  }
+}
+
+// Short, separate call purely for a friendly one-line verdict comparing the REAL
+// looked-up macro against what's left in the day's target — this call never touches
+// the macro numbers themselves, only comments on numbers already fetched from the API.
+async function flGetVerdict(task,macro,dayTarget,dayConsumed){
+  const r1=n=>Math.round(n*10)/10;
+  const remaining={p:r1(dayTarget.p-dayConsumed.p),c:r1(dayTarget.c-dayConsumed.c),f:r1(dayTarget.f-dayConsumed.f),k:r1(dayTarget.k-dayConsumed.k)};
+  const sys=`You are a friendly, casual nutrition buddy (not formal, not lecture-y) for Abdullah, embedded in his habit app. He just logged a real, precisely-measured meal for "${task[4]}": ${JSON.stringify(macro)} (protein/carb/fat grams, kcal). His remaining target for today: ${JSON.stringify(remaining)}.
+
+Reply in 1-2 short casual sentences, in the same dialect/language he'd naturally expect (default Egyptian/Gulf-friendly Arabic, casual not فصحى), reacting to whether this meal fits his remaining budget today. Be direct and specific with the numbers, not generic. Output ONLY the sentence(s), no JSON, no labels.${aiMemoryBlock()}`;
+  try{
+    const res=await fetch(AI_WORKER_URL,{
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({system:sys,messages:[{role:'user',content:'.'}]})
+    });
+    const data=await res.json();
+    if(!res.ok || data.error) return'';
+    return cleanVerdictText((data.text||'').trim());
+  }catch{
+    return''; // verdict is a nice-to-have; never block the actual logged entry on it
+  }
+}
+
 
 // Sends the free-text description (optionally with a prior clarifying Q&A appended)
 // to the Cloudflare Worker, parses+validates the JSON response.
@@ -3542,44 +3649,6 @@ function cleanVerdictText(text){
     .replace(/\s{2,}/g,' ')             // collapse resulting double spaces
     .replace(/\s+([.,،؛])/g,'$1')       // fix space-before-punctuation left behind
     .trim();
-}
-
-async function flComputeMacro(task,description,priorQA){
-  if(!AI_WORKER_URL || AI_WORKER_URL==='REPLACE_WITH_YOUR_WORKER_URL'){
-    return{ok:false,error:'⚠️ المساعد الذكي لسه مش متوصل بالسيرفر.'};
-  }
-  const jd=getJDfromISO(SELECTED_DATE);
-  const{target,consumed}=computeDayMacros(jd,SELECTED_DATE);
-  const sys=flBuildSystemPrompt(task,target,consumed);
-  let userMsg=`Meal description: ${description}`;
-  if(priorQA) userMsg+=`\n\nFollow-up question you asked: ${priorQA.question}\nHis answer: ${priorQA.answer}`;
-  try{
-    const res=await fetch(AI_WORKER_URL,{
-      method:'POST',
-      headers:{'Content-Type':'application/json'},
-      body:JSON.stringify({system:sys,messages:[{role:'user',content:userMsg}]})
-    });
-    const data=await res.json();
-    if(!res.ok || data.error) return{ok:false,error:'⚠️ حصل خطأ من السيرفر — جرب تاني.'};
-    let raw=(data.text||'').trim().replace(/^```json\s*|```$/g,'').trim();
-    let parsed;
-    try{ parsed=JSON.parse(raw); }catch{ return{ok:false,error:'⚠️ مش فاهم الوصف ده كويس — جرب تكتبه بشكل أوضح.'}; }
-    if(parsed.needsClarification && parsed.clarifyingQuestion){
-      return{ok:true,needsClarification:true,question:parsed.clarifyingQuestion};
-    }
-    const m=parsed.macro;
-    if(!m || typeof m.p!=='number' || typeof m.c!=='number' || typeof m.f!=='number' || typeof m.k!=='number'){
-      return{ok:false,error:'⚠️ مش قادر أحسب القيم الغذائية من الوصف ده — جرب توصف أكتر.'};
-    }
-    // b (fiber) validated loosely — default to 0 rather than rejecting the whole
-    // response if the model ever omits it, since fiber is a secondary field and
-    // shouldn't block an otherwise-valid macro estimate.
-    const b=typeof m.b==='number'?m.b:0;
-    return{ok:true,macro:{p:m.p,c:m.c,f:m.f,b,k:m.k},verdict:cleanVerdictText(parsed.verdict||'')};
-  }catch(e){
-    console.error('food macro compute failed',e);
-    return{ok:false,error:'⚠️ مش قادر أوصل للسيرفر دلوقتي.'};
-  }
 }
 
 // Finalizes logging: marks the task done (if not already), stores the food-log entry
@@ -3632,6 +3701,25 @@ async function flFinalizeLog(task,description,macro,verdict,showVerdictUI){
   }
 }
 
+// Runs the full pipeline once the extraction step returns items ready to look up:
+// real Nutritionix lookup -> friendly verdict -> finalize/save. Shared by both the
+// first-submit path and the after-clarification path so there's exactly one place
+// that turns "items" into a saved log entry.
+async function flRunLookupAndFinalize(task,description,items){
+  const lookup=await flLookupNutrition(items);
+  if(!lookup.ok){
+    document.getElementById('flLoadingStep').style.display='none';
+    document.getElementById('flChooseStep').style.display='block';
+    showToast(lookup.error,4200,'warn');
+    return;
+  }
+  const jd=getJDfromISO(SELECTED_DATE);
+  const{target,consumed}=computeDayMacros(jd,SELECTED_DATE);
+  const verdict=await flGetVerdict(task,lookup.macro,target,consumed);
+  document.getElementById('flLoadingStep').style.display='none';
+  await flFinalizeLog(task,description,lookup.macro,verdict,true);
+}
+
 async function flHandleSubmit(){
   if(!FL_ACTIVE_TASK) return;
   const text=document.getElementById('flFreeText').value.trim();
@@ -3640,7 +3728,7 @@ async function flHandleSubmit(){
   document.getElementById('flChooseStep').style.display='none';
   document.getElementById('flLoadingStep').style.display='block';
 
-  const result=await flComputeMacro(FL_ACTIVE_TASK,text,null);
+  const result=await flExtractMealInfo(text,null);
 
   if(!result.ok){
     document.getElementById('flLoadingStep').style.display='none';
@@ -3649,7 +3737,10 @@ async function flHandleSubmit(){
     return;
   }
 
-  if(result.needsClarification){
+  if(result.needsInfo){
+    // Missing info gate: don't call the nutrition API at all until the description
+    // is actually complete (quantity + cooking method where it matters) — ask the
+    // casual follow-up and wait for the reply instead of guessing.
     document.getElementById('flLoadingStep').style.display='none';
     const askStep=document.getElementById('flAskStep');
     askStep.style.display='block';
@@ -3658,8 +3749,7 @@ async function flHandleSubmit(){
     return;
   }
 
-  document.getElementById('flLoadingStep').style.display='none';
-  await flFinalizeLog(FL_ACTIVE_TASK,text,result.macro,result.verdict,true);
+  await flRunLookupAndFinalize(FL_ACTIVE_TASK,text,result.items);
 }
 
 async function flHandleAskAnswer(){
@@ -3668,13 +3758,20 @@ async function flHandleAskAnswer(){
   const answer=document.getElementById('flAskAnswer').value.trim();
   if(!answer){showToast('اكتب إجابتك الأول',2000,'warn');return;}
   const origText=askStep.dataset.origText||'';
+  const priorQuestion=document.getElementById('flAskQuestion').textContent;
 
   askStep.style.display='none';
   document.getElementById('flLoadingStep').style.display='block';
 
-  const result=await flComputeMacro(FL_ACTIVE_TASK,origText,{question:document.getElementById('flAskQuestion').textContent,answer});
+  // Carries the original description + the Q&A round as real conversation turns, so
+  // the extractor has full context instead of re-parsing from scratch.
+  const priorTurns=[
+    {role:'user',content:origText},
+    {role:'assistant',content:JSON.stringify({status:'needs_info',followUpQuestion:priorQuestion,items:[]})}
+  ];
+  const result=await flExtractMealInfo(answer,priorTurns);
 
-  if(!result.ok || result.needsClarification){
+  if(!result.ok || result.needsInfo){
     // Don't loop clarifying questions indefinitely — if it's still unclear after one
     // follow-up, fall back to asking him to just retype the description plainly.
     document.getElementById('flLoadingStep').style.display='none';
@@ -3683,9 +3780,8 @@ async function flHandleAskAnswer(){
     return;
   }
 
-  document.getElementById('flLoadingStep').style.display='none';
   const combinedDesc=`${origText} (${answer})`;
-  await flFinalizeLog(FL_ACTIVE_TASK,combinedDesc,result.macro,result.verdict,true);
+  await flRunLookupAndFinalize(FL_ACTIVE_TASK,combinedDesc,result.items);
 }
 
 async function flHandleSaveOptYes(){
@@ -4078,7 +4174,7 @@ function aiToolCallReplyText(v){
   switch(v.tool){
     case 'markDone': return `تمام، سجلت "${v.taskName}" بتاريخ ${v.iso} كمُنجزة ✅`;
     case 'unmarkDone': return `تم إلغاء تسجيل "${v.taskName}" كمُنجزة في ${v.iso} ✅`;
-    case 'logFood': return `تم تسجيل "${v.description}" في "${v.taskName}" ✅`;
+    case 'logFood': return v._chatReplyOverride?`🍽️ ${v._chatReplyOverride}`:`تم تسجيل "${v.description}" في "${v.taskName}" ✅`;
     case 'moveTask': return `تم نقل "${v.taskName}" إلى ${v.toDate} الساعة ${v.toTime} ✅`;
     case 'deleteTask': return `تم حذف "${v.taskName}" (لسه ظاهرة بس معلّم عليها كمحذوفة) 🗑️`;
     case 'restoreTask': return `تم إرجاع "${v.taskName}" ✅`;
