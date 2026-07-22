@@ -1241,8 +1241,24 @@ function checkStreak(){
   const allDone=req.length>0 && req.every(t=>todayDone[t[0]]);
   const yesterday=dateOff(-1);
 
+  // The "did the streak break" checks below are inherently about YESTERDAY's
+  // completion, not today's — so they must evaluate yesterday's own required-task
+  // list against yesterday's own historyData, never today's `allDone`/`req`.
+  //
+  // The previous version reused today's `allDone` (computed above, for TODAY's task
+  // list) as a stand-in for "was yesterday finished?". Since checkStreak() runs once
+  // per day on load — BEFORE the user has completed anything today — `allDone` for
+  // today is almost always false at that moment. That false was then wrongly read as
+  // "yesterday was incomplete", breaking a streak that was actually completed in
+  // full the day before. This is the exact mechanism behind "streak broke after 1
+  // day" despite every task from the prior day being done.
+  const yesterdayJd=getJDfromISO(yesterday);
+  const yesterdayReq=getReqTasks(yesterdayJd,yesterday);
+  const yesterdayDoneMap=(historyData[yesterday]||{}).done||{};
+  const yesterdayAllDone=yesterdayReq.length>0 && yesterdayReq.every(t=>yesterdayDoneMap[t[0]]);
+
   if(STATS.lc!==TODAY){
-    if(STATS.lf===yesterday && !allDone){
+    if(STATS.lf===yesterday && !yesterdayAllDone){
       STATS.best=Math.max(STATS.best,STATS.cur);
       if(STATS.cur>0){showToast(`💔 انكسر الاستريك بعد ${STATS.cur} يوم\n${pickRandom(ENCOURAGE_MISS)}`,3800,'warn');shakeStreakBroken();}
       STATS.cur=0;
@@ -1263,7 +1279,11 @@ function checkStreak(){
     pulseStreakWin();barGoldFlash();
   }
 
-  if(!allDone && STATS.lf===yesterday){
+  // This branch previously fired on almost every load before the user did any task
+  // today (since `!allDone` was near-always true for a freshly-started day), which
+  // is the second half of the same false-break bug — now correctly scoped to
+  // "yesterday, which the streak claims was completed, actually wasn't."
+  if(!yesterdayAllDone && STATS.lf===yesterday){
     STATS.best=Math.max(STATS.best,STATS.cur);
     if(STATS.cur>0){showToast(`💔 انكسر الاستريك بعد ${STATS.cur} يوم\n${pickRandom(ENCOURAGE_MISS)}`,3800,'warn');shakeStreakBroken();}
     STATS.cur=0;STATS.lf=null;
@@ -1529,7 +1549,8 @@ function buildTodayReminderPayload(){
     if(DONE[id]!==undefined && DONE[id]!==false) continue;
     const startMin=toMin(t[10]||t[1]);
 
-    reminders.push({taskId:id,taskName:t[4],type:'lead',date:TODAY,time:minToHHMM(startMin-NOTIF_LEAD_MIN)});
+    // 'lead' (30-min-before) reminder removed per explicit instruction. Only 'start'
+    // (at task time) and 'ending' (30 min before task's effective end) remain.
     reminders.push({taskId:id,taskName:t[4],type:'start',date:TODAY,time:minToHHMM(startMin)});
 
     if(t[2]!=='sleep'){

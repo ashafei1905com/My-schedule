@@ -180,26 +180,44 @@ async function handleSaveSubscription(request, env) {
          user_uid=excluded.user_uid, p256dh=excluded.p256dh, auth=excluded.auth`
     ).bind(uid, subscription.endpoint, subscription.keys.p256dh, subscription.keys.auth, now).run();
 
-    // Wholesale-replace today's reminders for this user. Scoped to the date(s) present
-    // in the incoming payload, not the whole user, so re-saving today's reminders never
-    // clobbers a different day's already-scheduled ones (relevant once/if this is
-    // extended to schedule more than just today in advance).
+    // Replace today's PENDING reminders for this user. Previous version deleted ALL
+    // rows (fired or not) for the date, unconditionally, on every sync call. The app
+    // calls syncPushSchedule() on every load/re-render (see index.html), so a sync
+    // could race the cron job: cron reads a not-yet-fired row and starts sending the
+    // push -> before it marks fired=1, a resync deletes that row and inserts a FRESH
+    // fired=0 row for the exact same task/time -> the in-flight send still completes,
+    // and the new row is still eligible to fire again on the next cron tick. This was
+    // the actual mechanism behind the repeated "same reminder 4x in a row" bug, not a
+    // subscription-table duplication issue.
+    //
+    // Fix has two parts:
+    //   1. Only delete rows that have NOT fired yet (fired = 0) — an already-fired row
+    //      for today is left alone, so a resync can never resurrect a reminder that's
+    //      already been sent.
+    //   2. Insert with a dedup guard (INSERT ... WHERE NOT EXISTS) keyed on the same
+    //      tuple the sw.js notification tag itself collapses on (task_id + type),
+    //      scoped to the day — this makes even an overlapping/racing sync unable to
+    //      create two live rows for the same reminder, regardless of timing.
     const dates = [...new Set(reminders.map(r => r.date))];
     for (const d of dates) {
       await env.DB.prepare(
-        `DELETE FROM scheduled_reminders WHERE user_uid = ? AND fire_date = ?`
+        `DELETE FROM scheduled_reminders WHERE user_uid = ? AND fire_date = ? AND fired = 0`
       ).bind(uid, d).run();
     }
 
     if (reminders.length) {
-      // D1 batch insert — one round trip instead of N.
       const stmt = env.DB.prepare(
         `INSERT INTO scheduled_reminders
-         (user_uid, task_id, task_name, reminder_type, fire_date, fire_time, fired, created_at)
-         VALUES (?, ?, ?, ?, ?, ?, 0, ?)`
+           (user_uid, task_id, task_name, reminder_type, fire_date, fire_time, fired, created_at)
+         SELECT ?, ?, ?, ?, ?, ?, 0, ?
+         WHERE NOT EXISTS (
+           SELECT 1 FROM scheduled_reminders
+           WHERE user_uid = ? AND task_id = ? AND reminder_type = ? AND fire_date = ?
+         )`
       );
       const batch = reminders.map(r =>
-        stmt.bind(uid, r.taskId, r.taskName, r.type, r.date, r.time, now)
+        stmt.bind(uid, r.taskId, r.taskName, r.type, r.date, r.time, now,
+                   uid, r.taskId, r.type, r.date)
       );
       await env.DB.batch(batch);
     }
