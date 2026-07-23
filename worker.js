@@ -26,8 +26,23 @@
 import { buildPushPayload } from '@block65/webcrypto-web-push';
 
 const ALLOWED_ORIGIN = 'https://ashafei1905com.github.io';
-const MODEL = 'llama-3.3-70b-versatile';
-const MAX_TOKENS = 600;
+// Switched from llama-3.3-70b-versatile to openai/gpt-oss-120b — still 100% free on
+// Groq's no-card tier (same account, same key, zero cost change), but a newer,
+// larger, production-tier model built specifically with stronger instruction-
+// following and tool-use as design goals. This directly targets the observed
+// failure modes: ignoring explicit rules in the food-log extraction prompt (asking
+// a follow-up question when the rules said not to), and fabricating content not
+// present in context (the invented "protocol" comment). A bigger, newer model
+// reduces how often this happens — it does not guarantee zero, since it's still a
+// free-tier call with no retry/validation loop around it.
+const MODEL = 'openai/gpt-oss-120b';
+// gpt-oss-120b spends completion tokens on internal reasoning BEFORE producing the
+// visible answer, even with include_reasoning:false hiding that trace from the
+// response text — the token budget still has to cover both. 600 was sized for the
+// old non-reasoning Llama model's output alone and would risk truncating a reply
+// before any visible text was emitted at all. Raised with headroom; reasoning_effort
+// is kept at 'low' above specifically so this doesn't balloon latency or usage.
+const MAX_TOKENS = 1200;
 
 export default {
   async fetch(request, env) {
@@ -82,7 +97,19 @@ export default {
         body: JSON.stringify({
           model: MODEL,
           max_completion_tokens: MAX_TOKENS,
-          messages: groqMessages
+          messages: groqMessages,
+          // gpt-oss-120b is a reasoning model — by default Groq INCLUDES its internal
+          // reasoning trace in the response (include_reasoning defaults to true).
+          // Every caller in this app (aiParseIntent's JSON parsing, flExtractMealInfo,
+          // flComputeMacro, aiResolveRelativeMove, etc.) does a plain JSON.parse on
+          // data.text expecting ONLY the final JSON object — a prepended reasoning
+          // trace would break every one of them with a parse error. Explicitly
+          // disabling it here is required, not optional, for this model swap to work
+          // at all. reasoning_effort:'low' also keeps latency/token usage close to
+          // what the old non-reasoning model felt like, since this app needs fast
+          // conversational replies, not deep multi-step reasoning.
+          include_reasoning: false,
+          reasoning_effort: 'low'
         })
       });
 
@@ -235,19 +262,35 @@ async function handleNutritionLookup(request, env) {
         // grams). A food entry that fails this is skipped entirely rather than
         // silently contributing NaN/garbage to the running total — this is the
         // actual fix for "3089g carbs, 0 protein" style impossible results.
+        //
+        // Tightened from <5000g to <1500g per item: a single realistically-logged
+        // food item (one meal component, not a whole day's intake) essentially never
+        // legitimately weighs more than ~1.5kg. The earlier 5000g ceiling was wide
+        // enough to let a misparsed API Ninjas match (e.g. the query resolving to a
+        // bulk/wrong database entry) straight through, which is what produced the
+        // 3088g-carbs result even after "validation" — every individual field was
+        // still technically finite and non-negative, so it passed.
         const isFiniteNonNeg = n => typeof n === 'number' && Number.isFinite(n) && n >= 0;
         const p = food.protein_g, c = food.carbohydrates_total_g, f = food.fat_total_g,
               b = food.fiber_g, k = food.calories, servingG = food.serving_size_g;
         const fieldsValid = isFiniteNonNeg(p) && isFiniteNonNeg(c) && isFiniteNonNeg(f) &&
                              (b===undefined || isFiniteNonNeg(b)) && isFiniteNonNeg(k) &&
-                             (servingG===undefined || (isFiniteNonNeg(servingG) && servingG < 5000));
+                             (servingG===undefined || (isFiniteNonNeg(servingG) && servingG < 1500));
         // Sanity cross-check: calories should roughly match p*4 + c*4 + f*9 (within a
         // generous tolerance for rounding/alcohol/etc.) — catches a field-mapping or
         // scale bug even when every individual field looked numerically "valid".
         const kcalFromMacros = p*4 + c*4 + f*9;
         const kcalPlausible = k===0 || (kcalFromMacros>0 && Math.abs(k-kcalFromMacros)/Math.max(k,kcalFromMacros) < 0.5);
         if (!fieldsValid || !kcalPlausible) {
-          console.error('nutrition item failed validation, skipping', food);
+          console.error('nutrition item failed validation, skipping', { query: q, food });
+          items.push({
+            name: food.name || q,
+            qty: servingG,
+            unit: 'g',
+            kcal: null,
+            rejected: true,
+            rejectReason: !fieldsValid ? 'implausible_serving_or_field' : 'kcal_macro_mismatch'
+          });
           continue;
         }
         macro.p += p; macro.c += c; macro.f += f; macro.b += (b||0); macro.k += k;
@@ -255,7 +298,12 @@ async function handleNutritionLookup(request, env) {
           name: food.name,
           qty: servingG,
           unit: 'g',
-          kcal: Math.round(k)
+          kcal: Math.round(k),
+          protein: Math.round(p*10)/10,
+          carbs: Math.round(c*10)/10,
+          fat: Math.round(f*10)/10,
+          fiber: Math.round((b||0)*10)/10,
+          rejected: false
         });
         anyMatched = true;
       }
@@ -265,10 +313,12 @@ async function handleNutritionLookup(request, env) {
       return json({ error: 'No matching foods found' }, 404);
     }
 
+    const anyRejected = items.some(it => it.rejected);
     const r1 = n => Math.round(n * 10) / 10;
     return json({
       macro: { p: r1(macro.p), c: r1(macro.c), f: r1(macro.f), b: r1(macro.b), k: r1(macro.k) },
-      items
+      items,
+      anyRejected
     });
   } catch (e) {
     console.error('nutrition lookup request failed', e);

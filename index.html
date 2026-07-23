@@ -395,6 +395,7 @@ body{font-family:'Cairo',sans-serif;background:var(--bg);color:var(--tx);directi
     <!-- Step: result + verdict + save-as-option prompt -->
     <div id="flResultStep" style="display:none">
       <div id="flMacroResult" class="fl-macro-result"></div>
+      <div id="flItemBreakdown" style="display:none;background:var(--c);border:1px solid var(--br);border-radius:10px;padding:10px 12px;margin-bottom:12px"></div>
       <div id="flVerdict" class="fl-verdict"></div>
       <div id="flSaveOptRow" class="fl-save-row">
         <span>تحفظها كخيار سريع للمرة الجاية؟</span>
@@ -914,14 +915,43 @@ async function saveMealOptions(){
   }catch(e){console.warn('mealOptions cloud save failed',e);}
 }
 
+// Token-overlap similarity between two descriptions, using the SAME normalizer
+// (aiNormalize, defined later in this file — safe to reference here since function
+// declarations are hoisted) that already handles task-name fuzzy matching. This is
+// what actually fixes the near-duplicate accumulation: "3 eggs boiled" and "3 boiled
+// eggs" produce the same token SET after normalization, so a pure exact-string check
+// (the previous logic) never caught them as the same option. Order-independent and
+// tolerant of small wording differences, but still requires near-total token overlap
+// so genuinely different meals never collapse into one entry.
+function mealOptionSimilarity(a,b){
+  const ta=new Set(aiNormalize(a).split(' ').filter(Boolean));
+  const tb=new Set(aiNormalize(b).split(' ').filter(Boolean));
+  if(!ta.size||!tb.size) return 0;
+  let shared=0;
+  for(const t of ta) if(tb.has(t)) shared++;
+  const union=new Set([...ta,...tb]).size;
+  return union>0?shared/union:0; // Jaccard similarity, 0..1
+}
+const MEAL_OPTION_DUPLICATE_THRESHOLD=0.72; // tuned to catch reorderings/small edits, not distinct meals
+
+// Adds a saved quick-pick option for a meal slot, replacing an existing near-duplicate
+// in place instead of piling up near-identical entries ("3 eggs boiled", "3 boiled
+// eggs", "3 eggs boiled + salt" all collapsing to one). The newest description/macro
+// always wins on a match — that's the one Abdullah just actually ate and logged, so it
+// should be what's offered next time, not whichever version happened to be saved
+// first.
 function addMealOption(mealKey,description,macro){
   if(!mealKey||!description) return;
   if(!MEAL_OPTIONS[mealKey]) MEAL_OPTIONS[mealKey]=[];
-  // No exact-text dupes for the same meal slot.
-  if(MEAL_OPTIONS[mealKey].some(o=>o.description.trim().toLowerCase()===description.trim().toLowerCase())) return;
-  MEAL_OPTIONS[mealKey].push({description,macro,addedAt:Date.now()});
+  const list=MEAL_OPTIONS[mealKey];
+  const dupIdx=list.findIndex(o=>mealOptionSimilarity(o.description,description)>=MEAL_OPTION_DUPLICATE_THRESHOLD);
+  if(dupIdx>=0){
+    list[dupIdx]={description,macro,addedAt:Date.now()};
+    return;
+  }
+  list.push({description,macro,addedAt:Date.now()});
   // Keep each meal slot's saved list from growing unbounded.
-  if(MEAL_OPTIONS[mealKey].length>25) MEAL_OPTIONS[mealKey].shift();
+  if(list.length>25) list.shift();
 }
 let IS_BRAND_NEW_SESSION=false; // true only for the very session that creates FIRST_SEEN
 // (FIRST_SEEN itself: no day before it is ever eligible for punishment, and the day
@@ -3454,8 +3484,17 @@ async function aiExecuteToolCall(v){
             SELECTED_DATE=v.iso;
             const{target,consumed}=computeDayMacros(jd,v.iso);
             const verdict=await flGetVerdict(taskObj,lookup.macro,target,consumed);
-            await flFinalizeLog(taskObj, v.description, lookup.macro, verdict, false);
+            await flFinalizeLog(taskObj, v.description, lookup.macro, verdict, false, lookup.items);
             SELECTED_DATE=prevSelected;
+            // Chat-driven logging has no modal to show the per-item breakdown in, so
+            // a partial/rejected match must be surfaced in the chat reply itself —
+            // otherwise this path silently under-counts with zero way to notice,
+            // which is the likely mechanism behind "AI logged garbage and I couldn't
+            // tell why" for messages sent through the chat rather than the modal.
+            if(lookup.anyRejected){
+              const badNames=(lookup.items||[]).filter(it=>it.rejected).map(it=>it.name).join('، ');
+              v._nutritionWarning=`⚠️ ملحوظة: مش كل حاجة في الوصف اتحسبت بدقة (${badNames||'عنصر واحد على الأقل'}) — القيم دي ناقصة الجزء ده.`;
+            }
           }else{
             v._chatReplyOverride=lookup.error;
           }
@@ -3596,13 +3635,23 @@ Respond with ONLY a raw JSON object, nothing else — no markdown fences, no tex
 {"status":"needs_info" | "ready","followUpQuestion":"<if needs_info: ONE short casual question in his own dialect/language asking for the missing detail — otherwise empty string>","items":[{"food":"<plain English food name, e.g. 'grilled chicken breast'>","qty":<number>,"unit":"<e.g. 'g','oz','cup','piece','tbsp'>"}]}
 
 Rules for deciding needs_info vs ready:
-- Missing QUANTITY entirely (no size/count/weight mentioned at all) -> needs_info. Ask casually, e.g. "قد ايه تقريبا؟ كوباية؟ طبق؟" or "how much roughly — a cup, a plate?"
-- Missing COOKING METHOD when it meaningfully changes the calories (fried vs grilled/boiled/baked for meat, chicken, fish, eggs, potatoes) -> needs_info. Ask casually, e.g. "مقلي ولا مشوي؟" or "fried or grilled?"
-- Vague quantity words like "a bit", "شوية", "حبة" for a countable item (e.g. "حبة موز") are FINE — treat "a piece/حبة" as qty:1, unit:"piece" and proceed to ready. Don't ask for more precision than a normal person would give.
+- Missing QUANTITY entirely (no size/count/weight mentioned at all) -> needs_info.
+- Missing COOKING METHOD when it meaningfully changes the calories (fried vs grilled/boiled/baked for meat, chicken, fish, eggs, potatoes) -> needs_info.
+- Vague quantity words like "a bit", "شوية", "حبة" for a countable item (e.g. "حبة موز") are FINE — treat "a piece/حبة" as qty:1, unit:"piece" and proceed to ready IMMEDIATELY, status "ready", with NO followUpQuestion at all. This is a hard rule, not a suggestion: "أكلت حبة موز" ALONE, with zero other words, is already 100% complete information (food=banana, qty=1, unit=piece) — asking anything else about it is WRONG and violates this instruction. Do not ask for grams, do not ask for ripeness, do not ask anything — a single piece of a whole fruit/vegetable needs no further detail, ever. Don't ask for more precision than a normal person would give.
 - Foods where cooking method doesn't change calories much (raw fruit, raw vegetables, nuts, dairy, bread) never need a method follow-up.
 - If he gives multiple items in one message, resolve ALL of them — only ask about whichever ones are actually missing info; items with complete info go straight into "items".
 - Never ask more than ONE combined question per turn, even if multiple things are missing — combine into one natural sentence.
-- Once qty + (method, if relevant) are both known for every item, status is "ready" and items must be filled in — translate food names and units into plain English food-database terms (e.g. "رز أبيض مسلوق" -> {"food":"boiled white rice","qty":1,"unit":"cup"}), even though he spoke to you in Arabic/dialect.${aiMemoryBlock()}`;
+- Once qty + (method, if relevant) are both known for every item, status is "ready" and items must be filled in — translate food names and units into plain English food-database terms (e.g. "رز أبيض مسلوق" -> {"food":"boiled white rice","qty":1,"unit":"cup"}), even though he spoke to you in Arabic/dialect.
+
+CRITICAL — MULTI-TURN CONTEXT: if the conversation so far already contains an earlier user message describing a food, and your own prior assistant turn asked a follow-up question about THAT SAME food, the LATEST user message is the ANSWER to that question — not a new, separate, standalone meal. You MUST combine it with the food named earlier before deciding ready/needs_info. Example: earlier user message "أكلت فراخ", your prior question "مقلي ولا مشوي؟ وكام؟", latest user message "مشوي، 200 جرام" -> this means grilled chicken, 200g — status MUST be "ready" with items:[{"food":"grilled chicken breast","qty":200,"unit":"g"}]. NEVER re-ask about the food identity itself once it was already named in an earlier turn — a short reply like a cooking method or a number is answering your own question, not starting over. If, after combining the full conversation, something is still genuinely missing, ask ONLY about that remaining gap — never repeat a question about something already answered in an earlier turn.
+
+CRITICAL — NEVER INVENT FACTS: you have no information about Abdullah beyond what is explicitly given to you in this conversation and in the "THINGS YOU KNOW ABOUT ABDULLAH" section below, if present. NEVER reference a "protocol", "diet plan", "system", "his goals", or any rule/restriction he supposedly follows unless it is explicitly stated in that memory section or in his own message. If nothing has been said about restrictions, treat every food as simply allowed and move straight to figuring out quantity/method — do not comment on whether a food "fits" anything unless he asked you to.
+
+CRITICAL — the followUpQuestion must be built FROM his actual message, never a generic template:
+- Name the SPECIFIC food he mentioned by name in the question (e.g. if he wrote "أكلت فراخ", ask "الفراخ كانت قد ايه تقريبا؟" — not a generic "قد ايه الوجبة؟" that could apply to anything).
+- If he mentioned multiple items and only one is missing info, name THAT one specifically, not all of them.
+- Never reuse a stock example phrasing verbatim — compose the question fresh each time from what he actually wrote. Two different messages with two different missing details must never produce the same question text.
+- If unsure what unit makes sense for a food, offer units that actually fit THAT food (e.g. eggs -> "كام بيضة؟" not "كام كوباية؟"; rice/liquid -> cups/grams make sense; meat -> grams/portion makes sense). Do not default to "cup" as a generic fallback question when the food isn't cup-measured.${aiMemoryBlock()}`;
 }
 
 // Calls flBuildExtractionPrompt via the Worker (still using the free Groq/Llama
@@ -3661,9 +3710,47 @@ async function flLookupNutrition(items){
     const data=await res.json();
     if(!res.ok || data.error){
       console.error('nutrition lookup failed',data.error||res.status);
-      return{ok:false,error:'⚠️ مش لاقي بيانات غذائية دقيقة للوصف ده — جرب تبسطه أكتر (مثلاً: "200 جرام فراخ مشوية").'};
+      // Distinguish an actual "couldn't find this food" result from a transient
+      // server/network failure — these were previously collapsed into one identical
+      // message regardless of cause, which is exactly why a genuinely specific
+      // description ("200g grilled chicken breast") could show the same "try being
+      // more specific" text as a real outage. Only the true no-match case tells you
+      // to rephrase; everything else says what actually happened.
+      if(res.status===404 || data.error==='No matching foods found'){
+        return{ok:false,error:'⚠️ مش لاقي بيانات غذائية دقيقة للوصف ده — جرب تبسطه أكتر (مثلاً: "200 جرام فراخ مشوية").'};
+      }
+      if(res.status>=500){
+        return{ok:false,error:'⚠️ السيرفر واقع أو فيه مشكلة مؤقتة — جرب تاني بعد شوية (مش مشكلة في الوصف اللي كتبته).'};
+      }
+      return{ok:false,error:`⚠️ حصل خطأ (${data.error||res.status}) — جرب تاني، ولو تكرر قولّي.`};
     }
-    return{ok:true,macro:data.macro,items:data.items};
+    // Client-side sanity gate — independent of whatever validation the Worker does
+    // (or fails to do, e.g. an un-deployed fix). This is the actual backstop against
+    // the "3088g carbs for one breakfast" failure mode: a single meal cannot
+    // legitimately contain thousands of grams of any macro, and kcal must roughly
+    // match p*4+c*4+f*9. If the response fails this check, it's treated exactly like
+    // a lookup failure — never silently written into the tracker.
+    const m=data.macro;
+    const finite=v=>typeof v==='number' && isFinite(v) && v>=0;
+    const PLAUSIBLE_MAX={p:300,c:400,f:250,b:100,k:4000}; // grams/kcal — generous upper bound for a single logged meal
+    const macroSane = m
+      && finite(m.p) && finite(m.c) && finite(m.f) && finite(m.k)
+      && m.p<=PLAUSIBLE_MAX.p && m.c<=PLAUSIBLE_MAX.c && m.f<=PLAUSIBLE_MAX.f && m.k<=PLAUSIBLE_MAX.k
+      && (m.b===undefined || (finite(m.b) && m.b<=PLAUSIBLE_MAX.b));
+    if(macroSane){
+      const expectedKcal=m.p*4+m.c*4+m.f*9;
+      // Allow generous drift (fiber, alcohol, rounding) but catch wildly inconsistent
+      // combinations like the observed bug (0 protein/fat, kcal completely disjoint
+      // from the carb figure).
+      if(expectedKcal>0 && Math.abs(m.k-expectedKcal)/Math.max(expectedKcal,m.k)>0.6){
+        console.error('nutrition response failed kcal-consistency check',m);
+        return{ok:false,error:'⚠️ القيم اللي رجعت من السيرفر مش منطقية — جرب توصف الوجبة بشكل مختلف أو أبسط.'};
+      }
+    }else{
+      console.error('nutrition response failed client-side sanity check',m);
+      return{ok:false,error:'⚠️ القيم اللي رجعت من السيرفر مش منطقية — جرب توصف الوجبة بشكل مختلف أو أبسط.'};
+    }
+    return{ok:true,macro:data.macro,items:data.items,anyRejected:!!data.anyRejected};
   }catch(e){
     console.error('nutrition lookup request failed',e);
     return{ok:false,error:'⚠️ مش قادر أوصل للسيرفر دلوقتي.'};
@@ -3718,7 +3805,7 @@ function cleanVerdictText(text){
 // computeDayMacros), awards points, saves, re-renders. showVerdictUI controls whether
 // the result/verdict/save-prompt screen is shown (skipped for instant saved-option
 // picks) — pass null verdict to skip the verdict line.
-async function flFinalizeLog(task,description,macro,verdict,showVerdictUI){
+async function flFinalizeLog(task,description,macro,verdict,showVerdictUI,itemsBreakdown){
   const id=task[0];
   const iso=SELECTED_DATE;
   const pts=task[6]||0;
@@ -3749,6 +3836,30 @@ async function flFinalizeLog(task,description,macro,verdict,showVerdictUI){
     const resStep=document.getElementById('flResultStep');
     resStep.style.display='block';
     document.getElementById('flMacroResult').innerHTML=`<span><b>${Math.round(macro.k)}</b> سعرة</span><span>بروتين <b>${Math.round(macro.p)}</b>جم</span><span>كارب <b>${Math.round(macro.c)}</b>جم</span><span>دهون <b>${Math.round(macro.f)}</b>جم</span><span>ألياف <b>${Math.round(macro.b||0)}</b>جم</span>`;
+    // Per-item breakdown — this is the actual traceability fix: instead of one
+    // opaque total, show exactly which food-database entry each part of the meal
+    // matched to, its assumed serving size, and its individual macro contribution.
+    // A wrong match (wrong food, implausible serving size) becomes visible and
+    // catchable here instead of silently baked into an unexplained total. Rejected
+    // items (server-side validation failed) are shown too, explicitly marked as
+    // excluded, so a partial total is never mistaken for a complete one.
+    const breakdownEl=document.getElementById('flItemBreakdown');
+    if(breakdownEl){
+      if(Array.isArray(itemsBreakdown) && itemsBreakdown.length){
+        breakdownEl.style.display='block';
+        breakdownEl.innerHTML=`<div style="font-size:.68rem;color:var(--mu);font-weight:700;margin-bottom:6px">تفاصيل كل عنصر اتحسب إزاي:</div>`+
+          itemsBreakdown.map(it=>{
+            if(it.rejected){
+              return `<div style="font-size:.7rem;color:var(--rd);padding:4px 0;border-bottom:1px solid rgba(239,68,68,.15)">❌ "${(it.name||'').replace(/</g,'&lt;')}" — متتحسبش (القيم اللي رجعت مش منطقية)، مش داخلة في الإجمالي</div>`;
+            }
+            const qtyLabel=it.qty!=null?`${Math.round(it.qty)}${it.unit||'g'}`:'';
+            return `<div style="font-size:.7rem;color:var(--so);padding:4px 0;border-bottom:1px solid rgba(255,255,255,.06)">✅ ${(it.name||'').replace(/</g,'&lt;')} ${qtyLabel?`(${qtyLabel})`:''} — <b style="color:var(--gr)">${it.kcal}</b> سعرة · ب${it.protein??'-'} · ك${it.carbs??'-'} · د${it.fat??'-'}</div>`;
+          }).join('');
+      }else{
+        breakdownEl.style.display='none';
+        breakdownEl.innerHTML='';
+      }
+    }
     const verdictEl=document.getElementById('flVerdict');
     if(verdict){verdictEl.style.display='block';verdictEl.textContent=verdict;}
     else{verdictEl.style.display='none';}
@@ -3775,11 +3886,18 @@ async function flRunLookupAndFinalize(task,description,items){
     showToast(lookup.error,4200,'warn');
     return;
   }
+  if(lookup.anyRejected){
+    // At least one item couldn't be matched/validated and was silently dropped from
+    // the total on the server. Surfacing this explicitly is the actual fix for "the
+    // numbers are wrong and I can't tell why" — previously a partial/undercounted
+    // total looked identical to a fully correct one.
+    showToast('⚠️ في عنصر واحد على الأقل من الوجبة معرفتش أحسبه بدقة — القيم اللي هتظهر ناقصة العنصر ده. شوف التفاصيل تحت.',4500,'warn');
+  }
   const jd=getJDfromISO(SELECTED_DATE);
   const{target,consumed}=computeDayMacros(jd,SELECTED_DATE);
   const verdict=await flGetVerdict(task,lookup.macro,target,consumed);
   document.getElementById('flLoadingStep').style.display='none';
-  await flFinalizeLog(task,description,lookup.macro,verdict,true);
+  await flFinalizeLog(task,description,lookup.macro,verdict,true,lookup.items);
 }
 
 async function flHandleSubmit(){
@@ -4236,7 +4354,7 @@ function aiToolCallReplyText(v){
   switch(v.tool){
     case 'markDone': return `تمام، سجلت "${v.taskName}" بتاريخ ${v.iso} كمُنجزة ✅`;
     case 'unmarkDone': return `تم إلغاء تسجيل "${v.taskName}" كمُنجزة في ${v.iso} ✅`;
-    case 'logFood': return v._chatReplyOverride?`🍽️ ${v._chatReplyOverride}`:`تم تسجيل "${v.description}" في "${v.taskName}" ✅`;
+    case 'logFood': return v._chatReplyOverride?`🍽️ ${v._chatReplyOverride}`:`تم تسجيل "${v.description}" في "${v.taskName}" ✅${v._nutritionWarning?`\n\n${v._nutritionWarning}`:''}`;
     case 'moveTask': return `تم نقل "${v.taskName}" إلى ${v.toDate} الساعة ${v.toTime} ✅`;
     case 'deleteTask': return `تم حذف "${v.taskName}" (لسه ظاهرة بس معلّم عليها كمحذوفة) 🗑️`;
     case 'restoreTask': return `تم إرجاع "${v.taskName}" ✅`;
@@ -4654,8 +4772,21 @@ if (typeof onAuthStateChanged !== 'undefined' && typeof fbAuth !== 'undefined') 
     await loadAll();
 
     if(user && typeof getDoc !== 'undefined' && typeof doc !== 'undefined' && typeof fbDb !== 'undefined'){
+      // Retry once after a short delay before giving up — mirrors the same pattern
+      // already used for saveAll()'s cloud write (see attemptSave/e1/e2 above). A
+      // transient network hiccup (including the known mifi.home DNS-filtering issue)
+      // often clears within a second or two; retrying here means a page load doesn't
+      // need a manual refresh to recover, and the "غير متزامن" banner only shows when
+      // the load has genuinely failed twice in a row, not on the first blip.
+      let ud;
       try{
-        const ud=await getDoc(doc(fbDb,'users',user.uid));
+        ud=await getDoc(doc(fbDb,'users',user.uid));
+      }catch(e0){
+        console.warn('cloud load failed, retrying once',e0);
+        await new Promise(r=>setTimeout(r,1200));
+        ud=await getDoc(doc(fbDb,'users',user.uid)); // let this one throw to the outer catch if it fails too
+      }
+      try{
         if(ud.exists()){
           const d=ud.data();
           // STATS used to be a flat overwrite (STATS=d.stats), which is what actually
