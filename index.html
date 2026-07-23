@@ -472,7 +472,7 @@ body{font-family:'Cairo',sans-serif;background:var(--bg);color:var(--tx);directi
 
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
 import { getAuth, GoogleAuthProvider, signInWithPopup, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
-import { getFirestore, doc, setDoc, getDoc } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
+import { initializeFirestore, doc, setDoc, getDoc } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
 
 const firebaseConfig = {
   apiKey:"AIzaSyDevk9uUTTiXaNKA5UrGN7KrbCtWgqAnYk",
@@ -484,7 +484,16 @@ const firebaseConfig = {
 };
 const fbApp=initializeApp(firebaseConfig);
 const fbAuth=getAuth(fbApp);
-const fbDb=getFirestore(fbApp);
+// experimentalAutoDetectLongPolling: Firestore's default transport auto-detection
+// tries a streaming (WebChannel) connection first. Some networks/security software
+// let the underlying HTTP connection through fine (which is why plain requests and
+// even the channel's own HTTP requests can show 200 in DevTools' Network tab) while
+// still interfering with the specific gRPC-Web streaming framing Firestore needs —
+// producing exactly a stuck "could not reach backend, 10s timeout" from the SDK
+// despite the network layer looking completely healthy. Forcing long-polling
+// auto-detection bypasses that failure mode by falling back to plain long-polling
+// requests instead of a persistent stream, at a small latency cost.
+const fbDb=initializeFirestore(fbApp,{experimentalAutoDetectLongPolling:true});
 
 let FIREBASE_ONLINE=true;
 
@@ -4603,16 +4612,14 @@ function revealApp(){
 
 function initAppFlow(user){
   updateAuthUI(user);
-  // Belt-and-suspenders failsafe: no single future change to this init chain (a new
-  // awaited network call, a Firestore read, etc.) should ever be able to hang the app
-  // on the loading spinner forever again. If the whole chain hasn't finished within
-  // 12s, force the reveal anyway — worst case the user sees slightly stale/fallback
-  // data for a moment, which is far better than an indefinite blank loading screen.
-  const failsafe=setTimeout(()=>{
-    console.warn('initAppFlow failsafe fired — forcing reveal after 12s');
-    revealApp();
-  },12000);
-  const clearFailsafe=()=>clearTimeout(failsafe);
+  // Failsafe timer removed per explicit instruction: it was forcing the app shell to
+  // reveal after 12s even if the real init chain (prayer times, punishment check,
+  // streak check, render) hadn't actually finished — producing a visible "empty
+  // screen, then the real data pops in a moment later" flash. The loading spinner now
+  // stays up for exactly as long as the real chain takes, however long that is; if
+  // something in the chain hangs, the .catch() below still reveals the app rather
+  // than leaving it stuck forever, so a genuinely broken step still doesn't strand
+  // the user on the spinner permanently.
   fetchPrayers().then(async ()=>{
     // Weekly points reset MUST run before punishment. Previously punishment ran
     // first and deducted from last week's leftover STATS.pts, which the reset then
@@ -4629,7 +4636,6 @@ function initAppFlow(user){
     checkStreak();
     renderTabs();renderPanels();switchDay(todayJD());updateUI();
     revealApp();
-    clearFailsafe();
     if(PENALTY_FLASH_PENDING){flashPenalty();PENALTY_FLASH_PENDING=false;}
     await loadNotifPref();
     updateAuthUI(user);
@@ -4639,7 +4645,6 @@ function initAppFlow(user){
   }).catch(e=>{
     console.warn('Init error bypass:',e);
     revealApp();
-    clearFailsafe();
   });
 }
 
