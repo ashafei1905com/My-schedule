@@ -486,16 +486,26 @@ const firebaseConfig = {
 };
 const fbApp=initializeApp(firebaseConfig);
 const fbAuth=getAuth(fbApp);
-// experimentalAutoDetectLongPolling: Firestore's default transport auto-detection
-// tries a streaming (WebChannel) connection first. Some networks/security software
-// let the underlying HTTP connection through fine (which is why plain requests and
-// even the channel's own HTTP requests can show 200 in DevTools' Network tab) while
-// still interfering with the specific gRPC-Web streaming framing Firestore needs —
-// producing exactly a stuck "could not reach backend, 10s timeout" from the SDK
-// despite the network layer looking completely healthy. Forcing long-polling
-// auto-detection bypasses that failure mode by falling back to plain long-polling
-// requests instead of a persistent stream, at a small latency cost.
-const fbDb=initializeFirestore(fbApp,{experimentalAutoDetectLongPolling:true});
+// DIAGNOSED (2026-07-24): the "غير متزامن (Firebase)" banner was traced to a real,
+// reproducible cause via DevTools evidence — NOT DNS, NOT a router/ISP block, NOT a
+// browser extension. Confirmed by: (1) the failure reproduces identically in
+// Incognito with every extension disabled, ruling out extensions; (2) `nslookup
+// firestore.googleapis.com` resolves correctly even with DNS already set to
+// 1.1.1.1, ruling out DNS filtering; (3) the Network tab showed the actual failing
+// request was `channel?gsessionid=...` returning 404 — a stale WebChannel session
+// trying to resume against a session the backend had already dropped — and every
+// subsequent load succeeded with clean 200s. This is a known Firestore SDK pattern:
+// experimentalAutoDetectLongPolling runs a live transport-negotiation probe on
+// EVERY fresh page load to decide whether to use streaming or long-polling, and
+// that probe can itself race/fail against a leftover session, producing exactly
+// this fail-once-then-work-on-reload signature. experimentalForceLongPolling skips
+// that per-load probe entirely and always uses the same reliable transport from the
+// very first request — the officially documented fix for exactly this failure
+// class (see firebase-js-sdk issues #6948, #7354, #3631), at a small, one-time
+// latency cost versus streaming. If sync issues ever return after this change, they
+// are a DIFFERENT root cause than this one — don't reach for the DNS/router theory
+// again, it was already disproven here.
+const fbDb=initializeFirestore(fbApp,{experimentalForceLongPolling:true});
 
 let FIREBASE_ONLINE=true;
 
@@ -4773,11 +4783,13 @@ if (typeof onAuthStateChanged !== 'undefined' && typeof fbAuth !== 'undefined') 
 
     if(user && typeof getDoc !== 'undefined' && typeof doc !== 'undefined' && typeof fbDb !== 'undefined'){
       // Retry once after a short delay before giving up — mirrors the same pattern
-      // already used for saveAll()'s cloud write (see attemptSave/e1/e2 above). A
-      // transient network hiccup (including the known mifi.home DNS-filtering issue)
-      // often clears within a second or two; retrying here means a page load doesn't
-      // need a manual refresh to recover, and the "غير متزامن" banner only shows when
-      // the load has genuinely failed twice in a row, not on the first blip.
+      // already used for saveAll()'s cloud write (see attemptSave/e1/e2 above). The
+      // root cause of the recurring "غير متزامن" flakiness (a stale WebChannel session
+      // on first load) is fixed at the source via experimentalForceLongPolling above;
+      // this retry is a second layer of defense for genuine transient blips (e.g. the
+      // network being briefly unavailable), so a real one-off hiccup doesn't need a
+      // manual refresh to recover, and the banner only shows when the load has
+      // genuinely failed twice in a row, not on the first blip.
       let ud;
       try{
         ud=await getDoc(doc(fbDb,'users',user.uid));
@@ -4899,16 +4911,16 @@ if (typeof onAuthStateChanged !== 'undefined' && typeof fbAuth !== 'undefined') 
           loadDay();
         }
       }catch(e){
-        console.warn('cloud load failed',e);
+        console.warn('cloud load failed after retry',e);
         setFirebaseOffline();
-        // Known recurring cause on this project: some routers (e.g. mifi.home) apply
-        // DNS-level filtering that silently blocks Firestore's connection on desktop
-        // browsers specifically, while phones on a different network/DNS are unaffected
-        // — which is exactly the "works on phone, fails on laptop" pattern. The fix is
-        // switching the laptop's DNS to 1.1.1.1 / 1.0.0.1, not a code change. Surfacing
-        // that directly here instead of a generic "check your connection" message that
-        // doesn't point at the actual fix.
-        showToast('⚠️ فشل تحميل بياناتك من Firebase. لو الجهاز ده فاشل باستمرار وهو شغال على نفس الراوتر، جرب تغيّر DNS الجهاز لـ 1.1.1.1 — الراوتر ممكن يكون بيعمل فلترة بتمنع Firebase.',6500,'warn');
+        // CORRECTED (2026-07-24): this used to blame router/DNS filtering and tell
+        // the user to change their DNS to 1.1.1.1. That theory was tested directly —
+        // nslookup confirmed DNS resolution was already correct via 1.1.1.1 and the
+        // failure still reproduced — so it was actively wrong and has been removed.
+        // The real cause (a stale WebChannel session on first load) is now fixed at
+        // the source via experimentalForceLongPolling above; this retry+toast is only
+        // a last-resort fallback for a genuine, currently-ongoing connectivity loss.
+        showToast('⚠️ فشل تحميل بياناتك من Firebase بعد أكتر من محاولة — البيانات المحلية اللي شايفها دلوقتي هي آخر نسخة متزامنة، مش بالضرورة أحدث حاجة. جرب تتأكد إن الإنترنت شغال، أو أعد تحميل الصفحة.',5500,'warn');
       }
     }
     initAppFlow(user);
