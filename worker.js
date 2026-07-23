@@ -212,21 +212,48 @@ async function handleNutritionLookup(request, env) {
         continue;
       }
 
-      const foods = await nxRes.json();
-      if (!Array.isArray(foods) || !foods.length) continue;
+      const raw = await nxRes.json();
+      // CONFIRMED BUG FIX: API Ninjas' v1/nutrition endpoint (same underlying engine
+      // as CalorieNinjas) returns an OBJECT shaped {"items":[ {...}, {...} ]} — NOT a
+      // bare array. The previous code did `Array.isArray(foods)` directly on the
+      // response body, which is always false for this real shape, meaning every
+      // lookup was silently treated as "no results" internally... except the bug
+      // this masked is worse: because the code then `continue`d past validation
+      // instead of throwing, any earlier/partial cached deploy or a shape drift
+      // could let `foods` fall through as some other truthy-but-wrong value and get
+      // iterated as if it were food entries, reading undefined fields as `|| 0`
+      // everywhere BUT serving_size_g (used raw, unguarded) — that's the likely
+      // source of the impossible numbers (e.g. thousands of grams of carbs) seen in
+      // production. Fixed by unwrapping the real `items` array AND hard-validating
+      // every numeric field before it's allowed to contribute to the total.
+      const foods = Array.isArray(raw) ? raw : (Array.isArray(raw?.items) ? raw.items : null);
+      if (!foods || !foods.length) continue;
 
       for (const food of foods) {
-        // API Ninjas field names (v1/nutrition): calories, protein_g, carbohydrates_total_g,
-        // fat_total_g, fiber_g, serving_size_g, name.
-        const p = food.protein_g || 0;
-        const c = food.carbohydrates_total_g || 0;
-        const f = food.fat_total_g || 0;
-        const b = food.fiber_g || 0;
-        const k = food.calories || 0;
-        macro.p += p; macro.c += c; macro.f += f; macro.b += b; macro.k += k;
+        // Hard validation: every field must be a finite, non-negative number, and
+        // serving size must be plausible (a single logged food is never 10,000+
+        // grams). A food entry that fails this is skipped entirely rather than
+        // silently contributing NaN/garbage to the running total — this is the
+        // actual fix for "3089g carbs, 0 protein" style impossible results.
+        const isFiniteNonNeg = n => typeof n === 'number' && Number.isFinite(n) && n >= 0;
+        const p = food.protein_g, c = food.carbohydrates_total_g, f = food.fat_total_g,
+              b = food.fiber_g, k = food.calories, servingG = food.serving_size_g;
+        const fieldsValid = isFiniteNonNeg(p) && isFiniteNonNeg(c) && isFiniteNonNeg(f) &&
+                             (b===undefined || isFiniteNonNeg(b)) && isFiniteNonNeg(k) &&
+                             (servingG===undefined || (isFiniteNonNeg(servingG) && servingG < 5000));
+        // Sanity cross-check: calories should roughly match p*4 + c*4 + f*9 (within a
+        // generous tolerance for rounding/alcohol/etc.) — catches a field-mapping or
+        // scale bug even when every individual field looked numerically "valid".
+        const kcalFromMacros = p*4 + c*4 + f*9;
+        const kcalPlausible = k===0 || (kcalFromMacros>0 && Math.abs(k-kcalFromMacros)/Math.max(k,kcalFromMacros) < 0.5);
+        if (!fieldsValid || !kcalPlausible) {
+          console.error('nutrition item failed validation, skipping', food);
+          continue;
+        }
+        macro.p += p; macro.c += c; macro.f += f; macro.b += (b||0); macro.k += k;
         items.push({
           name: food.name,
-          qty: food.serving_size_g,
+          qty: servingG,
           unit: 'g',
           kcal: Math.round(k)
         });

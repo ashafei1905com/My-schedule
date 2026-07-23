@@ -893,11 +893,27 @@ async function saveMealOptions(){
   }catch(e){console.warn('mealOptions cloud save failed',e);}
 }
 
-function addMealOption(mealKey,description,macro){
+// replaceDescription: when set, this call is an EDIT of a previously-saved option —
+// find the entry matching the OLD description and update it in place (new
+// description + macro), instead of the old behavior of only ever appending, which is
+// what caused every edited meal to silently create a duplicate saved option rather
+// than updating the one the user was actually editing.
+function addMealOption(mealKey,description,macro,replaceDescription){
   if(!mealKey||!description) return;
   if(!MEAL_OPTIONS[mealKey]) MEAL_OPTIONS[mealKey]=[];
+  const norm=s=>s.trim().toLowerCase();
+  if(replaceDescription){
+    const idx=MEAL_OPTIONS[mealKey].findIndex(o=>norm(o.description)===norm(replaceDescription));
+    if(idx>=0){
+      MEAL_OPTIONS[mealKey][idx]={...MEAL_OPTIONS[mealKey][idx],description,macro,addedAt:Date.now()};
+      return;
+    }
+    // Old option wasn't found as a saved quick-pick (e.g. it was logged manually,
+    // never saved) — fall through to normal add-or-dedupe below instead of silently
+    // doing nothing.
+  }
   // No exact-text dupes for the same meal slot.
-  if(MEAL_OPTIONS[mealKey].some(o=>o.description.trim().toLowerCase()===description.trim().toLowerCase())) return;
+  if(MEAL_OPTIONS[mealKey].some(o=>norm(o.description)===norm(description))) return;
   MEAL_OPTIONS[mealKey].push({description,macro,addedAt:Date.now()});
   // Keep each meal slot's saved list from growing unbounded.
   if(MEAL_OPTIONS[mealKey].length>25) MEAL_OPTIONS[mealKey].shift();
@@ -1554,7 +1570,7 @@ function buildTodayReminderPayload(){
     reminders.push({taskId:id,taskName:t[4],type:'start',date:TODAY,time:minToHHMM(startMin)});
 
     if(t[2]!=='sleep'){
-      const endMin=notifTaskEndMin(t);
+      const endMin=notifTaskEndMin(t,tasks);
       const endLeadMin=endMin-NOTIF_END_LEAD_MIN;
       if(endLeadMin>startMin){ // skip nonsensical "ending soon" before the task even starts
         reminders.push({taskId:id,taskName:t[4],type:'ending',date:TODAY,time:minToHHMM(endLeadMin)});
@@ -1568,7 +1584,17 @@ const NOTIF_LEAD_MIN=30;
 const NOTIF_END_LEAD_MIN=30;
 const NOTIF_DEFAULT_DURATION_MIN=60;
 
-function notifTaskEndMin(task){
+// CONFIRMED BUG FIX: this previously assumed every non-prayer task lasts exactly
+// NOTIF_DEFAULT_DURATION_MIN (60 min), so the "30 min left" reminder fired at
+// start+30 for EVERY food/gym/quran/prog/recovery task regardless of how long it
+// actually runs. For the 90-minute gym block (7:00 م gym -> 8:30 م swim), that meant
+// "ending soon" fired at 7:30 م — a full hour before the gym session actually ends —
+// which is exactly the "way too early" symptom reported. Fixed by deriving the real
+// end time from the NEXT task's start time on the same day (the schedule's own
+// timeline already defines each task's effective duration this way — nothing needs
+// to be guessed or parsed from free-text descriptions), falling back to the old flat
+// default only for the day's very last task, where there's no "next task" to bound it.
+function notifTaskEndMin(task,allTodayTasks){
   const start=toMin(task[10]||task[1]);
   if(isPrayer(task)){
     const pk=(task[0].split('-')[2])||'';
@@ -1579,6 +1605,17 @@ function notifTaskEndMin(task){
     if(pk==='Isha')return 24*60;
     if(task[0].includes('fri-jm'))return toMin(PRYT.Asr||FALLBK.Asr);
   }
+  if(Array.isArray(allTodayTasks)){
+    // Find the next non-deleted, non-free task strictly after this one's start time.
+    const candidates=allTodayTasks
+      .filter(t=>!t._deleted && t[2]!=='free' && t[0]!==task[0])
+      .map(t=>toMin(t[10]||t[1]))
+      .filter(m=>m>start)
+      .sort((a,b)=>a-b);
+    if(candidates.length) return candidates[0];
+  }
+  // No later task today (this is the last one) — fall back to the flat default
+  // rather than leaving it undefined.
   return start+NOTIF_DEFAULT_DURATION_MIN;
 }
 
@@ -3440,6 +3477,11 @@ async function aiExecuteToolCall(v){
 
 // State for whichever task the modal is currently open for.
 let FL_ACTIVE_TASK=null;
+// Set to the PRE-EDIT description when the modal is opened in edit mode, so that if
+// the user then chooses "save as quick-pick" after editing, addMealOption() can find
+// and update the matching saved option in place instead of appending a duplicate.
+// Cleared (null) for a fresh, non-edit log.
+let FL_EDIT_ORIG_DESCRIPTION=null;
 
 function fmtMacroShort(m){
   const r1=n=>Math.round(n*10)/10;
@@ -3448,6 +3490,7 @@ function fmtMacroShort(m){
 
 function openFoodLogModal(task,existingEntry,prefillText){
   FL_ACTIVE_TASK=task;
+  FL_EDIT_ORIG_DESCRIPTION=existingEntry?(existingEntry.description||null):null;
   const modal=document.getElementById('foodLogModal');
   const titleEl=document.getElementById('flTitle');
   const subEl=document.getElementById('flSub');
@@ -3786,14 +3829,16 @@ async function flHandleAskAnswer(){
 async function flHandleSaveOptYes(){
   if(!FL_ACTIVE_TASK) return;
   const mealKey=FL_ACTIVE_TASK[12];
-  const macroText=document.getElementById('flMacroResult');
   // Recover description+macro from the last logged entry for this task today, since
   // that's the exact data that was just finalized.
   const entry=(historyData[SELECTED_DATE]||{}).foodLog?.[FL_ACTIVE_TASK[0]];
   if(entry && mealKey){
-    addMealOption(mealKey,entry.description,entry.macro);
+    // If this was an edit of a previously-saved quick-pick, update that SAME entry
+    // in place (matched by its pre-edit description) instead of appending a new one
+    // — this is the actual fix for "editing creates a duplicate option".
+    addMealOption(mealKey,entry.description,entry.macro,FL_EDIT_ORIG_DESCRIPTION);
     try{ await saveMealOptions(); }catch(e){ console.warn('saveMealOptions failed',e); }
-    showToast('💾 اتحفظت كخيار سريع لنفس الوجبة دي',2400);
+    showToast(FL_EDIT_ORIG_DESCRIPTION?'💾 اتحدّث الخيار المحفوظ':'💾 اتحفظت كخيار سريع لنفس الوجبة دي',2400);
   }
   document.getElementById('flSaveOptRow').style.display='none';
 }
