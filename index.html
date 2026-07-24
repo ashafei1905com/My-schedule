@@ -473,7 +473,7 @@ body{font-family:'Cairo',sans-serif;background:var(--bg);color:var(--tx);directi
 'use strict';
 
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
-import { getAuth, GoogleAuthProvider, signInWithRedirect, getRedirectResult, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
+import { getAuth, GoogleAuthProvider, signInWithPopup, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
 import { initializeFirestore, doc, setDoc, getDoc } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
 
 const firebaseConfig = {
@@ -4605,18 +4605,18 @@ document.body.addEventListener('click',async e=>{
   }
 
   if(tgt.id==='btn-signin'){
-    // Switched from signInWithPopup to signInWithRedirect (2026-07-24): the popup
-    // flow relies on the browser polling `popup.closed` to detect completion/
-    // cancellation. Under Chrome's Cross-Origin-Opener-Policy handling, that poll
-    // throws "Cross-Origin-Opener-Policy policy would block the window.closed call"
-    // repeatedly and can leave the sign-in promise hanging with no error surfaced —
-    // the button silently does nothing. Redirect sidesteps window.closed entirely
-    // (the whole page navigates away and back), and is also the safer pattern for
-    // an installed PWA, where popups are unreliable/blocked on some platforms
-    // (iOS standalone mode in particular). The result is picked up by
-    // getRedirectResult() below on the page load right after the redirect back.
-    try{ await signInWithRedirect(fbAuth,new GoogleAuthProvider()); }
-    catch{ showToast('فشل تسجيل الدخول',3500,'warn'); }
+    // Reverted from signInWithRedirect back to signInWithPopup (2026-07-24): redirect
+    // was tried as a fix for a cosmetic COOP console warning ("window.closed" being
+    // blocked), but it broke sign-in entirely — white screen, bounce back to signed-
+    // out state, no error surfaced. Popup was the last confirmed-working flow, so it
+    // takes priority. The COOP warning is noisy but was not actually blocking sign-in
+    // before this — don't re-attempt redirect without first confirming in the
+    // Firebase Console that the exact GitHub Pages origin is in Authorized domains.
+    try{ await signInWithPopup(fbAuth,new GoogleAuthProvider()); }
+    catch(e){
+      console.error('signInWithPopup failed — code:',e.code,'message:',e.message,e);
+      showToast(`فشل تسجيل الدخول (${e.code||'unknown'}) — جرب تاني`,4500,'warn');
+    }
     return;
   }
 
@@ -4854,19 +4854,13 @@ function initAppFlow(user){
   });
 }
 
-// Must be called once on every load to complete a signInWithRedirect flow — without
-// this, the page comes back from Google fully authenticated at the Firebase Auth
-// level, but nothing in this file ever "hears" about it until onAuthStateChanged
-// fires anyway (which it does regardless), so this is mainly here to surface a
-// redirect-specific error (e.g. account-exists-with-different-credential) that would
-// otherwise be silently dropped, since signInWithRedirect() itself never rejects
-// (the whole page navigated away before any promise could settle).
-if (typeof getRedirectResult !== 'undefined' && typeof fbAuth !== 'undefined') {
-  getRedirectResult(fbAuth).catch(e=>{
-    console.warn('signInWithRedirect result error',e);
-    showToast('فشل تسجيل الدخول — جرب تاني',3500,'warn');
-  });
-}
+// Reverted to signInWithPopup (2026-07-24): signInWithRedirect was tried as a fix
+// for a COOP console warning, but it broke sign-in entirely (white screen, bounce
+// back, no user). Root cause was never confirmed (likely Firebase authorized-domain
+// handling differs between popup and redirect flows), but popup was the last known
+// working state, so it takes priority over the cosmetic COOP warning until the
+// domain config can be checked directly in the Firebase Console.
+
 
 if (typeof onAuthStateChanged !== 'undefined' && typeof fbAuth !== 'undefined') {
   onAuthStateChanged(fbAuth, async user => {
