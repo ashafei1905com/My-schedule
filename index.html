@@ -3798,10 +3798,18 @@ Reply in 1-2 short casual sentences, in the same dialect/language he'd naturally
       body:JSON.stringify({system:sys,messages:[{role:'user',content:'.'}]})
     });
     const data=await res.json();
-    if(!res.ok || data.error) return'';
-    return cleanVerdictText((data.text||'').trim());
-  }catch{
-    return''; // verdict is a nice-to-have; never block the actual logged entry on it
+    // Was silently returning '' on any failure — meaning after a long chain of
+    // Worker calls (clarify round(s) + forced-ready + Nutritionix lookup + this),
+    // a rate-limit hit or transient error here just left the verdict box blank
+    // with zero indication anything went wrong. Now returns null (distinguishable
+    // from "model legitimately said nothing") so the caller can show an honest
+    // fallback line instead of an empty box.
+    if(!res.ok || data.error){ console.warn('verdict call failed',data.error||res.status); return null; }
+    const text=cleanVerdictText((data.text||'').trim());
+    return text||null;
+  }catch(e){
+    console.warn('verdict call threw',e);
+    return null; // distinguish "failed" from "model returned empty" — caller decides fallback text
   }
 }
 
@@ -3886,8 +3894,19 @@ async function flFinalizeLog(task,description,macro,verdict,showVerdictUI,itemsB
       }
     }
     const verdictEl=document.getElementById('flVerdict');
-    if(verdict){verdictEl.style.display='block';verdictEl.textContent=verdict;}
-    else{verdictEl.style.display='none';}
+    // verdict===null means the call genuinely failed (network/worker/rate-limit) —
+    // was previously indistinguishable from "" and just hid the box with zero
+    // explanation. Now shows an honest fallback so it's clear the macros ARE saved
+    // correctly, only the AI opinion on them didn't come through this time.
+    if(verdict){
+      verdictEl.style.display='block';
+      verdictEl.textContent=verdict;
+    }else if(verdict===null){
+      verdictEl.style.display='block';
+      verdictEl.textContent='⚠️ القيم اتحفظت صح، بس مش قادر أجيبلك رأيي في الوجبة دلوقتي — السيرفر مردش. القيم فوق دي دقيقة وهي اللي هتتحسب.';
+    }else{
+      verdictEl.style.display='none';
+    }
     // Only offer to save as a quick-pick option if it isn't already saved for this
     // exact meal slot (avoids duplicate save prompts for something already there).
     const mealKey=task[12];
