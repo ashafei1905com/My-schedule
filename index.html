@@ -3552,6 +3552,10 @@ async function aiExecuteToolCall(v){
 
 // State for whichever task the modal is currently open for.
 let FL_ACTIVE_TASK=null;
+// Max clarification rounds allowed per modal session before forcing a stop —
+// see openFoodLogModal for why this must be session-scoped, not per-function.
+let FL_CLARIFY_ROUNDS=0;
+const FL_MAX_CLARIFY_ROUNDS=1;
 
 function fmtMacroShort(m){
   const r1=n=>Math.round(n*10)/10;
@@ -3560,6 +3564,16 @@ function fmtMacroShort(m){
 
 function openFoodLogModal(task,existingEntry,prefillText){
   FL_ACTIVE_TASK=task;
+  // Session-scoped clarification counter — tracks how many needs_info rounds have
+  // happened for THIS modal open, regardless of which button path (flHandleSubmit vs
+  // flHandleAskAnswer) triggered it. This is what actually closes the loop: previously
+  // the one-round cap only applied within flHandleAskAnswer, but resubmitting through
+  // flHandleSubmit (e.g. after the pre-filled fallback text) called the extractor with
+  // priorTurns=null — a completely fresh context that could ask about a DIFFERENT
+  // ambiguous item and reset the count back to zero, which is what produced the
+  // "keeps looping" symptom even though no single function ever asked a second
+  // question in a row.
+  FL_CLARIFY_ROUNDS=0;
   const modal=document.getElementById('foodLogModal');
   const titleEl=document.getElementById('flTitle');
   const subEl=document.getElementById('flSub');
@@ -3645,8 +3659,9 @@ Respond with ONLY a raw JSON object, nothing else — no markdown fences, no tex
 {"status":"needs_info" | "ready","followUpQuestion":"<if needs_info: ONE short casual question in his own dialect/language asking for the missing detail — otherwise empty string>","items":[{"food":"<plain English food name, e.g. 'grilled chicken breast'>","qty":<number>,"unit":"<e.g. 'g','oz','cup','piece','tbsp'>"}]}
 
 Rules for deciding needs_info vs ready:
-- Missing QUANTITY entirely (no size/count/weight mentioned at all) -> needs_info.
-- Missing COOKING METHOD when it meaningfully changes the calories (fried vs grilled/boiled/baked for meat, chicken, fish, eggs, potatoes) -> needs_info.
+- Missing QUANTITY entirely (no size/count/weight/volume mentioned at all, anywhere in the message) -> needs_info.
+- If ANY number + unit is already stated for an item (e.g. "1 كوب", "100 جرام", "2 ملعقة", "كوب لبن", "250 ملل") that item's quantity is COMPLETE — never ask about it again, never ask "what exactly is in the cup" or any variant. A stated volume/weight/count IS the answer; do not second-guess it or ask for more precision than the user gave.
+- Missing COOKING METHOD when it meaningfully changes the calories (fried vs grilled/boiled/baked for meat, chicken, fish, eggs, potatoes) -> needs_info. This does NOT apply to dairy, drinks, bread, fruit, nuts, or anything already covered by the dairy rule below.
 - Vague quantity words like "a bit", "شوية", "حبة" for a countable item (e.g. "حبة موز") are FINE — treat "a piece/حبة" as qty:1, unit:"piece" and proceed to ready IMMEDIATELY, status "ready", with NO followUpQuestion at all. This is a hard rule, not a suggestion: "أكلت حبة موز" ALONE, with zero other words, is already 100% complete information (food=banana, qty=1, unit=piece) — asking anything else about it is WRONG and violates this instruction. Do not ask for grams, do not ask for ripeness, do not ask anything — a single piece of a whole fruit/vegetable needs no further detail, ever. Don't ask for more precision than a normal person would give.
 - Foods where cooking method doesn't change calories much (raw fruit, raw vegetables, nuts, dairy, bread) never need a method follow-up.
 - If he gives multiple items in one message, resolve ALL of them — only ask about whichever ones are actually missing info; items with complete info go straight into "items".
@@ -3928,6 +3943,32 @@ async function flHandleSubmit(){
   }
 
   if(result.needsInfo){
+    if(FL_CLARIFY_ROUNDS>=FL_MAX_CLARIFY_ROUNDS){
+      // Cap already spent this session (e.g. resubmitted through this button after
+      // an earlier round instead of answering inline) — never open a new question.
+      // Proceed with a best-effort lookup on whatever was typed rather than looping;
+      // the per-item breakdown shown after lookup lets him see and fix a wrong guess
+      // directly instead of getting stuck in another round-trip.
+      document.getElementById('flLoadingStep').style.display='none';
+      showToast('كملنا بأفضل تفسير للوصف من غير سؤال تاني — راجع التفاصيل بعد الحساب ولو حاجة غلط عدّل الوصف واحسب تاني',3800,'warn');
+      // Re-extract in "force ready" spirit isn't available without changing the
+      // model contract, so fall back to a direct lookup pass using the raw text as
+      // a single best-guess item is not reliable either — instead, ask the model
+      // one more time but explicitly instruct it (via priorTurns) that it MUST
+      // return ready this round no matter what.
+      const forcedResult=await flExtractMealInfo(text,[
+        {role:'user',content:text},
+        {role:'assistant',content:'You must respond with status "ready" this time using your best-guess values for anything unclear — no more questions are allowed.'}
+      ]);
+      if(!forcedResult.ok || !forcedResult.items || !forcedResult.items.length){
+        document.getElementById('flChooseStep').style.display='block';
+        showToast('مش قادر أحسب الوصف ده — جرب تبسطه أكتر (مثلاً: ٢٠٠ جرام فراخ مشوي)',4000,'warn');
+        return;
+      }
+      await flRunLookupAndFinalize(FL_ACTIVE_TASK,text,forcedResult.items);
+      return;
+    }
+    FL_CLARIFY_ROUNDS++;
     // Missing info gate: don't call the nutrition API at all until the description
     // is actually complete (quantity + cooking method where it matters) — ask the
     // casual follow-up and wait for the reply instead of guessing.
@@ -3962,11 +4003,17 @@ async function flHandleAskAnswer(){
   const result=await flExtractMealInfo(answer,priorTurns);
 
   if(!result.ok || result.needsInfo){
-    // Don't loop clarifying questions indefinitely — if it's still unclear after one
-    // follow-up, fall back to asking him to just retype the description plainly.
+    // Hard stop after exactly one clarifying round — never ask a second follow-up
+    // question in the same entry, regardless of what the model returns here. Falls
+    // back to the free-text step, but pre-fills it with everything already said
+    // (original description + the answer just given) so nothing is lost and he
+    // isn't forced to retype from scratch — he can just add the one remaining
+    // detail and resubmit.
     document.getElementById('flLoadingStep').style.display='none';
     document.getElementById('flChooseStep').style.display='block';
-    showToast(result.error||'لسه مش واضح — جرب تكتب وصف مختصر وواضح للوجبة',3800,'warn');
+    const freeText=document.getElementById('flFreeText');
+    if(freeText) freeText.value=`${origText}، ${answer}`;
+    showToast('لسه مش واضح 100% — كملت الوصف تحت باللي قلته، ضيف التفصيلة الناقصة وابعت تاني',4200,'warn');
     return;
   }
 
