@@ -214,7 +214,26 @@ async function importServiceAccountKey(pem) {
   const body = pem
     .replace(/-----BEGIN PRIVATE KEY-----/, '')
     .replace(/-----END PRIVATE KEY-----/, '')
+    // Strips LITERAL two-character backslash-n sequences, not just real newline
+    // characters. This is the actual fix for the production `atob() called with
+    // invalid base64-encoded data` error: when a service-account JSON key's
+    // private_key field (which is stored JSON-escaped, e.g. "...\nMIIEvQ...\n...")
+    // is copied out of the JSON file and pasted into `wrangler secret put`, it is
+    // extremely easy for the escape sequence to survive as the literal two
+    // characters `\` + `n` rather than becoming a real newline byte — `\s+` below
+    // only matches real whitespace, so those literal backslash-n pairs previously
+    // survived straight into the base64 body, and `\`/`n`-as-text are not valid
+    // base64 alphabet characters, hence atob() throwing InvalidCharacterError.
+    .replace(/\\n/g, '')
     .replace(/\s+/g, '');
+  // Validate the cleaned string is plausible base64 BEFORE calling atob(), so a
+  // still-malformed secret produces a clear, actionable error message (naming the
+  // actual cause) instead of atob()'s opaque InvalidCharacterError with no context —
+  // this is what let the original failure reach production silently as a generic
+  // "foods cache lookup failed" catch-all instead of pointing at the secret itself.
+  if (!/^[A-Za-z0-9+/]*={0,2}$/.test(body)) {
+    throw new Error('FIREBASE_PRIVATE_KEY does not decode as valid base64 after cleanup — re-check the secret was pasted correctly (the full PEM body between BEGIN/END PRIVATE KEY, either as real newlines or a single unbroken line)');
+  }
   const der = Uint8Array.from(atob(body), c => c.charCodeAt(0));
   return crypto.subtle.importKey(
     'pkcs8',
@@ -655,6 +674,7 @@ async function handleNutritionLookup(request, env) {
         continue;
       }
 
+      let hadValidMatch = false;
       for (const food of foods) {
         // Hard validation: every field must be a finite, non-negative number, and
         // serving size must be plausible (a single logged food is never 10,000+
@@ -692,6 +712,7 @@ async function handleNutritionLookup(request, env) {
           });
           continue;
         }
+        hadValidMatch = true;
         macro.p += p; macro.c += c; macro.f += f; macro.b += (b||0); macro.k += k;
         items.push({
           name: food.name,
@@ -734,6 +755,17 @@ async function handleNutritionLookup(request, env) {
             updatedAt: Date.now()
           }).catch(e => console.error('write-back cache failed', e));
         }
+      }
+
+      // API Ninjas returned one or more `food` entries for this query, but every
+      // single one failed validation (e.g. the API Ninjas paywall-string case seen
+      // in production: calories/protein_g returned as the literal string "Only
+      // available for premium subscribers." instead of a number, which fieldsValid
+      // correctly rejects). This is a genuine tier-2 miss just like an empty result
+      // set — queue it for tier 3 exactly once for this qi, rather than leaving it to
+      // silently fall out as a 404 with no fallback attempted.
+      if (!hadValidMatch) {
+        tier3Candidates.push({ qi, q, cacheKey });
       }
     }
 
