@@ -890,6 +890,7 @@ async function usdaLookupFood(env, query, requestedGrams) {
 // Ninjas' parser than one long comma-joined multi-item string.
 // Response: { macro: {p,c,f,b,k}, items: [{name, qty, unit, kcal}, ...] }
 async function handleNutritionLookup(request, env) {
+  console.log('DEPLOY_CHECK v2a', typeof usdaLookupFood, typeof decomposeDish, typeof usdaRelevanceScore);
   if (request.method === 'OPTIONS') return new Response(null, { headers: corsHeaders() });
   if (request.method !== 'POST') return json({ error: 'Method not allowed' }, 405);
 
