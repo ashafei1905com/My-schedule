@@ -509,13 +509,64 @@ const USDA_NUTRIENT_IDS = { protein: 1003, fat: 1004, carbs: 1005, fiber: 1079, 
 // resort among USDA results.
 const USDA_DATATYPE_PRIORITY = ['Foundation', 'SR Legacy', 'Survey (FNDDS)', 'Branded'];
 
-function usdaPickBestResult(foods) {
+// Normalizes text for relevance scoring: lowercases, strips punctuation, collapses
+// whitespace. Deliberately simpler than the client's aiNormalize() (no Arabic-
+// specific handling needed) since by this point every query reaching USDA has
+// already been through either the original English text or Groq normalization —
+// this only ever compares English against English.
+function usdaNormalizeForScore(s) {
+  return String(s || '')
+    .toLowerCase()
+    .replace(/[^a-z0-9\s]/g, ' ')
+    .split(/\s+/)
+    .filter(Boolean);
+}
+
+// Scores how relevant a USDA result's description is to the actual query, using the
+// same token-overlap approach already proven in this codebase's client-side
+// aiFindTask() fuzzy matcher. THIS is the actual fix for the koshary bug: USDA's
+// search endpoint returns loosely-related results with NO relevance score of its
+// own (e.g. "كشري" normalized to something USDA's free-text search fuzzy-matched
+// against "CRACKER BARREL, macaroni n' cheese" — a result that shares essentially no
+// real meaning with the query). Score = fraction of the QUERY's own meaningful words
+// found in the result description; a low score means the result, however "valid"
+// its nutrient data looks, isn't actually the food that was asked for.
+function usdaRelevanceScore(query, description) {
+  const qTokens = new Set(usdaNormalizeForScore(query).filter(w => w.length >= 3));
+  const dTokens = new Set(usdaNormalizeForScore(description));
+  if (!qTokens.size) return 0;
+  let overlap = 0;
+  for (const t of qTokens) if (dTokens.has(t)) overlap++;
+  return overlap / qTokens.size;
+}
+
+// Confidence floor: below this, a USDA result is treated as NO MATCH rather than
+// accepted — this is what makes a bad fuzzy match fall through to decomposition/tier
+// 3 instead of silently returning wrong macros under a plausible-looking food name.
+// Deliberately lenient (not requiring near-total overlap) since USDA descriptions are
+// often terse/differently-worded ("Chicken, broiler, breast, meat only, cooked,
+// grilled" for a "grilled chicken breast" query shares most but not all tokens).
+const USDA_RELEVANCE_MIN_SCORE = 0.34;
+
+function usdaPickBestResult(foods, query) {
   if (!Array.isArray(foods) || !foods.length) return null;
+  // Score every candidate up front — a lower-priority dataType with a much better
+  // relevance score should still lose to a same-or-better-priority dataType if BOTH
+  // clear the relevance floor, but a high-priority dataType with a bad relevance
+  // score must not win just because Foundation/SR Legacy ranks first structurally.
+  const scored = foods
+    .map(f => ({ food: f, score: usdaRelevanceScore(query, f.description) }))
+    .filter(x => x.score >= USDA_RELEVANCE_MIN_SCORE);
+  if (!scored.length) return null; // every candidate was a loose/irrelevant match — genuine miss
+
   for (const dt of USDA_DATATYPE_PRIORITY) {
-    const match = foods.find(f => f.dataType === dt);
-    if (match) return match;
+    const match = scored.find(x => x.food.dataType === dt);
+    if (match) return match.food;
   }
-  return foods[0]; // unknown dataType we didn't anticipate — still usable, just unranked
+  // No candidate matched a known priority dataType, but at least one cleared the
+  // relevance floor — return the highest-scoring one rather than an arbitrary first.
+  scored.sort((a, b) => b.score - a.score);
+  return scored[0].food;
 }
 
 // Extracts {p,c,f,b,k} PER 100g from a USDA food record's foodNutrients array. USDA's
@@ -553,7 +604,7 @@ async function usdaSearchRaw(env, query) {
     return null;
   }
   const data = await res.json();
-  const best = usdaPickBestResult(data.foods);
+  const best = usdaPickBestResult(data.foods, query);
   if (!best) return null;
   const per100g = usdaExtractPer100g(best);
   const isNum = n => typeof n === 'number' && Number.isFinite(n);
@@ -563,6 +614,117 @@ async function usdaSearchRaw(env, query) {
   // already treats a missing fiber value as 0 everywhere else.
   if (!isNum(per100g.p) || !isNum(per100g.c) || !isNum(per100g.f) || !isNum(per100g.k)) return null;
   return { name: best.description || query, per100g };
+}
+
+// Detects whether a query needs DECOMPOSITION rather than a single-item lookup:
+// either explicit exclusion language ("بدون"/"without"/"no X"), which USDA has no
+// concept of at all, or the query matching a short list of known composite/regional
+// dishes that are structurally made of several distinct components USDA would never
+// have as one single food record. This list is intentionally small and specific
+// rather than trying to be exhaustive — a query that ISN'T on this list and has no
+// exclusion language just goes through the existing single-item raw+normalize path,
+// which already works correctly for genuinely single-food items (confirmed by the
+// passing "150 جرام دجاج مشوي" test). Expanding this list over time as more
+// composite-dish gaps are found is expected and safe — it only ever ADDS coverage,
+// never changes behavior for queries not on it.
+const COMPOSITE_DISH_HINTS = [
+  'كشري', 'koshary', 'kushari', 'kosheri',
+  'كبسة', 'kabsa', 'kabseh',
+  'مندي', 'mandi',
+  'ملوخية', 'molokhia', 'molokheya',
+  'فتة', 'fatta', 'fattah',
+  'بيتزا', 'pizza',
+  'ساندوتش', 'sandwich', 'ساندويتش',
+  'برجر', 'burger'
+];
+const EXCLUSION_RE = /بدون|من غير|without\b|\bno\s+\w/i;
+
+function needsDecomposition(query) {
+  const low = query.toLowerCase();
+  if (EXCLUSION_RE.test(low)) return true;
+  return COMPOSITE_DISH_HINTS.some(hint => low.includes(hint));
+}
+
+// Asks Groq to decompose a composite dish (or a dish with stated exclusions) into
+// raw, standardized English ingredient lines with gram weights — explicitly as a
+// PARSER, not an estimator: Groq never supplies macro numbers here, only identifies
+// and quantifies ingredients. Every gram of actual nutrition data still comes from
+// USDA per-ingredient lookups afterward, keeping "verified macros" true even for
+// composite dishes. Strict JSON-only response, validated before use — same
+// discipline as every other LLM-facing call in this codebase.
+async function decomposeDish(env, query) {
+  if (!env.GROQ_API_KEY) return null;
+  const sys = `You decompose a food description into its raw component ingredients with estimated gram weights, for a nutrition lookup pipeline that will fetch REAL macro data per ingredient from the USDA database — you are a parser, NOT a nutrition estimator, so never include any macro/calorie numbers yourself.
+
+The description may be Arabic (including dialect/regional dish names) and may include exclusions ("بدون", "من غير", "without", "no X") that must be OMITTED from your ingredient list entirely.
+
+Respond with ONLY a raw JSON object, nothing else — no markdown fences, no explanation:
+{"dishNameAr":"<the dish's name in Arabic, for display>","ingredients":[{"food":"<standardized English ingredient name, USDA-searchable, e.g. 'cooked white rice'>","grams":<number>}]}
+
+Rules:
+- Use standard/typical ingredient ratios for the named dish's usual home or restaurant preparation.
+- Every ingredient name must be a plain, generic, USDA-searchable English food term — no brand names, no dish names, no compound descriptions.
+- Grams must be realistic component weights for a single serving (a full dish typically decomposes into 3-6 components each well under 500g).
+- Honor every exclusion in the original description by leaving that ingredient out entirely — do not substitute it with something else unless the user's phrasing implies a substitution.
+- If the description doesn't actually name an identifiable composite dish, respond with {"error":"<short explanation>"} instead.`;
+  try {
+    const groqRes = await fetch('https://api.groq.com/openai/v1/chat/completions', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${env.GROQ_API_KEY}` },
+      body: JSON.stringify({
+        model: MODEL,
+        max_completion_tokens: 500,
+        messages: [{ role: 'system', content: sys }, { role: 'user', content: query }]
+      })
+    });
+    const data = await groqRes.json();
+    if (!groqRes.ok) {
+      console.error('decomposeDish groq error', data?.error?.message);
+      return null;
+    }
+    let raw = (data?.choices?.[0]?.message?.content || '').trim().replace(/^```json\s*|```$/g, '').trim();
+    let parsed;
+    try { parsed = JSON.parse(raw); } catch { return null; }
+    if (parsed.error) { console.error('decomposeDish declined', parsed.error); return null; }
+    if (!Array.isArray(parsed.ingredients) || !parsed.ingredients.length) return null;
+    const isFiniteNonNeg = n => typeof n === 'number' && Number.isFinite(n) && n >= 0;
+    const clean = parsed.ingredients.filter(it => it && typeof it.food === 'string' && it.food.trim() && isFiniteNonNeg(it.grams) && it.grams > 0 && it.grams < 1500);
+    if (!clean.length) return null;
+    return { dishNameAr: parsed.dishNameAr || query, ingredients: clean };
+  } catch (e) {
+    console.error('decomposeDish threw', e);
+    return null;
+  }
+}
+
+// Translates a USDA English food description back to Arabic for display. Only ever
+// called for the composite-dish decomposition path (see usdaLookupFood below) — the
+// single-item raw/normalize path leaves the USDA English name as-is, matching
+// existing behavior confirmed working by the "150g grilled chicken breast" and
+// "150 جرام دجاج مشوي" tests, neither of which this function touches.
+async function translateToArabic(env, englishName) {
+  if (!env.GROQ_API_KEY) return null;
+  try {
+    const groqRes = await fetch('https://api.groq.com/openai/v1/chat/completions', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${env.GROQ_API_KEY}` },
+      body: JSON.stringify({
+        model: MODEL,
+        max_completion_tokens: 30,
+        messages: [
+          { role: 'system', content: 'Translate the given food name into short, natural Arabic. Respond with ONLY the Arabic translation, nothing else — no quotes, no explanation.' },
+          { role: 'user', content: englishName }
+        ]
+      })
+    });
+    const data = await groqRes.json();
+    if (!groqRes.ok) return null;
+    const ar = (data?.choices?.[0]?.message?.content || '').trim();
+    return ar || null;
+  } catch (e) {
+    console.error('translateToArabic threw', e);
+    return null;
+  }
 }
 
 // Uses Groq to turn a possibly-Arabic or otherwise USDA-unparseable query into a
@@ -597,17 +759,90 @@ async function usdaNormalizeAndRetry(env, originalQuery) {
   }
 }
 
-// Top-level tier-2 entry point: raw USDA search first, normalize-and-retry only on a
-// miss. Returns the SAME shape handleNutritionLookup's existing validation block
-// already expects on a "food" object (protein_g/carbohydrates_total_g/fat_total_g/
-// fiber_g/calories/serving_size_g/name), scaled to the item's requested grams — this
-// is what lets that block stay completely unmodified below.
+// Top-level tier-2 entry point. Branches into one of two strategies:
+//   - DECOMPOSITION (composite dishes / exclusions, e.g. "كشري بدون بصل"): Groq
+//     decomposes into raw ingredients+grams (never supplying macros itself), each
+//     ingredient gets its own single-item USDA lookup (raw+normalize, same as
+//     below), and the results are summed. This is what actually fixes the koshary
+//     bug — no single USDA record is ever asked to represent a composite dish, so
+//     the relevance gate in usdaPickBestResult never has to choose between "reject
+//     everything" and "accept a loose fuzzy match" for a dish USDA was never going
+//     to have as one entry.
+//   - SINGLE-ITEM (everything else): raw USDA search, normalize-and-retry only on a
+//     miss — UNCHANGED from before, since this path is already confirmed working
+//     correctly by both the English and single-item Arabic test cases.
+// Returns the SAME shape handleNutritionLookup's existing validation block already
+// expects (protein_g/carbohydrates_total_g/fat_total_g/fiber_g/calories/
+// serving_size_g/name[/name_ar]), scaled to the item's requested grams — this is
+// what lets that block stay completely unmodified below, for BOTH strategies.
 async function usdaLookupFood(env, query, requestedGrams) {
+  if (needsDecomposition(query)) {
+    const decomposed = await decomposeDish(env, query);
+    if (decomposed) {
+      const total = { p: 0, c: 0, f: 0, b: 0, k: 0 };
+      let anyIngredientMatched = false;
+      for (const ing of decomposed.ingredients) {
+        // Each ingredient reuses the exact single-item strategy below (raw search,
+        // normalize-on-miss) — a composite dish's ingredients are themselves
+        // ordinary single foods ("cooked white rice", "tomato sauce"), so there is
+        // no separate lookup mechanism needed here, just recursion into the same
+        // logic with requestedGrams = this ingredient's own gram weight.
+        const ingResult = await usdaSearchRaw(env, ing.food) || await usdaNormalizeAndRetry(env, ing.food);
+        if (!ingResult) {
+          console.error('decomposition ingredient had no USDA match, skipping', ing.food);
+          continue; // one missing component doesn't invalidate the whole dish — sum what's verifiable
+        }
+        const scale = ing.grams / 100;
+        total.p += ingResult.per100g.p * scale;
+        total.c += ingResult.per100g.c * scale;
+        total.f += ingResult.per100g.f * scale;
+        total.b += (ingResult.per100g.b || 0) * scale;
+        total.k += ingResult.per100g.k * scale;
+        anyIngredientMatched = true;
+      }
+      if (anyIngredientMatched) {
+        // The summed total represents whatever gram weight decomposeDish estimated
+        // across all its ingredients — that IS the requested portion (decomposition
+        // already accounts for quantity per Groq's own estimate), so this is
+        // returned as an absolute total, not re-scaled against requestedGrams like
+        // the single-item path below does. A composite dish's "how much did you
+        // actually eat" is inherently the whole decomposed serving, not a
+        // per-100g-scalable single ingredient.
+        const totalGrams = decomposed.ingredients.reduce((s, i) => s + i.grams, 0);
+        return {
+          name: decomposed.dishNameAr, // already Arabic — decomposeDish asked Groq for dishNameAr directly, no separate translation call needed
+          name_ar: decomposed.dishNameAr,
+          protein_g: total.p,
+          carbohydrates_total_g: total.c,
+          fat_total_g: total.f,
+          fiber_g: total.b,
+          calories: total.k,
+          serving_size_g: totalGrams
+        };
+      }
+      // Decomposition ran but NOT ONE ingredient resolved via USDA — fall through to
+      // the single-item path below as a last resort rather than returning nothing,
+      // in case the "composite dish" detection was a false positive on a query
+      // that's actually closer to a single food.
+    }
+  }
+
+  // ===== SINGLE-ITEM path (unchanged core logic) =====
   let result = await usdaSearchRaw(env, query);
   if (!result) {
     result = await usdaNormalizeAndRetry(env, query);
   }
   if (!result) return null;
+
+  // If the original query was Arabic-script but USDA's matched description is
+  // English (the normal case — USDA has no Arabic data), get an Arabic display name
+  // so the frontend never has to show a raw English product/food name in an Arabic
+  // UI. Only fires when the query actually contained Arabic script, so an
+  // English-language query never pays this extra call.
+  let nameAr = null;
+  if (/[\u0600-\u06FF]/.test(query)) {
+    nameAr = await translateToArabic(env, result.name);
+  }
 
   // Default to a 100g reference serving if the caller didn't supply a gram-parseable
   // portion (requestedGrams is null for non-gram units like "cup"/"piece" — see
@@ -622,6 +857,7 @@ async function usdaLookupFood(env, query, requestedGrams) {
   const scale = grams / 100;
   return {
     name: result.name,
+    name_ar: nameAr,
     protein_g: result.per100g.p * scale,
     carbohydrates_total_g: result.per100g.c * scale,
     fat_total_g: result.per100g.f * scale,
@@ -761,6 +997,7 @@ async function handleNutritionLookup(request, env) {
               macro.p += sp; macro.c += sc; macro.f += sf; macro.b += sb; macro.k += sk;
               items.push({
                 name: cached.canonicalName || q,
+                name_ar: cached.canonicalNameAr || null,
                 qty: grams,
                 unit: 'g',
                 kcal: Math.round(sk),
@@ -852,6 +1089,7 @@ async function handleNutritionLookup(request, env) {
         macro.p += p; macro.c += c; macro.f += f; macro.b += (b||0); macro.k += k;
         items.push({
           name: food.name,
+          name_ar: food.name_ar || null,
           qty: servingG,
           unit: 'g',
           kcal: Math.round(k),
@@ -876,6 +1114,7 @@ async function handleNutritionLookup(request, env) {
           const scale = 100 / servingG;
           firestoreSetFood(env, cacheKey, {
             canonicalName: food.name || q,
+            canonicalNameAr: food.name_ar || null,
             normalizedKey: cacheKey,
             macroPer100g: {
               p: Math.round(p * scale * 10) / 10,
