@@ -482,6 +482,155 @@ async function tier3EstimateMacro(env, query) {
   }
 }
 
+// ===== TIER 2: USDA FoodData Central client =====
+// Replaces API Ninjas as the primary verified-macro lookup. Two structural
+// differences from API Ninjas that this client has to bridge, so everything AFTER
+// this point in handleNutritionLookup (validation, write-back, hadValidMatch) can
+// stay completely untouched:
+//   1. USDA returns nutrients as a `foodNutrients` ARRAY, each entry keyed by a
+//      numeric USDA nutrient ID — not flat named fields like API Ninjas' protein_g/
+//      carbohydrates_total_g/etc. USDA_NUTRIENT_IDS below maps the 5 IDs this app
+//      cares about; every other nutrient USDA returns (sodium, vitamins, etc.) is
+//      ignored entirely, matching what the rest of this codebase already tracks.
+//   2. USDA values are per-100g for Foundation/SR Legacy foods (the preferred data
+//      types below) but Branded foods carry their own servingSize/servingSizeUnit —
+//      this client normalizes everything to a {p,c,f,b,k,servingG,name} shape at a
+//      REQUESTED serving size, matching exactly what the existing API-Ninjas
+//      validation block already expects on food.protein_g/food.serving_size_g/etc.,
+//      so that block needs zero changes to accept USDA results.
+const USDA_NUTRIENT_IDS = { protein: 1003, fat: 1004, carbs: 1005, fiber: 1079, energy: 1008 };
+
+// USDA search results mix multiple dataTypes in one response. Preference order,
+// most-representative-for-a-single-generic-food first: Foundation and SR Legacy are
+// USDA's own analyzed reference data (most accurate for "grilled chicken breast"-
+// style generic foods); Survey (FNDDS) reflects real dietary-study consumption
+// patterns; Branded is manufacturer-submitted packaged-product data, least
+// representative for a home-cooked/generic meal component and used only as a last
+// resort among USDA results.
+const USDA_DATATYPE_PRIORITY = ['Foundation', 'SR Legacy', 'Survey (FNDDS)', 'Branded'];
+
+function usdaPickBestResult(foods) {
+  if (!Array.isArray(foods) || !foods.length) return null;
+  for (const dt of USDA_DATATYPE_PRIORITY) {
+    const match = foods.find(f => f.dataType === dt);
+    if (match) return match;
+  }
+  return foods[0]; // unknown dataType we didn't anticipate — still usable, just unranked
+}
+
+// Extracts {p,c,f,b,k} PER 100g from a USDA food record's foodNutrients array. USDA's
+// search endpoint already reports values per 100g for Foundation/SR Legacy/Survey
+// records (the standard USDA reporting basis) — Branded foods are the one dataType
+// where the raw foodNutrients values may instead reflect the labeled serving rather
+// than 100g, which is exactly why Branded sits last in USDA_DATATYPE_PRIORITY above
+// rather than being trusted at face value for a per-100g baseline.
+function usdaExtractPer100g(food) {
+  const arr = Array.isArray(food.foodNutrients) ? food.foodNutrients : [];
+  const get = nutrientId => {
+    const entry = arr.find(n => n.nutrientId === nutrientId || n.nutrientNumber === String(nutrientId));
+    return entry && typeof entry.value === 'number' ? entry.value : null;
+  };
+  const p = get(USDA_NUTRIENT_IDS.protein);
+  const c = get(USDA_NUTRIENT_IDS.carbs);
+  const f = get(USDA_NUTRIENT_IDS.fat);
+  const b = get(USDA_NUTRIENT_IDS.fiber);
+  const k = get(USDA_NUTRIENT_IDS.energy);
+  return { p, c, f, b, k };
+}
+
+// Calls USDA foods/search for a single raw query string. Returns a parsed
+// {name, per100g:{p,c,f,b,k}} object, or null if USDA has no usable match (empty
+// results, or the best match's core macros aren't all present as numbers — a food
+// record missing protein/carbs/fat/energy entirely is not a usable match regardless
+// of what other nutrients it does report).
+async function usdaSearchRaw(env, query) {
+  const apiKey = env.USDA_API_KEY || 'DEMO_KEY';
+  const url = `https://api.nal.usda.gov/fdc/v1/foods/search?query=${encodeURIComponent(query)}&pageSize=5&api_key=${encodeURIComponent(apiKey)}`;
+  const res = await fetch(url);
+  if (!res.ok) {
+    const errText = await res.text().catch(() => '');
+    console.error('usda search http error', res.status, errText);
+    return null;
+  }
+  const data = await res.json();
+  const best = usdaPickBestResult(data.foods);
+  if (!best) return null;
+  const per100g = usdaExtractPer100g(best);
+  const isNum = n => typeof n === 'number' && Number.isFinite(n);
+  // Core macros (protein/carbs/fat/energy) must all be present as numbers to count as
+  // a usable match — fiber (b) is allowed to be missing/null since plenty of
+  // legitimate USDA records simply don't report it, and the rest of this pipeline
+  // already treats a missing fiber value as 0 everywhere else.
+  if (!isNum(per100g.p) || !isNum(per100g.c) || !isNum(per100g.f) || !isNum(per100g.k)) return null;
+  return { name: best.description || query, per100g };
+}
+
+// Uses Groq to turn a possibly-Arabic or otherwise USDA-unparseable query into a
+// clean, standardized English search string (e.g. "150 جرام دجاج مشوي" ->
+// "grilled chicken breast"), then retries USDA once with that normalized text. This
+// is the "normalize-on-miss" step — only ever called after a raw USDA search already
+// came back empty, so ordinary English queries never pay this extra round trip.
+async function usdaNormalizeAndRetry(env, originalQuery) {
+  if (!env.GROQ_API_KEY) return null;
+  const sys = `You convert a food description (possibly Arabic, possibly informal/dialect, possibly with a quantity) into a short, standardized ENGLISH search query suitable for the USDA FoodData Central database. Respond with ONLY the search string, nothing else — no quotes, no explanation, no markdown. Keep any quantity/unit if present (e.g. "150 جرام دجاج مشوي" -> "150g grilled chicken breast"). If the description names a regional/home-cooked dish that has no direct USDA equivalent (e.g. كشري), respond with the closest generic USDA-searchable component or dish name in English rather than inventing one.`;
+  try {
+    const groqRes = await fetch('https://api.groq.com/openai/v1/chat/completions', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${env.GROQ_API_KEY}` },
+      body: JSON.stringify({
+        model: MODEL,
+        max_completion_tokens: 60,
+        messages: [{ role: 'system', content: sys }, { role: 'user', content: originalQuery }]
+      })
+    });
+    const data = await groqRes.json();
+    if (!groqRes.ok) {
+      console.error('usda normalize groq error', data?.error?.message);
+      return null;
+    }
+    const normalized = (data?.choices?.[0]?.message?.content || '').trim();
+    if (!normalized) return null;
+    return await usdaSearchRaw(env, normalized);
+  } catch (e) {
+    console.error('usdaNormalizeAndRetry threw', e);
+    return null;
+  }
+}
+
+// Top-level tier-2 entry point: raw USDA search first, normalize-and-retry only on a
+// miss. Returns the SAME shape handleNutritionLookup's existing validation block
+// already expects on a "food" object (protein_g/carbohydrates_total_g/fat_total_g/
+// fiber_g/calories/serving_size_g/name), scaled to the item's requested grams — this
+// is what lets that block stay completely unmodified below.
+async function usdaLookupFood(env, query, requestedGrams) {
+  let result = await usdaSearchRaw(env, query);
+  if (!result) {
+    result = await usdaNormalizeAndRetry(env, query);
+  }
+  if (!result) return null;
+
+  // Default to a 100g reference serving if the caller didn't supply a gram-parseable
+  // portion (requestedGrams is null for non-gram units like "cup"/"piece" — see
+  // cacheGrams construction in handleNutritionLookup). This is NOT a guess at what
+  // the user actually ate: the full query text (e.g. "1 cup rice") was already passed
+  // to USDA's search / Groq normalization above, so the food identity and rough
+  // portion context were both considered upstream. 100g here only sets the baseline
+  // that THIS function's numeric output is scaled/labeled against when no exact gram
+  // figure is available — matching the same "can't scale reliably without a known
+  // gram figure" caution already applied to tier-1 cache reads.
+  const grams = (typeof requestedGrams === 'number' && requestedGrams > 0) ? requestedGrams : 100;
+  const scale = grams / 100;
+  return {
+    name: result.name,
+    protein_g: result.per100g.p * scale,
+    carbohydrates_total_g: result.per100g.c * scale,
+    fat_total_g: result.per100g.f * scale,
+    fiber_g: (result.per100g.b || 0) * scale,
+    calories: result.per100g.k * scale,
+    serving_size_g: grams
+  };
+}
+
 // ===== /api/nutrition =====
 // Real nutrition lookup — API Ninjas Nutrition API. This is the platform CalorieNinjas
 // itself migrated into during 2025 (CalorieNinjas' free public signup is closed; the
@@ -513,9 +662,11 @@ async function handleNutritionLookup(request, env) {
     return json({ error: 'Origin not allowed' }, 403);
   }
 
-  if (!env.API_NINJAS_KEY) {
-    return json({ error: 'API Ninjas key not configured on the server yet.' }, 500);
-  }
+  // NOTE: API_NINJAS_KEY is no longer required — tier 2 is now USDA FoodData Central
+  // (see usdaLookupFood above), which falls back to the public 'DEMO_KEY' if
+  // env.USDA_API_KEY isn't set, per explicit instruction. Left un-guarded here
+  // deliberately: a missing USDA_API_KEY should degrade to DEMO_KEY's lower rate
+  // limit, not hard-fail every request the way a missing API_NINJAS_KEY used to.
 
   let body;
   try {
@@ -634,42 +785,27 @@ async function handleNutritionLookup(request, env) {
         }
       }
 
-      // ===== TIER 2: API Ninjas (existing, unmodified logic below) =====
-      const url = 'https://api.api-ninjas.com/v1/nutrition?query=' + encodeURIComponent(q);
-      const nxRes = await fetch(url, {
-        headers: { 'X-Api-Key': env.API_NINJAS_KEY }
-      });
-
-      if (!nxRes.ok) {
-        const errText = await nxRes.text().catch(() => '');
-        console.error('api-ninjas error', nxRes.status, errText);
-        // One bad item shouldn't fail the whole meal — skip it and keep going, but
-        // track that at least one lookup must succeed or the whole call is an error.
-        // Queue for tier 3 (Groq) rather than dropping silently — this is the actual
-        // fix for Arabic/complex-meal items that API Ninjas can't parse at all.
-        tier3Candidates.push({ qi, q, cacheKey });
-        continue;
+      // ===== TIER 2: USDA FoodData Central (replaces API Ninjas) =====
+      // usdaLookupFood already does raw-search-then-normalize-on-miss internally (see
+      // usdaLookupFood/usdaNormalizeAndRetry above) and returns the SAME field shape
+      // API Ninjas used to (protein_g/carbohydrates_total_g/fat_total_g/fiber_g/
+      // calories/serving_size_g/name) — wrapped in a single-element array so every
+      // line of the validation/write-back loop below runs completely unmodified,
+      // exactly as it did against API Ninjas' `foods` array.
+      const cacheGramsForQi = cacheGrams[qi];
+      let foods;
+      try {
+        const usdaFood = await usdaLookupFood(env, q, cacheGramsForQi);
+        foods = usdaFood ? [usdaFood] : null;
+      } catch (e) {
+        console.error('usda lookup threw', e);
+        foods = null;
       }
 
-      const raw = await nxRes.json();
-      // CONFIRMED BUG FIX: API Ninjas' v1/nutrition endpoint (same underlying engine
-      // as CalorieNinjas) returns an OBJECT shaped {"items":[ {...}, {...} ]} — NOT a
-      // bare array. The previous code did `Array.isArray(foods)` directly on the
-      // response body, which is always false for this real shape, meaning every
-      // lookup was silently treated as "no results" internally... except the bug
-      // this masked is worse: because the code then `continue`d past validation
-      // instead of throwing, any earlier/partial cached deploy or a shape drift
-      // could let `foods` fall through as some other truthy-but-wrong value and get
-      // iterated as if it were food entries, reading undefined fields as `|| 0`
-      // everywhere BUT serving_size_g (used raw, unguarded) — that's the likely
-      // source of the impossible numbers (e.g. thousands of grams of carbs) seen in
-      // production. Fixed by unwrapping the real `items` array AND hard-validating
-      // every numeric field before it's allowed to contribute to the total.
-      const foods = Array.isArray(raw) ? raw : (Array.isArray(raw?.items) ? raw.items : null);
       if (!foods || !foods.length) {
-        // API Ninjas understood the request but has no match — the common case for
-        // Arabic-language or regional-dish queries, since its underlying database is
-        // English/Western-food-centric. Queue for tier 3 instead of dropping.
+        // USDA (raw + normalized retry) had no usable match at all — the common case
+        // for regional/home-cooked dishes with no USDA equivalent (e.g. كشري). Queue
+        // for tier 3 instead of dropping.
         tier3Candidates.push({ qi, q, cacheKey });
         continue;
       }
