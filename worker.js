@@ -1,18 +1,28 @@
-// Cloudflare Worker — AI proxy + Web Push backend for جدول عبدالله
+// Cloudflare Worker — AI proxy + Web Push backend + nutrition cache for جدول عبدالله
 //
-// Two responsibilities now live in this one Worker:
+// Three responsibilities now live in this one Worker:
 //   1. AI proxy (unchanged) — root path, POST — forwards chat/food-log calls to Groq.
-//   2. Web Push backend (NEW) — /api/save-subscription (POST) stores a subscription +
-//      that day's reminder schedule in D1; a per-minute Cron Trigger (scheduled())
-//      scans D1 for anything due "now" and sends real Web Push notifications via
-//      Cloudflare's own infrastructure — NOT a client-side setTimeout, so it is
-//      immune to iOS freezing/killing a backgrounded/closed tab.
+//   2. Web Push backend (unchanged) — /api/save-subscription (POST) stores a
+//      subscription + that day's reminder schedule in D1; a per-minute Cron Trigger
+//      (scheduled()) scans D1 for anything due "now" and sends real Web Push
+//      notifications via Cloudflare's own infrastructure — NOT a client-side
+//      setTimeout, so it is immune to iOS freezing/killing a backgrounded/closed tab.
+//   3. Nutrition lookup (CHECKPOINT 1 CHANGE) — /api/nutrition (POST) now checks the
+//      global Firestore /foods cache FIRST (tier 1) before falling through to the
+//      existing, UNMODIFIED API Ninjas lookup (tier 2). A cache hit increments
+//      usageCount and returns immediately, skipping the external API call entirely.
+//      A cache miss falls through to API Ninjas exactly as before; on a successful
+//      API Ninjas result, the resolved macro is written back to /foods so the next
+//      lookup for the same food is a cache hit. The client-side LLM estimate
+//      fallback (flEstimateMacroFallback in index.html, used when /api/nutrition
+//      404s) is UNCHANGED and NOT touched in this checkpoint — that becomes tier 3,
+//      moved server-side, in Checkpoint 2.
 //
 // Root-path behavior is 100% unchanged from before: index.html's existing
 // AI_WORKER_URL POST-to-root calls (AI chat + food macro logging) work exactly as
-// they did previously. Only a new path prefix was added; nothing at "/" was touched.
+// they did previously. Only new path behavior was added; nothing at "/" was touched.
 //
-// Setup (in addition to the existing GROQ_API_KEY secret):
+// Setup (in addition to the existing GROQ_API_KEY / API_NINJAS_KEY / VAPID secrets):
 //   1. wrangler d1 create abdullah-schedule-push
 //      -> paste the printed database_id into wrangler.toml
 //   2. wrangler d1 execute abdullah-schedule-push --remote --file=./schema.sql
@@ -21,7 +31,23 @@
 //   5. Put the PUBLIC key in wrangler.toml under [vars] VAPID_PUBLIC_KEY (safe, public
 //      by design) AND in index.html's VAPID_PUBLIC_KEY constant (same string, client
 //      side needs it too to call pushManager.subscribe()).
-//   6. wrangler deploy
+//   6. Firestore /foods cache (NEW, Checkpoint 1):
+//      a. Firebase Console -> Project Settings -> Service Accounts -> "Generate new
+//         private key" -> downloads a JSON file containing client_email + private_key.
+//      b. wrangler secret put FIREBASE_CLIENT_EMAIL   (paste the client_email value)
+//      c. wrangler secret put FIREBASE_PRIVATE_KEY    (paste the FULL private_key
+//         value, including the BEGIN/END PRIVATE KEY lines — multiline secrets are
+//         supported by wrangler secret put)
+//      d. Add FIREBASE_PROJECT_ID = "my-schedule-10a33" to [vars] in wrangler.toml
+//         (not secret — this is public info, same tier as ALLOWED_ORIGIN below)
+//      e. Deploy firestore.rules (public read, zero client writes on /foods) via
+//         `firebase deploy --only firestore:rules` or the Firestore Console Rules tab
+//      Why not the Node Admin SDK: it depends on Node's fs/net/gRPC, none of which
+//      exist in the Workers runtime even with nodejs_compat (gRPC specifically is not
+//      supported). Instead this Worker signs its own Google OAuth2 JWT with WebCrypto
+//      (the same signing primitive @block65/webcrypto-web-push already uses for VAPID
+//      below) and talks to the plain Firestore REST API over fetch() — no SDK at all.
+//   7. wrangler deploy
 
 import { buildPushPayload } from '@block65/webcrypto-web-push';
 
@@ -164,6 +190,279 @@ function kuwaitNowParts() {
   return { date: `${o.year}-${o.month}-${o.day}`, time: `${o.hour}:${o.minute}` };
 }
 
+// ===== Firestore REST client (service-account auth, no Admin SDK) =====
+// Cloudflare Workers cannot run the Node Admin SDK (it needs Node's fs/net/gRPC,
+// unavailable even with nodejs_compat). This talks to the plain Firestore REST API
+// over fetch(), authenticated with a hand-signed Google OAuth2 JWT — the same
+// WebCrypto signing approach @block65/webcrypto-web-push already uses for VAPID.
+//
+// Module-scope token cache: a Worker isolate can be reused across multiple requests,
+// so caching the access token here (instead of re-signing a JWT and hitting Google's
+// token endpoint on every single /api/nutrition call) meaningfully cuts latency and
+// avoids unnecessary load on Google's OAuth endpoint. Cleared/refreshed automatically
+// once within 60s of expiry.
+let _fbTokenCache = { token: null, expiresAt: 0 };
+
+function base64url(bytes) {
+  let str = typeof bytes === 'string' ? bytes : String.fromCharCode(...new Uint8Array(bytes));
+  return btoa(str).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+}
+
+// Imports a PEM-formatted PKCS8 private key (exactly what Firebase's service-account
+// JSON provides as `private_key`) into a WebCrypto CryptoKey usable for RS256 signing.
+async function importServiceAccountKey(pem) {
+  const body = pem
+    .replace(/-----BEGIN PRIVATE KEY-----/, '')
+    .replace(/-----END PRIVATE KEY-----/, '')
+    .replace(/\s+/g, '');
+  const der = Uint8Array.from(atob(body), c => c.charCodeAt(0));
+  return crypto.subtle.importKey(
+    'pkcs8',
+    der.buffer,
+    { name: 'RSASSA-PKCS1-v1_5', hash: 'SHA-256' },
+    false,
+    ['sign']
+  );
+}
+
+// Signs a Google service-account JWT and exchanges it for a short-lived OAuth2 access
+// token scoped to Firestore (datastore scope covers Firestore's REST surface). Returns
+// the cached token if it's still valid for at least another 60 seconds.
+async function getFirestoreAccessToken(env) {
+  const now = Math.floor(Date.now() / 1000);
+  if (_fbTokenCache.token && _fbTokenCache.expiresAt - now > 60) {
+    return _fbTokenCache.token;
+  }
+
+  if (!env.FIREBASE_CLIENT_EMAIL || !env.FIREBASE_PRIVATE_KEY) {
+    throw new Error('Firebase service account secrets not configured (FIREBASE_CLIENT_EMAIL / FIREBASE_PRIVATE_KEY)');
+  }
+
+  const header = { alg: 'RS256', typ: 'JWT' };
+  const claims = {
+    iss: env.FIREBASE_CLIENT_EMAIL,
+    scope: 'https://www.googleapis.com/auth/datastore',
+    aud: 'https://oauth2.googleapis.com/token',
+    iat: now,
+    exp: now + 3600
+  };
+  const encHeader = base64url(JSON.stringify(header));
+  const encClaims = base64url(JSON.stringify(claims));
+  const signingInput = `${encHeader}.${encClaims}`;
+
+  const key = await importServiceAccountKey(env.FIREBASE_PRIVATE_KEY);
+  const sig = await crypto.subtle.sign(
+    'RSASSA-PKCS1-v1_5',
+    key,
+    new TextEncoder().encode(signingInput)
+  );
+  const jwt = `${signingInput}.${base64url(sig)}`;
+
+  const tokenRes = await fetch('https://oauth2.googleapis.com/token', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+    body: new URLSearchParams({
+      grant_type: 'urn:ietf:params:oauth:grant-type:jwt-bearer',
+      assertion: jwt
+    })
+  });
+
+  if (!tokenRes.ok) {
+    const errText = await tokenRes.text().catch(() => '');
+    throw new Error(`Firebase OAuth token exchange failed: ${tokenRes.status} ${errText}`);
+  }
+
+  const tokenData = await tokenRes.json();
+  _fbTokenCache = { token: tokenData.access_token, expiresAt: now + (tokenData.expires_in || 3600) };
+  return _fbTokenCache.token;
+}
+
+// Converts a plain JS value into a Firestore REST "Value" object (the REST API's
+// typed-field wire format — every value must be tagged with its Firestore type).
+function toFirestoreValue(v) {
+  if (v === null || v === undefined) return { nullValue: null };
+  if (typeof v === 'string') return { stringValue: v };
+  if (typeof v === 'boolean') return { booleanValue: v };
+  if (typeof v === 'number') return Number.isInteger(v) ? { integerValue: String(v) } : { doubleValue: v };
+  if (Array.isArray(v)) return { arrayValue: { values: v.map(toFirestoreValue) } };
+  if (typeof v === 'object') {
+    const fields = {};
+    for (const k of Object.keys(v)) fields[k] = toFirestoreValue(v[k]);
+    return { mapValue: { fields } };
+  }
+  return { stringValue: String(v) };
+}
+
+// Converts a Firestore REST "Value" object back into a plain JS value — the inverse
+// of toFirestoreValue, used when reading a cached /foods doc back out.
+function fromFirestoreValue(v) {
+  if (!v) return null;
+  if ('nullValue' in v) return null;
+  if ('stringValue' in v) return v.stringValue;
+  if ('booleanValue' in v) return v.booleanValue;
+  if ('integerValue' in v) return parseInt(v.integerValue, 10);
+  if ('doubleValue' in v) return v.doubleValue;
+  if ('timestampValue' in v) return v.timestampValue;
+  if ('arrayValue' in v) return (v.arrayValue.values || []).map(fromFirestoreValue);
+  if ('mapValue' in v) {
+    const out = {};
+    const fields = v.mapValue.fields || {};
+    for (const k of Object.keys(fields)) out[k] = fromFirestoreValue(fields[k]);
+    return out;
+  }
+  return null;
+}
+
+const FIRESTORE_BASE = env => `https://firestore.googleapis.com/v1/projects/${env.FIREBASE_PROJECT_ID}/databases/(default)/documents`;
+
+// Fetches a single /foods/{docId} document. Returns null on a genuine 404 (cache
+// miss — the normal, expected case for a food never looked up before). Throws on any
+// other failure (auth misconfigured, network error, etc.) so the caller can decide
+// whether to fail the request or silently fall through to tier 2 — see the try/catch
+// around this call in handleNutritionLookup below.
+async function firestoreGetFood(env, docId) {
+  const token = await getFirestoreAccessToken(env);
+  const res = await fetch(`${FIRESTORE_BASE(env)}/foods/${encodeURIComponent(docId)}`, {
+    headers: { Authorization: `Bearer ${token}` }
+  });
+  if (res.status === 404) return null;
+  if (!res.ok) {
+    const errText = await res.text().catch(() => '');
+    throw new Error(`Firestore get failed: ${res.status} ${errText}`);
+  }
+  const data = await res.json();
+  const fields = data.fields || {};
+  const out = {};
+  for (const k of Object.keys(fields)) out[k] = fromFirestoreValue(fields[k]);
+  return out;
+}
+
+// Writes (creates or overwrites) a /foods/{docId} document with the given plain-JS
+// field map, using PATCH so this also works as an upsert. Failures here are logged
+// but never thrown up to the caller — a failed cache WRITE must never fail the
+// nutrition lookup itself (the client still got a correct answer from tier 2; caching
+// it is a pure optimization for next time, not something worth surfacing as an error).
+async function firestoreSetFood(env, docId, fieldsObj) {
+  try {
+    const token = await getFirestoreAccessToken(env);
+    const fields = {};
+    for (const k of Object.keys(fieldsObj)) fields[k] = toFirestoreValue(fieldsObj[k]);
+    const res = await fetch(`${FIRESTORE_BASE(env)}/foods/${encodeURIComponent(docId)}`, {
+      method: 'PATCH',
+      headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ fields })
+    });
+    if (!res.ok) {
+      const errText = await res.text().catch(() => '');
+      console.error('firestoreSetFood failed', res.status, errText);
+    }
+  } catch (e) {
+    console.error('firestoreSetFood threw', e);
+  }
+}
+
+// Normalizes a food name into the /foods lookup key: strips Arabic diacritics, unifies
+// alef forms (أ/إ/آ -> ا) and taa marbuta/haa (ة -> ه) so common spelling variants of
+// the same food collide onto the same cache entry, collapses whitespace, strips
+// punctuation, and lowercases (for any Latin-script portion of the query, e.g. brand
+// names). This mirrors the spirit of the client's existing aiNormalize() but is
+// intentionally more aggressive since this key only needs to be an internal cache
+// index, never shown to a user.
+function normalizeFoodKey(raw) {
+  if (!raw) return '';
+  return String(raw)
+    .replace(/[\u064B-\u0652]/g, '')      // strip Arabic diacritics
+    .replace(/[إأآ]/g, 'ا')                // unify alef forms
+    .replace(/ة/g, 'ه')                    // taa marbuta -> haa
+    .replace(/[^\p{L}\p{N}\s]/gu, ' ')     // strip punctuation, keep letters/numbers
+    .trim()
+    .replace(/\s+/g, ' ')
+    .toLowerCase();
+}
+
+// ===== TIER 3: server-side Groq LLM estimate =====
+// Reached only for items that missed BOTH tier 1 (cache) and tier 2 (API Ninjas) —
+// almost always Arabic-language or regional-dish descriptions API Ninjas' English/
+// Western-food-centric database has no match for. Asks the SAME Groq account/model
+// this Worker already uses for chat, with a strict JSON-only response format so the
+// result can be parsed and validated deterministically, exactly like every other
+// LLM-facing call in this codebase (aiResolveRelativeMove, flComputeMacro client-side
+// equivalent, etc.) — never trust a raw LLM string, always parse+validate before it's
+// allowed to touch macro totals or get written to the shared cache.
+const TIER3_SYSTEM_PROMPT = `You are a precise nutrition estimator. You will receive a food description, possibly in Arabic (including Egyptian/Gulf/Levantine dialect or regional dish names), possibly with a quantity and unit.
+
+Respond with ONLY a raw JSON object, nothing else — no markdown fences, no explanation outside the JSON:
+{"canonicalName":"<the food's common name, in English, for internal cataloging>","macroPer100g":{"p":<protein grams per 100g, number>,"c":<carb grams per 100g, number>,"f":<fat grams per 100g, number>,"b":<fiber grams per 100g, number>,"k":<calories per 100g, number>},"estimatedGrams":<your best-estimate total gram weight of the described portion, number>}
+
+Rules:
+- macroPer100g must be a per-100g baseline for this food, NOT scaled to the described portion — estimatedGrams is what scaling happens against, separately, by the caller.
+- Use standard nutritional values for the identified food. For regional/traditional dishes (e.g. كشري, ملوخية, مندي, مسخن), estimate based on typical home/restaurant preparation and standard ingredient ratios.
+- estimatedGrams should reflect the quantity/unit given in the description if present (e.g. "150 جرام" -> 150), or a normal single-adult serving if no quantity was given.
+- k (calories) must be consistent with p*4 + c*4 + f*9 approximately (per 100g).
+- Never fabricate a food that doesn't match the description — if the description is genuinely unidentifiable, respond with {"error":"<short explanation>"} instead.`;
+
+async function tier3EstimateMacro(env, query) {
+  if (!env.GROQ_API_KEY) {
+    return { ok: false, error: 'GROQ_API_KEY not configured' };
+  }
+  try {
+    const groqRes = await fetch('https://api.groq.com/openai/v1/chat/completions', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${env.GROQ_API_KEY}`
+      },
+      body: JSON.stringify({
+        model: MODEL,
+        max_completion_tokens: 400,
+        include_reasoning: false,
+        reasoning_effort: 'low',
+        messages: [
+          { role: 'system', content: TIER3_SYSTEM_PROMPT },
+          { role: 'user', content: query }
+        ]
+      })
+    });
+    const data = await groqRes.json();
+    if (!groqRes.ok) {
+      return { ok: false, error: data?.error?.message || 'Groq API error' };
+    }
+    let raw = (data?.choices?.[0]?.message?.content || '').trim().replace(/^```json\s*|```$/g, '').trim();
+    let parsed;
+    try { parsed = JSON.parse(raw); } catch { return { ok: false, error: 'unparseable LLM response' }; }
+    if (parsed.error) return { ok: false, error: parsed.error };
+
+    const m = parsed.macroPer100g;
+    const isFiniteNonNeg = n => typeof n === 'number' && Number.isFinite(n) && n >= 0;
+    const gramsOk = isFiniteNonNeg(parsed.estimatedGrams) && parsed.estimatedGrams > 0 && parsed.estimatedGrams < 1500;
+    const macroOk = m && isFiniteNonNeg(m.p) && isFiniteNonNeg(m.c) && isFiniteNonNeg(m.f) &&
+                     (m.b === undefined || isFiniteNonNeg(m.b)) && isFiniteNonNeg(m.k);
+    if (!gramsOk || !macroOk) {
+      console.error('tier3 estimate failed validation', parsed);
+      return { ok: false, error: 'implausible LLM macro estimate' };
+    }
+    // Same kcal/macro cross-check tier 2 already applies — a structurally "valid"
+    // but internally inconsistent LLM guess (e.g. 0 protein/fat, kcal disjoint from
+    // carbs) must be rejected here too, not just for API Ninjas results.
+    const kcalFromMacros = m.p * 4 + m.c * 4 + m.f * 9;
+    const kcalPlausible = m.k === 0 || (kcalFromMacros > 0 && Math.abs(m.k - kcalFromMacros) / Math.max(m.k, kcalFromMacros) < 0.5);
+    if (!kcalPlausible) {
+      console.error('tier3 estimate failed kcal cross-check', parsed);
+      return { ok: false, error: 'implausible LLM macro estimate (kcal mismatch)' };
+    }
+
+    return {
+      ok: true,
+      canonicalName: parsed.canonicalName || query,
+      macroPer100g: { p: m.p, c: m.c, f: m.f, b: m.b || 0, k: m.k },
+      estimatedGrams: parsed.estimatedGrams
+    };
+  } catch (e) {
+    console.error('tier3EstimateMacro threw', e);
+    return { ok: false, error: 'Groq request failed: ' + e.message };
+  }
+}
+
 // ===== /api/nutrition =====
 // Real nutrition lookup — API Ninjas Nutrition API. This is the platform CalorieNinjas
 // itself migrated into during 2025 (CalorieNinjas' free public signup is closed; the
@@ -211,11 +510,42 @@ async function handleNutritionLookup(request, env) {
   // is noticeably less reliable when several unrelated items are comma-joined into
   // one query. Falls back to a single combined query if the caller only sent a raw
   // "query" string (e.g. from an older client build) rather than structured items.
-  let queries;
+  //
+  // cacheKeys runs parallel to queries — cacheKeys[i] is the normalized /foods lookup
+  // key for queries[i]'s food name specifically (not the full "qty unit food" string,
+  // since qty/unit vary per-log but the underlying food identity doesn't — caching by
+  // food name alone is what makes repeat logs of the same food, at different
+  // portions, all hit the same cache entry).
+  let queries, cacheKeys, cacheGrams;
   if (Array.isArray(body.items) && body.items.length) {
     queries = body.items.map(it => `${it.qty} ${it.unit} ${it.food}`.trim());
+    cacheKeys = body.items.map(it => normalizeFoodKey(it.food));
+    // Cached macros are stored per-100g (see write-back below), so a cache hit can
+    // ONLY be scaled correctly when the requested portion is expressible in grams.
+    // A gram-ambiguous unit ("cup", "piece", "tbsp") is left as null here, which
+    // forces that item to skip tier 1 and fall through to API Ninjas — API Ninjas'
+    // own free-text parser already handles those units correctly, and guessing a
+    // gram-conversion here risks silently wrong macros, which is worse than one extra
+    // external call.
+    cacheGrams = body.items.map(it => {
+      const unit = String(it.unit || '').trim().toLowerCase();
+      const qty = parseFloat(it.qty);
+      if (!Number.isFinite(qty) || qty <= 0) return null;
+      if (unit === 'g' || unit === 'gram' || unit === 'grams' || unit === 'جم' || unit === 'جرام') return qty;
+      return null;
+    });
   } else if (body.query && String(body.query).trim()) {
+    // A raw free-text query has no structured qty/unit, so it can never be a TIER 1
+    // read hit (macroPer100g scaling requires a known gram figure — see cacheGrams
+    // logic above) and always routes to tier 2 first (API Ninjas' own parser handles
+    // free text natively). It CAN still benefit from TIER 3 write-back, though —
+    // Groq estimates its own gram figure from the description, so a normalized key
+    // for the whole query string is set here purely for that write-back path (tier 1
+    // read logic above still requires cacheGrams to be non-null, so this key is
+    // simply never consulted for a read on this path — only used if tier 3 fires).
     queries = [String(body.query).trim()];
+    cacheKeys = [normalizeFoodKey(body.query)];
+    cacheGrams = [null];
   } else {
     return json({ error: 'items or query required' }, 400);
   }
@@ -224,8 +554,68 @@ async function handleNutritionLookup(request, env) {
     const macro = { p: 0, c: 0, f: 0, b: 0, k: 0 };
     const items = [];
     let anyMatched = false;
+    // Tracks items that fell through BOTH tier 1 (cache) and tier 2 (API Ninjas) —
+    // these get one attempt at tier 3 (Groq) below, rather than only falling back to
+    // the LLM when the entire batch comes back empty. This matters for mixed-language
+    // meals: "200g chicken + ١٥٠ جرام رز" should resolve chicken via API Ninjas AND
+    // rice via Groq in the SAME request, not silently drop the rice because chicken
+    // alone was enough to make anyMatched true.
+    const tier3Candidates = []; // { qi, q, cacheKey }
 
-    for (const q of queries) {
+    for (let qi = 0; qi < queries.length; qi++) {
+      const q = queries[qi];
+      const cacheKey = cacheKeys[qi];
+      const grams = cacheGrams[qi];
+
+      // ===== TIER 1: /foods cache =====
+      // Only attempted when the requested portion is expressible in grams (see
+      // cacheGrams construction above) — cached macros are stored per-100g, and that
+      // gram figure is what lets a hit be scaled correctly to THIS request's actual
+      // portion, rather than reusing whatever portion happened to be logged the first
+      // time this food was cached.
+      //
+      // A cache miss, or any error reaching Firestore (misconfigured secrets, network
+      // blip, etc.), falls straight through to tier 2 (API Ninjas) below — caching is
+      // purely an optimization layer in front of the existing, already-working
+      // lookup, and must never be able to make a request fail that would have
+      // succeeded without it.
+      if (cacheKey && grams) {
+        try {
+          const cached = await firestoreGetFood(env, cacheKey);
+          if (cached && cached.macroPer100g) {
+            const m = cached.macroPer100g;
+            const isNum = n => typeof n === 'number' && Number.isFinite(n);
+            if (isNum(m.p) && isNum(m.c) && isNum(m.f) && isNum(m.k)) {
+              const scale = grams / 100;
+              const sp = m.p * scale, sc = m.c * scale, sf = m.f * scale, sb = (m.b || 0) * scale, sk = m.k * scale;
+              macro.p += sp; macro.c += sc; macro.f += sf; macro.b += sb; macro.k += sk;
+              items.push({
+                name: cached.canonicalName || q,
+                qty: grams,
+                unit: 'g',
+                kcal: Math.round(sk),
+                protein: Math.round(sp * 10) / 10,
+                carbs: Math.round(sc * 10) / 10,
+                fat: Math.round(sf * 10) / 10,
+                fiber: Math.round(sb * 10) / 10,
+                rejected: false,
+                source: cached.source || 'cache'
+              });
+              anyMatched = true;
+              // Fire-and-forget usage counter bump — must not block or fail the
+              // response if it errors, so it's deliberately not awaited into the
+              // main try/catch's failure path.
+              firestoreSetFood(env, cacheKey, { usageCount: (cached.usageCount || 0) + 1, updatedAt: Date.now() })
+                .catch(e => console.error('usageCount bump failed', e));
+              continue; // skip tier 2 entirely for this item — cache hit
+            }
+          }
+        } catch (e) {
+          console.error('foods cache lookup failed, falling through to API Ninjas', e);
+        }
+      }
+
+      // ===== TIER 2: API Ninjas (existing, unmodified logic below) =====
       const url = 'https://api.api-ninjas.com/v1/nutrition?query=' + encodeURIComponent(q);
       const nxRes = await fetch(url, {
         headers: { 'X-Api-Key': env.API_NINJAS_KEY }
@@ -236,6 +626,9 @@ async function handleNutritionLookup(request, env) {
         console.error('api-ninjas error', nxRes.status, errText);
         // One bad item shouldn't fail the whole meal — skip it and keep going, but
         // track that at least one lookup must succeed or the whole call is an error.
+        // Queue for tier 3 (Groq) rather than dropping silently — this is the actual
+        // fix for Arabic/complex-meal items that API Ninjas can't parse at all.
+        tier3Candidates.push({ qi, q, cacheKey });
         continue;
       }
 
@@ -254,7 +647,13 @@ async function handleNutritionLookup(request, env) {
       // production. Fixed by unwrapping the real `items` array AND hard-validating
       // every numeric field before it's allowed to contribute to the total.
       const foods = Array.isArray(raw) ? raw : (Array.isArray(raw?.items) ? raw.items : null);
-      if (!foods || !foods.length) continue;
+      if (!foods || !foods.length) {
+        // API Ninjas understood the request but has no match — the common case for
+        // Arabic-language or regional-dish queries, since its underlying database is
+        // English/Western-food-centric. Queue for tier 3 instead of dropping.
+        tier3Candidates.push({ qi, q, cacheKey });
+        continue;
+      }
 
       for (const food of foods) {
         // Hard validation: every field must be a finite, non-negative number, and
@@ -306,6 +705,90 @@ async function handleNutritionLookup(request, env) {
           rejected: false
         });
         anyMatched = true;
+
+        // ===== Tier-1 write-back =====
+        // Cache this validated result under this item's normalized food-name key so
+        // the NEXT lookup for the same food (any portion size) is a tier-1 hit and
+        // skips API Ninjas entirely. Deliberately fire-and-forget (not awaited into
+        // the main flow) — per the same rule as the usageCount bump above, a caching
+        // failure must never turn an already-successful nutrition lookup into an
+        // error response for the user. Only caches per-100g-normalized macros derived
+        // from this specific serving, scaled by servingG, so future lookups at
+        // different portions compute correctly off a consistent per-100g baseline.
+        if (cacheKey && servingG > 0) {
+          const scale = 100 / servingG;
+          firestoreSetFood(env, cacheKey, {
+            canonicalName: food.name || q,
+            normalizedKey: cacheKey,
+            macroPer100g: {
+              p: Math.round(p * scale * 10) / 10,
+              c: Math.round(c * scale * 10) / 10,
+              f: Math.round(f * scale * 10) / 10,
+              b: Math.round((b || 0) * scale * 10) / 10,
+              k: Math.round(k * scale * 10) / 10
+            },
+            source: 'external_api_cache',
+            confidence: 'medium',
+            usageCount: 1,
+            createdAt: Date.now(),
+            updatedAt: Date.now()
+          }).catch(e => console.error('write-back cache failed', e));
+        }
+      }
+    }
+
+    // ===== TIER 3: Groq LLM estimate =====
+    // Runs once per item that missed both tier 1 and tier 2 — not inside the main
+    // loop, so a slow/failed Groq call for one item never blocks or reorders the
+    // synchronous API Ninjas calls for the others. Marked confidence:'low' on
+    // write-back (per the original architecture doc) so a future admin review queue
+    // can prioritize verifying these over external_api_cache entries.
+    for (const cand of tier3Candidates) {
+      const est = await tier3EstimateMacro(env, cand.q);
+      if (!est.ok) {
+        console.error('tier3 miss for', cand.q, est.error);
+        continue; // genuinely unresolvable — falls out of the response entirely, same as any other total miss
+      }
+      const scale = est.estimatedGrams / 100;
+      const sp = est.macroPer100g.p * scale, sc = est.macroPer100g.c * scale,
+            sf = est.macroPer100g.f * scale, sb = est.macroPer100g.b * scale, sk = est.macroPer100g.k * scale;
+      macro.p += sp; macro.c += sc; macro.f += sf; macro.b += sb; macro.k += sk;
+      items.push({
+        name: est.canonicalName,
+        qty: Math.round(est.estimatedGrams),
+        unit: 'g',
+        kcal: Math.round(sk),
+        protein: Math.round(sp * 10) / 10,
+        carbs: Math.round(sc * 10) / 10,
+        fat: Math.round(sf * 10) / 10,
+        fiber: Math.round(sb * 10) / 10,
+        rejected: false,
+        source: 'ai_estimate',
+        estimated: true // client can show the existing "تقريبي" badge off this flag
+      });
+      anyMatched = true;
+
+      // Write-back to /foods, same shape and same fire-and-forget policy as the
+      // tier-2 write-back above — a caching failure must never fail an otherwise-
+      // successful lookup. confidence:'low' (vs tier 2's 'medium') is the one
+      // deliberate difference, flagging these for eventual admin review.
+      if (cand.cacheKey) {
+        firestoreSetFood(env, cand.cacheKey, {
+          canonicalName: est.canonicalName,
+          normalizedKey: cand.cacheKey,
+          macroPer100g: {
+            p: Math.round(est.macroPer100g.p * 10) / 10,
+            c: Math.round(est.macroPer100g.c * 10) / 10,
+            f: Math.round(est.macroPer100g.f * 10) / 10,
+            b: Math.round(est.macroPer100g.b * 10) / 10,
+            k: Math.round(est.macroPer100g.k * 10) / 10
+          },
+          source: 'ai_estimate',
+          confidence: 'low',
+          usageCount: 1,
+          createdAt: Date.now(),
+          updatedAt: Date.now()
+        }).catch(e => console.error('tier3 write-back cache failed', e));
       }
     }
 
