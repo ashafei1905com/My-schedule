@@ -665,7 +665,7 @@ Rules:
 - Use standard/typical ingredient ratios for the named dish's usual home or restaurant preparation.
 - Every ingredient name must be a plain, generic, USDA-searchable English food term — no brand names, no dish names, no compound descriptions.
 - Grams must be realistic component weights for a single serving (a full dish typically decomposes into 3-6 components each well under 500g).
-- Honor every exclusion in the original description by leaving that ingredient out entirely — do not substitute it with something else unless the user's phrasing implies a substitution.
+- CRITICAL — EXCLUSIONS MUST NOT CHANGE OTHER INGREDIENTS' QUANTITIES: when the description excludes one or more ingredients ("بدون", "من غير", "without", "no X"), first mentally build the dish's STANDARD full ingredient list with standard gram weights, then simply DELETE the excluded ingredient's line(s) from that list. Do not re-derive or adjust the gram weight of any remaining ingredient because something else was removed — a koshary without onions and chickpeas still has the SAME rice, lentils, macaroni, and tomato sauce quantities as a full koshary, not a proportionally rebalanced dish. This matters because two calls for the same base dish with different exclusions must stay numerically consistent with each other on every ingredient they share — do not substitute a removed ingredient with something else either, unless the user's phrasing explicitly implies a substitution.
 - If the description doesn't actually name an identifiable composite dish, respond with {"error":"<short explanation>"} instead.`;
   try {
     const groqRes = await fetch('https://api.groq.com/openai/v1/chat/completions', {
@@ -890,7 +890,6 @@ async function usdaLookupFood(env, query, requestedGrams) {
 // Ninjas' parser than one long comma-joined multi-item string.
 // Response: { macro: {p,c,f,b,k}, items: [{name, qty, unit, kcal}, ...] }
 async function handleNutritionLookup(request, env) {
-  console.log('DEPLOY_CHECK v2a', typeof usdaLookupFood, typeof decomposeDish, typeof usdaRelevanceScore);
   if (request.method === 'OPTIONS') return new Response(null, { headers: corsHeaders() });
   if (request.method !== 'POST') return json({ error: 'Method not allowed' }, 405);
 

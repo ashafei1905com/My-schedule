@@ -3790,10 +3790,28 @@ async function flLookupNutrition(items){
 // the macro numbers themselves, only comments on numbers already fetched from the API.
 async function flGetVerdict(task,macro,dayTarget,dayConsumed){
   const r1=n=>Math.round(n*10)/10;
-  const remaining={p:r1(dayTarget.p-dayConsumed.p),c:r1(dayTarget.c-dayConsumed.c),f:r1(dayTarget.f-dayConsumed.f),k:r1(dayTarget.k-dayConsumed.k)};
-  const sys=`You are a friendly, casual nutrition buddy (not formal, not lecture-y) for Abdullah, embedded in his habit app. He just logged a real, precisely-measured meal for "${task[4]}": ${JSON.stringify(macro)} (protein/carb/fat grams, kcal). His remaining target for today: ${JSON.stringify(remaining)}.
+  const remaining={p:r1(dayTarget.p-dayConsumed.p),c:r1(dayTarget.c-dayConsumed.c),f:r1(dayTarget.f-dayConsumed.f),b:r1((dayTarget.b||0)-(dayConsumed.b||0)),k:r1(dayTarget.k-dayConsumed.k)};
+  // mealSlotHint gives the model an explicit notion of WHICH meal this is, derived
+  // from the task's category/name rather than left implicit — this is what lets it
+  // reason about "is this appropriate for X" instead of only reacting to the daily
+  // budget number. Falls back to a generic "meal" label for anything that doesn't
+  // match a known slot (e.g. a snack task), so the prompt never breaks on an
+  // unrecognized task shape.
+  const cat=task[2]||'';
+  const nameForSlot=task[4]||'';
+  let mealSlotHint='وجبة';
+  if(cat==='snack') mealSlotHint='سناك (وجبة خفيفة اختيارية)';
+  else if(/فطار/.test(nameForSlot)) mealSlotHint='الفطار (أول وجبة في اليوم)';
+  else if(/غدا/.test(nameForSlot)) mealSlotHint='الغدا (الوجبة الرئيسية في النص)';
+  else if(/عشا/.test(nameForSlot)) mealSlotHint='العشا (آخر وجبة في اليوم)';
+  const macroWithFiber={...macro, b: macro.b || 0};
+  const sys=`You are a friendly, casual nutrition buddy (not formal, not lecture-y) for Abdullah, embedded in his habit app. He just logged a real, precisely-measured meal for "${task[4]}" — this is ${mealSlotHint}. Full macro breakdown of THIS meal (grams unless noted): ${JSON.stringify(macroWithFiber)}. His remaining target for the REST of today after this meal: ${JSON.stringify(remaining)}.
 
-Reply in 1-2 short casual sentences, in the same dialect/language he'd naturally expect (default Egyptian/Gulf-friendly Arabic, casual not فصحى), reacting to whether this meal fits his remaining budget today. Be direct and specific with the numbers, not generic. Output ONLY the sentence(s), no JSON, no labels.${aiMemoryBlock()}`;
+Reply in 2-3 short casual sentences, in the same dialect/language he'd naturally expect (default Egyptian/Gulf-friendly Arabic, casual not فصحى), covering BOTH of these — do not skip either one:
+1. Whether this meal fits his remaining daily budget (be direct and specific with real numbers, not generic praise).
+2. Whether this meal is NUTRITIONALLY APPROPRIATE for what it is (${mealSlotHint}) — judged on its own, not just against the daily total. Specifically check: does it have real protein for a main meal (breakfast/lunch/dinner should have meaningful protein, a snack doesn't need to)? Does it have essentially zero fiber (b field near 0) when it's a main meal — if so, say so directly and suggest ONE concrete, easy addition (e.g. "زود شوية خضار أو سلطة على جنب" or "لو حبيت تزود الألياف كل ما تحتاجه ملعقة بذور شيا أو طبق سلطة"). If the meal IS nutritionally solid for what it is, say that plainly instead of inventing a problem — never manufacture a complaint just to fill the second point.
+
+Be specific to the actual numbers given, never generic filler. Output ONLY the sentences, no JSON, no labels, no markdown.${aiMemoryBlock()}`;
   try{
     const res=await fetch(AI_WORKER_URL,{
       method:'POST',
