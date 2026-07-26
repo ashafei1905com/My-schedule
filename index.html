@@ -365,6 +365,27 @@ body{font-family:'Cairo',sans-serif;background:var(--bg);color:var(--tx);directi
   </div>
 </div>
 
+<!-- Onboarding Modal (Stage 1) — shown exactly once, only to a signed-in user whose
+     USER_SCHEDULE is genuinely empty after the cloud merge (see the
+     computeIsNewOnboardingUser gate near onAuthStateChanged). Reuses the existing
+     modal-overlay/modal-box/modal-opt visual language rather than inventing new
+     styling, so it reads as a native part of the app. z-index deliberately higher
+     than every other modal (10050) since this can legitimately be the very first
+     thing a brand-new account ever sees, before any other UI is meaningful. -->
+<div id="onboardModal" class="modal-overlay" style="z-index:10050">
+  <div class="modal-box" style="max-width:440px">
+    <div class="modal-step-ind" id="obStepInd"></div>
+    <div class="modal-title" id="obTitle"></div>
+    <div class="modal-sub" id="obSub"></div>
+    <div class="modal-opts" id="obOpts"></div>
+    <div id="obTextInputWrap" style="display:none;margin-top:6px">
+      <input id="obTextInput" type="text" class="fl-textarea" style="height:auto;padding:12px" placeholder="">
+      <button id="obTextNextBtn" class="fl-submit-btn" type="button" style="margin-top:10px">التالي ←</button>
+    </div>
+    <button id="btn-onboard-back" class="modal-back-btn" type="button">← رجوع</button>
+  </div>
+</div>
+
 <!-- Food Log Modal — replaces the old static "alternatives" system. Tapping a food/
      snack task opens this: pick a saved option for this exact meal slot, or type what
      was actually eaten. Submission goes to the Cloudflare Worker for precise macro
@@ -866,6 +887,131 @@ async function saveUserSettings(){
   }catch(e){console.warn('userSettings cloud save failed',e);}
 }
 
+// ===== Onboarding (Stage 1) =====
+// Shown exactly once, gated by computeIsNewOnboardingUser() near onAuthStateChanged
+// — a signed-in user whose USER_SCHEDULE is genuinely empty after the cloud merge,
+// and who is NOT Abdullah (his account is always pre-populated by
+// migrateAbdullahScheduleIfNeeded, so this condition structurally can never be true
+// for his uid). Guests are never shown this — they keep today's existing read-only
+// guest behavior against static SCHED, unchanged, since nothing asked for that to
+// change and forcing onboarding on an anonymous browser session would be a real
+// regression, not a feature.
+//
+// Deliberately narrow scope for Stage 1: collects trackPrayers (yes/no) and a
+// buildMode choice ("template" vs "custom") into USER_SETTINGS, and marks
+// onboardingComplete so this never shows again for the account. It does NOT build a
+// theme picker (Stage 2) or an actual custom-task builder (Stage 3) — buildMode is
+// stored now so Stage 3 can read it later, but choosing "custom" here does not yet
+// launch any task-building UI; it currently just seeds an empty (still-valid,
+// getEffectiveSched-fallback-safe) USER_SCHEDULE, identical in effect to "template"
+// until Stage 3 exists. This is an intentional, explicit scope boundary, not an
+// oversight — flagged in the finish handler below too.
+let OB_STEP=0;
+let OB_ANSWERS={name:'',trackPrayers:true,buildMode:'template'};
+const OB_TOTAL_STEPS=3;
+
+function obShowStep(){
+  const modal=document.getElementById('onboardModal');
+  if(modal) modal.classList.add('open');
+  const stepInd=document.getElementById('obStepInd');
+  if(stepInd) stepInd.textContent=`الخطوة ${OB_STEP+1} من ${OB_TOTAL_STEPS}`;
+  const backBtn=document.getElementById('btn-onboard-back');
+  if(backBtn) backBtn.style.visibility=OB_STEP===0?'hidden':'visible';
+
+  const titleEl=document.getElementById('obTitle');
+  const subEl=document.getElementById('obSub');
+  const optsEl=document.getElementById('obOpts');
+  const textWrap=document.getElementById('obTextInputWrap');
+  if(!titleEl||!subEl||!optsEl||!textWrap) return;
+  optsEl.innerHTML='';
+  textWrap.style.display='none';
+
+  if(OB_STEP===0){
+    titleEl.textContent='أهلاً بيك في جدول عبدالله 👋';
+    subEl.textContent='إيه اسمك؟';
+    textWrap.style.display='block';
+    const input=document.getElementById('obTextInput');
+    if(input){ input.placeholder='اكتب اسمك هنا'; input.value=OB_ANSWERS.name||''; setTimeout(()=>input.focus(),50); }
+  }else if(OB_STEP===1){
+    titleEl.textContent='هل تحب نتابعلك مواعيد الصلاة؟';
+    subEl.textContent='لو موافق، هنضيف الصلوات الخمسة لجدولك اليومي بمواقيتها الفعلية — تقدر تغيّر ده بعدين من الإعدادات في أي وقت';
+    obRenderOpts([
+      {label:'أيوه، ضيفهم ✅',value:true},
+      {label:'لأ، من غيرهم',value:false}
+    ],(val)=>{ OB_ANSWERS.trackPrayers=val; OB_STEP++; obShowStep(); });
+  }else if(OB_STEP===2){
+    titleEl.textContent='عايز تبدأ إزاي؟';
+    subEl.textContent='تقدر تغيّر ده بعدين برضه';
+    obRenderOpts([
+      {label:'ابدأ بجدول جاهز 📋',value:'template'},
+      {label:'هبني جدولي من الصفر ✨',value:'custom'}
+    ],(val)=>{ OB_ANSWERS.buildMode=val; obFinish(); });
+  }
+}
+
+function obRenderOpts(opts,onPick){
+  const el=document.getElementById('obOpts');
+  if(!el) return;
+  opts.forEach(o=>{
+    const btn=document.createElement('button');
+    btn.className='modal-opt';
+    btn.innerHTML=`<span>${o.label}</span>`;
+    btn.onclick=()=>onPick(o.value);
+    el.appendChild(btn);
+  });
+}
+
+function obHandleTextNext(){
+  if(OB_STEP===0){
+    const input=document.getElementById('obTextInput');
+    const val=(input?.value||'').trim();
+    if(!val){ showToast('اكتب اسمك الأول',2000,'warn'); return; }
+    OB_ANSWERS.name=val;
+    OB_STEP++;
+    obShowStep();
+  }
+}
+
+function obHandleBack(){
+  if(OB_STEP<=0) return;
+  OB_STEP--;
+  obShowStep();
+}
+
+// Finalizes onboarding: persists trackPrayers into USER_SETTINGS (the SAME field
+// getAllTasks/getReqTasks already gate buildPTasks() on — nothing new to wire there,
+// Stage 0.5's plumbing already reads this), seeds an empty USER_SCHEDULE so
+// getEffectiveSched's fallback-to-static-SCHED path is never hit for a new account
+// (a genuinely new user should never silently see Abdullah's personal schedule —
+// they see whatever getAllTasks produces from an empty per-day ts:[] until Stage 3
+// lets them actually add tasks), and marks onboardingComplete so
+// computeIsNewOnboardingUser() never returns true for this account again.
+async function obFinish(){
+  USER_SETTINGS={...USER_SETTINGS, trackPrayers:OB_ANSWERS.trackPrayers, buildMode:OB_ANSWERS.buildMode, displayNameChosen:OB_ANSWERS.name, onboardingComplete:true};
+  // Seed a real, empty-but-valid USER_SCHEDULE for every weekday — {n,wk,bd,gm,ts:[]}
+  // shape matches static SCHED exactly (see getEffectiveSched's contract), so every
+  // existing consumer (getAllTasks/getReqTasks/renderPanel/renderTabs) handles this
+  // correctly with zero special-casing: a new account simply has 7 empty days.
+  const emptySchedule={};
+  for(let jd=0; jd<7; jd++){
+    emptySchedule[jd]={n:DSHORT[jd], wk:'9:00 ص', bd:'11:00 م', gm:null, ts:[]};
+  }
+  USER_SCHEDULE=emptySchedule;
+  try{
+    await saveUserSettings();
+    await saveUserSchedule();
+  }catch(e){
+    console.warn('onboarding save failed',e);
+    showToast('⚠️ حصل خطأ أثناء حفظ إعداداتك — جرب تاني',3500,'warn');
+  }
+  const modal=document.getElementById('onboardModal');
+  if(modal) modal.classList.remove('open');
+  // Re-render everything now that USER_SCHEDULE/USER_SETTINGS actually reflect the
+  // choices just made — the initial initAppFlow render (if it already ran before
+  // onboarding finished) would otherwise still show stale/default state.
+  try{ renderTabs();renderPanels();switchDay(todayJD());updateUI(); }catch(e){ console.warn('post-onboarding re-render failed',e); }
+}
+
 
 function buildPTasks(jd){
   const k=DKEYS ? DKEYS[jd] : ['sun','mon','tue','wed','thu','fri','sat'][jd];
@@ -1072,6 +1218,12 @@ function addMealOption(mealKey,description,macro){
   if(list.length>25) list.shift();
 }
 let IS_BRAND_NEW_SESSION=false; // true only for the very session that creates FIRST_SEEN
+// True only when a SIGNED-IN user's USER_SCHEDULE was confirmed empty after the cloud
+// merge (see onAuthStateChanged) — set there, read by initAppFlow to decide whether
+// to show the onboarding modal instead of the normal schedule view. Defaults false so
+// guests (who never reach that cloud-merge code at all) and the brief window before
+// a signed-in user's merge completes never accidentally trigger onboarding.
+let PENDING_ONBOARDING=false;
 // (FIRST_SEEN itself: no day before it is ever eligible for punishment, and the day
 // FIRST_SEEN itself is never punished either, since the user hadn't finished their
 // first day when the account was created.)
@@ -4802,6 +4954,7 @@ document.body.addEventListener('click',async e=>{
       MEAL_OPTIONS={};
       USER_SCHEDULE={};
       USER_SETTINGS={trackPrayers:true};
+      PENDING_ONBOARDING=false;
       AI_SESSIONS=[];
       AI_ACTIVE_SESSION_ID=null;
       AI_VIEW_MODE='chat';
@@ -4846,6 +4999,9 @@ document.body.addEventListener('click',async e=>{
     showPrayerStep();
     return;
   }
+
+  if(tgt.id==='btn-onboard-back'){ obHandleBack(); return; }
+  if(tgt.id==='obTextNextBtn'){ obHandleTextNext(); return; }
 
   if(tgt.id==='btn-hist-prev'){
     saveDay();SELECTED_DATE=dateOff(-1,SELECTED_DATE);loadDay();
@@ -4941,6 +5097,10 @@ document.body.addEventListener('keydown',async e=>{
     e.preventDefault();
     await aiHandleSend();
   }
+  if(e.target && e.target.id==='obTextInput' && e.key==='Enter'){
+    e.preventDefault();
+    obHandleTextNext();
+  }
 });
 
 // Re-arms notification timers whenever the tab/PWA regains visibility. This does NOT
@@ -5000,6 +5160,18 @@ function initAppFlow(user){
     updateAuthUI(user);
     if(NOTIF_ENABLED && typeof Notification!=='undefined' && Notification.permission==='granted'){
       try{ await syncPushSchedule(); }catch(e){ console.warn('startup push sync failed',e); }
+    }
+    // Onboarding (Stage 1) — shown ONLY for a signed-in user whose USER_SCHEDULE was
+    // confirmed empty after the cloud merge (see onAuthStateChanged). Fires after
+    // revealApp() so the app shell/schedule view is fully rendered and ready
+    // underneath, exactly like the prayer modal already layers on top of a ready
+    // page rather than blocking the initial render. Guests never reach this branch
+    // (PENDING_ONBOARDING defaults false and is only ever set inside the signed-in
+    // cloud-merge code path), so existing guest access is completely unaffected.
+    if(PENDING_ONBOARDING && user){
+      OB_STEP=0;
+      OB_ANSWERS={name:'',trackPrayers:true,buildMode:'template'};
+      obShowStep();
     }
   }).catch(e=>{
     console.warn('Init error bypass:',e);
@@ -5144,6 +5316,19 @@ if (typeof onAuthStateChanged !== 'undefined' && typeof fbAuth !== 'undefined') 
           // ran once elsewhere), the function's own Object.keys(...).length>0 guard
           // sees that real cloud data and correctly no-ops instead of re-migrating.
           migrateAbdullahScheduleIfNeeded(user.uid);
+          // Onboarding gate: a signed-in user is "new" (needs onboarding) if, after
+          // everything above has run (cloud merge + Abdullah's migration, in that
+          // order), USER_SCHEDULE is STILL empty. This structurally can never be
+          // true for Abdullah's own uid, since migrateAbdullahScheduleIfNeeded
+          // unconditionally populates it for him. For every other account, an empty
+          // USER_SCHEDULE at this point means genuinely nothing has ever been saved
+          // for them — not "migration hasn't run yet" (that only applies to
+          // Abdullah), just "this account has never completed onboarding or built a
+          // schedule". Checked again, identically, in the ud.exists()===false branch
+          // below for a truly brand-new Firebase Auth account with no Firestore doc
+          // at all yet — that case never reaches this line, so it needs its own copy
+          // of the same check.
+          PENDING_ONBOARDING = !USER_SCHEDULE || Object.keys(USER_SCHEDULE).length===0;
           if(d.userMemory) USER_MEMORY=d.userMemory;
           if(d.mealOptions) MEAL_OPTIONS=d.mealOptions;
           if(d.weeklyPointsHistory) weeklyPointsHistory={...weeklyPointsHistory,...d.weeklyPointsHistory};
@@ -5163,6 +5348,16 @@ if (typeof onAuthStateChanged !== 'undefined' && typeof fbAuth !== 'undefined') 
           rescueFutureDatedEntries();
           migrateSavedReports();
           loadDay();
+        }else{
+          // Brand-new Firebase Auth account: no Firestore document exists for this
+          // uid at all yet (first-ever sign-in, nothing has ever been saved). Still
+          // run the Abdullah migration safety net here too — defensive, not expected
+          // to matter in practice since his account gets a Firestore doc the moment
+          // migrateAbdullahScheduleIfNeeded's own saveUserSchedule() call lands, but
+          // this closes the theoretical gap of his very first-ever sign-in landing
+          // in this branch before that doc exists.
+          migrateAbdullahScheduleIfNeeded(user.uid);
+          PENDING_ONBOARDING = !USER_SCHEDULE || Object.keys(USER_SCHEDULE).length===0;
         }
       }catch(e){
         console.warn('cloud load failed after retry',e);
