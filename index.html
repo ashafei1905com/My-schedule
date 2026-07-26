@@ -805,6 +805,69 @@ const SCHED={
 // it remains the fallback for as long as USER_SCHEDULE is empty.
 let USER_SCHEDULE={};
 
+// ===== Firestore array-of-arrays boundary fix =====
+// ROOT CAUSE of "FirebaseError: Nested arrays are not supported": every task in this
+// app is a plain JS ARRAY (tuple) — [id,time,cat,ico,name,desc,pts,...] — and
+// SCHED[jd].ts / USER_SCHEDULE[jd].ts is an ARRAY OF THESE TUPLES. That is
+// structurally Array<Array<...>> — an array directly containing arrays — which is
+// exactly the one shape Firestore's setDoc() unconditionally rejects, regardless of
+// what's inside the inner arrays. This has NOTHING to do with the composite-meal
+// `components` field (confirmed by direct code search: components never gets
+// persisted into historyData/foodLog anywhere in this file) — it was introduced by
+// Stage 0.5's migrateAbdullahScheduleIfNeeded() the moment USER_SCHEDULE.ts started
+// holding real tuples and got written to Firestore for the first time.
+//
+// Fix: convert each task tuple to a plain OBJECT (not nested-array-of-arrays) only
+// at the Firestore read/write boundary — every in-memory consumer (getAllTasks,
+// getReqTasks, renderCard, the AI assistant's task matcher, etc.) continues reading
+// tuples positionally (t[0], t[4], t[6]...) completely unchanged, since
+// deserializeScheduleFromFirestore converts objects back into tuples immediately on
+// load, before anything else ever touches USER_SCHEDULE. This keeps the fix
+// contained to exactly the 3 Firestore boundary call sites (saveUserSchedule,
+// saveAll's payload, and the cloud-merge read) rather than rippling through every
+// function that reads a task tuple across the whole codebase.
+function serializeScheduleForFirestore(sched){
+  if(!sched) return sched;
+  const out={};
+  for(const jd of Object.keys(sched)){
+    const d=sched[jd];
+    if(!d){ out[jd]=d; continue; }
+    out[jd]={
+      n:d.n, wk:d.wk, bd:d.bd, gm:d.gm||null,
+      // Each tuple (a plain array) becomes {tuple:[...]} — a single-field OBJECT
+      // wrapping the array. This is NOT still a nested array: ts is now
+      // Array<Object>, and each object's `tuple` field is a flat array of
+      // primitives (strings/numbers/null) with no array nested inside IT either —
+      // task tuples never contain another array as an element (index 7 "alts" is
+      // always null, never a real array — see the dead-data comment near mkBk/mkDn),
+      // so this one level of object-wrapping is sufficient to fully eliminate every
+      // array-of-arrays in the structure.
+      ts:(d.ts||[]).map(tuple=>({tuple}))
+    };
+  }
+  return out;
+}
+
+function deserializeScheduleFromFirestore(sched){
+  if(!sched) return sched;
+  const out={};
+  for(const jd of Object.keys(sched)){
+    const d=sched[jd];
+    if(!d){ out[jd]=d; continue; }
+    out[jd]={
+      n:d.n, wk:d.wk, bd:d.bd, gm:d.gm||null,
+      // Unwrap {tuple:[...]} back into the plain array every consumer expects.
+      // Defensive fallback: if ts ever somehow already contains plain arrays
+      // (e.g. old localStorage data saved before this fix existed, or the
+      // pre-fix in-memory shape from earlier in this same session), pass it
+      // through as-is rather than crashing on `.tuple` being undefined —
+      // Array.isArray(t) check handles that transitional case safely.
+      ts:(d.ts||[]).map(t=>Array.isArray(t)?t:(t&&t.tuple?t.tuple:t))
+    };
+  }
+  return out;
+}
+
 // Abdullah's own uid — see memory: "user UID: cWY1nZwSkJSJFzpQ72IrPxduhav2". Migration
 // is gated to fire ONLY for this exact uid, per his explicit instruction to keep his
 // personal data separate and never touch it as part of the general new-user flow.
@@ -818,7 +881,7 @@ async function saveUserSchedule(){
   const user=fbAuth.currentUser;
   if(!user)return; // guests never sync a schedule anywhere
   try{
-    await setDoc(doc(fbDb,'users',user.uid),{userSchedule:USER_SCHEDULE},{merge:true});
+    await setDoc(doc(fbDb,'users',user.uid),{userSchedule:serializeScheduleForFirestore(USER_SCHEDULE)},{merge:true});
   }catch(e){console.warn('userSchedule cloud save failed',e);}
 }
 
@@ -1509,7 +1572,7 @@ async function saveAll(){
     userEdits:USER_EDITS,
     mealOptions:MEAL_OPTIONS,
     weeklyPointsHistory:weeklyPointsHistory,
-    userSchedule:USER_SCHEDULE,
+    userSchedule:serializeScheduleForFirestore(USER_SCHEDULE),
     userSettings:USER_SETTINGS
   },{merge:true});
   try{
@@ -5306,7 +5369,7 @@ if (typeof onAuthStateChanged !== 'undefined' && typeof fbAuth !== 'undefined') 
           // have (empty {} for a fresh guest-turned-signed-in session, or a
           // not-yet-synced local migration result in the rare case a save is still
           // in flight).
-          if(d.userSchedule) USER_SCHEDULE=d.userSchedule;
+          if(d.userSchedule) USER_SCHEDULE=deserializeScheduleFromFirestore(d.userSchedule);
           if(d.userSettings) USER_SETTINGS={trackPrayers:true,...d.userSettings};
           // One-time migration trigger — see migrateAbdullahScheduleIfNeeded's own
           // comments for the full idempotency/safety reasoning. Called here, AFTER
