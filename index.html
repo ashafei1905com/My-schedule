@@ -768,6 +768,105 @@ const SCHED={
   6:{n:'السبت',wk:'9:00 ص',bd:'11:00 م',gm:'upper',ts:[mkBk('sat',undefined,true),mkWd('sat'),mkSnackA('sat','12:15 م',true),['sat-lu','1:00 م','food','🍽️','الغدا','غداء البيت أو دليفري (بروتين + كارب) + طبق سلطة كبير',5,null,null,false,null,MACROS_GYM.lunch,mealKeyFor('lunch',true)],mkSnackB('sat','1:45 م',true),mkPS('sat','2:15 م'),mkGU('sat','3:00 م'),mkSw('sat','4:00 م'),mkRc('sat','4:45 م','جاكوزي + بخار/ساونا — ريكفري حتى ٥:٣٠ م ← استثناء ✓'),mkPM('sat','5:45 م'),mkSnackC('sat','9:45 م',true),mkSl('sat')]}
 };
 
+// ===== USER_SCHEDULE — per-account dynamic schedule (Stage 0.5) =====
+// This is the new source of truth for a user's schedule, stored under their own
+// Firestore doc exactly like USER_EDITS/MEAL_OPTIONS already are. Shape mirrors
+// static SCHED exactly — { [weekday 0-6]: {n, wk, bd, gm, ts} } — specifically so
+// getEffectiveSched() below is a drop-in replacement for every existing `SCHED[jd]`
+// read site, with zero changes needed to getAllTasks/getReqTasks/renderPanel/
+// renderTabs beyond swapping which one they call.
+//
+// Empty ({}) by default for EVERY account, including guests — this is what makes an
+// account with no USER_SCHEDULE yet fall through to static SCHED below, which is
+// exactly the "not yet migrated" state for Abdullah's own account before Stage 0.5's
+// migration runs once, and exactly the "new user, show onboarding" state for anyone
+// else in later stages. Nothing in this stage removes or disables static SCHED —
+// it remains the fallback for as long as USER_SCHEDULE is empty.
+let USER_SCHEDULE={};
+
+// Abdullah's own uid — see memory: "user UID: cWY1nZwSkJSJFzpQ72IrPxduhav2". Migration
+// is gated to fire ONLY for this exact uid, per his explicit instruction to keep his
+// personal data separate and never touch it as part of the general new-user flow.
+// Any other signed-in account with no USER_SCHEDULE yet is left empty deliberately —
+// that empty state is what later stages use to detect "this is a new user, show
+// onboarding" instead of silently inheriting Abdullah's personal SCHED.
+const ABDULLAH_UID='cWY1nZwSkJSJFzpQ72IrPxduhav2';
+
+async function saveUserSchedule(){
+  await sSet(LS.userSchedule,USER_SCHEDULE);
+  const user=fbAuth.currentUser;
+  if(!user)return; // guests never sync a schedule anywhere
+  try{
+    await setDoc(doc(fbDb,'users',user.uid),{userSchedule:USER_SCHEDULE},{merge:true});
+  }catch(e){console.warn('userSchedule cloud save failed',e);}
+}
+
+// One-time, idempotent migration: copies every task out of the static SCHED object
+// into USER_SCHEDULE's identical shape, for Abdullah's account ONLY. Idempotent by
+// design — safe to call on every load, since it only ever does anything when
+// USER_SCHEDULE is still empty (Object.keys(...).length===0). Never overwrites,
+// never duplicates: once USER_SCHEDULE has content for even one day, this is a no-op
+// forever after, regardless of how many times loadAll()/onAuthStateChanged fires.
+// Deliberately does NOT delete or mutate static SCHED — that stays completely intact
+// as the fallback for every other account, and as an unused-but-present safety net
+// for Abdullah's own account too until he's personally verified the migrated copy
+// over real daily use (see Stage 0.5 plan).
+function migrateAbdullahScheduleIfNeeded(uid){
+  if(uid!==ABDULLAH_UID) return; // never runs for any other account
+  if(USER_SCHEDULE && Object.keys(USER_SCHEDULE).length>0) return; // already migrated, or already has real content — never overwrite
+  const migrated={};
+  for(const jd of Object.keys(SCHED)){
+    const d=SCHED[jd];
+    // Deep-copy every task tuple (JSON round-trip is sufficient here since task
+    // tuples are plain arrays/strings/numbers/null — no functions, no special
+    // objects) so the migrated copy can never accidentally alias/mutate the
+    // original static SCHED array in memory.
+    migrated[jd]={n:d.n, wk:d.wk, bd:d.bd, gm:d.gm||null, ts:JSON.parse(JSON.stringify(d.ts))};
+  }
+  USER_SCHEDULE=migrated;
+  console.log('migrateAbdullahScheduleIfNeeded: migrated', Object.keys(migrated).length, 'days into USER_SCHEDULE');
+  // Persist immediately — this is a one-shot event and must not be lost if the user
+  // closes the tab before some later unrelated saveAll() would have written it.
+  saveUserSchedule().catch(e=>console.warn('post-migration saveUserSchedule failed',e));
+}
+
+// Single indirection point for reading a weekday's schedule. Returns EXACTLY the
+// same shape SCHED[jd] always has ({n,wk,bd,gm,ts}) — a signed-in user with a
+// populated USER_SCHEDULE gets their own data; everyone else (guests, and any
+// account before its USER_SCHEDULE exists) falls through to static SCHED, UNCHANGED
+// from today's behavior. This is the ONLY function getAllTasks/getReqTasks/
+// renderPanel/renderTabs should read a weekday's schedule through from now on —
+// never SCHED[jd] directly, so a future removal of static SCHED (planned Stage 4,
+// NOT this stage) only ever requires changing this one function's fallback branch.
+function getEffectiveSched(jd){
+  if(USER_SCHEDULE && USER_SCHEDULE[jd]) return USER_SCHEDULE[jd];
+  return SCHED[jd];
+}
+
+// ===== USER_SETTINGS — per-account feature toggles (trackPrayers, future settings) =====
+// Same persistence pattern as USER_SCHEDULE/USER_EDITS/MEAL_OPTIONS: local always,
+// cloud only when signed in, merged via setDoc(...,{merge:true}).
+//
+// trackPrayers defaults to TRUE — this is a deliberate backward-compatibility
+// choice, not an assumption about any user's beliefs: every existing account
+// (Abdullah's included) has always had prayer tracking as part of the app, so
+// defaulting an unset/missing trackPrayers to true means nobody's schedule silently
+// loses its prayer tasks the moment this field is introduced. A brand-new user going
+// through onboarding (Stage 1) is asked explicitly and their answer is stored here
+// before they ever see a schedule — this default only matters for accounts that
+// predate the toggle existing at all.
+let USER_SETTINGS={trackPrayers:true};
+
+async function saveUserSettings(){
+  await sSet(LS.userSettings,USER_SETTINGS);
+  const user=fbAuth.currentUser;
+  if(!user)return; // guests never sync settings anywhere
+  try{
+    await setDoc(doc(fbDb,'users',user.uid),{userSettings:USER_SETTINGS},{merge:true});
+  }catch(e){console.warn('userSettings cloud save failed',e);}
+}
+
+
 function buildPTasks(jd){
   const k=DKEYS ? DKEYS[jd] : ['sun','mon','tue','wed','thu','fri','sat'][jd];
   return Object.entries(PMETA)
@@ -789,9 +888,16 @@ function sortKey(t){const base=toMin(t[10]||t[1]);return t[2]==='sleep'?base+144
 // default) see exactly the original SCHED-derived tasks, unchanged.
 function getAllTasks(jd,iso){
   const effIso=iso||dateForWeekday(jd,TODAY);
-  const d=SCHED[jd];if(!d)return applyUserEditsToTasks([],effIso).sort((a,b)=>sortKey(a)-sortKey(b));
+  const d=getEffectiveSched(jd);if(!d)return applyUserEditsToTasks([],effIso).sort((a,b)=>sortKey(a)-sortKey(b));
   const frees=(FREE_TIME[jd]||[]).map((f,i)=>[`fr-${jd}-${i}`,f.t,'free','🎮','وقت حر',f.d,0,null,null,false]);
-  const base=[...buildPTasks(jd),...d.ts,...frees];
+  // Prayer tasks are entirely opt-in per account (USER_SETTINGS.trackPrayers) — a
+  // user who turned prayer tracking off in onboarding/Settings gets an empty array
+  // here instead of buildPTasks(jd)'s 5 daily prayer entries. buildPTasks itself is
+  // left completely unchanged (still a pure function of jd) — this is the ONE place
+  // (plus the identical check in getReqTasks below) that decides whether its output
+  // is actually included in what the user sees.
+  const prayers=USER_SETTINGS.trackPrayers?buildPTasks(jd):[];
+  const base=[...prayers,...d.ts,...frees];
   // Sort AFTER merging user edits, not before — moved-in and custom tasks are appended
   // by applyUserEditsToTasks and were previously never re-sorted, so they always landed
   // at the end of the list regardless of their actual time. This was the root cause of
@@ -800,17 +906,19 @@ function getAllTasks(jd,iso){
 }
 function getReqTasks(jd,iso){
   const effIso=iso||dateForWeekday(jd,TODAY);
+  const d=getEffectiveSched(jd);
   // cat==='snack' is excluded here — this is the actual mechanism that exempts snacks
   // from both the punishment scan (applyPunishmentOnce loops over getReqTasks) and the
   // streak "all required tasks done" check (checkStreak also uses getReqTasks). Snacks
   // still carry pts>0 and are fully completable via their own button; they just never
   // appear in the "required" list that punishment/streak logic reads.
-  const base=[...buildPTasks(jd),...(SCHED[jd]?.ts||[])].filter(t=>!t[9]&&t[6]>0&&t[2]!=='snack');
+  const prayers=USER_SETTINGS.trackPrayers?buildPTasks(jd):[];
+  const base=[...prayers,...(d?.ts||[])].filter(t=>!t[9]&&t[6]>0&&t[2]!=='snack');
   return applyUserEditsToTasks(base,effIso).filter(t=>!t._deleted).sort((a,b)=>sortKey(a)-sortKey(b));
 }
 
 // ===== State =====
-const LS={stats:'sc:stats2',history:'sc:history2',reports:'sc:reports2',penalized:'sc:penalized2',firstSeen:'sc:firstSeen1',userEdits:'sc:userEdits1',aiChat:'sc:aiChat1',userMemory:'sc:userMemory1',mealOptions:'sc:mealOptions1',weeklyPtsHistory:'sc:weeklyPtsHistory1'};
+const LS={stats:'sc:stats2',history:'sc:history2',reports:'sc:reports2',penalized:'sc:penalized2',firstSeen:'sc:firstSeen1',userEdits:'sc:userEdits1',aiChat:'sc:aiChat1',userMemory:'sc:userMemory1',mealOptions:'sc:mealOptions1',weeklyPtsHistory:'sc:weeklyPtsHistory1',userSchedule:'sc:userSchedule1',userSettings:'sc:userSettings1'};
 let STATS={cur:0,best:0,pts:0,lc:null,lf:null,lastPtsWeekStart:null};
 // {weekStartISO: finalPointsTotal} — archive of past weeks' final point totals,
 // written right before resetWeeklyPointsIfNewWeek() zeroes STATS.pts, so a week's
@@ -1155,6 +1263,8 @@ async function loadAll() {
     penalizedDates = (await sGet(LS.penalized)) || {};
     FIRST_SEEN = await sGet(LS.firstSeen);
     USER_EDITS = (await sGet(LS.userEdits)) || emptyUserEdits();
+    USER_SCHEDULE = (await sGet(LS.userSchedule)) || {};
+    USER_SETTINGS = (await sGet(LS.userSettings)) || {trackPrayers:true};
     USER_MEMORY = (await sGet(LS.userMemory)) || [];
     MEAL_OPTIONS = (await sGet(LS.mealOptions)) || {};
     weeklyPointsHistory = (await sGet(LS.weeklyPtsHistory)) || {};
@@ -1246,7 +1356,9 @@ async function saveAll(){
     firstSeen:FIRST_SEEN,
     userEdits:USER_EDITS,
     mealOptions:MEAL_OPTIONS,
-    weeklyPointsHistory:weeklyPointsHistory
+    weeklyPointsHistory:weeklyPointsHistory,
+    userSchedule:USER_SCHEDULE,
+    userSettings:USER_SETTINGS
   },{merge:true});
   try{
     await attemptSave();
@@ -2269,7 +2381,7 @@ function renderCard(task,isToday){
 }
 
 function renderPanel(jd){
-  const d=SCHED[jd];if(!d)return'';
+  const d=getEffectiveSched(jd);if(!d)return'';
   const k=DKEYS[jd];
   const isToday=(SELECTED_DATE===TODAY)&&(jd===todayJD());
   const gbLabel=d.gm?`<div class="gbx ${d.gm==='upper'?'gbu':'gbl'}">${d.gm==='upper'?'Upper Body 💪':'Lower Body 🦵'}</div>`:`<div class="gbx gbr">يوم راحة 💤</div>`;
@@ -2304,7 +2416,7 @@ function renderTabs(){
   const c=document.getElementById('tabrow');if(!c)return;c.innerHTML='';
   const selJD=getJDfromISO(SELECTED_DATE);
   WEEK_ORDER.forEach(j=>{
-    const isT=j===selJD;const isG=!!SCHED[j]?.gm;
+    const isT=j===selJD;const isG=!!getEffectiveSched(j)?.gm;
     const b=document.createElement('div');
     b.className=`tab${isT?' act':''}${j===todayJD()?' tod':''}`;
     b.dataset.jd=j;
@@ -4675,6 +4787,8 @@ document.body.addEventListener('click',async e=>{
       localStorage.removeItem(LS.aiChat);
       localStorage.removeItem(LS.userMemory);
       localStorage.removeItem(LS.mealOptions);
+      localStorage.removeItem(LS.userSchedule);
+      localStorage.removeItem(LS.userSettings);
 
       // Clear any in-memory state
       STATS={cur:0,best:0,pts:0,lc:null,lf:null};
@@ -4686,6 +4800,8 @@ document.body.addEventListener('click',async e=>{
       USER_EDITS=emptyUserEdits();
       USER_MEMORY=[];
       MEAL_OPTIONS={};
+      USER_SCHEDULE={};
+      USER_SETTINGS={trackPrayers:true};
       AI_SESSIONS=[];
       AI_ACTIVE_SESSION_ID=null;
       AI_VIEW_MODE='chat';
@@ -5012,6 +5128,22 @@ if (typeof onAuthStateChanged !== 'undefined' && typeof fbAuth !== 'undefined') 
           // edit made on your phone show up on your laptop. If the cloud doc has no
           // userEdits yet (brand-new account), keep whatever local value we have.
           if(d.userEdits) USER_EDITS={...emptyUserEdits(),...d.userEdits};
+          // Cloud userSchedule is authoritative once it exists — same reasoning as
+          // userEdits above (an edit/migration on one device must show up on
+          // another). If the cloud doc has none yet, keep whatever local value we
+          // have (empty {} for a fresh guest-turned-signed-in session, or a
+          // not-yet-synced local migration result in the rare case a save is still
+          // in flight).
+          if(d.userSchedule) USER_SCHEDULE=d.userSchedule;
+          if(d.userSettings) USER_SETTINGS={trackPrayers:true,...d.userSettings};
+          // One-time migration trigger — see migrateAbdullahScheduleIfNeeded's own
+          // comments for the full idempotency/safety reasoning. Called here, AFTER
+          // the cloud USER_SCHEDULE merge above, specifically so it never fires
+          // against a stale pre-merge USER_SCHEDULE — if the cloud already has
+          // migrated data (e.g. a second device signing in after migration already
+          // ran once elsewhere), the function's own Object.keys(...).length>0 guard
+          // sees that real cloud data and correctly no-ops instead of re-migrating.
+          migrateAbdullahScheduleIfNeeded(user.uid);
           if(d.userMemory) USER_MEMORY=d.userMemory;
           if(d.mealOptions) MEAL_OPTIONS=d.mealOptions;
           if(d.weeklyPointsHistory) weeklyPointsHistory={...weeklyPointsHistory,...d.weeklyPointsHistory};
