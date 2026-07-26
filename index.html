@@ -3680,7 +3680,7 @@ CRITICAL — the followUpQuestion must be built FROM his actual message, never a
 - If he mentioned multiple items and only one is missing info, name THAT one specifically, not all of them.
 - Never reuse a stock example phrasing verbatim — compose the question fresh each time from what he actually wrote. Two different messages with two different missing details must never produce the same question text.
 - If unsure what unit makes sense for a food, offer units that actually fit THAT food (e.g. eggs -> "كام بيضة؟" not "كام كوباية؟"; rice/liquid -> cups/grams make sense; meat -> grams/portion makes sense). Do not default to "cup" as a generic fallback question when the food isn't cup-measured.
-- For a COOKED/PLATED DISH (composite meals like koshary/kabsa/mandi, or any home-cooked meal served on a plate) — the ONLY sensible units are plate/portion SIZE ("طبق صغير/متوسط/كبير", "حصة عادية/كبيرة") or a direct gram estimate. NEVER ask about container units that dish was never sold or stored in — no "كيس" (bag), "علبة" (box/can), "كوب" (cup), or similar packaging/container words for something served hot on a plate. Those units belong to packaged/measured ingredients (rice before cooking, milk, cereal), not to a finished cooked meal.${aiMemoryBlock()}`;
+- For a COOKED/PLATED DISH (composite meals like koshary/kabsa/mandi, or any home-cooked meal served on a plate) — the ONLY sensible units are plate/portion SIZE ("طبق صغير/متوسط/كبير", "حصة عادية/كبيرة") or a direct gram estimate. NEVER ask about container units that dish was never sold or stored in — no "كيس" (bag), "علبة" (box/can), "كوب" (cup), or similar packaging/container words for something served hot on a plate. Those units belong to packaged/measured ingredients (rice before cooking, milk, cereal), not to a finished cooked meal. When asking a plated-dish quantity question, the followUpQuestion itself MUST explicitly offer the size options inline so he can just pick one instead of guessing what answer format you want — pattern: "كام كمية [food]؟ (مثلاً: طبق صغير، وسط، أو كبير؟)" — always name the specific food, always offer small/medium/large explicitly, never leave the question open-ended without options.${aiMemoryBlock()}`;
 }
 
 // Calls flBuildExtractionPrompt via the Worker (still using the free Groq/Llama
@@ -3908,7 +3908,22 @@ async function flFinalizeLog(task,description,macro,verdict,showVerdictUI,itemsB
               return `<div style="font-size:.7rem;color:var(--rd);padding:4px 0;border-bottom:1px solid rgba(239,68,68,.15)">❌ "${(it.name||'').replace(/</g,'&lt;')}" — متتحسبش (القيم اللي رجعت مش منطقية)، مش داخلة في الإجمالي</div>`;
             }
             const qtyLabel=it.qty!=null?`${Math.round(it.qty)}${it.unit||'g'}`:'';
-            return `<div style="font-size:.7rem;color:var(--so);padding:4px 0;border-bottom:1px solid rgba(255,255,255,.06)">✅ ${(it.name||'').replace(/</g,'&lt;')} ${qtyLabel?`(${qtyLabel})`:''} — <b style="color:var(--gr)">${it.kcal}</b> سعرة · ب${it.protein??'-'} · ك${it.carbs??'-'} · د${it.fat??'-'}</div>`;
+            const mainRow=`<div style="font-size:.7rem;color:var(--so);padding:4px 0;${Array.isArray(it.components)&&it.components.length?'':'border-bottom:1px solid rgba(255,255,255,.06)'}">✅ ${(it.name||'').replace(/</g,'&lt;')} ${qtyLabel?`(${qtyLabel})`:''} — <b style="color:var(--gr)">${it.kcal}</b> سعرة · ب${it.protein??'-'} · ك${it.carbs??'-'} · د${it.fat??'-'}</div>`;
+            // Composite-dish items (koshary, kabsa, etc.) carry a `components` array —
+            // the individually-matched USDA ingredients that summed to this item's
+            // total (see decomposeDish/usdaLookupFood in worker.js). Rendering these
+            // as an indented sub-list is what actually builds the trust this feature
+            // exists for: instead of one opaque "كشري (400g) — 625 سعرة" line, the
+            // user can see it's really Rice + Lentils + Macaroni + Tomato Sauce, each
+            // with its own real USDA-matched macro contribution — verifiable, not a
+            // black box. Absent/empty for ordinary single-item matches, so this adds
+            // nothing visually for the vast majority of logged foods.
+            if(!Array.isArray(it.components) || !it.components.length) return mainRow;
+            const compRows=it.components.map(c=>{
+              const cQty=c.qty!=null?`${Math.round(c.qty)}${c.unit||'g'}`:'';
+              return `<div style="font-size:.64rem;color:var(--mu);padding:3px 0 3px 14px;border-right:2px solid rgba(16,185,129,.25);margin-right:4px">↳ ${(c.name||'').replace(/</g,'&lt;')} ${cQty?`(${cQty})`:''} — ${c.kcal} سعرة · ب${c.protein??'-'} · ك${c.carbs??'-'} · د${c.fat??'-'}</div>`;
+            }).join('');
+            return mainRow+`<div style="border-bottom:1px solid rgba(255,255,255,.06);padding-bottom:2px">${compRows}</div>`;
           }).join('');
       }else{
         breakdownEl.style.display='none';
