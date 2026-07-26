@@ -3679,7 +3679,8 @@ CRITICAL — the followUpQuestion must be built FROM his actual message, never a
 - Name the SPECIFIC food he mentioned by name in the question (e.g. if he wrote "أكلت فراخ", ask "الفراخ كانت قد ايه تقريبا؟" — not a generic "قد ايه الوجبة؟" that could apply to anything).
 - If he mentioned multiple items and only one is missing info, name THAT one specifically, not all of them.
 - Never reuse a stock example phrasing verbatim — compose the question fresh each time from what he actually wrote. Two different messages with two different missing details must never produce the same question text.
-- If unsure what unit makes sense for a food, offer units that actually fit THAT food (e.g. eggs -> "كام بيضة؟" not "كام كوباية؟"; rice/liquid -> cups/grams make sense; meat -> grams/portion makes sense). Do not default to "cup" as a generic fallback question when the food isn't cup-measured.${aiMemoryBlock()}`;
+- If unsure what unit makes sense for a food, offer units that actually fit THAT food (e.g. eggs -> "كام بيضة؟" not "كام كوباية؟"; rice/liquid -> cups/grams make sense; meat -> grams/portion makes sense). Do not default to "cup" as a generic fallback question when the food isn't cup-measured.
+- For a COOKED/PLATED DISH (composite meals like koshary/kabsa/mandi, or any home-cooked meal served on a plate) — the ONLY sensible units are plate/portion SIZE ("طبق صغير/متوسط/كبير", "حصة عادية/كبيرة") or a direct gram estimate. NEVER ask about container units that dish was never sold or stored in — no "كيس" (bag), "علبة" (box/can), "كوب" (cup), or similar packaging/container words for something served hot on a plate. Those units belong to packaged/measured ingredients (rice before cooking, milk, cereal), not to a finished cooked meal.${aiMemoryBlock()}`;
 }
 
 // Calls flBuildExtractionPrompt via the Worker (still using the free Groq/Llama

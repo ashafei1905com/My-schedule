@@ -531,32 +531,56 @@ function usdaNormalizeForScore(s) {
 // real meaning with the query). Score = fraction of the QUERY's own meaningful words
 // found in the result description; a low score means the result, however "valid"
 // its nutrient data looks, isn't actually the food that was asked for.
-function usdaRelevanceScore(query, description) {
+//
+// Returns {score, overlap} — overlap is the raw shared-token COUNT (not just the
+// fraction), needed by usdaPickBestResult's minimum-overlap-count check so a sparse
+// query can't pass the gate on a single lucky shared word.
+function usdaRelevanceScoreDetailed(query, description) {
   const qTokens = new Set(usdaNormalizeForScore(query).filter(w => w.length >= 3));
   const dTokens = new Set(usdaNormalizeForScore(description));
-  if (!qTokens.size) return 0;
+  if (!qTokens.size) return { score: 0, overlap: 0 };
   let overlap = 0;
   for (const t of qTokens) if (dTokens.has(t)) overlap++;
-  return overlap / qTokens.size;
+  return { score: overlap / qTokens.size, overlap };
+}
+
+function usdaRelevanceScore(query, description) {
+  return usdaRelevanceScoreDetailed(query, description).score;
 }
 
 // Confidence floor: below this, a USDA result is treated as NO MATCH rather than
 // accepted — this is what makes a bad fuzzy match fall through to decomposition/tier
 // 3 instead of silently returning wrong macros under a plausible-looking food name.
-// Deliberately lenient (not requiring near-total overlap) since USDA descriptions are
-// often terse/differently-worded ("Chicken, broiler, breast, meat only, cooked,
-// grilled" for a "grilled chicken breast" query shares most but not all tokens).
-const USDA_RELEVANCE_MIN_SCORE = 0.34;
+// Raised from an earlier, looser 0.34 after a production case where a single-token
+// query match let an unrelated candy product ("MIDGEES") pass as a result — 0.34
+// with no minimum-overlap-count requirement meant a query with very few scoreable
+// tokens (e.g. after aggressive normalization stripped most words) could hit the
+// floor on ONE coincidental shared token. Two changes close this: a higher score
+// floor, AND a minimum absolute overlap count for any query with 2+ scoreable
+// tokens — a single shared word is never enough on its own to accept a match.
+const USDA_RELEVANCE_MIN_SCORE = 0.5;
+const USDA_RELEVANCE_MIN_OVERLAP_COUNT = 2;
 
 function usdaPickBestResult(foods, query) {
   if (!Array.isArray(foods) || !foods.length) return null;
+  const qTokenCount = usdaNormalizeForScore(query).filter(w => w.length >= 3).length;
   // Score every candidate up front — a lower-priority dataType with a much better
   // relevance score should still lose to a same-or-better-priority dataType if BOTH
   // clear the relevance floor, but a high-priority dataType with a bad relevance
   // score must not win just because Foundation/SR Legacy ranks first structurally.
   const scored = foods
-    .map(f => ({ food: f, score: usdaRelevanceScore(query, f.description) }))
-    .filter(x => x.score >= USDA_RELEVANCE_MIN_SCORE);
+    .map(f => ({ food: f, ...usdaRelevanceScoreDetailed(query, f.description) }))
+    .filter(x => {
+      if (x.score < USDA_RELEVANCE_MIN_SCORE) return false;
+      // For any query with 2+ scoreable tokens, require at least
+      // USDA_RELEVANCE_MIN_OVERLAP_COUNT actual shared tokens — not just a high
+      // fraction that a short/sparse query could hit on one lucky word. A
+      // single-token query (e.g. just "koshari") is exempt from this count
+      // requirement since it structurally can never have more than 1 possible
+      // overlap — the score floor alone governs that case.
+      if (qTokenCount >= 2 && x.overlap < USDA_RELEVANCE_MIN_OVERLAP_COUNT) return false;
+      return true;
+    });
   if (!scored.length) return null; // every candidate was a loose/irrelevant match — genuine miss
 
   for (const dt of USDA_DATATYPE_PRIORITY) {
@@ -618,31 +642,36 @@ async function usdaSearchRaw(env, query) {
 
 // Detects whether a query needs DECOMPOSITION rather than a single-item lookup:
 // either explicit exclusion language ("بدون"/"without"/"no X"), which USDA has no
-// concept of at all, or the query matching a short list of known composite/regional
-// dishes that are structurally made of several distinct components USDA would never
-// have as one single food record. This list is intentionally small and specific
-// rather than trying to be exhaustive — a query that ISN'T on this list and has no
-// exclusion language just goes through the existing single-item raw+normalize path,
-// which already works correctly for genuinely single-food items (confirmed by the
-// passing "150 جرام دجاج مشوي" test). Expanding this list over time as more
-// composite-dish gaps are found is expected and safe — it only ever ADDS coverage,
-// never changes behavior for queries not on it.
-const COMPOSITE_DISH_HINTS = [
-  'كشري', 'koshary', 'kushari', 'kosheri',
-  'كبسة', 'kabsa', 'kabseh',
-  'مندي', 'mandi',
-  'ملوخية', 'molokhia', 'molokheya',
-  'فتة', 'fatta', 'fattah',
-  'بيتزا', 'pizza',
-  'ساندوتش', 'sandwich', 'ساندويتش',
-  'برجر', 'burger'
+// concept of at all, or the query matching a known composite/regional dish that is
+// structurally made of several distinct components USDA would never have as one
+// single food record.
+//
+// STEM-PREFIX matching, not exact-substring: the query reaching this function has
+// already been through flExtractMealInfo's client-side English transliteration
+// (Groq's own free choice of spelling, e.g. "koshari" vs "koshary" vs "kushari" vs
+// "kosheri" — all real, all seen in production for the same dish), so a fixed list
+// of exact spellings will always have gaps no matter how many variants are added —
+// that was the actual root cause of the "MIDGEES"/"Koshari (400g)" bypass: the
+// specific spelling Groq chose ("koshari") simply wasn't one of the three variants
+// hardcoded at the time. Matching on a short STEM (e.g. "kosh"/"kush" — the shared
+// first syllable across every real spelling of this dish) instead of the whole word
+// absorbs any vowel-spelling variant without needing to enumerate every one.
+const COMPOSITE_DISH_STEMS = [
+  { stems: ['كشري', 'كوشري', 'kosh', 'kush'], label: 'koshary' },
+  { stems: ['كبس', 'kabs'], label: 'kabsa' },
+  { stems: ['مندي', 'mandi', 'mendi'], label: 'mandi' },
+  { stems: ['ملوخي', 'moloukh', 'molokh'], label: 'molokhia' },
+  { stems: ['فت ', 'فتة', 'fattah', 'fatteh'], label: 'fatta' },
+  { stems: ['بيتزا', 'pizza'], label: 'pizza' },
+  { stems: ['ساندوتش', 'ساندويتش', 'sandwich', 'sandwitch'], label: 'sandwich' },
+  { stems: ['برجر', 'burger', 'burgur'], label: 'burger' }
 ];
 const EXCLUSION_RE = /بدون|من غير|without\b|\bno\s+\w/i;
 
 function needsDecomposition(query) {
   const low = query.toLowerCase();
   if (EXCLUSION_RE.test(low)) return true;
-  return COMPOSITE_DISH_HINTS.some(hint => low.includes(hint));
+  return COMPOSITE_DISH_STEMS.some(entry => entry.stems.some(stem => low.includes(stem)));
 }
 
 // Asks Groq to decompose a composite dish (or a dish with stated exclusions) into
