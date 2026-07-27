@@ -4,7 +4,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1.0,maximum-scale=1.0,user-scalable=no">
-<title>جدول عبدالله 🏋️</title>
+<title>الجدول الذكي 🏋️</title>
 <link rel="icon" href="data:," />
 <!-- Web app manifest — REQUIRED for iOS to treat "Add to Home Screen" as a real PWA
      install rather than a plain bookmark. Without this + the apple-mobile-web-app-*
@@ -18,7 +18,7 @@
 <link rel="manifest" href="./manifest.json" />
 <meta name="apple-mobile-web-app-capable" content="yes" />
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
-<meta name="apple-mobile-web-app-title" content="جدول عبدالله" />
+<meta name="apple-mobile-web-app-title" content="الجدول الذكي" />
 <meta name="theme-color" content="#0a0e1a" />
 <!-- Apple-specific home-screen icon link (separate from the generic favicon above —
      iOS ignores rel="icon" for the home-screen icon and requires rel="apple-touch-icon"
@@ -333,7 +333,7 @@ body{font-family:'Cairo',sans-serif;background:var(--bg);color:var(--tx);directi
 
 <div id="ld" style="display:flex;align-items:center;justify-content:center;height:100vh;flex-direction:column;gap:16px">
   <div style="width:40px;height:40px;border:3px solid #1e2d45;border-top-color:#3b82f6;border-radius:50%;animation:spin .8s linear infinite"></div>
-  <span style="color:#64748b;font-family:Cairo,sans-serif;font-size:.9rem">جاري تحميل جدول عبدالله...</span>
+  <span style="color:#64748b;font-family:Cairo,sans-serif;font-size:.9rem">جاري تحميل الجدول الذكي...</span>
 </div>
 
 <main id="app" style="display:none">
@@ -414,7 +414,7 @@ body{font-family:'Cairo',sans-serif;background:var(--bg);color:var(--tx);directi
      the very first thing a brand-new account ever sees. -->
 <div id="obWizard">
   <div class="ob-topbar">
-    <div class="ob-brand">🏋️ جدول عبدالله</div>
+    <div class="ob-brand">🏋️ الجدول الذكي</div>
     <div class="ob-stepcount" id="obStepCount"></div>
   </div>
   <div class="ob-body">
@@ -429,6 +429,43 @@ body{font-family:'Cairo',sans-serif;background:var(--bg);color:var(--tx);directi
     <div class="ob-navrow">
       <button id="btn-onboard-back" class="ob-navbtn ob-navbtn-back" type="button">→ رجوع</button>
       <button id="btn-onboard-next" class="ob-navbtn ob-navbtn-next" type="button">التالي ←</button>
+    </div>
+  </div>
+</div>
+
+<!-- Schedule Task Editor (Stage 3, minimal) — add/edit/delete a recurring weekly
+     task block, writing directly to USER_SCHEDULE. Reuses the modal-overlay/
+     modal-box pattern and a chip-style color picker matching the onboarding
+     wizard's visual language. Only ever opened for signed-in users (the "+ إضافة
+     مهمة" button that opens this is itself hidden for guests — see renderPanel). -->
+<div id="schedTaskModal" class="modal-overlay">
+  <div class="modal-box" style="max-width:420px;text-align:right">
+    <div class="modal-title" id="stTitle" style="text-align:center">إضافة مهمة</div>
+    <div style="display:flex;flex-direction:column;gap:12px;margin-top:16px">
+      <div>
+        <label style="font-size:.72rem;color:var(--so);font-weight:700;display:block;margin-bottom:6px">اسم المهمة</label>
+        <input id="stName" type="text" class="ob-textinput" style="text-align:right;font-size:.9rem;padding:12px 14px" placeholder="مثلاً: قراءة، مذاكرة، مشي">
+      </div>
+      <div>
+        <label style="font-size:.72rem;color:var(--so);font-weight:700;display:block;margin-bottom:6px">الوقت</label>
+        <input id="stTime" type="time" class="ob-textinput" style="text-align:right;font-size:.9rem;padding:12px 14px">
+      </div>
+      <div>
+        <label style="font-size:.72rem;color:var(--so);font-weight:700;display:block;margin-bottom:6px">وصف (اختياري)</label>
+        <input id="stDesc" type="text" class="ob-textinput" style="text-align:right;font-size:.9rem;padding:12px 14px" placeholder="تفاصيل إضافية">
+      </div>
+      <div>
+        <label style="font-size:.72rem;color:var(--so);font-weight:700;display:block;margin-bottom:6px">النقاط</label>
+        <input id="stPts" type="number" min="0" max="100" class="ob-textinput" style="text-align:right;font-size:.9rem;padding:12px 14px" value="5">
+      </div>
+      <div>
+        <label style="font-size:.72rem;color:var(--so);font-weight:700;display:block;margin-bottom:8px">اللون</label>
+        <div id="stColorRow" style="display:flex;gap:8px;flex-wrap:wrap"></div>
+      </div>
+    </div>
+    <div style="display:flex;gap:8px;margin-top:20px">
+      <button id="stSaveBtn" class="fl-submit-btn" type="button" style="margin-bottom:0">حفظ ✅</button>
+      <button id="stCancelBtn" class="modal-back-btn" type="button" style="margin-top:0;flex-shrink:0">إلغاء</button>
     </div>
   </div>
 </div>
@@ -965,13 +1002,190 @@ function migrateAbdullahScheduleIfNeeded(uid){
 // same shape SCHED[jd] always has ({n,wk,bd,gm,ts}) — a signed-in user with a
 // populated USER_SCHEDULE gets their own data; everyone else (guests, and any
 // account before its USER_SCHEDULE exists) falls through to static SCHED, UNCHANGED
-// from today's behavior. This is the ONLY function getAllTasks/getReqTasks/
-// renderPanel/renderTabs should read a weekday's schedule through from now on —
-// never SCHED[jd] directly, so a future removal of static SCHED (planned Stage 4,
-// NOT this stage) only ever requires changing this one function's fallback branch.
+// BLANK_TEMPLATE — the correct fallback for a SIGNED-IN user whose USER_SCHEDULE is
+// empty (new account, still onboarding, or between account creation and obFinish()
+// seeding their real empty schedule). Generic morning/afternoon/evening placeholder
+// blocks, zero personal habits, zero nutrition targets — this is what actually fixes
+// the "new user sees Abdullah's gym schedule" bug: the OLD getEffectiveSched fell
+// through to static SCHED (Abdullah's real hardcoded data) for ANY falsy
+// USER_SCHEDULE[jd], with no distinction between "guest, never signed in" (where
+// showing SCHED read-only is genuinely correct, pre-existing behavior) and "signed-in
+// user, new account, hasn't finished onboarding yet" (where showing Abdullah's real
+// schedule is a real data-exposure bug, not a display quirk).
+const BLANK_TEMPLATE={
+  0:{n:'الأحد',wk:'9:00 ص',bd:'11:00 م',gm:null,ts:[]},
+  1:{n:'الاثنين',wk:'9:00 ص',bd:'11:00 م',gm:null,ts:[]},
+  2:{n:'الثلاثاء',wk:'9:00 ص',bd:'11:00 م',gm:null,ts:[]},
+  3:{n:'الأربعاء',wk:'9:00 ص',bd:'11:00 م',gm:null,ts:[]},
+  4:{n:'الخميس',wk:'9:00 ص',bd:'11:00 م',gm:null,ts:[]},
+  5:{n:'الجمعة',wk:'9:00 ص',bd:'11:00 م',gm:null,ts:[]},
+  6:{n:'السبت',wk:'9:00 ص',bd:'11:00 م',gm:null,ts:[]}
+};
+
+// Single indirection point for reading a weekday's schedule.
+//   - Signed-in user with real USER_SCHEDULE content -> their own data.
+//   - Signed-in user with NO USER_SCHEDULE content (new account, mid-onboarding) ->
+//     BLANK_TEMPLATE. Never static SCHED — that would leak Abdullah's personal
+//     schedule to every new sign-up, which is the exact bug this fixes.
+//   - No signed-in user at all (guest, anonymous browsing) -> static SCHED,
+//     UNCHANGED from today's existing, intentional guest behavior.
+// fbAuth.currentUser is read directly here (not passed in) since every call site
+// across the file calls this with just (jd) — adding a parameter to every one of
+// getAllTasks/getReqTasks/renderPanel/renderTabs's calls would be a much larger,
+// riskier diff for the same outcome.
 function getEffectiveSched(jd){
   if(USER_SCHEDULE && USER_SCHEDULE[jd]) return USER_SCHEDULE[jd];
+  if(fbAuth.currentUser) return BLANK_TEMPLATE[jd];
   return SCHED[jd];
+}
+
+// ===== Schedule editor (Stage 3, minimal) =====
+// Lets a signed-in user add/edit/delete their OWN recurring weekly task blocks,
+// writing directly to USER_SCHEDULE[jd].ts (the real per-account schedule, not the
+// date-specific USER_EDITS.customTasks system the AI assistant uses for one-off
+// "add a task tomorrow" requests — those are structurally different: one-off vs
+// recurring-every-week). Deliberately uses cat:'free' for every task created here
+// rather than inventing a full custom-category system — 'free' already renders
+// generically (see renderCard's cat==='free' branch) and already supports a color
+// override via inline style, so this reuses proven rendering instead of auditing
+// every category-specific branch in renderCard for a new arbitrary-category system.
+// A real multi-category custom system is a larger, separate piece of work.
+const OB_TASK_COLORS=['#3b82f6','#10b981','#f59e0b','#ef4444','#8b5cf6','#06b6d4','#ec4899','#fbbf24'];
+
+function scheduleGenTaskId(){return `custom-${Date.now()}-${Math.floor(Math.random()*9999)}`;}
+
+// Ensures USER_SCHEDULE has a real, editable entry for weekday jd before mutating
+// it — a brand-new account's USER_SCHEDULE is seeded empty-but-valid by obFinish(),
+// but this guards defensively in case it's ever called before that (e.g. a future
+// direct-to-editor entry point that skips onboarding).
+function scheduleEnsureDay(jd){
+  if(!USER_SCHEDULE[jd]){
+    USER_SCHEDULE[jd]={n:DSHORT[jd],wk:'9:00 ص',bd:'11:00 م',gm:null,ts:[]};
+  }
+  if(!Array.isArray(USER_SCHEDULE[jd].ts)) USER_SCHEDULE[jd].ts=[];
+}
+
+// Adds or updates a task tuple in USER_SCHEDULE[jd].ts. existingId null/undefined
+// means "add new"; otherwise replaces the tuple with that id in place, preserving
+// its position in the list. Task tuple shape matches every other task in this
+// codebase exactly ([id,time,cat,ico,name,desc,pts,alts,hw,isEx,...]) so it renders
+// through the exact same renderCard path as SCHED-derived tasks — no special-casing
+// needed anywhere else.
+async function saveScheduleTask(jd,existingId,{time,name,desc,pts,color}){
+  scheduleEnsureDay(jd);
+  const ts=USER_SCHEDULE[jd].ts;
+  const id=existingId||scheduleGenTaskId();
+  // Index 10 is the documented-dead "_unused10" slot (see the tuple-layout comment
+  // near mkBk/mkWd) — repurposed here to carry the user's chosen color, since a
+  // bolted-on property (tuple._color=...) would be silently dropped by
+  // JSON.stringify on every save (confirmed: array indices only, non-index
+  // properties never survive serialization), which is exactly the kind of silent
+  // data loss this project's standing principles warn against. Using a real tuple
+  // index means the color survives the full save/load round-trip through both
+  // localStorage and the Firestore serializeScheduleForFirestore boundary.
+  const tuple=[id,time,'free','✨',name,desc||'',pts||0,null,null,false,color||null];
+  const idx=ts.findIndex(t=>t[0]===id);
+  if(idx>=0) ts[idx]=tuple; else ts.push(tuple);
+  await saveUserSchedule();
+}
+
+async function deleteScheduleTask(jd,taskId){
+  scheduleEnsureDay(jd);
+  USER_SCHEDULE[jd].ts=USER_SCHEDULE[jd].ts.filter(t=>t[0]!==taskId);
+  await saveUserSchedule();
+}
+
+// Modal state — which day/task is currently being edited (null taskId = adding new).
+let ST_ACTIVE_JD=null;
+let ST_ACTIVE_TASK_ID=null;
+let ST_SELECTED_COLOR=OB_TASK_COLORS[0];
+
+function stRenderColorChips(){
+  const row=document.getElementById('stColorRow');
+  if(!row) return;
+  row.innerHTML='';
+  OB_TASK_COLORS.forEach(color=>{
+    const chip=document.createElement('div');
+    const isSel=ST_SELECTED_COLOR===color;
+    chip.style.cssText=`width:34px;height:34px;border-radius:10px;cursor:pointer;background:${color};border:3px solid ${isSel?'#fff':'transparent'};box-shadow:${isSel?'0 0 0 2px '+color:'none'};transition:all .15s`;
+    chip.onclick=()=>{ ST_SELECTED_COLOR=color; stRenderColorChips(); };
+    row.appendChild(chip);
+  });
+}
+
+// Opens the editor. existingTask (a full task tuple) present = edit mode, prefills
+// every field from it; absent = add mode, blank form with sensible defaults.
+function openScheduleTaskEditor(jd,existingTask){
+  ST_ACTIVE_JD=jd;
+  ST_ACTIVE_TASK_ID=existingTask?existingTask[0]:null;
+  ST_SELECTED_COLOR=(existingTask&&existingTask[10])||OB_TASK_COLORS[0];
+
+  const titleEl=document.getElementById('stTitle');
+  if(titleEl) titleEl.textContent=existingTask?'تعديل المهمة':'إضافة مهمة';
+
+  const nameEl=document.getElementById('stName');
+  const timeEl=document.getElementById('stTime');
+  const descEl=document.getElementById('stDesc');
+  const ptsEl=document.getElementById('stPts');
+  if(nameEl) nameEl.value=existingTask?existingTask[4]:'';
+  if(descEl) descEl.value=existingTask?(existingTask[5]||''):'';
+  if(ptsEl) ptsEl.value=existingTask?(existingTask[6]||5):5;
+  if(timeEl){
+    // Task times are stored as "H:MM ص/م" display strings; <input type="time">
+    // needs 24h "HH:MM". Convert on the way in; toMin()+formatting handles the
+    // reverse on save (see stHandleSave below).
+    const raw=existingTask?existingTask[1]:'';
+    const mins=raw?toMin(raw):9*60;
+    const h=Math.floor(mins/60),m=mins%60;
+    timeEl.value=`${String(h).padStart(2,'0')}:${String(m).padStart(2,'0')}`;
+  }
+
+  stRenderColorChips();
+  document.getElementById('schedTaskModal')?.classList.add('open');
+  setTimeout(()=>nameEl?.focus(),80);
+}
+
+function closeScheduleTaskEditor(){
+  document.getElementById('schedTaskModal')?.classList.remove('open');
+  ST_ACTIVE_JD=null;
+  ST_ACTIVE_TASK_ID=null;
+}
+
+async function stHandleSave(){
+  const name=(document.getElementById('stName')?.value||'').trim();
+  if(!name){ showToast('اكتب اسم المهمة الأول',2000,'warn'); return; }
+  const timeVal=document.getElementById('stTime')?.value||'09:00';
+  const [h24,m]=timeVal.split(':').map(Number);
+  const pm=h24>=12;
+  const h12=h24%12||12;
+  const displayTime=`${h12}:${String(m).padStart(2,'0')} ${pm?'م':'ص'}`;
+  const desc=(document.getElementById('stDesc')?.value||'').trim();
+  const pts=Math.max(0,Math.min(100,parseInt(document.getElementById('stPts')?.value,10)||0));
+
+  if(ST_ACTIVE_JD===null){ showToast('⚠️ حصل خطأ — جرب تفتح المهمة تاني',3000,'warn'); return; }
+
+  try{
+    await saveScheduleTask(ST_ACTIVE_JD,ST_ACTIVE_TASK_ID,{time:displayTime,name,desc,pts,color:ST_SELECTED_COLOR});
+  }catch(e){
+    console.error('saveScheduleTask failed',e);
+    showToast('⚠️ حصل خطأ أثناء الحفظ — جرب تاني',3500,'warn');
+    return;
+  }
+  closeScheduleTaskEditor();
+  try{ renderTabs();renderPanels();switchDay(getJDfromISO(SELECTED_DATE));updateUI(); }catch(e){ console.warn('re-render after schedule edit failed',e); }
+  showToast('✅ اتحفظت المهمة',2200);
+}
+
+async function stHandleDelete(jd,taskId){
+  try{
+    await deleteScheduleTask(jd,taskId);
+  }catch(e){
+    console.error('deleteScheduleTask failed',e);
+    showToast('⚠️ حصل خطأ أثناء الحذف — جرب تاني',3500,'warn');
+    return;
+  }
+  try{ renderTabs();renderPanels();switchDay(getJDfromISO(SELECTED_DATE));updateUI(); }catch(e){ console.warn('re-render after schedule delete failed',e); }
+  showToast('🗑️ اتشالت المهمة',2000);
 }
 
 // ===== USER_SETTINGS — per-account feature toggles (trackPrayers, future settings) =====
@@ -1027,7 +1241,7 @@ const OB_TOTAL_STEPS=4;
 // adding a future step (e.g. a Stage 2 theme-color chip step) means adding one entry
 // here, not touching the render/advance logic itself.
 const OB_STEPS=[
-  {key:'name',type:'text',title:'أهلاً بيك في جدول عبدالله 👋',sub:'إيه اسمك؟',placeholder:'اكتب اسمك هنا'},
+  {key:'name',type:'text',title:'أهلاً بيك في الجدول الذكي 👋',sub:'إيه اسمك؟',placeholder:'اكتب اسمك هنا'},
   {key:'trackPrayers',type:'chips',title:'هل تحب نتابعلك مواعيد الصلاة؟',sub:'لو موافق، هنضيف الصلوات الخمسة لجدولك اليومي بمواقيتها الفعلية — تقدر تغيّر ده بعدين من الإعدادات في أي وقت',chips:[
     {value:true,icon:'🕌',label:'أيوه، ضيفهم',desc:'الصلوات الخمسة + مواقيتها الفعلية في جدولك اليومي'},
     {value:false,icon:'📅',label:'لأ، جدول عادي',desc:'من غير تتبع صلاة — تقدر تفعّلها بعدين من الإعدادات'}
@@ -2605,14 +2819,21 @@ function getDisplayDesc(task,iso){
   return task[5];
 }
 
-function renderCard(task,isToday){
+function renderCard(task,isToday,jd){
   const[id,arTime,cat,ico,name,,pts,,hw,isEx]=task;
   const done=DONE[id];
   const isDone=done!==undefined&&done!==false;
   const state=getState(task);
   const isFoodLoggable=(cat==='food'||cat==='snack')&&!!task[11]; // has macro data => goes through the log modal
 
-  if(cat==='free')return`<div class="tc" data-c="free"><div class="tctime">${arTime}</div><div class="tcico">${ico}</div><div class="tcbody"><div class="tcname" style="color:#6366f1">${name}</div><div class="tcdesc">${task[5]}</div></div></div>`;
+  if(cat==='free'){
+    const customColor=task[10]||null;
+    const isCustom=String(id).startsWith('custom-');
+    const borderStyle=customColor?`border-right:3px solid ${customColor}`:'';
+    const nameColor=customColor||'#6366f1';
+    const editBtns=isCustom?`<div style="display:flex;gap:4px;flex-shrink:0"><button class="cbtn" data-action="editSchedTask" data-id="${id}" data-jd="${jd}" style="padding:5px 9px;font-size:.68rem">✏️</button><button class="cbtn" data-action="deleteSchedTask" data-id="${id}" data-jd="${jd}" style="padding:5px 9px;font-size:.68rem;background:rgba(239,68,68,.1);border-color:rgba(239,68,68,.4);color:#ef4444">🗑️</button></div>`:'';
+    return`<div class="tc" data-c="free" style="${borderStyle}"><div class="tctime">${arTime}</div><div class="tcico">${ico}</div><div class="tcbody"><div class="tcname" style="color:${nameColor}">${name}</div><div class="tcdesc">${task[5]}</div></div>${editBtns}</div>`;
+  }
 
   const isSnack=cat==='snack';
   let act='';
@@ -2709,10 +2930,12 @@ function renderPanel(jd){
   }
 
   const tasks=getAllTasks(jd);
+  const addTaskBtn=fbAuth.currentUser?`<button class="altbtn" data-action="openAddTask" data-jd="${jd}" style="width:100%;margin-top:10px;justify-content:center">➕ إضافة مهمة</button>`:'';
   return`<div class="pan" id="pan-${k}">
     <div class="dh"><div><div class="dhn">${d.n}</div><div class="dhm">فجر ${fmt24(PRYT.Fajr||FALLBK.Fajr)} · شروق ${fmt24(PRYT.Sunrise||FALLBK.Sunrise)} ← صحيان ${d.wk} · نوم ${d.bd}</div></div>${gbLabel}</div>
     <div class="prow">${pills.join('')}</div>
-    <div class="tl">${tasks.map(t=>renderCard(t,isToday)).join('')}</div>
+    <div class="tl">${tasks.map(t=>renderCard(t,isToday,jd)).join('')}</div>
+    ${addTaskBtn}
   </div>`;
 }
 
@@ -5154,6 +5377,31 @@ document.body.addEventListener('click',async e=>{
 
   if(tgt.id==='btn-onboard-back'){ obHandleBack(); return; }
   if(tgt.id==='btn-onboard-next'){ obHandleNext(); return; }
+
+  if(tgt.id==='stSaveBtn'){ await stHandleSave(); return; }
+  if(tgt.id==='stCancelBtn'){ closeScheduleTaskEditor(); return; }
+
+  const addTaskBtn=closest('[data-action="openAddTask"]');
+  if(addTaskBtn){
+    const jd=parseInt(addTaskBtn.getAttribute('data-jd'),10);
+    openScheduleTaskEditor(jd,null);
+    return;
+  }
+  const editSchedBtn=closest('[data-action="editSchedTask"]');
+  if(editSchedBtn){
+    const jd=parseInt(editSchedBtn.getAttribute('data-jd'),10);
+    const taskId=editSchedBtn.getAttribute('data-id');
+    const existing=(USER_SCHEDULE[jd]?.ts||[]).find(t=>t[0]===taskId);
+    if(existing) openScheduleTaskEditor(jd,existing);
+    return;
+  }
+  const delSchedBtn=closest('[data-action="deleteSchedTask"]');
+  if(delSchedBtn){
+    const jd=parseInt(delSchedBtn.getAttribute('data-jd'),10);
+    const taskId=delSchedBtn.getAttribute('data-id');
+    await stHandleDelete(jd,taskId);
+    return;
+  }
 
   if(tgt.id==='btn-hist-prev'){
     saveDay();SELECTED_DATE=dateOff(-1,SELECTED_DATE);loadDay();
