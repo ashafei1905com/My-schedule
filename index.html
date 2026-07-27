@@ -174,6 +174,48 @@ body{font-family:'Cairo',sans-serif;background:var(--bg);color:var(--tx);directi
 .modal-back-btn{margin-top:16px;padding:9px 18px;background:rgba(239,68,68,.12);border:2px solid rgba(239,68,68,.45);border-radius:10px;color:#ef4444;font-family:'Cairo',sans-serif;font-weight:800;font-size:.82rem;cursor:pointer;transition:all .2s}
 .modal-back-btn:hover{background:rgba(239,68,68,.22)}
 
+/* ===== Onboarding Wizard (full-screen, Stage 1 redesign) =====
+   Deliberately its own CSS namespace (ob-*) rather than reusing .modal-box, since
+   this is structurally different: a genuinely full-viewport experience (not a card
+   floating over a dimmed backdrop) with a persistent bottom nav bar and progress
+   bar, matching the reference ClickUp-style wizard flow. Reuses the app's existing
+   color tokens throughout (--bg/--c/--c2/--br/--ac/--gr/--tx/--so/--mu) so it reads
+   as native to the app rather than a foreign, differently-themed component. */
+#obWizard{position:fixed;inset:0;background:var(--bg);z-index:10060;display:none;flex-direction:column}
+#obWizard.open{display:flex}
+.ob-topbar{padding:22px 24px 0;display:flex;justify-content:space-between;align-items:center;flex-shrink:0}
+.ob-brand{font-size:1rem;font-weight:900;color:var(--tx);display:flex;align-items:center;gap:8px}
+.ob-stepcount{font-size:.72rem;color:var(--mu);font-weight:700}
+.ob-body{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:24px 20px;overflow-y:auto}
+.ob-content{width:100%;max-width:520px;text-align:center;animation:obFadeIn .35s ease}
+@keyframes obFadeIn{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:translateY(0)}}
+.ob-title{font-size:1.6rem;font-weight:900;color:var(--tx);margin-bottom:8px;line-height:1.3}
+.ob-subtitle{font-size:.85rem;color:var(--so);margin-bottom:32px;line-height:1.6}
+.ob-textinput{width:100%;background:var(--c);border:2px solid var(--br);border-radius:14px;padding:16px 18px;color:var(--tx);font-family:'Cairo',sans-serif;font-size:1rem;text-align:center;transition:border-color .2s}
+.ob-textinput:focus{outline:none;border-color:var(--ac)}
+.ob-chips{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.ob-chips.ob-chips-single{grid-template-columns:1fr}
+.ob-chip{background:var(--c);border:2px solid var(--br);border-radius:16px;padding:20px 16px;cursor:pointer;transition:all .18s;text-align:right;display:flex;flex-direction:column;gap:6px}
+.ob-chip:hover{border-color:var(--ac);background:rgba(59,130,246,.06);transform:translateY(-2px)}
+.ob-chip.sel{border-color:var(--ac);background:rgba(59,130,246,.1);box-shadow:0 0 0 1px var(--ac)}
+.ob-chip-icon{font-size:1.6rem}
+.ob-chip-label{font-size:.92rem;font-weight:800;color:var(--tx)}
+.ob-chip-desc{font-size:.72rem;color:var(--so);line-height:1.5}
+.ob-bottombar{flex-shrink:0;padding:16px 24px 20px;border-top:1px solid var(--br)}
+.ob-progress-track{height:4px;background:var(--br);border-radius:2px;overflow:hidden;margin-bottom:16px}
+.ob-progress-fill{height:100%;background:linear-gradient(90deg,var(--ac),var(--gr));border-radius:2px;transition:width .3s ease}
+.ob-navrow{display:flex;justify-content:space-between;align-items:center;max-width:520px;margin:0 auto}
+.ob-navbtn{padding:12px 24px;border-radius:12px;font-family:'Cairo',sans-serif;font-weight:800;font-size:.88rem;cursor:pointer;border:none;transition:all .2s;display:flex;align-items:center;gap:6px}
+.ob-navbtn-back{background:transparent;color:var(--so);border:2px solid var(--br)}
+.ob-navbtn-back:hover{border-color:var(--mu);color:var(--tx)}
+.ob-navbtn-back:disabled{opacity:0;pointer-events:none}
+.ob-navbtn-next{background:linear-gradient(135deg,#2563eb,#1d4ed8);color:#fff;box-shadow:0 2px 12px rgba(37,99,235,.4)}
+.ob-navbtn-next:hover{box-shadow:0 4px 18px rgba(37,99,235,.55);transform:translateY(-1px)}
+.ob-navbtn-next:disabled{opacity:.4;cursor:not-allowed;transform:none;box-shadow:none}
+.ob-navbtn-finish{background:linear-gradient(135deg,#10b981,#059669);color:#fff;box-shadow:0 2px 12px rgba(16,185,129,.4)}
+.ob-navbtn-finish:hover{box-shadow:0 4px 18px rgba(16,185,129,.55);transform:translateY(-1px)}
+@media(min-width:640px){.ob-title{font-size:1.9rem}}
+
 /* Food Log Modal */
 .fl-opts{display:flex;flex-direction:column;gap:8px;margin-bottom:14px;max-height:180px;overflow-y:auto}
 .fl-opt{padding:11px 14px;border-radius:10px;cursor:pointer;font-family:'Cairo',sans-serif;font-size:.82rem;font-weight:700;border:2px solid var(--br);background:var(--c);color:var(--tx);transition:all .15s;text-align:right;display:flex;justify-content:space-between;align-items:center;gap:8px}
@@ -365,24 +407,29 @@ body{font-family:'Cairo',sans-serif;background:var(--bg);color:var(--tx);directi
   </div>
 </div>
 
-<!-- Onboarding Modal (Stage 1) — shown exactly once, only to a signed-in user whose
-     USER_SCHEDULE is genuinely empty after the cloud merge (see the
-     computeIsNewOnboardingUser gate near onAuthStateChanged). Reuses the existing
-     modal-overlay/modal-box/modal-opt visual language rather than inventing new
-     styling, so it reads as a native part of the app. z-index deliberately higher
-     than every other modal (10050) since this can legitimately be the very first
-     thing a brand-new account ever sees, before any other UI is meaningful. -->
-<div id="onboardModal" class="modal-overlay" style="z-index:10050">
-  <div class="modal-box" style="max-width:440px">
-    <div class="modal-step-ind" id="obStepInd"></div>
-    <div class="modal-title" id="obTitle"></div>
-    <div class="modal-sub" id="obSub"></div>
-    <div class="modal-opts" id="obOpts"></div>
-    <div id="obTextInputWrap" style="display:none;margin-top:6px">
-      <input id="obTextInput" type="text" class="fl-textarea" style="height:auto;padding:12px" placeholder="">
-      <button id="obTextNextBtn" class="fl-submit-btn" type="button" style="margin-top:10px">التالي ←</button>
+<!-- Onboarding Wizard (Stage 1, full-screen redesign) — shown exactly once, only to
+     a signed-in user whose USER_SCHEDULE is genuinely empty after the cloud merge
+     (see PENDING_ONBOARDING near onAuthStateChanged). Full-viewport, not a dimmed
+     modal overlay — z-index above everything else since this can legitimately be
+     the very first thing a brand-new account ever sees. -->
+<div id="obWizard">
+  <div class="ob-topbar">
+    <div class="ob-brand">🏋️ جدول عبدالله</div>
+    <div class="ob-stepcount" id="obStepCount"></div>
+  </div>
+  <div class="ob-body">
+    <div class="ob-content" id="obContent">
+      <div class="ob-title" id="obTitle"></div>
+      <div class="ob-subtitle" id="obSub"></div>
+      <div id="obStepBody"></div>
     </div>
-    <button id="btn-onboard-back" class="modal-back-btn" type="button">← رجوع</button>
+  </div>
+  <div class="ob-bottombar">
+    <div class="ob-progress-track"><div class="ob-progress-fill" id="obProgressFill" style="width:0%"></div></div>
+    <div class="ob-navrow">
+      <button id="btn-onboard-back" class="ob-navbtn ob-navbtn-back" type="button">→ رجوع</button>
+      <button id="btn-onboard-next" class="ob-navbtn ob-navbtn-next" type="button">التالي ←</button>
+    </div>
   </div>
 </div>
 
@@ -970,91 +1017,133 @@ async function saveUserSettings(){
 // until Stage 3 exists. This is an intentional, explicit scope boundary, not an
 // oversight — flagged in the finish handler below too.
 let OB_STEP=0;
-let OB_ANSWERS={name:'',trackPrayers:true,buildMode:'template'};
-const OB_TOTAL_STEPS=3;
+let OB_ANSWERS={name:'',trackPrayers:null,buildMode:null,workspaceName:''};
+const OB_TOTAL_STEPS=4;
 
-function obShowStep(){
-  const modal=document.getElementById('onboardModal');
-  if(modal) modal.classList.add('open');
-  const stepInd=document.getElementById('obStepInd');
-  if(stepInd) stepInd.textContent=`الخطوة ${OB_STEP+1} من ${OB_TOTAL_STEPS}`;
-  const backBtn=document.getElementById('btn-onboard-back');
-  if(backBtn) backBtn.style.visibility=OB_STEP===0?'hidden':'visible';
+// Step definitions: each step is either type 'text' (free text input, Next enabled
+// once non-empty) or 'chips' (2-column selectable cards, Next enabled once one is
+// picked). Kept as data rather than a long if/else chain so obRenderStep/obCanAdvance/
+// obGetAnswerKey stay short and every step follows one consistent rendering path —
+// adding a future step (e.g. a Stage 2 theme-color chip step) means adding one entry
+// here, not touching the render/advance logic itself.
+const OB_STEPS=[
+  {key:'name',type:'text',title:'أهلاً بيك في جدول عبدالله 👋',sub:'إيه اسمك؟',placeholder:'اكتب اسمك هنا'},
+  {key:'trackPrayers',type:'chips',title:'هل تحب نتابعلك مواعيد الصلاة؟',sub:'لو موافق، هنضيف الصلوات الخمسة لجدولك اليومي بمواقيتها الفعلية — تقدر تغيّر ده بعدين من الإعدادات في أي وقت',chips:[
+    {value:true,icon:'🕌',label:'أيوه، ضيفهم',desc:'الصلوات الخمسة + مواقيتها الفعلية في جدولك اليومي'},
+    {value:false,icon:'📅',label:'لأ، جدول عادي',desc:'من غير تتبع صلاة — تقدر تفعّلها بعدين من الإعدادات'}
+  ]},
+  {key:'buildMode',type:'chips',title:'عايز تبدأ إزاي؟',sub:'تقدر تغيّر ده بعدين برضه',chips:[
+    {value:'template',icon:'📋',label:'ابدأ بجدول جاهز',desc:'قالب مبدئي جاهز تقدر تعدّل فيه بعدين'},
+    {value:'custom',icon:'✨',label:'هبني جدولي من الصفر',desc:'ابدأ بجدول فاضي وضيف مهامك بنفسك'}
+  ]},
+  {key:'workspaceName',type:'text',title:'سمّي جدولك',sub:'اسم يميّز مساحتك — تقدر تغيّره في أي وقت من الإعدادات',placeholder:'مثلاً: جدول أحمد اليومي'}
+];
+
+function obUpdateProgress(){
+  const fill=document.getElementById('obProgressFill');
+  if(fill) fill.style.width=`${Math.round(((OB_STEP+1)/OB_TOTAL_STEPS)*100)}%`;
+  const stepCount=document.getElementById('obStepCount');
+  if(stepCount) stepCount.textContent=`${OB_STEP+1} / ${OB_TOTAL_STEPS}`;
+}
+
+// Whether the CURRENT step has a valid answer yet — gates the Next/Finish button.
+// Kept separate from rendering so it can be re-checked on every input change without
+// re-rendering the whole step (see the 'input' listener wiring further down).
+function obCanAdvance(){
+  const step=OB_STEPS[OB_STEP];
+  if(!step) return false;
+  const val=OB_ANSWERS[step.key];
+  if(step.type==='text') return typeof val==='string' && val.trim().length>0;
+  if(step.type==='chips') return val!==null && val!==undefined;
+  return false;
+}
+
+function obRenderStep(){
+  const step=OB_STEPS[OB_STEP];
+  if(!step) return;
+  obUpdateProgress();
 
   const titleEl=document.getElementById('obTitle');
   const subEl=document.getElementById('obSub');
-  const optsEl=document.getElementById('obOpts');
-  const textWrap=document.getElementById('obTextInputWrap');
-  if(!titleEl||!subEl||!optsEl||!textWrap) return;
-  optsEl.innerHTML='';
-  textWrap.style.display='none';
+  const bodyEl=document.getElementById('obStepBody');
+  if(!titleEl||!subEl||!bodyEl) return;
+  titleEl.textContent=step.title;
+  subEl.textContent=step.sub;
+  bodyEl.innerHTML='';
 
-  if(OB_STEP===0){
-    titleEl.textContent='أهلاً بيك في جدول عبدالله 👋';
-    subEl.textContent='إيه اسمك؟';
-    textWrap.style.display='block';
-    const input=document.getElementById('obTextInput');
-    if(input){ input.placeholder='اكتب اسمك هنا'; input.value=OB_ANSWERS.name||''; setTimeout(()=>input.focus(),50); }
-  }else if(OB_STEP===1){
-    titleEl.textContent='هل تحب نتابعلك مواعيد الصلاة؟';
-    subEl.textContent='لو موافق، هنضيف الصلوات الخمسة لجدولك اليومي بمواقيتها الفعلية — تقدر تغيّر ده بعدين من الإعدادات في أي وقت';
-    obRenderOpts([
-      {label:'أيوه، ضيفهم ✅',value:true},
-      {label:'لأ، من غيرهم',value:false}
-    ],(val)=>{ OB_ANSWERS.trackPrayers=val; OB_STEP++; obShowStep(); });
-  }else if(OB_STEP===2){
-    titleEl.textContent='عايز تبدأ إزاي؟';
-    subEl.textContent='تقدر تغيّر ده بعدين برضه';
-    obRenderOpts([
-      {label:'ابدأ بجدول جاهز 📋',value:'template'},
-      {label:'هبني جدولي من الصفر ✨',value:'custom'}
-    ],(val)=>{ OB_ANSWERS.buildMode=val; obFinish(); });
+  if(step.type==='text'){
+    const input=document.createElement('input');
+    input.type='text';
+    input.id='obActiveTextInput';
+    input.className='ob-textinput';
+    input.placeholder=step.placeholder||'';
+    input.value=OB_ANSWERS[step.key]||'';
+    input.oninput=()=>{ OB_ANSWERS[step.key]=input.value; obUpdateNavButtons(); };
+    bodyEl.appendChild(input);
+    setTimeout(()=>input.focus(),80);
+  }else if(step.type==='chips'){
+    const wrap=document.createElement('div');
+    wrap.className='ob-chips';
+    step.chips.forEach(chip=>{
+      const card=document.createElement('div');
+      const isSel=OB_ANSWERS[step.key]===chip.value;
+      card.className='ob-chip'+(isSel?' sel':'');
+      card.innerHTML=`<div class="ob-chip-icon">${chip.icon}</div><div class="ob-chip-label">${chip.label}</div><div class="ob-chip-desc">${chip.desc}</div>`;
+      card.onclick=()=>{ OB_ANSWERS[step.key]=chip.value; obRenderStep(); };
+      wrap.appendChild(card);
+    });
+    bodyEl.appendChild(wrap);
   }
+
+  obUpdateNavButtons();
 }
 
-function obRenderOpts(opts,onPick){
-  const el=document.getElementById('obOpts');
-  if(!el) return;
-  opts.forEach(o=>{
-    const btn=document.createElement('button');
-    btn.className='modal-opt';
-    btn.innerHTML=`<span>${o.label}</span>`;
-    btn.onclick=()=>onPick(o.value);
-    el.appendChild(btn);
-  });
+function obUpdateNavButtons(){
+  const backBtn=document.getElementById('btn-onboard-back');
+  const nextBtn=document.getElementById('btn-onboard-next');
+  if(backBtn) backBtn.disabled=OB_STEP===0;
+  if(!nextBtn) return;
+  const isLast=OB_STEP===OB_TOTAL_STEPS-1;
+  nextBtn.textContent=isLast?'إنهاء ✅':'التالي ←';
+  nextBtn.className='ob-navbtn '+(isLast?'ob-navbtn-finish':'ob-navbtn-next');
+  nextBtn.disabled=!obCanAdvance();
 }
 
-function obHandleTextNext(){
-  if(OB_STEP===0){
-    const input=document.getElementById('obTextInput');
-    const val=(input?.value||'').trim();
-    if(!val){ showToast('اكتب اسمك الأول',2000,'warn'); return; }
-    OB_ANSWERS.name=val;
-    OB_STEP++;
-    obShowStep();
-  }
+function obShowStep(){
+  const wizard=document.getElementById('obWizard');
+  if(wizard) wizard.classList.add('open');
+  obRenderStep();
+}
+
+function obHandleNext(){
+  if(!obCanAdvance()) return;
+  if(OB_STEP>=OB_TOTAL_STEPS-1){ obFinish(); return; }
+  OB_STEP++;
+  obRenderStep();
 }
 
 function obHandleBack(){
   if(OB_STEP<=0) return;
   OB_STEP--;
-  obShowStep();
+  obRenderStep();
 }
 
-// Finalizes onboarding: persists trackPrayers into USER_SETTINGS (the SAME field
-// getAllTasks/getReqTasks already gate buildPTasks() on — nothing new to wire there,
-// Stage 0.5's plumbing already reads this), seeds an empty USER_SCHEDULE so
-// getEffectiveSched's fallback-to-static-SCHED path is never hit for a new account
-// (a genuinely new user should never silently see Abdullah's personal schedule —
-// they see whatever getAllTasks produces from an empty per-day ts:[] until Stage 3
-// lets them actually add tasks), and marks onboardingComplete so
-// computeIsNewOnboardingUser() never returns true for this account again.
+// Finalizes onboarding: persists trackPrayers + buildMode + the chosen workspace
+// name into USER_SETTINGS (trackPrayers is the SAME field getAllTasks/getReqTasks
+// already gate buildPTasks() on — nothing new to wire there, Stage 0.5's plumbing
+// already reads this), seeds an empty USER_SCHEDULE so getEffectiveSched's
+// fallback-to-static-SCHED path is never hit for a new account (a genuinely new
+// user should never silently see Abdullah's personal schedule — they see whatever
+// getAllTasks produces from an empty per-day ts:[] until Stage 3 lets them actually
+// add tasks), and marks onboardingComplete so PENDING_ONBOARDING-driven display
+// never fires again for this account.
+//
+// buildMode:'custom' does NOT yet launch a task-building UI — same explicit Stage 1
+// scope boundary as before, just carried into the redesigned wizard: the choice is
+// recorded for Stage 3 to read later, but both buildMode values currently produce
+// the identical empty-schedule outcome.
 async function obFinish(){
-  USER_SETTINGS={...USER_SETTINGS, trackPrayers:OB_ANSWERS.trackPrayers, buildMode:OB_ANSWERS.buildMode, displayNameChosen:OB_ANSWERS.name, onboardingComplete:true};
-  // Seed a real, empty-but-valid USER_SCHEDULE for every weekday — {n,wk,bd,gm,ts:[]}
-  // shape matches static SCHED exactly (see getEffectiveSched's contract), so every
-  // existing consumer (getAllTasks/getReqTasks/renderPanel/renderTabs) handles this
-  // correctly with zero special-casing: a new account simply has 7 empty days.
+  USER_SETTINGS={...USER_SETTINGS, trackPrayers:!!OB_ANSWERS.trackPrayers, buildMode:OB_ANSWERS.buildMode||'template', displayNameChosen:OB_ANSWERS.name, workspaceName:OB_ANSWERS.workspaceName, onboardingComplete:true};
   const emptySchedule={};
   for(let jd=0; jd<7; jd++){
     emptySchedule[jd]={n:DSHORT[jd], wk:'9:00 ص', bd:'11:00 م', gm:null, ts:[]};
@@ -1067,8 +1156,8 @@ async function obFinish(){
     console.warn('onboarding save failed',e);
     showToast('⚠️ حصل خطأ أثناء حفظ إعداداتك — جرب تاني',3500,'warn');
   }
-  const modal=document.getElementById('onboardModal');
-  if(modal) modal.classList.remove('open');
+  const wizard=document.getElementById('obWizard');
+  if(wizard) wizard.classList.remove('open');
   // Re-render everything now that USER_SCHEDULE/USER_SETTINGS actually reflect the
   // choices just made — the initial initAppFlow render (if it already ran before
   // onboarding finished) would otherwise still show stale/default state.
@@ -5064,7 +5153,7 @@ document.body.addEventListener('click',async e=>{
   }
 
   if(tgt.id==='btn-onboard-back'){ obHandleBack(); return; }
-  if(tgt.id==='obTextNextBtn'){ obHandleTextNext(); return; }
+  if(tgt.id==='btn-onboard-next'){ obHandleNext(); return; }
 
   if(tgt.id==='btn-hist-prev'){
     saveDay();SELECTED_DATE=dateOff(-1,SELECTED_DATE);loadDay();
@@ -5160,9 +5249,9 @@ document.body.addEventListener('keydown',async e=>{
     e.preventDefault();
     await aiHandleSend();
   }
-  if(e.target && e.target.id==='obTextInput' && e.key==='Enter'){
+  if(e.target && e.target.id==='obActiveTextInput' && e.key==='Enter'){
     e.preventDefault();
-    obHandleTextNext();
+    obHandleNext();
   }
 });
 
@@ -5233,7 +5322,7 @@ function initAppFlow(user){
     // cloud-merge code path), so existing guest access is completely unaffected.
     if(PENDING_ONBOARDING && user){
       OB_STEP=0;
-      OB_ANSWERS={name:'',trackPrayers:true,buildMode:'template'};
+      OB_ANSWERS={name:'',trackPrayers:null,buildMode:null,workspaceName:''};
       obShowStep();
     }
   }).catch(e=>{
