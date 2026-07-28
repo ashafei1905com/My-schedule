@@ -51,6 +51,17 @@ html[dir="ltr"] .tc[data-c="sleep"]{border-left:3px solid var(--pu)}
 html[dir="ltr"] .tc[data-c="free"]{border-left:3px dashed #6366f1}
 html[dir="ltr"] .tc[data-c="snack"]{border-left:3px dotted #f472b6}
 html[dir="ltr"] .tc[data-c="sunrise"]{border-left:3px solid var(--or)}
+
+/* Custom color pickers — hide ugly native chrome */
+input[type=color]{
+  -webkit-appearance:none;appearance:none;
+  width:42px;height:32px;border:2px solid var(--br);border-radius:10px;
+  background:transparent;cursor:pointer;padding:0;overflow:hidden;
+}
+input[type=color]::-webkit-color-swatch-wrapper{padding:0}
+input[type=color]::-webkit-color-swatch{border:none;border-radius:8px}
+input[type=color]::-moz-color-swatch{border:none;border-radius:8px}
+
 .modal-box{max-height:min(90vh,720px);overflow-y:auto;scrollbar-width:thin;scrollbar-color:rgba(100,116,139,.45) transparent}
 .modal-box::-webkit-scrollbar{width:5px}
 .modal-box::-webkit-scrollbar-track{background:transparent;margin:12px 0}
@@ -72,7 +83,7 @@ html[dir="ltr"] .tc[data-c="sunrise"]{border-left:3px solid var(--or)}
 @keyframes lateGlow{0%{box-shadow:0 0 0 rgba(245,158,11,0);border-color:var(--br)}40%{box-shadow:0 0 18px 3px rgba(245,158,11,.55);border-color:var(--or)}100%{box-shadow:0 0 0 rgba(245,158,11,0)}}
 @keyframes qadaGlow{0%{box-shadow:0 0 0 rgba(148,163,184,0)}40%{box-shadow:0 0 14px 2px rgba(148,163,184,.4)}100%{box-shadow:0 0 0 rgba(148,163,184,0)}}
 @keyframes barGold{0%{filter:brightness(1)}50%{filter:brightness(1.6) saturate(1.4)}100%{filter:brightness(1)}}
-#sbar{position:sticky;top:0;z-index:100;background:rgba(10,14,26,.96);backdrop-filter:blur(12px);border-bottom:1px solid var(--br);padding:12px 16px;display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;min-height:64px}
+#sbar{position:sticky;top:0;z-index:100;background:color-mix(in srgb, var(--bg) 96%, transparent);backdrop-filter:blur(12px);border-bottom:1px solid var(--br);padding:12px 16px;display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;min-height:64px}
 #sbar .sbar-stats{display:flex;gap:14px;align-items:center;flex:1;justify-content:center}
 #sbar .sbar-auth{display:flex;flex-direction:column;align-items:flex-end;gap:6px;flex-shrink:0}
 @media (min-width:900px){
@@ -80,9 +91,21 @@ html[dir="ltr"] .tc[data-c="sunrise"]{border-left:3px solid var(--or)}
   .tabs{justify-content:center;width:auto;max-width:100%}
   .prow{justify-content:center;flex-wrap:wrap;overflow:visible}
   .ppill{min-width:72px}
-  .pan{max-width:920px;margin:0 auto}
+  .pan{max-width:800px;margin:0 auto}
   #sbar .sbar-stats{justify-content:flex-start}
 }
+/* Main schedule container centered on large screens */
+#panels{max-width:800px;margin:0 auto}
+.pw{max-width:800px;margin-left:auto;margin-right:auto}
+/* Score/points layout: prevent overlap with profile on mobile */
+@media (max-width:700px){
+  #sbar{flex-wrap:wrap;gap:8px;padding:10px 12px}
+  #sbar .sbar-stats{flex:1 1 100%;justify-content:space-around;order:1;gap:10px}
+  #sbar .sbar-auth{flex:1 1 100%;order:0;align-items:stretch}
+  #sbar .sbar-auth #authBtn{justify-content:flex-end;width:100%}
+  .st .sv{font-size:1.25rem}
+}
+
 .penalty-flash{animation:flashRed 1s ease}
 .streak-broke{animation:shakeX .5s ease}
 .streak-win{display:inline-block;animation:streakPulse .7s ease}
@@ -95,7 +118,7 @@ html[dir="ltr"] .tc[data-c="sunrise"]{border-left:3px solid var(--or)}
 .st{display:flex;flex-direction:column;align-items:center;gap:1px}
 .sv{font-size:1.5rem;font-weight:900;line-height:1}
 .sl{font-size:.6rem;color:var(--so);font-weight:700}
-#sv1{color:var(--or)}#sv2{color:var(--ye)}#sv3{color:var(--pu)}
+#sv1{color:var(--ac)}#sv2{color:var(--ye)}#sv3{color:var(--ac)}
 .pw{padding:10px 16px 0}
 .pb{background:var(--c);border:1px solid var(--br);border-radius:10px;padding:10px 14px}
 .ph{display:flex;justify-content:space-between;font-size:.77rem;color:var(--so);margin-bottom:6px}
@@ -324,7 +347,7 @@ html[dir="ltr"] .tc[data-c="sunrise"]{border-left:3px solid var(--or)}
 .fl-mini-no{background:rgba(100,116,139,.1);border-color:var(--br);color:var(--mu)}
 
 /* Weekly Report / History Modal */
-.report-overlay{position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(10,14,26,.95);display:none;align-items:flex-start;justify-content:center;z-index:10001;padding:40px 20px;overflow-y:auto}
+.report-overlay{position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(10,14,26,.95);display:none;align-items:flex-start;justify-content:center;z-index:10070;padding:40px 20px;overflow-y:auto}
 .report-overlay.open{display:flex}
 .report-box{background:var(--c2);border:2px solid var(--br);border-radius:20px;padding:24px 24px;width:100%;max-width:650px;margin:auto;box-shadow:0 10px 40px rgba(0,0,0,0.8)}
 .report-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:24px;padding-bottom:12px;border-bottom:2px solid var(--br)}
@@ -658,6 +681,10 @@ html[dir="ltr"] .tc[data-c="sunrise"]{border-left:3px solid var(--or)}
       <div id="stFoodLogRow" class="set-row" style="border:none;padding:8px 0;display:none">
         <label for="stFoodLog" style="font-size:.82rem;font-weight:700" data-i18n="food_log_opt">🍽️ Log food for this task?</label>
         <input type="checkbox" id="stFoodLog" style="width:20px;height:20px;accent-color:var(--ac)">
+      </div>
+      <div class="set-row" style="border:none;padding:8px 0;display:flex;align-items:center;justify-content:space-between;gap:12px">
+        <label for="stMandatory" style="font-size:.82rem;font-weight:700;flex:1;text-align:inherit" id="stMandatoryLabel">Mandatory (Break streak if missed)</label>
+        <input type="checkbox" id="stMandatory" style="width:20px;height:20px;accent-color:var(--ac)" checked>
       </div>
     </div>
     <div style="display:flex;gap:8px;margin-top:20px">
@@ -1271,7 +1298,7 @@ function scheduleEnsureDay(jd){
 // codebase exactly ([id,time,cat,ico,name,desc,pts,alts,hw,isEx,...]) so it renders
 // through the exact same renderCard path as SCHED-derived tasks — no special-casing
 // needed anywhere else.
-async function saveScheduleTask(jd,existingId,{time,name,desc,pts,color,foodLog}){
+async function saveScheduleTask(jd,existingId,{time,name,desc,pts,color,foodLog,mandatory}){
   scheduleEnsureDay(jd);
   const ts=USER_SCHEDULE[jd].ts;
   const id=existingId||scheduleGenTaskId();
@@ -1280,8 +1307,11 @@ async function saveScheduleTask(jd,existingId,{time,name,desc,pts,color,foodLog}
   const ico=ST_SELECTED_ICON||(foodLog?'🍽️':'✨');
   const macros=foodLog?{p:0,c:0,f:0,b:0,k:0}:null;
   const mealKey=foodLog?('custom:'+id):null;
+  // isEx (index 9): true = optional / does NOT break streak if missed.
+  // mandatory checkbox checked => isEx=false (required); unchecked => isEx=true.
+  const isEx = mandatory === false;
   // Index 10 = color. Index 11 = macros. Index 12 = mealKey.
-  const tuple=[id,time,cat,ico,name,desc||'',pts||0,null,null,false,color||null,macros,mealKey];
+  const tuple=[id,time,cat,ico,name,desc||'',pts||0,null,null,isEx,color||null,macros,mealKey];
   const idx=ts.findIndex(t=>t[0]===id);
   if(idx>=0) ts[idx]=tuple; else ts.push(tuple);
   await saveUserSchedule();
@@ -1369,6 +1399,11 @@ function openScheduleTaskEditor(jd,existingTask,opts){
   const foodEl=document.getElementById('stFoodLog');
   if(foodEl) foodEl.checked=!!(existingTask&&(existingTask[2]==='food'||existingTask[2]==='snack'||existingTask.foodLog));
   stUpdateFoodLogVisibility();
+  const mandEl=document.getElementById('stMandatory');
+  const mandLbl=document.getElementById('stMandatoryLabel');
+  if(mandLbl) mandLbl.textContent=en?'Mandatory (Break streak if missed)':'إلزامية (تكسر الاستريك لو فاتت)';
+  // existing isEx=true means optional; default new tasks are mandatory (checked)
+  if(mandEl) mandEl.checked=existingTask?(!existingTask[9]):true;
   const saveBtn=document.getElementById('stSaveBtn');
   const cancelBtn=document.getElementById('stCancelBtn');
   if(saveBtn) saveBtn.textContent=en?'Save ✅':'حفظ ✅';
@@ -1413,9 +1448,10 @@ async function stHandleSave(){
   }
 
   const foodLog=!!document.getElementById('stFoodLog')?.checked;
+  const mandatory=!!document.getElementById('stMandatory')?.checked;
   const returnToSettings=ST_RETURN_TO_SETTINGS;
   try{
-    await saveScheduleTask(ST_ACTIVE_JD,ST_ACTIVE_TASK_ID,{time:displayTime,name,desc,pts,color:ST_SELECTED_COLOR,foodLog});
+    await saveScheduleTask(ST_ACTIVE_JD,ST_ACTIVE_TASK_ID,{time:displayTime,name,desc,pts,color:ST_SELECTED_COLOR,foodLog,mandatory});
   }catch(e){
     console.error('saveScheduleTask failed',e);
     if(errEl){ errEl.textContent='⚠️ Save failed'; errEl.style.display='block'; }
@@ -1637,6 +1673,20 @@ function applyTheme(){
   if(USER_SETTINGS.themeAccent) r.style.setProperty('--ac',USER_SETTINGS.themeAccent);
   if(USER_SETTINGS.themeCard) r.style.setProperty('--c',USER_SETTINGS.themeCard);
   if(USER_SETTINGS.themeBg){ r.style.setProperty('--bg',USER_SETTINGS.themeBg); document.body.style.background=USER_SETTINGS.themeBg; }
+  // Top nav + score numbers follow the selected accent / background
+  const sbar=document.getElementById('sbar');
+  if(sbar){
+    const bg=USER_SETTINGS.themeBg||getComputedStyle(r).getPropertyValue('--bg').trim()||'#0a0e1a';
+    sbar.style.background=bg.startsWith('#')?`color-mix(in srgb, ${bg} 96%, transparent)`:'';
+  }
+  const ac=USER_SETTINGS.themeAccent||getComputedStyle(r).getPropertyValue('--ac').trim()||'#3b82f6';
+  const sv1=document.getElementById('sv1');
+  const sv2=document.getElementById('sv2');
+  const sv3=document.getElementById('sv3');
+  if(sv1) sv1.style.color=ac;
+  if(sv2) sv2.style.color=ac;
+  if(sv3) sv3.style.color=ac;
+  document.querySelectorAll('#sbar .sl').forEach(el=>{ el.style.color=ac; el.style.opacity='0.85'; });
 }
 function applyI18n(){
   document.querySelectorAll('[data-i18n]').forEach(el=>{
@@ -2392,7 +2442,7 @@ async function loadAll() {
     FIRST_SEEN = await sGet(LS.firstSeen);
     USER_EDITS = (await sGet(LS.userEdits)) || emptyUserEdits();
     USER_SCHEDULE = (await sGet(LS.userSchedule)) || {};
-    USER_SETTINGS = (await sGet(LS.userSettings)) || {trackPrayers:true};
+    USER_SETTINGS = (await sGet(LS.userSettings)) || {trackPrayers:true,showTracking:true,lang:'en',appIcon:'🏋️'};
     USER_MEMORY = (await sGet(LS.userMemory)) || [];
     MEAL_OPTIONS = (await sGet(LS.mealOptions)) || {};
     weeklyPointsHistory = (await sGet(LS.weeklyPtsHistory)) || {};
@@ -3042,7 +3092,7 @@ function showPrayerStep(){
     if(qEl) qEl.textContent=en?`How did you pray ${dispName}?`:`كيف أديت صلاة ${name}؟`;
     if(subEl) subEl.textContent=en?'Choose how you prayed':'اختر طريقة الأداء';
     renderOpts(en
-      ?[{label:'In congregation 👥',pts:4,gold:true},{label:'Alone 🧍',pts:2,gold:false}]
+      ?[{label:'After-prayer 👥',pts:4,gold:true},{label:'Alone 🧍',pts:2,gold:false}]
       :[{label:'جماعة 👥',pts:4,gold:true},{label:'منفرد 🧍',pts:2,gold:false}],'style');
   }else if(step===2){
     if(qEl) qEl.textContent=en?'Did you say the post-prayer dhikr?':'هل قلت أذكار الصلاة؟';
@@ -3381,7 +3431,10 @@ function showReportHistoryList(){
   const titleEl=document.getElementById('reportTitle');
   const rangeEl=document.getElementById('reportRange');
   if(!el) return;
-  if(titleEl) titleEl.textContent='🗂️ سجل كل التقارير الأسبوعية';
+  const en=(USER_SETTINGS&&USER_SETTINGS.lang)==='en';
+  const closeR=document.getElementById('closeReport');
+  if(closeR) closeR.textContent=en?'✕ Close':'✕ إغلاق';
+  if(titleEl) titleEl.textContent=en?'🗂️ Past weekly reports':'🗂️ سجل كل التقارير الأسبوعية';
   
   // Clean up any duplicates before rendering
   migrateSavedReports();
@@ -3482,7 +3535,7 @@ function renderCard(task,isToday,jd){
       act=`<div class="cbtn exp">${t('not_yet')}</div>`;
     }else if(state==='QADA'){
       const half=Math.floor(pts/2);
-      act=`<button class="cbtn qada" data-action="qada" data-id="${id}" data-pts="${pts}">${en?'Makeup (50%)':'قضاء (50%)'}<span class="ptslbl">+${half}⭐</span></button>`;
+      act=`<button class="cbtn qada" data-action="qada" data-id="${id}" data-pts="${pts}">${en?'Missed prayers (50%)':'قضاء (50%)'}<span class="ptslbl">+${half}⭐</span></button>`;
     }else if(state==='EXPIRED' && !isFoodLoggable){
       act=isSnack?`<div class="excbadge">🍎 ${en?'Missed — no penalty':'فات وقته — مفيش خصم'}</div>`:`<div class="cbtn exp">${t('expired')}</div>`;
     }else if(isFoodLoggable){
@@ -3589,9 +3642,8 @@ function switchDay(jd){
   document.querySelectorAll('.tab').forEach(t=>{if(parseInt(t.dataset.jd,10)===jd)t.classList.add('act');else t.classList.remove('act');});
   document.querySelectorAll('.pan').forEach(p=>p.classList.remove('act'));
   const p=document.getElementById(`pan-${DKEYS[jd]}`);if(p)p.classList.add('act');
-  if(jd===todayJD() && SELECTED_DATE===TODAY){
-    setTimeout(()=>{ try{ scrollToCurrentTask(); }catch(e){} },80);
-  }
+  // Auto-scroll to current task is intentionally NOT called here — it only runs once
+  // on initial app load (see revealApp). Checking a task off must not jump the page.
 }
 
 // Smooth-scroll the schedule to the task that matches "right now" (Kuwait time):
@@ -3601,23 +3653,29 @@ function scrollToCurrentTask(){
   if(SELECTED_DATE!==TODAY) return;
   if(document.getElementById('settingsScreen')?.classList.contains('open')) return;
   const jd=todayJD();
-  const tasks=(typeof getAllTasks==='function'?getAllTasks(jd):[]).filter(t=>t&&!t._deleted);
+  // Only jump to tasks that award points — ignore snacks, exceptions, and 0-pt fillers.
+  const tasks=(typeof getAllTasks==='function'?getAllTasks(jd):[]).filter(t=>{
+    if(!t||t._deleted) return false;
+    const cat=t[2], pts=t[6]|0, isEx=!!t[9];
+    if(isEx) return false;
+    if(cat==='snack') return false;
+    if(pts<=0) return false;
+    return true;
+  });
   if(!tasks.length) return;
   const now=getKuwaitNow();
-  const sorted=[...tasks].sort((a,b)=>toMin(a[10]||a[1])-toMin(b[10]||b[1]));
+  const timeOf=t=>toMin(t[1]);
+  const sorted=[...tasks].sort((a,b)=>timeOf(a)-timeOf(b));
   const isDone=id=>{const v=DONE[id];return v!==undefined&&v!==false;};
   let target=null;
-  // Latest task that has already started
   for(const t of sorted){
-    if(toMin(t[10]||t[1])<=now) target=t;
+    if(timeOf(t)<=now) target=t;
     else break;
   }
-  // If that one is done, prefer next incomplete
   if(target&&isDone(target[0])){
-    const next=sorted.find(t=>toMin(t[10]||t[1])>toMin(target[10]||target[1])&&!isDone(t[0]));
+    const next=sorted.find(t=>timeOf(t)>timeOf(target)&&!isDone(t[0]));
     if(next) target=next;
   }
-  // Fallback: first incomplete of the day, else first task
   if(!target||(isDone(target[0])&&!sorted.some(t=>!isDone(t[0])))){
     target=sorted.find(t=>!isDone(t[0]))||sorted[0];
   }
@@ -6013,6 +6071,11 @@ document.body.addEventListener('click',async e=>{
   }
 
   if(tgt.id==='btn-signin'){
+    // Ensure food-log / other modals are closed so they cannot intercept the
+    // auth popup or swallow the subsequent click/focus events.
+    try{ closeFoodLogModal(); }catch(e){}
+    try{ document.getElementById('schedTaskModal')?.classList.remove('open'); }catch(e){}
+    try{ document.getElementById('prayerModal')?.classList.remove('open'); }catch(e){}
     const provider=new GoogleAuthProvider();
     try{
       await signInWithPopup(fbAuth,provider);
@@ -6068,7 +6131,7 @@ document.body.addEventListener('click',async e=>{
       USER_MEMORY=[];
       MEAL_OPTIONS={};
       USER_SCHEDULE={};
-      USER_SETTINGS={trackPrayers:true};
+      USER_SETTINGS={trackPrayers:true,showTracking:true,lang:'en',appIcon:'🏋️'};
       PENDING_ONBOARDING=false;
       AI_SESSIONS=[];
       AI_ACTIVE_SESSION_ID=null;
@@ -6332,8 +6395,11 @@ function revealApp(){
       applyI18n();
     }
   }catch(e){}
-  // After the schedule paints, jump to the task for "right now".
-  setTimeout(()=>{ try{ scrollToCurrentTask(); }catch(e){} },200);
+  // After the schedule paints, jump to the task for "right now" — ONCE on initial load only.
+  if(!window.__didInitialScroll){
+    window.__didInitialScroll=true;
+    setTimeout(()=>{ try{ scrollToCurrentTask(); }catch(e){} },200);
+  }
 }
 
 function initAppFlow(user){
