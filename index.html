@@ -139,7 +139,7 @@ body{font-family:'Cairo',sans-serif;background:var(--bg);color:var(--tx);directi
 .ptslbl{font-size:.58rem;color:var(--mu)}
 .ptsbdg{padding:4px 8px;background:rgba(100,116,139,.1);border:1px solid var(--br);border-radius:6px;font-size:.67rem;color:var(--mu);flex-shrink:0}
 .floatpts{position:fixed;pointer-events:none;z-index:9999;font-size:1.1rem;font-weight:900;color:var(--ye);font-family:'Cairo',sans-serif;animation:up .8s ease-out forwards}
-#toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%);background:var(--c2);border:2px solid var(--gr);border-radius:12px;padding:14px 20px;font-size:.85rem;font-weight:700;color:var(--gr);z-index:9999;display:none;text-align:center;box-shadow:0 4px 20px rgba(0,0,0,.5);max-width:340px;white-space:pre-line}
+#toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%);background:var(--c2);border:2px solid var(--gr);border-radius:12px;padding:14px 20px;font-size:.85rem;font-weight:700;color:var(--gr);z-index:10050;display:none;text-align:center;box-shadow:0 4px 20px rgba(0,0,0,.5);max-width:340px;white-space:pre-line}
 #toast.show{display:block;animation:ti .3s ease}
 #toast.toast-warn{border-color:#ef4444;color:#ef4444}
 #toast.toast-qada{border-color:var(--so);color:var(--so)}
@@ -429,6 +429,28 @@ body{font-family:'Cairo',sans-serif;background:var(--bg);color:var(--tx);directi
     <div class="ob-navrow">
       <button id="btn-onboard-back" class="ob-navbtn ob-navbtn-back" type="button">→ رجوع</button>
       <button id="btn-onboard-next" class="ob-navbtn ob-navbtn-next" type="button">التالي ←</button>
+    </div>
+  </div>
+</div>
+
+<!-- Settings modal -->
+<div id="settingsModal" class="modal-overlay">
+  <div class="modal-box" style="max-width:420px;text-align:right">
+    <div class="modal-title" style="text-align:center">⚙️ الإعدادات</div>
+    <div style="display:flex;flex-direction:column;gap:14px;margin-top:18px">
+      <label style="display:flex;align-items:center;justify-content:space-between;gap:12px;cursor:pointer">
+        <span style="font-size:.88rem;font-weight:700">إظهار النقاط والاستريك والتغذية</span>
+        <input type="checkbox" id="setShowTracking" style="width:20px;height:20px;accent-color:var(--ac)">
+      </label>
+      <label style="display:flex;align-items:center;justify-content:space-between;gap:12px;cursor:pointer">
+        <span style="font-size:.88rem;font-weight:700">تتبع مواعيد الصلاة</span>
+        <input type="checkbox" id="setTrackPrayers" style="width:20px;height:20px;accent-color:var(--ac)">
+      </label>
+      <button id="setAddTaskBtn" class="altbtn" type="button" style="width:100%;justify-content:center;margin-top:6px">➕ إضافة مهمة لليوم الحالي</button>
+    </div>
+    <div style="display:flex;gap:8px;margin-top:20px">
+      <button id="setSaveBtn" class="fl-submit-btn" type="button" style="margin-bottom:0">حفظ ✅</button>
+      <button id="setCancelBtn" class="modal-back-btn" type="button" style="margin-top:0;flex-shrink:0">إغلاق</button>
     </div>
   </div>
 </div>
@@ -1022,21 +1044,11 @@ const BLANK_TEMPLATE={
   6:{n:'السبت',wk:'9:00 ص',bd:'11:00 م',gm:null,ts:[]}
 };
 
-// Single indirection point for reading a weekday's schedule.
-//   - Signed-in user with real USER_SCHEDULE content -> their own data.
-//   - Signed-in user with NO USER_SCHEDULE content (new account, mid-onboarding) ->
-//     BLANK_TEMPLATE. Never static SCHED — that would leak Abdullah's personal
-//     schedule to every new sign-up, which is the exact bug this fixes.
-//   - No signed-in user at all (guest, anonymous browsing) -> static SCHED,
-//     UNCHANGED from today's existing, intentional guest behavior.
-// fbAuth.currentUser is read directly here (not passed in) since every call site
-// across the file calls this with just (jd) — adding a parameter to every one of
-// getAllTasks/getReqTasks/renderPanel/renderTabs's calls would be a much larger,
-// riskier diff for the same outcome.
+// Stage 1 data-isolation: guests and every non-Abdullah account get pure blank.
+// Static SCHED is only used by migrateAbdullahScheduleIfNeeded for Abdullah's UID.
 function getEffectiveSched(jd){
   if(USER_SCHEDULE && USER_SCHEDULE[jd]) return USER_SCHEDULE[jd];
-  if(fbAuth.currentUser) return BLANK_TEMPLATE[jd];
-  return SCHED[jd];
+  return BLANK_TEMPLATE[jd];
 }
 
 // ===== Schedule editor (Stage 3, minimal) =====
@@ -1200,7 +1212,7 @@ async function stHandleDelete(jd,taskId){
 // through onboarding (Stage 1) is asked explicitly and their answer is stored here
 // before they ever see a schedule — this default only matters for accounts that
 // predate the toggle existing at all.
-let USER_SETTINGS={trackPrayers:true};
+let USER_SETTINGS={trackPrayers:true,showTracking:true};
 
 async function saveUserSettings(){
   await sSet(LS.userSettings,USER_SETTINGS);
@@ -1401,30 +1413,21 @@ function sortKey(t){const base=toMin(t[10]||t[1]);return t[2]==='sleep'?base+144
 function getAllTasks(jd,iso){
   const effIso=iso||dateForWeekday(jd,TODAY);
   const d=getEffectiveSched(jd);if(!d)return applyUserEditsToTasks([],effIso).sort((a,b)=>sortKey(a)-sortKey(b));
-  const frees=(FREE_TIME[jd]||[]).map((f,i)=>[`fr-${jd}-${i}`,f.t,'free','🎮','وقت حر',f.d,0,null,null,false]);
-  // Prayer tasks are entirely opt-in per account (USER_SETTINGS.trackPrayers) — a
-  // user who turned prayer tracking off in onboarding/Settings gets an empty array
-  // here instead of buildPTasks(jd)'s 5 daily prayer entries. buildPTasks itself is
-  // left completely unchanged (still a pure function of jd) — this is the ONE place
-  // (plus the identical check in getReqTasks below) that decides whether its output
-  // is actually included in what the user sees.
-  const prayers=USER_SETTINGS.trackPrayers?buildPTasks(jd):[];
+  // Stage 1: FREE_TIME is Abdullah-only. Never inject for guests or other accounts.
+  const isAbdullah=fbAuth?.currentUser?.uid===ABDULLAH_UID;
+  const frees=isAbdullah?(FREE_TIME[jd]||[]).map((f,i)=>[`fr-${jd}-${i}`,f.t,'free','🎮','وقت حر',f.d,0,null,null,false]):[];
+  // Stage 1: prayers only for Abdullah or users who finished onboarding with trackPrayers on.
+  const showPrayers=isAbdullah || (USER_SETTINGS.trackPrayers && USER_SETTINGS.onboardingComplete);
+  const prayers=showPrayers?buildPTasks(jd):[];
   const base=[...prayers,...d.ts,...frees];
-  // Sort AFTER merging user edits, not before — moved-in and custom tasks are appended
-  // by applyUserEditsToTasks and were previously never re-sorted, so they always landed
-  // at the end of the list regardless of their actual time. This was the root cause of
-  // AI-moved tasks appearing at the bottom of the day instead of in chronological order.
   return applyUserEditsToTasks(base,effIso).sort((a,b)=>sortKey(a)-sortKey(b));
 }
 function getReqTasks(jd,iso){
   const effIso=iso||dateForWeekday(jd,TODAY);
   const d=getEffectiveSched(jd);
-  // cat==='snack' is excluded here — this is the actual mechanism that exempts snacks
-  // from both the punishment scan (applyPunishmentOnce loops over getReqTasks) and the
-  // streak "all required tasks done" check (checkStreak also uses getReqTasks). Snacks
-  // still carry pts>0 and are fully completable via their own button; they just never
-  // appear in the "required" list that punishment/streak logic reads.
-  const prayers=USER_SETTINGS.trackPrayers?buildPTasks(jd):[];
+  const isAbdullah=fbAuth?.currentUser?.uid===ABDULLAH_UID;
+  const showPrayers=isAbdullah || (USER_SETTINGS.trackPrayers && USER_SETTINGS.onboardingComplete);
+  const prayers=showPrayers?buildPTasks(jd):[];
   const base=[...prayers,...(d?.ts||[])].filter(t=>!t[9]&&t[6]>0&&t[2]!=='snack');
   return applyUserEditsToTasks(base,effIso).filter(t=>!t._deleted).sort((a,b)=>sortKey(a)-sortKey(b));
 }
@@ -2831,7 +2834,17 @@ function renderCard(task,isToday,jd){
     const isCustom=String(id).startsWith('custom-');
     const borderStyle=customColor?`border-right:3px solid ${customColor}`:'';
     const nameColor=customColor||'#6366f1';
-    const editBtns=isCustom?`<div style="display:flex;gap:4px;flex-shrink:0"><button class="cbtn" data-action="editSchedTask" data-id="${id}" data-jd="${jd}" style="padding:5px 9px;font-size:.68rem">✏️</button><button class="cbtn" data-action="deleteSchedTask" data-id="${id}" data-jd="${jd}" style="padding:5px 9px;font-size:.68rem;background:rgba(239,68,68,.1);border-color:rgba(239,68,68,.4);color:#ef4444">🗑️</button></div>`:'';
+    // Stage 3: custom free tasks get a normal confirm button when pts>0.
+    let freeAct='';
+    if(isCustom && isToday && pts>0){
+      if(isDone){
+        const lbl=typeof done==='number'?`✅ +${done}⭐`:'✅';
+        freeAct=`<div class="cbtn done">${lbl}</div>`;
+      }else{
+        freeAct=`<button class="cbtn" data-action="confirm" data-id="${id}" data-pts="${pts}">تأكيد ✓<span class="ptslbl">+${pts}⭐</span></button>`;
+      }
+    }
+    const editBtns=isCustom?`<div style="display:flex;gap:4px;flex-shrink:0">${freeAct}<button class="cbtn" data-action="editSchedTask" data-id="${id}" data-jd="${jd}" style="padding:5px 9px;font-size:.68rem">✏️</button><button class="cbtn" data-action="deleteSchedTask" data-id="${id}" data-jd="${jd}" style="padding:5px 9px;font-size:.68rem;background:rgba(239,68,68,.1);border-color:rgba(239,68,68,.4);color:#ef4444">🗑️</button></div>`:(freeAct||'');
     return`<div class="tc" data-c="free" style="${borderStyle}"><div class="tctime">${arTime}</div><div class="tcico">${ico}</div><div class="tcbody"><div class="tcname" style="color:${nameColor}">${name}</div><div class="tcdesc">${task[5]}</div></div>${editBtns}</div>`;
   }
 
@@ -3026,6 +3039,11 @@ function updateMacroUI(){
 }
 
 function updateUI(){
+  const showTrack=USER_SETTINGS.showTracking!==false;
+  const sbarLeft=document.querySelector('#sbar > div');
+  if(sbarLeft) sbarLeft.style.display=showTrack?'flex':'none';
+  document.querySelectorAll('.pw').forEach(el=>{ el.style.display=showTrack?'block':'none'; });
+
   const s1=document.getElementById('sv1'); if(s1) s1.textContent=STATS.cur;
   const s2=document.getElementById('sv2'); if(s2){s2.textContent=STATS.pts;s2.style.color=STATS.pts<0?'var(--rd)':'var(--ye)';}
   const s3=document.getElementById('sv3'); if(s3) s3.textContent=STATS.best;
@@ -3073,12 +3091,13 @@ function updateAuthUI(user){
   const isPWANow=isStandalonePWA();
   const diagLabel=permState==='granted'?(isPWANow?'✅ مفعّلة (PWA)':'⚠️ مفعّلة بس مش PWA'):permState==='denied'?'🚫 متبلوكة':permState==='unsupported'?'❌ غير مدعومة':'⏳ لسه ما اتسألتش';
   const notifBtn=`<button class="topbtn" id="btn-notif-toggle" title="${diagLabel}" style="background:${NOTIF_ENABLED?'rgba(16,185,129,.18)':'rgba(100,116,139,.15)'};border:1px solid ${NOTIF_ENABLED?'rgba(16,185,129,.5)':'var(--br)'};color:${NOTIF_ENABLED?'var(--gr)':'var(--so)'}">${NOTIF_ENABLED?'🔔 مفعّلة':'🔕 التذكيرات'} <span style="font-size:.6rem;opacity:.75">${diagLabel}</span></button>`;
+  const settingsBtn=`<button class="topbtn" id="btn-settings" style="background:rgba(100,116,139,.18);border:1px solid var(--br);color:var(--tx)">⚙️ إعدادات</button>`;
   if(user){
     nameEl.textContent=(user.displayName||user.email||'').split('@')[0];
-    btnEl.innerHTML=`<button class="topbtn topbtn-signout" id="btn-signout">خروج</button>${notifBtn}${reportBtn}${historyBtn}`;
+    btnEl.innerHTML=`${settingsBtn}<button class="topbtn topbtn-signout" id="btn-signout">خروج</button>${notifBtn}${reportBtn}${historyBtn}`;
   }else{
     nameEl.textContent='';
-    btnEl.innerHTML=`<button class="topbtn topbtn-signin" id="btn-signin">تسجيل دخول</button>${notifBtn}${reportBtn}${historyBtn}`;
+    btnEl.innerHTML=`${settingsBtn}<button class="topbtn topbtn-signin" id="btn-signin">تسجيل دخول</button>${notifBtn}${reportBtn}${historyBtn}`;
   }
 }
 
@@ -5380,6 +5399,36 @@ document.body.addEventListener('click',async e=>{
 
   if(tgt.id==='stSaveBtn'){ await stHandleSave(); return; }
   if(tgt.id==='stCancelBtn'){ closeScheduleTaskEditor(); return; }
+
+  if(tgt.id==='btn-settings'){
+    const showEl=document.getElementById('setShowTracking');
+    const prayEl=document.getElementById('setTrackPrayers');
+    if(showEl) showEl.checked=USER_SETTINGS.showTracking!==false;
+    if(prayEl) prayEl.checked=!!USER_SETTINGS.trackPrayers;
+    document.getElementById('settingsModal')?.classList.add('open');
+    return;
+  }
+  if(tgt.id==='setCancelBtn'){
+    document.getElementById('settingsModal')?.classList.remove('open');
+    return;
+  }
+  if(tgt.id==='setSaveBtn'){
+    const showEl=document.getElementById('setShowTracking');
+    const prayEl=document.getElementById('setTrackPrayers');
+    USER_SETTINGS.showTracking=showEl?showEl.checked:true;
+    USER_SETTINGS.trackPrayers=prayEl?prayEl.checked:false;
+    try{ await saveUserSettings(); }catch(e){ console.warn(e); }
+    document.getElementById('settingsModal')?.classList.remove('open');
+    try{ renderTabs();renderPanels();switchDay(todayJD());updateUI(); }catch(e){}
+    showToast('✅ تم حفظ الإعدادات',2000);
+    return;
+  }
+  if(tgt.id==='setAddTaskBtn'){
+    document.getElementById('settingsModal')?.classList.remove('open');
+    if(!fbAuth.currentUser){ showToast('لازم تسجّل دخول عشان تضيف مهام',3000,'warn'); return; }
+    openScheduleTaskEditor(todayJD(),null);
+    return;
+  }
 
   const addTaskBtn=closest('[data-action="openAddTask"]');
   if(addTaskBtn){
