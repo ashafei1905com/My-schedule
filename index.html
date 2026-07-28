@@ -1,6 +1,6 @@
 <!DOCTYPE html>
-<html lang="ar" dir="rtl">
-<!-- cache-bust: 2026-07-23 -->
+<html lang="en" dir="ltr">
+<!-- cache-bust: 2026-07-28 -->
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1.0,maximum-scale=1.0,user-scalable=no">
@@ -43,7 +43,17 @@ body{font-family:'Cairo',sans-serif;background:var(--bg);color:var(--tx);directi
 @keyframes lateGlow{0%{box-shadow:0 0 0 rgba(245,158,11,0);border-color:var(--br)}40%{box-shadow:0 0 18px 3px rgba(245,158,11,.55);border-color:var(--or)}100%{box-shadow:0 0 0 rgba(245,158,11,0)}}
 @keyframes qadaGlow{0%{box-shadow:0 0 0 rgba(148,163,184,0)}40%{box-shadow:0 0 14px 2px rgba(148,163,184,.4)}100%{box-shadow:0 0 0 rgba(148,163,184,0)}}
 @keyframes barGold{0%{filter:brightness(1)}50%{filter:brightness(1.6) saturate(1.4)}100%{filter:brightness(1)}}
-#sbar{position:sticky;top:0;z-index:100;background:rgba(10,14,26,.96);backdrop-filter:blur(12px);border-bottom:1px solid var(--br);padding:12px 16px;display:flex;justify-content:center;align-items:center;gap:8px;flex-wrap:wrap;min-height:64px}
+#sbar{position:sticky;top:0;z-index:100;background:rgba(10,14,26,.96);backdrop-filter:blur(12px);border-bottom:1px solid var(--br);padding:12px 16px;display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;min-height:64px}
+#sbar .sbar-stats{display:flex;gap:14px;align-items:center;flex:1;justify-content:center}
+#sbar .sbar-auth{display:flex;flex-direction:column;align-items:flex-end;gap:6px;flex-shrink:0}
+@media (min-width:900px){
+  .tw{display:flex;justify-content:center}
+  .tabs{justify-content:center;width:auto;max-width:100%}
+  .prow{justify-content:center;flex-wrap:wrap;overflow:visible}
+  .ppill{min-width:72px}
+  .pan{max-width:920px;margin:0 auto}
+  #sbar .sbar-stats{justify-content:flex-start}
+}
 .penalty-flash{animation:flashRed 1s ease}
 .streak-broke{animation:shakeX .5s ease}
 .streak-win{display:inline-block;animation:streakPulse .7s ease}
@@ -194,9 +204,6 @@ body{font-family:'Cairo',sans-serif;background:var(--bg);color:var(--tx);directi
 .task-icon-row{display:flex;flex-wrap:wrap;gap:8px}
 .task-icon-btn{width:40px;height:40px;border-radius:10px;border:2px solid var(--br);background:var(--c);cursor:pointer;font-size:1.2rem;display:flex;align-items:center;justify-content:center}
 .task-icon-btn.sel{border-color:var(--ac);box-shadow:0 0 0 1px var(--ac)}
-#sbar{justify-content:center}
-#sbar > div:first-child{flex:1;justify-content:center}
-#sbar > div:last-child{position:absolute;inset-inline-end:16px;top:50%;transform:translateY(-50%)}
 #toast{z-index:10050 !important}
 
 /* Prayer Modal */
@@ -379,13 +386,13 @@ body{font-family:'Cairo',sans-serif;background:var(--bg);color:var(--tx);directi
 
 <main id="app" style="display:none">
   <div id="sbar">
-    <div style="display:flex;gap:12px;align-items:center">
-      <div class="st"><div class="sv" id="sv1">0</div><div class="sl">🔥 استريك</div></div>
-      <div class="st"><div class="sv" id="sv2">0</div><div class="sl">⭐ نقاطي</div></div>
-      <div class="st"><div class="sv" id="sv3">0</div><div class="sl">🏆 أعلى استريك</div></div>
-      <div id="networkStatusBadge" class="net-badge" style="display:none">⚠️ جاري التحقق...</div>
+    <div class="sbar-stats">
+      <div class="st"><div class="sv" id="sv1">0</div><div class="sl">🔥 Streak</div></div>
+      <div class="st"><div class="sv" id="sv2">0</div><div class="sl">⭐ Points</div></div>
+      <div class="st"><div class="sv" id="sv3">0</div><div class="sl">🏆 Best streak</div></div>
+      <div id="networkStatusBadge" class="net-badge" style="display:none">⚠️ ...</div>
     </div>
-    <div style="display:flex;flex-direction:column;align-items:flex-end;gap:6px">
+    <div class="sbar-auth">
       <div id="authBtn" style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;justify-content:flex-end"></div>
     </div>
   </div>
@@ -717,7 +724,7 @@ body{font-family:'Cairo',sans-serif;background:var(--bg);color:var(--tx);directi
 'use strict';
 
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
-import { getAuth, GoogleAuthProvider, signInWithPopup, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
+import { getAuth, GoogleAuthProvider, signInWithPopup, signInWithRedirect, getRedirectResult, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
 import { initializeFirestore, doc, setDoc, getDoc } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
 
 const firebaseConfig = {
@@ -730,6 +737,10 @@ const firebaseConfig = {
 };
 const fbApp=initializeApp(firebaseConfig);
 const fbAuth=getAuth(fbApp);
+// Complete redirect-based Google sign-in if the page was returned from Google.
+getRedirectResult(fbAuth).then(res=>{
+  if(res&&res.user) console.log('Google redirect sign-in ok',res.user.uid);
+}).catch(e=>console.warn('getRedirectResult',e));
 // DIAGNOSED (2026-07-24): the "غير متزامن (Firebase)" banner was traced to a real,
 // reproducible cause via DevTools evidence — NOT DNS, NOT a router/ISP block, NOT a
 // browser extension. Confirmed by: (1) the failure reproduces identically in
@@ -1347,7 +1358,15 @@ async function stHandleDelete(jd,taskId){
 // through onboarding (Stage 1) is asked explicitly and their answer is stored here
 // before they ever see a schedule — this default only matters for accounts that
 // predate the toggle existing at all.
-let USER_SETTINGS={trackPrayers:true,showTracking:true,lang:'ar',appIcon:'🏋️'};
+let USER_SETTINGS={trackPrayers:true,showTracking:true,lang:'en',appIcon:'🏋️'};
+let AI_REPLY_LANG='en';
+function detectTextLang(text){
+  const s=String(text||'');
+  const ar=(s.match(/[\u0600-\u06FF]/g)||[]).length;
+  const lat=(s.match(/[A-Za-z]/g)||[]).length;
+  if(ar===0&&lat===0) return (USER_SETTINGS&&USER_SETTINGS.lang)||'en';
+  return ar>=lat?'ar':'en';
+}
 
 const I18N={
   ar:{
@@ -1449,7 +1468,8 @@ function tn(text){
 function arEn(ar,en){ return (USER_SETTINGS&&USER_SETTINGS.lang)==='en'?en:ar; }
 // Auto-translate AI bot replies when language is English.
 function translateAiReply(text){
-  if(!text || (USER_SETTINGS&&USER_SETTINGS.lang)!=='en') return text;
+  // Reply language follows the USER MESSAGE language (not the UI language setting).
+  if(!text || AI_REPLY_LANG!=='en') return text;
   const pairs=[
     [/مش لاقي صلاة (.+) في جدول يوم (.+)\./g,"Can't find prayer $1 on $2."],
     [/صلاة (.+) يوم (.+) مسجلة كمُنجزة بالفعل\. لو عايز تعدّلها، لازم تشيلها الأول من الجدول\./g,'Prayer $1 on $2 is already marked done. To change it, remove it from the schedule first.'],
@@ -3451,8 +3471,8 @@ function updateMacroUI(){
 
 function updateUI(){
   const showTrack=USER_SETTINGS.showTracking!==false;
-  const sbarLeft=document.querySelector('#sbar > div');
-  if(sbarLeft) sbarLeft.style.display=showTrack?'flex':'none';
+  const sbarStats=document.querySelector('#sbar .sbar-stats');
+  if(sbarStats) sbarStats.style.display=showTrack?'flex':'none';
   document.querySelectorAll('.pw').forEach(el=>{ el.style.display=showTrack?'block':'none'; });
 
   const s1=document.getElementById('sv1'); if(s1) s1.textContent=STATS.cur;
@@ -5471,6 +5491,7 @@ async function aiHandleSend(){
   if(!text) return;
   input.value='';
   input.style.height='auto';
+  AI_REPLY_LANG=detectTextLang(text);
 
   const user=fbAuth.currentUser;
   const session=aiGetActiveSession();
@@ -5479,7 +5500,10 @@ async function aiHandleSend(){
   aiRenderMessages();
 
   if(!user){
-    session.messages.push({role:'bot',text:'لازم تسجل دخول الأول عشان أقدر أعمل تغييرات في جدولك وأحفظها ليك 🔒',ts:Date.now(),tone:'err'});
+    const needLogin=AI_REPLY_LANG==='en'
+      ?'You need to sign in first so I can change your schedule and save it 🔒'
+      :'لازم تسجل دخول الأول عشان أقدر أعمل تغييرات في جدولك وأحفظها ليك 🔒';
+    session.messages.push({role:'bot',text:needLogin,ts:Date.now(),tone:'err'});
     session.lastMsgAt=Date.now();
     aiRenderMessages();
     await saveAiChat();
@@ -5755,17 +5779,25 @@ document.body.addEventListener('click',async e=>{
   }
 
   if(tgt.id==='btn-signin'){
-    // Reverted from signInWithRedirect back to signInWithPopup (2026-07-24): redirect
-    // was tried as a fix for a cosmetic COOP console warning ("window.closed" being
-    // blocked), but it broke sign-in entirely — white screen, bounce back to signed-
-    // out state, no error surfaced. Popup was the last confirmed-working flow, so it
-    // takes priority. The COOP warning is noisy but was not actually blocking sign-in
-    // before this — don't re-attempt redirect without first confirming in the
-    // Firebase Console that the exact GitHub Pages origin is in Authorized domains.
-    try{ await signInWithPopup(fbAuth,new GoogleAuthProvider()); }
-    catch(e){
+    const provider=new GoogleAuthProvider();
+    try{
+      await signInWithPopup(fbAuth,provider);
+    }catch(e){
       console.error('signInWithPopup failed — code:',e.code,'message:',e.message,e);
-      showToast(`فشل تسجيل الدخول (${e.code||'unknown'}) — جرب تاني`,4500,'warn');
+      // Popup blocked / COOP / closed: fall back to full-page redirect.
+      const useRedirect=['auth/popup-blocked','auth/popup-closed-by-user','auth/cancelled-popup-request'].includes(e.code)
+        || /Cross-Origin-Opener-Policy|window\.closed/i.test(String(e.message||''));
+      if(useRedirect || e.code==='auth/operation-not-supported-in-this-environment'){
+        try{
+          showToast(USER_SETTINGS.lang==='en'?'Redirecting to Google sign-in…':'جارٍ التحويل لتسجيل الدخول…',2500);
+          await signInWithRedirect(fbAuth,provider);
+        }catch(e2){
+          console.error('signInWithRedirect failed',e2);
+          showToast(`Sign-in failed (${e2.code||e.code||'unknown'})`,4500,'warn');
+        }
+      }else{
+        showToast(`Sign-in failed (${e.code||'unknown'})`,4500,'warn');
+      }
     }
     return;
   }
