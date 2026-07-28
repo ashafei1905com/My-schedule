@@ -433,7 +433,11 @@ body{font-family:'Cairo',sans-serif;background:var(--bg);color:var(--tx);directi
   </div>
 </div>
 
-<!-- Settings modal -->
+<!-- Schedule Task Editor (Stage 3, minimal) — add/edit/delete a recurring weekly
+     task block, writing directly to USER_SCHEDULE. Reuses the modal-overlay/
+     modal-box pattern and a chip-style color picker matching the onboarding
+     wizard's visual language. Only ever opened for signed-in users (the "+ إضافة
+     مهمة" button that opens this is itself hidden for guests — see renderPanel). -->
 <div id="settingsModal" class="modal-overlay">
   <div class="modal-box" style="max-width:420px;text-align:right">
     <div class="modal-title" style="text-align:center">⚙️ الإعدادات</div>
@@ -455,14 +459,10 @@ body{font-family:'Cairo',sans-serif;background:var(--bg);color:var(--tx);directi
   </div>
 </div>
 
-<!-- Schedule Task Editor (Stage 3, minimal) — add/edit/delete a recurring weekly
-     task block, writing directly to USER_SCHEDULE. Reuses the modal-overlay/
-     modal-box pattern and a chip-style color picker matching the onboarding
-     wizard's visual language. Only ever opened for signed-in users (the "+ إضافة
-     مهمة" button that opens this is itself hidden for guests — see renderPanel). -->
 <div id="schedTaskModal" class="modal-overlay">
   <div class="modal-box" style="max-width:420px;text-align:right">
     <div class="modal-title" id="stTitle" style="text-align:center">إضافة مهمة</div>
+    <div id="stError" style="display:none;margin-top:10px;padding:10px 12px;border-radius:10px;background:rgba(239,68,68,.15);border:1px solid rgba(239,68,68,.45);color:#f87171;font-size:.82rem;font-weight:700;text-align:center"></div>
     <div style="display:flex;flex-direction:column;gap:12px;margin-top:16px">
       <div>
         <label style="font-size:.72rem;color:var(--so);font-weight:700;display:block;margin-bottom:6px">اسم المهمة</label>
@@ -1044,8 +1044,17 @@ const BLANK_TEMPLATE={
   6:{n:'السبت',wk:'9:00 ص',bd:'11:00 م',gm:null,ts:[]}
 };
 
-// Stage 1 data-isolation: guests and every non-Abdullah account get pure blank.
-// Static SCHED is only used by migrateAbdullahScheduleIfNeeded for Abdullah's UID.
+// Single indirection point for reading a weekday's schedule.
+//   - Signed-in user with real USER_SCHEDULE content -> their own data.
+//   - Signed-in user with NO USER_SCHEDULE content (new account, mid-onboarding) ->
+//     BLANK_TEMPLATE. Never static SCHED — that would leak Abdullah's personal
+//     schedule to every new sign-up, which is the exact bug this fixes.
+//   - No signed-in user at all (guest, anonymous browsing) -> static SCHED,
+//     UNCHANGED from today's existing, intentional guest behavior.
+// fbAuth.currentUser is read directly here (not passed in) since every call site
+// across the file calls this with just (jd) — adding a parameter to every one of
+// getAllTasks/getReqTasks/renderPanel/renderTabs's calls would be a much larger,
+// riskier diff for the same outcome.
 function getEffectiveSched(jd){
   if(USER_SCHEDULE && USER_SCHEDULE[jd]) return USER_SCHEDULE[jd];
   return BLANK_TEMPLATE[jd];
@@ -1153,6 +1162,8 @@ function openScheduleTaskEditor(jd,existingTask){
   }
 
   stRenderColorChips();
+  const errEl=document.getElementById('stError');
+  if(errEl){ errEl.style.display='none'; errEl.textContent=''; }
   document.getElementById('schedTaskModal')?.classList.add('open');
   setTimeout(()=>nameEl?.focus(),80);
 }
@@ -1164,8 +1175,14 @@ function closeScheduleTaskEditor(){
 }
 
 async function stHandleSave(){
+  const errEl=document.getElementById('stError');
+  if(errEl){ errEl.style.display='none'; errEl.textContent=''; }
   const name=(document.getElementById('stName')?.value||'').trim();
-  if(!name){ showToast('اكتب اسم المهمة الأول',2000,'warn'); return; }
+  if(!name){
+    if(errEl){ errEl.textContent='⚠️ اكتب اسم المهمة أولاً'; errEl.style.display='block'; }
+    document.getElementById('stName')?.focus();
+    return;
+  }
   const timeVal=document.getElementById('stTime')?.value||'09:00';
   const [h24,m]=timeVal.split(':').map(Number);
   const pm=h24>=12;
@@ -1174,13 +1191,16 @@ async function stHandleSave(){
   const desc=(document.getElementById('stDesc')?.value||'').trim();
   const pts=Math.max(0,Math.min(100,parseInt(document.getElementById('stPts')?.value,10)||0));
 
-  if(ST_ACTIVE_JD===null){ showToast('⚠️ حصل خطأ — جرب تفتح المهمة تاني',3000,'warn'); return; }
+  if(ST_ACTIVE_JD===null){
+    if(errEl){ errEl.textContent='⚠️ حصل خطأ — جرب تفتح المهمة تاني'; errEl.style.display='block'; }
+    return;
+  }
 
   try{
     await saveScheduleTask(ST_ACTIVE_JD,ST_ACTIVE_TASK_ID,{time:displayTime,name,desc,pts,color:ST_SELECTED_COLOR});
   }catch(e){
     console.error('saveScheduleTask failed',e);
-    showToast('⚠️ حصل خطأ أثناء الحفظ — جرب تاني',3500,'warn');
+    if(errEl){ errEl.textContent='⚠️ حصل خطأ أثناء الحفظ — جرب تاني'; errEl.style.display='block'; }
     return;
   }
   closeScheduleTaskEditor();
@@ -1413,10 +1433,8 @@ function sortKey(t){const base=toMin(t[10]||t[1]);return t[2]==='sleep'?base+144
 function getAllTasks(jd,iso){
   const effIso=iso||dateForWeekday(jd,TODAY);
   const d=getEffectiveSched(jd);if(!d)return applyUserEditsToTasks([],effIso).sort((a,b)=>sortKey(a)-sortKey(b));
-  // Stage 1: FREE_TIME is Abdullah-only. Never inject for guests or other accounts.
   const isAbdullah=fbAuth?.currentUser?.uid===ABDULLAH_UID;
   const frees=isAbdullah?(FREE_TIME[jd]||[]).map((f,i)=>[`fr-${jd}-${i}`,f.t,'free','🎮','وقت حر',f.d,0,null,null,false]):[];
-  // Stage 1: prayers only for Abdullah or users who finished onboarding with trackPrayers on.
   const showPrayers=isAbdullah || (USER_SETTINGS.trackPrayers && USER_SETTINGS.onboardingComplete);
   const prayers=showPrayers?buildPTasks(jd):[];
   const base=[...prayers,...d.ts,...frees];
@@ -2834,17 +2852,7 @@ function renderCard(task,isToday,jd){
     const isCustom=String(id).startsWith('custom-');
     const borderStyle=customColor?`border-right:3px solid ${customColor}`:'';
     const nameColor=customColor||'#6366f1';
-    // Stage 3: custom free tasks get a normal confirm button when pts>0.
-    let freeAct='';
-    if(isCustom && isToday && pts>0){
-      if(isDone){
-        const lbl=typeof done==='number'?`✅ +${done}⭐`:'✅';
-        freeAct=`<div class="cbtn done">${lbl}</div>`;
-      }else{
-        freeAct=`<button class="cbtn" data-action="confirm" data-id="${id}" data-pts="${pts}">تأكيد ✓<span class="ptslbl">+${pts}⭐</span></button>`;
-      }
-    }
-    const editBtns=isCustom?`<div style="display:flex;gap:4px;flex-shrink:0">${freeAct}<button class="cbtn" data-action="editSchedTask" data-id="${id}" data-jd="${jd}" style="padding:5px 9px;font-size:.68rem">✏️</button><button class="cbtn" data-action="deleteSchedTask" data-id="${id}" data-jd="${jd}" style="padding:5px 9px;font-size:.68rem;background:rgba(239,68,68,.1);border-color:rgba(239,68,68,.4);color:#ef4444">🗑️</button></div>`:(freeAct||'');
+    const editBtns=isCustom?`<div style="display:flex;gap:4px;flex-shrink:0"><button class="cbtn" data-action="editSchedTask" data-id="${id}" data-jd="${jd}" style="padding:5px 9px;font-size:.68rem">✏️</button><button class="cbtn" data-action="deleteSchedTask" data-id="${id}" data-jd="${jd}" style="padding:5px 9px;font-size:.68rem;background:rgba(239,68,68,.1);border-color:rgba(239,68,68,.4);color:#ef4444">🗑️</button></div>`:'';
     return`<div class="tc" data-c="free" style="${borderStyle}"><div class="tctime">${arTime}</div><div class="tcico">${ico}</div><div class="tcbody"><div class="tcname" style="color:${nameColor}">${name}</div><div class="tcdesc">${task[5]}</div></div>${editBtns}</div>`;
   }
 
@@ -2943,7 +2951,7 @@ function renderPanel(jd){
   }
 
   const tasks=getAllTasks(jd);
-  const addTaskBtn=fbAuth.currentUser?`<button class="altbtn" data-action="openAddTask" data-jd="${jd}" style="width:100%;margin-top:10px;justify-content:center">➕ إضافة مهمة</button>`:'';
+  const addTaskBtn=fbAuth.currentUser?`<div style="text-align:center;margin-top:12px;font-size:.72rem;color:var(--mu)">أضف مهام من زر ⚙️ الإعدادات بالأعلى</div>`:'';
   return`<div class="pan" id="pan-${k}">
     <div class="dh"><div><div class="dhn">${d.n}</div><div class="dhm">فجر ${fmt24(PRYT.Fajr||FALLBK.Fajr)} · شروق ${fmt24(PRYT.Sunrise||FALLBK.Sunrise)} ← صحيان ${d.wk} · نوم ${d.bd}</div></div>${gbLabel}</div>
     <div class="prow">${pills.join('')}</div>
@@ -5417,7 +5425,7 @@ document.body.addEventListener('click',async e=>{
     const prayEl=document.getElementById('setTrackPrayers');
     USER_SETTINGS.showTracking=showEl?showEl.checked:true;
     USER_SETTINGS.trackPrayers=prayEl?prayEl.checked:false;
-    try{ await saveUserSettings(); }catch(e){ console.warn(e); }
+    try{ await saveUserSettings(); }catch(e){}
     document.getElementById('settingsModal')?.classList.remove('open');
     try{ renderTabs();renderPanels();switchDay(todayJD());updateUI(); }catch(e){}
     showToast('✅ تم حفظ الإعدادات',2000);
