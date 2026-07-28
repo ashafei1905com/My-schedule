@@ -435,9 +435,24 @@ body{font-family:'Cairo',sans-serif;background:var(--bg);color:var(--tx);directi
         </div>
         <div class="set-section" id="setsec-appearance">
           <h3 data-i18n="sec_appearance">المظهر</h3>
-          <p class="desc" data-i18n="sec_appearance_desc">أيقونة التطبيق على الشاشة الرئيسية.</p>
+          <p class="desc" data-i18n="sec_appearance_desc">أيقونة التطبيق وألوان الجدول.</p>
           <div class="icon-presets" id="iconPresets"></div>
           <p class="desc" style="margin-top:12px" data-i18n="icon_hint">بعد الاختيار، احذف التطبيق من الشاشة الرئيسية وأضفه من جديد لتحديث الأيقونة.</p>
+          <div class="set-row" style="margin-top:16px">
+            <label for="themeAccent">لون التمييز</label>
+            <input type="color" id="themeAccent" value="#3b82f6" style="width:48px;height:32px;border:none;background:transparent;cursor:pointer">
+          </div>
+          <div class="set-row">
+            <label for="themeCard">لون البطاقة</label>
+            <input type="color" id="themeCard" value="#111827" style="width:48px;height:32px;border:none;background:transparent;cursor:pointer">
+          </div>
+          <div class="set-row">
+            <label for="themeBg">لون الخلفية</label>
+            <input type="color" id="themeBg" value="#0a0e1a" style="width:48px;height:32px;border:none;background:transparent;cursor:pointer">
+          </div>
+          <div class="set-actions" style="margin-top:12px">
+            <button type="button" id="setSaveThemeBtn" class="fl-submit-btn" style="margin:0">حفظ المظهر ✅</button>
+          </div>
         </div>
         <div class="set-section" id="setsec-language">
           <h3 data-i18n="sec_language">اللغة / Language</h3>
@@ -570,6 +585,10 @@ body{font-family:'Cairo',sans-serif;background:var(--bg);color:var(--tx);directi
       <div>
         <label style="font-size:.72rem;color:var(--so);font-weight:700;display:block;margin-bottom:8px">اللون</label>
         <div id="stColorRow" style="display:flex;gap:8px;flex-wrap:wrap"></div>
+      </div>
+      <div class="set-row" style="border:none;padding:8px 0">
+        <label for="stFoodLog" style="font-size:.82rem;font-weight:700">🍽️ تسجيل أكل؟ (يسأل المستخدم ماذا أكل)</label>
+        <input type="checkbox" id="stFoodLog" style="width:20px;height:20px;accent-color:var(--ac)">
       </div>
     </div>
     <div style="display:flex;gap:8px;margin-top:20px">
@@ -946,7 +965,7 @@ const mkBr=(p)=>[p+'-br','7:00 م','recovery','🏊','مع أخوك — جاكو
 // middaySnack figure Abdullah specified directly, identical on gym/rest days.
 const mkSnackA=(p,t='11:15 ص',isGym)=>[p+'-sn1',t,'snack','🥜','سناك منتصف النهار','حفنة مكسرات نيئة + ثمرة فاكهة',5,null,null,false,null,isGym?MACROS_GYM.middaySnack:MACROS_REST.middaySnack,mealKeyFor('middaySnack',isGym)];
 const mkSnackB=(p,t='4:30 م',isGym)=>[p+'-sn2',t,'snack','🥤','سناك ٢ (بعد الظهر)',isGym?'إضافي اختياري — لو لسه جعت قبل التمرين':'فشار منزلي أو سلطة فواكه',5,null,null,false,null,isGym?null:MACROS_REST.afternoonSnack,mealKeyFor('afternoonSnack',isGym)];
-const mkSnackC=(p,t='9:30 م',isGym)=>[p+'-sn3',t,'snack','🍇','سناك ٣ (مسائي خفيف)','فاكهة خفيفة أو حفنة مكسرات — لو جعت قبل النوم',5,null,null,false,null,{p:3,c:15,f:8,b:3,k:140},mealKeyFor('bedtimeSnack',isGym)];
+const mkSnackC=(p,t='9:30 م',isGym)=>[p+'-sn3',t,'snack','🍇','سناك ٣ (مسائي خفيف)','فاكهة خفيفة أو حفنة مكسرات — لو جعت قبل النوم',5,null,null,false,null,null,mealKeyFor('bedtimeSnack',isGym)];
 
 const PMETA={
   Fajr:{ar:'الفجر',ic:'🌙',pts:10,sunnah:'سنة الفجر (ركعتان قبل)'},
@@ -1179,19 +1198,17 @@ function scheduleEnsureDay(jd){
 // codebase exactly ([id,time,cat,ico,name,desc,pts,alts,hw,isEx,...]) so it renders
 // through the exact same renderCard path as SCHED-derived tasks — no special-casing
 // needed anywhere else.
-async function saveScheduleTask(jd,existingId,{time,name,desc,pts,color}){
+async function saveScheduleTask(jd,existingId,{time,name,desc,pts,color,foodLog}){
   scheduleEnsureDay(jd);
   const ts=USER_SCHEDULE[jd].ts;
   const id=existingId||scheduleGenTaskId();
-  // Index 10 is the documented-dead "_unused10" slot (see the tuple-layout comment
-  // near mkBk/mkWd) — repurposed here to carry the user's chosen color, since a
-  // bolted-on property (tuple._color=...) would be silently dropped by
-  // JSON.stringify on every save (confirmed: array indices only, non-index
-  // properties never survive serialization), which is exactly the kind of silent
-  // data loss this project's standing principles warn against. Using a real tuple
-  // index means the color survives the full save/load round-trip through both
-  // localStorage and the Firestore serializeScheduleForFirestore boundary.
-  const tuple=[id,time,'free','✨',name,desc||'',pts||0,null,null,false,color||null];
+  // foodLog: cat=food so renderCard opens the food-log modal; macros placeholder allows logging.
+  const cat=foodLog?'food':'free';
+  const ico=foodLog?'🍽️':'✨';
+  const macros=foodLog?{p:0,c:0,f:0,b:0,k:0}:null;
+  const mealKey=foodLog?('custom:'+id):null;
+  // Index 10 = color (also used for free custom color). Index 11 = macros. Index 12 = mealKey.
+  const tuple=[id,time,cat,ico,name,desc||'',pts||0,null,null,false,color||null,macros,mealKey];
   const idx=ts.findIndex(t=>t[0]===id);
   if(idx>=0) ts[idx]=tuple; else ts.push(tuple);
   await saveUserSchedule();
@@ -1239,14 +1256,13 @@ function openScheduleTaskEditor(jd,existingTask){
   if(descEl) descEl.value=existingTask?(existingTask[5]||''):'';
   if(ptsEl) ptsEl.value=existingTask?(existingTask[6]||5):5;
   if(timeEl){
-    // Task times are stored as "H:MM ص/م" display strings; <input type="time">
-    // needs 24h "HH:MM". Convert on the way in; toMin()+formatting handles the
-    // reverse on save (see stHandleSave below).
     const raw=existingTask?existingTask[1]:'';
     const mins=raw?toMin(raw):9*60;
     const h=Math.floor(mins/60),m=mins%60;
     timeEl.value=`${String(h).padStart(2,'0')}:${String(m).padStart(2,'0')}`;
   }
+  const foodEl=document.getElementById('stFoodLog');
+  if(foodEl) foodEl.checked=!!(existingTask&&(existingTask[2]==='food'||existingTask[2]==='snack'));
 
   stRenderColorChips();
   document.getElementById('schedTaskModal')?.classList.add('open');
@@ -1281,8 +1297,9 @@ async function stHandleSave(){
     return;
   }
 
+  const foodLog=!!document.getElementById('stFoodLog')?.checked;
   try{
-    await saveScheduleTask(ST_ACTIVE_JD,ST_ACTIVE_TASK_ID,{time:displayTime,name,desc,pts,color:ST_SELECTED_COLOR});
+    await saveScheduleTask(ST_ACTIVE_JD,ST_ACTIVE_TASK_ID,{time:displayTime,name,desc,pts,color:ST_SELECTED_COLOR,foodLog});
   }catch(e){
     console.error('saveScheduleTask failed',e);
     if(errEl){ errEl.textContent='⚠️ Save failed'; errEl.style.display='block'; }
@@ -1290,7 +1307,7 @@ async function stHandleSave(){
   }
   closeScheduleTaskEditor();
   try{ renderTabs();renderPanels();switchDay(getJDfromISO(SELECTED_DATE));updateUI(); }catch(e){ console.warn('re-render after schedule edit failed',e); }
-  showToast('✅ اتحفظت المهمة',2200);
+  showToast(t('task_saved'),2200);
 }
 
 async function stHandleDelete(jd,taskId){
@@ -1339,14 +1356,7 @@ const I18N={
     saved:'✅ تم الحفظ', need_login:'لازم تسجّل دخول عشان تضيف مهام',
     name_required:'⚠️ اكتب اسم المهمة أولاً', task_saved:'✅ اتحفظت المهمة',
     streak:'🔥 استريك', points:'⭐ نقاطي', best_streak:'🏆 أعلى استريك',
-    notif_on:'🔔 مفعّلة', notif_off:'🔕 التذكيرات',
-    day_sun:'الأحد', day_mon:'الاثنين', day_tue:'الثلاثاء', day_wed:'الأربعاء',
-    day_thu:'الخميس', day_fri:'الجمعة', day_sat:'السبت',
-    today:'اليوم', prev_day:'← يوم سابق', next_day:'يوم تالٍ →',
-    confirm:'تأكيد ✓', late:'متأخر', expired:'فات الوقت', not_yet:'⏳ لسه مجاش وقتها',
-    log_food:'🍽️ سجل الأكل', qada:'قضاء (50%)', loading:'جاري التحميل...',
-    nutrition:'🍽️ التغذية اليومية', tasks_done:'مهمة', pts_today:'نقطة اليوم',
-    rest_day:'يوم راحة', cancel:'إلغاء'
+    notif_on:'🔔 مفعّلة', notif_off:'🔕 التذكيرات'
   },
   en:{
     settings:'⚙️ Settings', close:'Close', save:'Save ✅', sign_out:'Sign out', sign_in:'Sign in',
@@ -1367,22 +1377,42 @@ const I18N={
     saved:'✅ Saved', need_login:'Sign in to add tasks',
     name_required:'⚠️ Enter a task name first', task_saved:'✅ Task saved',
     streak:'🔥 Streak', points:'⭐ Points', best_streak:'🏆 Best streak',
-    notif_on:'🔔 On', notif_off:'🔕 Reminders',
-    day_sun:'Sunday', day_mon:'Monday', day_tue:'Tuesday', day_wed:'Wednesday',
-    day_thu:'Thursday', day_fri:'Friday', day_sat:'Saturday',
-    today:'Today', prev_day:'← Previous day', next_day:'Next day →',
-    confirm:'Confirm ✓', late:'Late', expired:'Missed', not_yet:'⏳ Not yet',
-    log_food:'🍽️ Log food', qada:'Makeup (50%)', loading:'Loading...',
-    nutrition:'🍽️ Daily nutrition', tasks_done:'tasks', pts_today:'pts today',
-    rest_day:'Rest day', cancel:'Cancel'
+    notif_on:'🔔 On', notif_off:'🔕 Reminders'
   }
 };
 function t(key){
   const lang=(USER_SETTINGS&&USER_SETTINGS.lang)==='en'?'en':'ar';
   return (I18N[lang]&&I18N[lang][key])||(I18N.ar[key])||key;
 }
-function dayLabel(jd){
-  return t(['day_sun','day_mon','day_tue','day_wed','day_thu','day_fri','day_sat'][jd]||'day_sun');
+// Built-in schedule strings → English when lang=en. Custom user text stays as typed.
+const TASK_EN={
+  'الفجر':'Fajr','الشروق':'Sunrise','الظهر':'Dhuhr','العصر':'Asr','المغرب':'Maghrib','العشاء':'Isha',
+  'صلاة الجمعة':'Friday prayer','الفطار':'Breakfast','الغدا':'Lunch','العشا':'Dinner',
+  'الورد اليومي':'Daily Quran','تحضير درس الاثنين':'Prep Monday lesson','تحضير درس الأربعاء':'Prep Wednesday lesson',
+  'تحضير البرمجة':'Programming prep','سيشن البرمجة':'Programming session','واجب البرمجة':'Programming homework',
+  'درس القرآن':'Quran class','سناك منتصف النهار':'Midday snack','سناك ٢ (بعد الظهر)':'Afternoon snack',
+  'سناك ٣ (مسائي خفيف)':'Evening snack','سناك قبل الجيم (السموثي الخارق)':'Pre-gym smoothie',
+  'وجبة بعد التمرين':'Post-workout meal','جيم — Upper Body':'Gym — Upper Body','جيم — Lower Body':'Gym — Lower Body',
+  'سباحة مع الكوتش':'Swim with coach','جاكوزي + بخار/ساونا':'Jacuzzi + steam/sauna','مع أخوك — جاكوزي + بخار':'With brother — jacuzzi + steam',
+  'نوم على الوقت':'Sleep on time','وقت حر':'Free time','وقت حر (قبل سناك الجيم)':'Free time (before gym snack)',
+  '١٥ دقيقة قراءة قرآن يومياً':'15 min daily Quran reading',
+  'حفظ آيات جديدة + مراجعة اللوح — ٤٥ دقيقة':'New ayahs + board review — 45 min',
+  'حفنة مكسرات نيئة + ثمرة فاكهة':'Handful of raw nuts + fruit',
+  'فاكهة خفيفة أو حفنة مكسرات — لو جعت قبل النوم':'Light fruit or nuts if hungry before bed',
+  'نام على الوقت — النوم المنتظم ضروري للعضل والتخسيس':'Sleep on time — consistent sleep matters for muscle and fat loss',
+  'ارجع نام بعدها ✓':'Go back to sleep after ✓',
+  'متأخّر':'Late','فات الوقت':'Missed','تأكيد':'Confirm'
+};
+function tn(text){
+  if(!text) return text;
+  if((USER_SETTINGS&&USER_SETTINGS.lang)!=='en') return text;
+  return TASK_EN[text]||text;
+}
+function applyTheme(){
+  const r=document.documentElement;
+  if(USER_SETTINGS.themeAccent) r.style.setProperty('--ac',USER_SETTINGS.themeAccent);
+  if(USER_SETTINGS.themeCard) r.style.setProperty('--c',USER_SETTINGS.themeCard);
+  if(USER_SETTINGS.themeBg){ r.style.setProperty('--bg',USER_SETTINGS.themeBg); document.body.style.background=USER_SETTINGS.themeBg; }
 }
 function applyI18n(){
   document.querySelectorAll('[data-i18n]').forEach(el=>{
@@ -1393,16 +1423,12 @@ function applyI18n(){
   if(setTitle) setTitle.textContent=t('settings');
   const closeBtn=document.getElementById('setCloseBtn');
   if(closeBtn) closeBtn.textContent=t('close');
+  const s1=document.querySelector('#sv1 + .sl, .st .sl');
+  // streak labels
   const labels=document.querySelectorAll('#sbar .sl');
   if(labels[0]) labels[0].textContent=t('streak');
   if(labels[1]) labels[1].textContent=t('points');
   if(labels[2]) labels[2].textContent=t('best_streak');
-  const prev=document.getElementById('btn-hist-prev');
-  const next=document.getElementById('btn-hist-next');
-  if(prev) prev.textContent=t('prev_day');
-  if(next) next.textContent=t('next_day');
-  const macroTitle=document.querySelector('.macrotitle');
-  if(macroTitle) macroTitle.textContent=t('nutrition');
 }
 const APP_ICON_PRESETS=['🏋️','📅','✅','🎯','💪','📖','⭐','🔥','🧠','🌙'];
 function renderIconPresets(){
@@ -1630,7 +1656,6 @@ function getAllTasks(jd,iso){
   const d=getEffectiveSched(jd);if(!d)return applyUserEditsToTasks([],effIso).sort((a,b)=>sortKey(a)-sortKey(b));
   const isAbdullah=fbAuth?.currentUser?.uid===ABDULLAH_UID;
   const frees=isAbdullah?(FREE_TIME[jd]||[]).map((f,i)=>[`fr-${jd}-${i}`,f.t,'free','🎮','وقت حر',f.d,0,null,null,false]):[];
-  // Prayer tracking is ONLY controlled by the setting — never forced on for any account.
   const showPrayers=!!USER_SETTINGS.trackPrayers;
   const prayers=showPrayers?buildPTasks(jd):[];
   const base=[...prayers,...d.ts,...frees];
@@ -3032,11 +3057,12 @@ async function deleteSavedReport(idx){
 function getDisplayDesc(task,iso){
   const log=(historyData[iso]||{}).foodLog?.[task[0]];
   if(log && log.description) return log.description;
-  return task[5];
+  return tn(task[5]);
 }
 
 function renderCard(task,isToday,jd){
   const[id,arTime,cat,ico,name,,pts,,hw,isEx]=task;
+  const dispName=tn(name);
   const done=DONE[id];
   const isDone=done!==undefined&&done!==false;
   const state=getState(task);
@@ -3057,7 +3083,7 @@ function renderCard(task,isToday,jd){
       }
     }
     const editBtns=isCustom?`<div style="display:flex;gap:4px;flex-shrink:0">${freeAct}<button class="cbtn" data-action="editSchedTask" data-id="${id}" data-jd="${jd}" style="padding:5px 9px;font-size:.68rem">✏️</button><button class="cbtn" data-action="deleteSchedTask" data-id="${id}" data-jd="${jd}" style="padding:5px 9px;font-size:.68rem;background:rgba(239,68,68,.1);border-color:rgba(239,68,68,.4);color:#ef4444">🗑️</button></div>`:(freeAct||'');
-    return`<div class="tc" data-c="free" style="${borderStyle}"><div class="tctime">${arTime}</div><div class="tcico">${ico}</div><div class="tcbody"><div class="tcname" style="color:${nameColor}">${name}</div><div class="tcdesc">${task[5]}</div></div>${editBtns}</div>`;
+    return`<div class="tc" data-c="free" style="${borderStyle}"><div class="tctime">${arTime}</div><div class="tcico">${ico}</div><div class="tcbody"><div class="tcname" style="color:${nameColor}">${dispName}</div><div class="tcdesc">${tn(task[5])}</div></div>${editBtns}</div>`;
   }
 
   const isSnack=cat==='snack';
@@ -3125,7 +3151,7 @@ function renderCard(task,isToday,jd){
 
   return`<div class="tc${isDone?' done':''}${isEx?' excx':''}${isDeleted?' excx':''}" data-c="${cat}" id="c-${id}" ${isDeleted?'style="opacity:.5"':''}>
     <div class="tctime">${arTime}</div><div class="tcico">${ico}</div>
-    <div class="tcbody"><div class="tcname">${name}</div><div class="tcdesc">${getDisplayDesc(task,SELECTED_DATE||TODAY)}</div>${hwH}${movedBadge}${customBadge}${deletedBadge}${loggedBadge}</div>
+    <div class="tcbody"><div class="tcname">${dispName}</div><div class="tcdesc">${getDisplayDesc(task,SELECTED_DATE||TODAY)}</div>${hwH}${movedBadge}${customBadge}${deletedBadge}${loggedBadge}</div>
     ${act}
   </div>`;
 }
@@ -3172,7 +3198,7 @@ function renderTabs(){
     const b=document.createElement('div');
     b.className=`tab${isT?' act':''}${j===todayJD()?' tod':''}`;
     b.dataset.jd=j;
-    b.innerHTML=`<div>${dayLabel(j)}</div>${isG?'<div class="gdot"></div>':''}`;
+    b.innerHTML=`<div>${DSHORT[j]}</div>${isG?'<div class="gdot"></div>':''}`;
     b.onclick=()=>{
       saveDay();
       // Use the single canonical Sat->Fri week function so tab dates and report
@@ -3297,6 +3323,12 @@ function openSettingsScreen(){
   const prayEl=document.getElementById('setTrackPrayers');
   if(showEl) showEl.checked=USER_SETTINGS.showTracking!==false;
   if(prayEl) prayEl.checked=!!USER_SETTINGS.trackPrayers;
+  const a=document.getElementById('themeAccent');
+  const c=document.getElementById('themeCard');
+  const b=document.getElementById('themeBg');
+  if(a) a.value=USER_SETTINGS.themeAccent||'#3b82f6';
+  if(c) c.value=USER_SETTINGS.themeCard||'#111827';
+  if(b) b.value=USER_SETTINGS.themeBg||'#0a0e1a';
   applyI18n();
   renderIconPresets();
   document.getElementById('settingsScreen')?.classList.add('open');
@@ -3343,7 +3375,9 @@ function updateAuthUI(user){
         </div>
       </div>`;
   }else{
-    btnEl.innerHTML=`${reportBtn}<button class="topbtn topbtn-signin" id="btn-signin">${t('sign_in')}</button>`;
+    btnEl.innerHTML=`${reportBtn}
+      <button type="button" class="topbtn" id="pm-settings" style="background:rgba(100,116,139,.15);border:1px solid var(--br);color:var(--tx)">${t('profile_settings')}</button>
+      <button class="topbtn topbtn-signin" id="btn-signin">${t('sign_in')}</button>`;
   }
 }
 
@@ -5664,6 +5698,15 @@ document.body.addEventListener('click',async e=>{
     showToast(t('saved'),1800);
     return;
   }
+  if(tgt.id==='setSaveThemeBtn'){
+    USER_SETTINGS.themeAccent=document.getElementById('themeAccent')?.value||'#3b82f6';
+    USER_SETTINGS.themeCard=document.getElementById('themeCard')?.value||'#111827';
+    USER_SETTINGS.themeBg=document.getElementById('themeBg')?.value||'#0a0e1a';
+    try{ await saveUserSettings(); }catch(e){}
+    applyTheme();
+    showToast(t('saved'),1800);
+    return;
+  }
   if(tgt.id==='setAddTaskBtn'){
     closeSettingsScreen();
     if(!fbAuth.currentUser){ showToast(t('need_login'),3000,'warn'); return; }
@@ -5826,6 +5869,15 @@ function revealApp(){
   const appEl=document.getElementById('app'); if(appEl) appEl.style.display='block';
   const fabEl=document.getElementById('aiFab'); if(fabEl) fabEl.classList.remove('hidden');
   updateNetworkBadge();
+  try{ applyTheme(); }catch(e){}
+  try{
+    if(USER_SETTINGS.lang==='en'){
+      document.documentElement.lang='en';
+      document.documentElement.dir='ltr';
+      document.body.style.direction='ltr';
+      applyI18n();
+    }
+  }catch(e){}
 }
 
 function initAppFlow(user){
