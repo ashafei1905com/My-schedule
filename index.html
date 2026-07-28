@@ -32,7 +32,32 @@
 <style>
 :root{--bg:#0a0e1a;--c:#111827;--c2:#1a2235;--br:#1e2d45;--ac:#3b82f6;--gr:#10b981;--or:#f59e0b;--rd:#ef4444;--pu:#8b5cf6;--ye:#fbbf24;--cy:#06b6d4;--pk:#ec4899;--tx:#f1f5f9;--mu:#64748b;--so:#94a3b8}
 *{margin:0;padding:0;box-sizing:border-box}
-body{font-family:'Cairo',sans-serif;background:var(--bg);color:var(--tx);direction:rtl}
+body{font-family:'Cairo',sans-serif;background:var(--bg);color:var(--tx)}
+html[dir="rtl"] body{direction:rtl}
+html[dir="ltr"] body{direction:ltr}
+html[dir="ltr"] .set-nav button,html[dir="ltr"] .profile-menu button{text-align:left}
+html[dir="ltr"] .tl{padding-right:0;padding-left:20px}
+html[dir="ltr"] .tl::before{right:auto;left:7px}
+html[dir="ltr"] .tc::before{right:auto;left:-24px}
+html[dir="ltr"] .tc[data-c]{border-right:none}
+html[dir="ltr"] .tc[data-c="prayer"]{border-left:3px solid var(--ye)}
+html[dir="ltr"] .tc[data-c="food"]{border-left:3px solid var(--or)}
+html[dir="ltr"] .tc[data-c="gym"]{border-left:3px solid var(--rd)}
+html[dir="ltr"] .tc[data-c="swim"]{border-left:3px solid var(--cy)}
+html[dir="ltr"] .tc[data-c="recovery"]{border-left:3px solid var(--gr)}
+html[dir="ltr"] .tc[data-c="quran"]{border-left:3px solid var(--ye)}
+html[dir="ltr"] .tc[data-c="prog"]{border-left:3px solid var(--pk)}
+html[dir="ltr"] .tc[data-c="sleep"]{border-left:3px solid var(--pu)}
+html[dir="ltr"] .tc[data-c="free"]{border-left:3px dashed #6366f1}
+html[dir="ltr"] .tc[data-c="snack"]{border-left:3px dotted #f472b6}
+html[dir="ltr"] .tc[data-c="sunrise"]{border-left:3px solid var(--or)}
+.modal-box{max-height:min(90vh,720px);overflow-y:auto}
+@media (max-width:700px){
+  .set-body{flex-direction:column}
+  .set-nav{width:100%;border-left:none;border-bottom:1px solid var(--br);padding:10px;display:flex;flex-wrap:wrap;gap:6px;max-height:none}
+  .set-nav button{width:auto;flex:1 1 auto;text-align:center;padding:10px 12px;margin:0}
+  .set-content{padding:16px 14px}
+}
 @keyframes spin{to{transform:rotate(360deg)}}
 @keyframes up{0%{opacity:1;transform:translateY(0) scale(1)}100%{opacity:0;transform:translateY(-40px) scale(1.3)}}
 @keyframes ti{from{opacity:0;transform:translateX(-50%) translateY(16px)}to{opacity:1;transform:translateX(-50%) translateY(0)}}
@@ -454,12 +479,24 @@ body{font-family:'Cairo',sans-serif;background:var(--bg);color:var(--tx);directi
           <p class="desc" data-i18n="sec_appearance_desc">أيقونة التطبيق وألوان الجدول.</p>
           <div class="icon-presets" id="iconPresets"></div>
           <p class="desc" style="margin-top:12px" data-i18n="icon_hint">بعد الاختيار، احذف التطبيق من الشاشة الرئيسية وأضفه من جديد لتحديث الأيقونة.</p>
-          <p class="desc" style="margin-top:16px" data-i18n="theme_accent">لون التمييز</p>
+          <p class="desc" style="margin-top:16px" data-i18n="theme_accent">Accent color</p>
           <div class="theme-swatches" id="swatchAccent"></div>
-          <p class="desc" style="margin-top:12px" data-i18n="theme_card">لون البطاقة</p>
+          <div style="display:flex;align-items:center;gap:10px;margin:6px 0 4px">
+            <label style="font-size:.75rem;color:var(--so)">Custom</label>
+            <input type="color" id="themeAccentPick" value="#3b82f6" style="width:42px;height:32px;border:none;background:transparent;cursor:pointer">
+          </div>
+          <p class="desc" style="margin-top:12px" data-i18n="theme_card">Card color</p>
           <div class="theme-swatches" id="swatchCard"></div>
-          <p class="desc" style="margin-top:12px" data-i18n="theme_bg">لون الخلفية</p>
+          <div style="display:flex;align-items:center;gap:10px;margin:6px 0 4px">
+            <label style="font-size:.75rem;color:var(--so)">Custom</label>
+            <input type="color" id="themeCardPick" value="#111827" style="width:42px;height:32px;border:none;background:transparent;cursor:pointer">
+          </div>
+          <p class="desc" style="margin-top:12px" data-i18n="theme_bg">Background</p>
           <div class="theme-swatches" id="swatchBg"></div>
+          <div style="display:flex;align-items:center;gap:10px;margin:6px 0 4px">
+            <label style="font-size:.75rem;color:var(--so)">Custom</label>
+            <input type="color" id="themeBgPick" value="#0a0e1a" style="width:42px;height:32px;border:none;background:transparent;cursor:pointer">
+          </div>
           <div class="set-actions" style="margin-top:16px">
             <button type="button" id="setSaveThemeBtn" class="fl-submit-btn" style="margin:0">حفظ المظهر ✅</button>
             <button type="button" id="setResetThemeBtn" class="altbtn">افتراضي</button>
@@ -604,8 +641,8 @@ body{font-family:'Cairo',sans-serif;background:var(--bg);color:var(--tx);directi
         <label style="font-size:.72rem;color:var(--so);font-weight:700;display:block;margin-bottom:8px">اللون</label>
         <div id="stColorRow" style="display:flex;gap:8px;flex-wrap:wrap"></div>
       </div>
-      <div class="set-row" style="border:none;padding:8px 0">
-        <label for="stFoodLog" style="font-size:.82rem;font-weight:700" data-i18n="food_log_opt">🍽️ تسجيل أكل؟</label>
+      <div id="stFoodLogRow" class="set-row" style="border:none;padding:8px 0;display:none">
+        <label for="stFoodLog" style="font-size:.82rem;font-weight:700" data-i18n="food_log_opt">🍽️ Log food for this task?</label>
         <input type="checkbox" id="stFoodLog" style="width:20px;height:20px;accent-color:var(--ac)">
       </div>
     </div>
@@ -1262,30 +1299,62 @@ function stRenderColorChips(){
 
 // Opens the editor. existingTask (a full task tuple) present = edit mode, prefills
 // every field from it; absent = add mode, blank form with sensible defaults.
+function isFoodishName(name){
+  const s=String(name||'').toLowerCase();
+  return /طعام|أكل|اكل|وجبة|فطار|فطور|غداء|غدا|عشاء|عشا|سناك|سناكس|breakfast|lunch|dinner|snack|meal|food|eat|coffee|شاي|قهوة|عصير/.test(s);
+}
+function stUpdateFoodLogVisibility(){
+  const name=(document.getElementById('stName')?.value||'').trim();
+  const row=document.getElementById('stFoodLogRow');
+  const foodEl=document.getElementById('stFoodLog');
+  if(!row) return;
+  const show=isFoodishName(name)||!!(foodEl&&foodEl.checked);
+  row.style.display=show?'flex':'none';
+  if(show&&foodEl&&isFoodishName(name)) foodEl.checked=true;
+}
 function openScheduleTaskEditor(jd,existingTask){
   ST_ACTIVE_JD=jd;
   ST_ACTIVE_TASK_ID=existingTask?existingTask[0]:null;
   ST_SELECTED_COLOR=(existingTask&&existingTask[10])||OB_TASK_COLORS[0];
   ST_SELECTED_ICON=(existingTask&&existingTask[3])||'✨';
+  const en=(USER_SETTINGS.lang==='en');
 
   const titleEl=document.getElementById('stTitle');
-  if(titleEl) titleEl.textContent=existingTask?'تعديل المهمة':'إضافة مهمة';
+  if(titleEl) titleEl.textContent=existingTask?(en?'Edit task':'تعديل المهمة'):(en?'Add task':'إضافة مهمة');
+  const box=document.querySelector('#schedTaskModal .modal-box');
+  if(box) box.style.textAlign=en?'left':'right';
 
   const nameEl=document.getElementById('stName');
   const timeEl=document.getElementById('stTime');
   const descEl=document.getElementById('stDesc');
   const ptsEl=document.getElementById('stPts');
-  if(nameEl) nameEl.value=existingTask?existingTask[4]:'';
-  if(descEl) descEl.value=existingTask?(existingTask[5]||''):'';
-  if(ptsEl) ptsEl.value=existingTask?(existingTask[6]||5):5;
+  if(nameEl){
+    nameEl.value=existingTask?existingTask[4]:'';
+    nameEl.placeholder=en?'e.g. reading, study, walk':'مثلاً: قراءة، مذاكرة، مشي';
+    nameEl.style.textAlign=en?'left':'right';
+    nameEl.oninput=stUpdateFoodLogVisibility;
+  }
+  if(descEl){
+    descEl.value=existingTask?(existingTask[5]||''):'';
+    descEl.placeholder=en?'Extra details':'تفاصيل إضافية';
+    descEl.style.textAlign=en?'left':'right';
+  }
+  if(ptsEl){ ptsEl.value=existingTask?(existingTask[6]||5):5; ptsEl.style.textAlign=en?'left':'right'; }
   if(timeEl){
     const raw=existingTask?existingTask[1]:'';
     const mins=raw?toMin(raw):9*60;
     const h=Math.floor(mins/60),m=mins%60;
     timeEl.value=`${String(h).padStart(2,'0')}:${String(m).padStart(2,'0')}`;
+    timeEl.style.textAlign=en?'left':'right';
+    timeEl.style.direction='ltr';
   }
   const foodEl=document.getElementById('stFoodLog');
-  if(foodEl) foodEl.checked=!!(existingTask&&(existingTask[2]==='food'||existingTask[2]==='snack'));
+  if(foodEl) foodEl.checked=!!(existingTask&&(existingTask[2]==='food'||existingTask[2]==='snack'||existingTask.foodLog));
+  stUpdateFoodLogVisibility();
+  const saveBtn=document.getElementById('stSaveBtn');
+  const cancelBtn=document.getElementById('stCancelBtn');
+  if(saveBtn) saveBtn.textContent=en?'Save ✅':'حفظ ✅';
+  if(cancelBtn) cancelBtn.textContent=en?'Cancel':'إلغاء';
 
   stRenderColorChips();
   stRenderIconRow();
@@ -1577,13 +1646,13 @@ function applyI18n(){
 const APP_ICON_PRESETS=['🏋️','📅','✅','🎯','💪','📖','⭐','🔥','🧠','🌙'];
 const TASK_ICON_PRESETS=['✨','📚','💻','🏋️','🍽️','🥤','🏃','🧘','📝','🎵','💤','🎯','🧠','🕌','🏊','📖','⭐','🔥','💪','🎮'];
 const THEME_PALETTES={
-  accent:['#3b82f6','#10b981','#f59e0b','#ef4444','#8b5cf6','#ec4899','#06b6d4','#f97316','#14b8a6','#a855f7','#eab308','#64748b'],
-  card:['#111827','#1a2235','#0f172a','#1e293b','#18181b','#27272a','#1c1917','#292524','#3f3f46','#1e1b4b'],
-  bg:['#0a0e1a','#020617','#0f172a','#18181b','#1c1917','#000000','#111827','#0c0a09','#1a1a2e','#16213e']
+  accent:['#3b82f6','#2563eb','#1d4ed8','#60a5fa','#10b981','#059669','#34d399','#f59e0b','#d97706','#fbbf24','#ef4444','#dc2626','#f87171','#8b5cf6','#7c3aed','#a78bfa','#ec4899','#db2777','#f472b6','#06b6d4','#0891b2','#22d3ee','#f97316','#ea580c','#14b8a6','#0d9488','#a855f7','#9333ea','#eab308','#ca8a04','#64748b','#94a3b8','#ffffff','#000000'],
+  card:['#111827','#1a2235','#0f172a','#1e293b','#18181b','#27272a','#1c1917','#292524','#3f3f46','#1e1b4b','#312e81','#164e63','#14532d','#7c2d12','#4a044e'],
+  bg:['#0a0e1a','#020617','#0f172a','#18181b','#1c1917','#000000','#111827','#0c0a09','#1a1a2e','#16213e','#0b1324','#1a0a0a','#0a1a12','#1a1025']
 };
 const THEME_DEFAULTS={themeAccent:'#3b82f6',themeCard:'#111827',themeBg:'#0a0e1a'};
 function renderThemeSwatches(){
-  const bind=(rowId,hiddenId,colors)=>{
+  const bind=(rowId,hiddenId,colors,pickId)=>{
     const row=document.getElementById(rowId);
     const hid=document.getElementById(hiddenId);
     if(!row||!hid) return;
@@ -1595,13 +1664,21 @@ function renderThemeSwatches(){
       b.className='theme-swatch'+(col.toLowerCase()===cur.toLowerCase()?' sel':'');
       b.style.background=col;
       b.title=col;
-      b.onclick=()=>{ hid.value=col; renderThemeSwatches(); applyThemePreview(); };
+      b.onclick=()=>{
+        hid.value=col;
+        const p=document.getElementById(pickId);
+        if(p) p.value=col;
+        renderThemeSwatches();
+        applyThemePreview();
+      };
       row.appendChild(b);
     });
+    const p=document.getElementById(pickId);
+    if(p){ p.value=cur; p.onchange=()=>{ hid.value=p.value; renderThemeSwatches(); applyThemePreview(); }; }
   };
-  bind('swatchAccent','themeAccent',THEME_PALETTES.accent);
-  bind('swatchCard','themeCard',THEME_PALETTES.card);
-  bind('swatchBg','themeBg',THEME_PALETTES.bg);
+  bind('swatchAccent','themeAccent',THEME_PALETTES.accent,'themeAccentPick');
+  bind('swatchCard','themeCard',THEME_PALETTES.card,'themeCardPick');
+  bind('swatchBg','themeBg',THEME_PALETTES.bg,'themeBgPick');
 }
 function applyThemePreview(){
   const r=document.documentElement;
@@ -2840,13 +2917,18 @@ function showPrayerStep(){
   const hasSunnah=!!PMETA[pk]?.sunnah;
   const totalSteps=hasSunnah?4:3;
   if(step>=totalSteps){finishPrayerFlow();return;}
+  const en=(USER_SETTINGS.lang==='en');
+  const dispName=tn(name)||name;
 
   const modal=document.getElementById('prayerModal');
   if(modal){
     const sEl=document.getElementById('modalStep');
-    if(sEl) sEl.textContent=`السؤال ${step+1} من ${totalSteps}`;
+    if(sEl) sEl.textContent=en?`Question ${step+1} of ${totalSteps}`:`السؤال ${step+1} من ${totalSteps}`;
     const backBtn=document.getElementById('btn-prayer-back');
-    if(backBtn){backBtn.disabled=false;backBtn.style.opacity='1';}
+    if(backBtn){
+      backBtn.disabled=false;backBtn.style.opacity='1';
+      backBtn.textContent=en?'← Back':'رجوع ←';
+    }
     modal.classList.add('open');
   }
 
@@ -2854,22 +2936,30 @@ function showPrayerStep(){
   const subEl=document.getElementById('modalSub');
 
   if(step===0){
-    if(qEl) qEl.textContent='أين صليت؟';
-    if(subEl) subEl.textContent='اختر مكان الصلاة';
-    renderOpts([{label:'المسجد 🕌',pts:5,gold:true},{label:'البيت 🏠',pts:3,gold:false},{label:'الجيم 🏋️',pts:2,gold:false},{label:'أخرى 📍',pts:1,gold:false}],'location');
+    if(qEl) qEl.textContent=en?'Where did you pray?':'أين صليت؟';
+    if(subEl) subEl.textContent=en?'Choose the place of prayer':'اختر مكان الصلاة';
+    renderOpts(en
+      ?[{label:'Mosque 🕌',pts:5,gold:true},{label:'Home 🏠',pts:3,gold:false},{label:'Gym 🏋️',pts:2,gold:false},{label:'Other 📍',pts:1,gold:false}]
+      :[{label:'المسجد 🕌',pts:5,gold:true},{label:'البيت 🏠',pts:3,gold:false},{label:'الجيم 🏋️',pts:2,gold:false},{label:'أخرى 📍',pts:1,gold:false}],'location');
   }else if(step===1){
-    if(qEl) qEl.textContent=`كيف أديت صلاة ${name}؟`;
-    if(subEl) subEl.textContent='اختر طريقة الأداء';
-    renderOpts([{label:'جماعة 👥',pts:4,gold:true},{label:'منفرد 🧍',pts:2,gold:false}],'style');
+    if(qEl) qEl.textContent=en?`How did you pray ${dispName}?`:`كيف أديت صلاة ${name}؟`;
+    if(subEl) subEl.textContent=en?'Choose how you prayed':'اختر طريقة الأداء';
+    renderOpts(en
+      ?[{label:'In congregation 👥',pts:4,gold:true},{label:'Alone 🧍',pts:2,gold:false}]
+      :[{label:'جماعة 👥',pts:4,gold:true},{label:'منفرد 🧍',pts:2,gold:false}],'style');
   }else if(step===2){
-    if(qEl) qEl.textContent='هل قلت أذكار الصلاة؟';
-    if(subEl) subEl.textContent='سبحان الله · الحمد لله · الله أكبر';
-    renderOpts([{label:'نعم ✅',pts:3,gold:true},{label:'لا ❌',pts:1,gold:false}],'dhikr');
+    if(qEl) qEl.textContent=en?'Did you say the post-prayer dhikr?':'هل قلت أذكار الصلاة؟';
+    if(subEl) subEl.textContent=en?'SubhanAllah · Alhamdulillah · Allahu Akbar':'سبحان الله · الحمد لله · الله أكبر';
+    renderOpts(en
+      ?[{label:'Yes ✅',pts:3,gold:true},{label:'No ❌',pts:1,gold:false}]
+      :[{label:'نعم ✅',pts:3,gold:true},{label:'لا ❌',pts:1,gold:false}],'dhikr');
   }else if(step===3){
-    const sunnahText=PMETA[pk]?.sunnah||`سنة ${name}`;
-    if(qEl) qEl.textContent=`هل صليت ${sunnahText}؟`;
-    if(subEl) subEl.textContent='السنة الراتبة';
-    renderOpts([{label:'نعم ✅',pts:3,gold:true},{label:'لا ❌',pts:1,gold:false}],'sunnah');
+    const sunnahText=PMETA[pk]?.sunnah||(en?`Sunnah of ${dispName}`:`سنة ${name}`);
+    if(qEl) qEl.textContent=en?`Did you pray ${sunnahText}?`:`هل صليت ${sunnahText}؟`;
+    if(subEl) subEl.textContent=en?'The regular sunnah':'السنة الراتبة';
+    renderOpts(en
+      ?[{label:'Yes ✅',pts:3,gold:true},{label:'No ❌',pts:1,gold:false}]
+      :[{label:'نعم ✅',pts:3,gold:true},{label:'لا ❌',pts:1,gold:false}],'sunnah');
   }
 }
 
@@ -4697,22 +4787,31 @@ function fmtMacroShort(m){
 
 function openFoodLogModal(task,existingEntry,prefillText){
   FL_ACTIVE_TASK=task;
-  // Session-scoped clarification counter — tracks how many needs_info rounds have
-  // happened for THIS modal open, regardless of which button path (flHandleSubmit vs
-  // flHandleAskAnswer) triggered it. This is what actually closes the loop: previously
-  // the one-round cap only applied within flHandleAskAnswer, but resubmitting through
-  // flHandleSubmit (e.g. after the pre-filled fallback text) called the extractor with
-  // priorTurns=null — a completely fresh context that could ask about a DIFFERENT
-  // ambiguous item and reset the count back to zero, which is what produced the
-  // "keeps looping" symptom even though no single function ever asked a second
-  // question in a row.
   FL_CLARIFY_ROUNDS=0;
+  const en=(USER_SETTINGS.lang==='en');
+  const meal=tn(task[4])||task[4];
   const modal=document.getElementById('foodLogModal');
   const titleEl=document.getElementById('flTitle');
   const subEl=document.getElementById('flSub');
   const isEdit=!!existingEntry;
-  if(titleEl) titleEl.textContent=isEdit?`تعديل "${task[4]}"`:`إيه اللي أكلته في "${task[4]}"؟`;
-  if(subEl) subEl.textContent=isEdit?'عدّل الوصف واحسب القيم من جديد — هيستبدل التسجيل القديم بالكامل':(prefillText?'راجع الوصف اللي فهمته من كلامك، وعدّله لو محتاج، وبعدين احسب':'اختار من الخيارات المحفوظة، أو اكتب إيه اللي أكلته بالظبط');
+  if(titleEl) titleEl.textContent=isEdit
+    ?(en?`Edit "${meal}"`:`تعديل "${task[4]}"`)
+    :(en?`What did you eat for "${meal}"?`:`إيه اللي أكلته في "${task[4]}"؟`);
+  if(subEl) subEl.textContent=isEdit
+    ?(en?'Update the description and recalculate — this replaces the old log':`عدّل الوصف واحسب القيم من جديد — هيستبدل التسجيل القديم بالكامل`)
+    :(prefillText
+      ?(en?'Review what I understood, edit if needed, then calculate':'راجع الوصف اللي فهمته من كلامك، وعدّله لو محتاج، وبعدين احسب')
+      :(en?'Pick a saved option, or type exactly what you ate':'اختار من الخيارات المحفوظة، أو اكتب إيه اللي أكلته بالظبط'));
+  const stepInd=document.getElementById('flStepInd');
+  if(stepInd) stepInd.textContent=en?'Food log':'تسجيل الأكل';
+  const submitBtn=document.getElementById('flSubmitBtn');
+  if(submitBtn) submitBtn.textContent=en?'Calculate & save ✅':'احسب واحفظ ✅';
+  const cancelBtn=document.querySelector('#foodLogModal .modal-back-btn, #flCancelBtn');
+  if(cancelBtn) cancelBtn.textContent=en?'Cancel':'إلغاء';
+  const divEl=document.querySelector('#foodLogModal .fl-divider span');
+  if(divEl) divEl.textContent=en?'Or type exactly what you ate':'أو اكتب إيه اللي أكلته بالظبط';
+  const ta=document.getElementById('flTextarea')||document.getElementById('flDesc');
+  if(ta) ta.placeholder=en?'e.g. grilled chicken with rice and salad, cup of yogurt':'مثال: طبق فراخ مشوي مع رز وسلطة، وكوب لبن';
 
   // Reset to the choose step every time it opens.
   document.getElementById('flChooseStep').style.display='block';
@@ -4740,7 +4839,7 @@ function openFoodLogModal(task,existingEntry,prefillText){
     const mealKey=task[12];
     const opts=mealKey?(MEAL_OPTIONS[mealKey]||[]):[];
     if(!opts.length){
-      optsWrap.innerHTML=`<div style="color:var(--mu);font-size:.76rem;text-align:center;padding:6px">لسه مفيش خيارات محفوظة للوجبة دي — اكتب إيه اللي أكلته وهيتحفظ لو عايز</div>`;
+      optsWrap.innerHTML=`<div style="color:var(--mu);font-size:.76rem;text-align:center;padding:6px">${en?'No saved options for this meal yet — type what you ate and it can be saved.':'لسه مفيش خيارات محفوظة للوجبة دي — اكتب إيه اللي أكلته وهيتحفظ لو عايز'}</div>`;
     }else{
       optsWrap.innerHTML=opts.slice().reverse().map((o,i)=>{
         const realIdx=opts.length-1-i;
