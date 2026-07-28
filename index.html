@@ -51,7 +51,11 @@ html[dir="ltr"] .tc[data-c="sleep"]{border-left:3px solid var(--pu)}
 html[dir="ltr"] .tc[data-c="free"]{border-left:3px dashed #6366f1}
 html[dir="ltr"] .tc[data-c="snack"]{border-left:3px dotted #f472b6}
 html[dir="ltr"] .tc[data-c="sunrise"]{border-left:3px solid var(--or)}
-.modal-box{max-height:min(90vh,720px);overflow-y:auto}
+.modal-box{max-height:min(90vh,720px);overflow-y:auto;scrollbar-width:thin;scrollbar-color:rgba(100,116,139,.45) transparent}
+.modal-box::-webkit-scrollbar{width:5px}
+.modal-box::-webkit-scrollbar-track{background:transparent;margin:12px 0}
+.modal-box::-webkit-scrollbar-thumb{background:rgba(100,116,139,.4);border-radius:8px}
+.modal-box::-webkit-scrollbar-thumb:hover{background:rgba(148,163,184,.55)}
 @media (max-width:700px){
   .set-body{flex-direction:column}
   .set-nav{width:100%;border-left:none;border-bottom:1px solid var(--br);padding:10px;display:flex;flex-wrap:wrap;gap:6px;max-height:none}
@@ -224,9 +228,19 @@ html[dir="ltr"] .tc[data-c="sunrise"]{border-left:3px solid var(--or)}
 .icon-presets{display:flex;flex-wrap:wrap;gap:10px}
 .icon-preset{width:48px;height:48px;border-radius:12px;border:2px solid var(--br);background:var(--c);cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:1.5rem}
 .icon-preset.sel{border-color:var(--ac);box-shadow:0 0 0 1px var(--ac)}
-.theme-swatches{display:flex;flex-wrap:wrap;gap:8px;margin:8px 0 4px}
-.theme-swatch{width:36px;height:36px;border-radius:10px;border:2px solid transparent;cursor:pointer;box-shadow:inset 0 0 0 1px rgba(255,255,255,.12)}
-.theme-swatch.sel{border-color:#fff;box-shadow:0 0 0 2px var(--ac)}
+.theme-palette-row{display:flex;gap:14px;overflow-x:auto;padding:8px 4px 14px;scrollbar-width:none;-webkit-overflow-scrolling:touch}
+.theme-palette-row::-webkit-scrollbar{display:none}
+.theme-preset{flex-shrink:0;display:flex;flex-direction:column;align-items:center;gap:8px;background:transparent;border:none;cursor:pointer;padding:0;font-family:'Cairo',sans-serif}
+.theme-preset-circle{width:56px;height:56px;border-radius:50%;border:3px solid transparent;box-shadow:0 2px 10px rgba(0,0,0,.35);transition:transform .15s,box-shadow .15s,border-color .15s}
+.theme-preset:hover .theme-preset-circle{transform:scale(1.06)}
+.theme-preset.sel .theme-preset-circle{border-color:#fff;box-shadow:0 0 0 3px var(--ac),0 4px 16px rgba(0,0,0,.4)}
+.theme-preset-label{font-size:.68rem;font-weight:700;color:var(--so);max-width:76px;text-align:center;line-height:1.2}
+.theme-preset.sel .theme-preset-label{color:var(--tx)}
+.theme-custom-panel{display:none;margin-top:12px;padding:14px;background:var(--c);border:1px solid var(--br);border-radius:14px}
+.theme-custom-panel.open{display:block}
+.theme-custom-row{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:10px 0;border-bottom:1px solid var(--br)}
+.theme-custom-row:last-child{border-bottom:none}
+.theme-custom-row label{font-size:.82rem;font-weight:700}
 .task-icon-row{display:flex;flex-wrap:wrap;gap:8px}
 .task-icon-btn{width:40px;height:40px;border-radius:10px;border:2px solid var(--br);background:var(--c);cursor:pointer;font-size:1.2rem;display:flex;align-items:center;justify-content:center}
 .task-icon-btn.sel{border-color:var(--ac);box-shadow:0 0 0 1px var(--ac)}
@@ -480,31 +494,30 @@ html[dir="ltr"] .tc[data-c="sunrise"]{border-left:3px solid var(--or)}
           <p class="desc" data-i18n="sec_appearance_desc">أيقونة التطبيق وألوان الجدول.</p>
           <div class="icon-presets" id="iconPresets"></div>
           <p class="desc" style="margin-top:12px" data-i18n="icon_hint">بعد الاختيار، احذف التطبيق من الشاشة الرئيسية وأضفه من جديد لتحديث الأيقونة.</p>
-          <p class="desc" style="margin-top:16px" data-i18n="theme_accent">Accent color</p>
-          <div class="theme-swatches" id="swatchAccent"></div>
-          <div style="display:flex;align-items:center;gap:10px;margin:6px 0 4px">
-            <label style="font-size:.75rem;color:var(--so)">Custom</label>
-            <input type="color" id="themeAccentPick" value="#3b82f6" style="width:42px;height:32px;border:none;background:transparent;cursor:pointer">
-          </div>
-          <p class="desc" style="margin-top:12px" data-i18n="theme_card">Card color</p>
-          <div class="theme-swatches" id="swatchCard"></div>
-          <div style="display:flex;align-items:center;gap:10px;margin:6px 0 4px">
-            <label style="font-size:.75rem;color:var(--so)">Custom</label>
-            <input type="color" id="themeCardPick" value="#111827" style="width:42px;height:32px;border:none;background:transparent;cursor:pointer">
-          </div>
-          <p class="desc" style="margin-top:12px" data-i18n="theme_bg">Background</p>
-          <div class="theme-swatches" id="swatchBg"></div>
-          <div style="display:flex;align-items:center;gap:10px;margin:6px 0 4px">
-            <label style="font-size:.75rem;color:var(--so)">Custom</label>
-            <input type="color" id="themeBgPick" value="#0a0e1a" style="width:42px;height:32px;border:none;background:transparent;cursor:pointer">
+          <p class="desc" style="margin-top:18px" data-i18n="color_palette">Color palette</p>
+          <div class="theme-palette-row" id="themePaletteRow"></div>
+          <div class="theme-custom-panel" id="themeCustomPanel">
+            <div class="theme-custom-row">
+              <label data-i18n="theme_accent">Accent</label>
+              <input type="color" id="themeAccentPick" value="#3b82f6" style="width:42px;height:32px;border:none;background:transparent;cursor:pointer">
+            </div>
+            <div class="theme-custom-row">
+              <label data-i18n="theme_card">Card</label>
+              <input type="color" id="themeCardPick" value="#111827" style="width:42px;height:32px;border:none;background:transparent;cursor:pointer">
+            </div>
+            <div class="theme-custom-row">
+              <label data-i18n="theme_bg">Background</label>
+              <input type="color" id="themeBgPick" value="#0a0e1a" style="width:42px;height:32px;border:none;background:transparent;cursor:pointer">
+            </div>
           </div>
           <div class="set-actions" style="margin-top:16px">
-            <button type="button" id="setSaveThemeBtn" class="fl-submit-btn" style="margin:0">حفظ المظهر ✅</button>
-            <button type="button" id="setResetThemeBtn" class="altbtn">افتراضي</button>
+            <button type="button" id="setSaveThemeBtn" class="fl-submit-btn" style="margin:0">Save appearance ✅</button>
+            <button type="button" id="setResetThemeBtn" class="altbtn">Default</button>
           </div>
           <input type="hidden" id="themeAccent" value="#3b82f6">
           <input type="hidden" id="themeCard" value="#111827">
           <input type="hidden" id="themeBg" value="#0a0e1a">
+          <input type="hidden" id="themePresetId" value="default">
         </div>
         <div class="set-section" id="setsec-language">
           <h3 data-i18n="sec_language">اللغة / Language</h3>
@@ -1482,6 +1495,7 @@ const I18N={
     protein:'بروتين', carbs:'كارب', fats:'دهون', fiber:'ألياف', kcal:'سعرة',
     rest_day:'يوم راحة', save_theme:'حفظ المظهر ✅', reset_theme:'افتراضي',
     theme_accent:'لون التمييز', theme_card:'لون البطاقة', theme_bg:'لون الخلفية',
+    color_palette:'لوحة الألوان',
     ai_title:'🤖 مساعد الجدول', ai_ready:'جاهز للمساعدة', ai_close:'إغلاق', ai_send:'إرسال',
     ai_placeholder:'اكتب أمرك...', ai_welcome:'👋 أهلاً! قولّي أي حاجة عايز تعملها في جدولك.',
     not_yet:'⏳ لسه مجاش وقتها', expired:'فات الوقت', late:'متأخر', log_food:'🍽️ سجل الأكل',
@@ -1514,6 +1528,7 @@ const I18N={
     protein:'Protein', carbs:'Carbs', fats:'Fats', fiber:'Fiber', kcal:'kcal',
     rest_day:'Rest day', save_theme:'Save appearance ✅', reset_theme:'Default',
     theme_accent:'Accent color', theme_card:'Card color', theme_bg:'Background',
+    color_palette:'Color palette',
     ai_title:'🤖 Schedule assistant', ai_ready:'Ready to help', ai_close:'Close', ai_send:'Send',
     ai_placeholder:'Type a command...', ai_welcome:'👋 Hi! Tell me anything you want to do with your schedule.',
     not_yet:'⏳ Not yet', expired:'Missed', late:'Late', log_food:'🍽️ Log food',
@@ -1662,40 +1677,105 @@ function applyI18n(){
 }
 const APP_ICON_PRESETS=['🏋️','📅','✅','🎯','💪','📖','⭐','🔥','🧠','🌙'];
 const TASK_ICON_PRESETS=['✨','📚','💻','🏋️','🍽️','🥤','🏃','🧘','📝','🎵','💤','🎯','🧠','🕌','🏊','📖','⭐','🔥','💪','🎮'];
-const THEME_PALETTES={
-  accent:['#3b82f6','#2563eb','#1d4ed8','#60a5fa','#10b981','#059669','#34d399','#f59e0b','#d97706','#fbbf24','#ef4444','#dc2626','#f87171','#8b5cf6','#7c3aed','#a78bfa','#ec4899','#db2777','#f472b6','#06b6d4','#0891b2','#22d3ee','#f97316','#ea580c','#14b8a6','#0d9488','#a855f7','#9333ea','#eab308','#ca8a04','#64748b','#94a3b8','#ffffff','#000000'],
-  card:['#111827','#1a2235','#0f172a','#1e293b','#18181b','#27272a','#1c1917','#292524','#3f3f46','#1e1b4b','#312e81','#164e63','#14532d','#7c2d12','#4a044e'],
-  bg:['#0a0e1a','#020617','#0f172a','#18181b','#1c1917','#000000','#111827','#0c0a09','#1a1a2e','#16213e','#0b1324','#1a0a0a','#0a1a12','#1a1025']
-};
 const THEME_DEFAULTS={themeAccent:'#3b82f6',themeCard:'#111827',themeBg:'#0a0e1a'};
+// Samsung-style curated palettes — each sets accent + card + background together.
+const THEME_PRESETS=[
+  {id:'default', name:{en:'Default',ar:'افتراضي'}, accent:'#3b82f6', card:'#111827', bg:'#0a0e1a'},
+  {id:'ocean', name:{en:'Ocean',ar:'محيط'}, accent:'#06b6d4', card:'#0f172a', bg:'#020617'},
+  {id:'sunset', name:{en:'Sunset',ar:'غروب'}, accent:'#f97316', card:'#1c1917', bg:'#0c0a09'},
+  {id:'amoled', name:{en:'AMOLED',ar:'أسود'}, accent:'#a855f7', card:'#000000', bg:'#000000'},
+  {id:'forest', name:{en:'Forest',ar:'غابة'}, accent:'#10b981', card:'#14532d', bg:'#0a1a12'},
+  {id:'rose', name:{en:'Rose',ar:'وردي'}, accent:'#ec4899', card:'#1a1025', bg:'#0f0a14'}
+];
+function themePresetCircleStyle(p){
+  // Tri-split circle: accent / card / background (like Samsung palette previews)
+  return `background:conic-gradient(from 210deg, ${p.accent} 0deg 120deg, ${p.card} 120deg 240deg, ${p.bg} 240deg 360deg);`;
+}
+function matchThemePresetId(accent,card,bg){
+  const a=(accent||'').toLowerCase(), c=(card||'').toLowerCase(), b=(bg||'').toLowerCase();
+  const hit=THEME_PRESETS.find(p=>p.accent.toLowerCase()===a&&p.card.toLowerCase()===c&&p.bg.toLowerCase()===b);
+  return hit?hit.id:'custom';
+}
+function applyThemeColors(accent,card,bg,presetId){
+  const aEl=document.getElementById('themeAccent');
+  const cEl=document.getElementById('themeCard');
+  const bEl=document.getElementById('themeBg');
+  const idEl=document.getElementById('themePresetId');
+  if(aEl) aEl.value=accent;
+  if(cEl) cEl.value=card;
+  if(bEl) bEl.value=bg;
+  if(idEl) idEl.value=presetId||matchThemePresetId(accent,card,bg);
+  const ap=document.getElementById('themeAccentPick');
+  const cp=document.getElementById('themeCardPick');
+  const bp=document.getElementById('themeBgPick');
+  if(ap) ap.value=accent;
+  if(cp) cp.value=card;
+  if(bp) bp.value=bg;
+  applyThemePreview();
+}
 function renderThemeSwatches(){
-  const bind=(rowId,hiddenId,colors,pickId)=>{
-    const row=document.getElementById(rowId);
-    const hid=document.getElementById(hiddenId);
-    if(!row||!hid) return;
-    const cur=hid.value||colors[0];
-    row.innerHTML='';
-    colors.forEach(col=>{
-      const b=document.createElement('button');
-      b.type='button';
-      b.className='theme-swatch'+(col.toLowerCase()===cur.toLowerCase()?' sel':'');
-      b.style.background=col;
-      b.title=col;
-      b.onclick=()=>{
-        hid.value=col;
-        const p=document.getElementById(pickId);
-        if(p) p.value=col;
-        renderThemeSwatches();
-        applyThemePreview();
-      };
-      row.appendChild(b);
-    });
-    const p=document.getElementById(pickId);
-    if(p){ p.value=cur; p.onchange=()=>{ hid.value=p.value; renderThemeSwatches(); applyThemePreview(); }; }
+  const row=document.getElementById('themePaletteRow');
+  if(!row) return;
+  const en=(USER_SETTINGS.lang==='en');
+  const curA=document.getElementById('themeAccent')?.value||THEME_DEFAULTS.themeAccent;
+  const curC=document.getElementById('themeCard')?.value||THEME_DEFAULTS.themeCard;
+  const curB=document.getElementById('themeBg')?.value||THEME_DEFAULTS.themeBg;
+  const activeId=matchThemePresetId(curA,curC,curB);
+  if(document.getElementById('themePresetId')) document.getElementById('themePresetId').value=activeId;
+  const customOpen=activeId==='custom';
+  const panel=document.getElementById('themeCustomPanel');
+  if(panel) panel.classList.toggle('open',customOpen);
+
+  row.innerHTML='';
+  THEME_PRESETS.forEach(p=>{
+    const btn=document.createElement('button');
+    btn.type='button';
+    btn.className='theme-preset'+(activeId===p.id?' sel':'');
+    btn.innerHTML=`<div class="theme-preset-circle" style="${themePresetCircleStyle(p)}"></div><span class="theme-preset-label">${en?p.name.en:p.name.ar}</span>`;
+    btn.onclick=async()=>{
+      applyThemeColors(p.accent,p.card,p.bg,p.id);
+      USER_SETTINGS.themeAccent=p.accent;
+      USER_SETTINGS.themeCard=p.card;
+      USER_SETTINGS.themeBg=p.bg;
+      USER_SETTINGS.themePresetId=p.id;
+      try{ await saveUserSettings(); }catch(e){}
+      applyTheme();
+      renderThemeSwatches();
+      showToast(t('saved'),1400);
+    };
+    row.appendChild(btn);
+  });
+  // Custom circle at the end
+  const custom=document.createElement('button');
+  custom.type='button';
+  custom.className='theme-preset'+(activeId==='custom'?' sel':'');
+  custom.innerHTML=`<div class="theme-preset-circle" style="background:conic-gradient(red,yellow,lime,aqua,blue,magenta,red);display:flex;align-items:center;justify-content:center;font-size:1.2rem;color:#fff;text-shadow:0 1px 3px #000">✎</div><span class="theme-preset-label">${en?'Custom':'مخصص'}</span>`;
+  custom.onclick=()=>{
+    if(panel) panel.classList.add('open');
+    document.querySelectorAll('.theme-preset').forEach(b=>b.classList.remove('sel'));
+    custom.classList.add('sel');
+    if(document.getElementById('themePresetId')) document.getElementById('themePresetId').value='custom';
   };
-  bind('swatchAccent','themeAccent',THEME_PALETTES.accent,'themeAccentPick');
-  bind('swatchCard','themeCard',THEME_PALETTES.card,'themeCardPick');
-  bind('swatchBg','themeBg',THEME_PALETTES.bg,'themeBgPick');
+  row.appendChild(custom);
+
+  // Wire custom pickers
+  ['themeAccentPick','themeCardPick','themeBgPick'].forEach(id=>{
+    const el=document.getElementById(id);
+    if(!el) return;
+    el.onchange=async()=>{
+      const a=document.getElementById('themeAccentPick')?.value||THEME_DEFAULTS.themeAccent;
+      const c=document.getElementById('themeCardPick')?.value||THEME_DEFAULTS.themeCard;
+      const b=document.getElementById('themeBgPick')?.value||THEME_DEFAULTS.themeBg;
+      applyThemeColors(a,c,b,'custom');
+      USER_SETTINGS.themeAccent=a;
+      USER_SETTINGS.themeCard=c;
+      USER_SETTINGS.themeBg=b;
+      USER_SETTINGS.themePresetId='custom';
+      try{ await saveUserSettings(); }catch(e){}
+      applyTheme();
+      renderThemeSwatches();
+    };
+  });
 }
 function applyThemePreview(){
   const r=document.documentElement;
@@ -4906,8 +4986,7 @@ function openFoodLogModal(task,existingEntry,prefillText){
 
   // Change the submit button label in edit mode so it's clear this replaces the old
   // entry rather than adding a second one.
-  const flSubmitBtnEl = document.getElementById('flSubmitBtn');
-  if(flSubmitBtnEl) flSubmitBtnEl.textContent=isEdit?'احسب واستبدل ✏️':'احسب واحفظ ✅';
+  if(submitBtn) submitBtn.textContent=isEdit?'احسب واستبدل ✏️':'احسب واحفظ ✅';
 
   if(modal) modal.classList.add('open');
 }
@@ -6070,12 +6149,12 @@ document.body.addEventListener('click',async e=>{
     return;
   }
   if(tgt.id==='setResetThemeBtn'){
-    document.getElementById('themeAccent').value=THEME_DEFAULTS.themeAccent;
-    document.getElementById('themeCard').value=THEME_DEFAULTS.themeCard;
-    document.getElementById('themeBg').value=THEME_DEFAULTS.themeBg;
-    USER_SETTINGS.themeAccent=THEME_DEFAULTS.themeAccent;
-    USER_SETTINGS.themeCard=THEME_DEFAULTS.themeCard;
-    USER_SETTINGS.themeBg=THEME_DEFAULTS.themeBg;
+    const def=THEME_PRESETS[0];
+    applyThemeColors(def.accent,def.card,def.bg,def.id);
+    USER_SETTINGS.themeAccent=def.accent;
+    USER_SETTINGS.themeCard=def.card;
+    USER_SETTINGS.themeBg=def.bg;
+    USER_SETTINGS.themePresetId=def.id;
     try{ await saveUserSettings(); }catch(e){}
     renderThemeSwatches();
     applyTheme();
