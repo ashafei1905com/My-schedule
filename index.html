@@ -87,16 +87,19 @@ input[type=color]::-moz-color-swatch{border:none;border-radius:8px}
 #sbar .sbar-stats{display:flex;gap:14px;align-items:center;flex:1;justify-content:center}
 #sbar .sbar-auth{display:flex;flex-direction:column;align-items:flex-end;gap:6px;flex-shrink:0}
 @media (min-width:900px){
-  .tw{display:flex;justify-content:center}
-  .tabs{justify-content:center;width:auto;max-width:100%}
-  .prow{justify-content:center;flex-wrap:wrap;overflow:visible}
-  .ppill{min-width:72px}
-  .pan{max-width:800px;margin:0 auto}
+  .tw{display:flex;justify-content:flex-start}
+  .tabs{justify-content:flex-start;width:100%;max-width:100%;flex-wrap:wrap}
+  .prow{justify-content:flex-start;flex-wrap:wrap;overflow:visible;gap:8px}
+  .ppill{min-width:78px;padding:8px 12px}
+  .pan{max-width:1000px;margin:0;margin-right:auto}
   #sbar .sbar-stats{justify-content:flex-start}
 }
-/* Main schedule container centered on large screens */
-#panels{max-width:800px;margin:0 auto}
-.pw{max-width:800px;margin-left:auto;margin-right:auto}
+/* Main schedule container — wider, left-aligned on large screens */
+#panels{max-width:1000px;margin:0;margin-right:auto}
+.pw{max-width:1000px;margin-left:0;margin-right:auto}
+.tw{max-width:1000px;margin-left:0;margin-right:auto}
+.ppill .pnam{font-size:.68rem}
+.ppill .ptim{font-size:.78rem}
 /* Score/points layout: prevent overlap with profile on mobile */
 @media (max-width:700px){
   #sbar{flex-wrap:wrap;gap:8px;padding:10px 12px}
@@ -118,7 +121,7 @@ input[type=color]::-moz-color-swatch{border:none;border-radius:8px}
 .st{display:flex;flex-direction:column;align-items:center;gap:1px}
 .sv{font-size:1.5rem;font-weight:900;line-height:1}
 .sl{font-size:.6rem;color:var(--so);font-weight:700}
-#sv1{color:var(--ac)}#sv2{color:var(--ye)}#sv3{color:var(--ac)}
+#sv1,#sv2,#sv3{color:var(--ac)!important}#sbar .sl{color:var(--ac);opacity:.85}
 .pw{padding:10px 16px 0}
 .pb{background:var(--c);border:1px solid var(--br);border-radius:10px;padding:10px 14px}
 .ph{display:flex;justify-content:space-between;font-size:.77rem;color:var(--so);margin-bottom:6px}
@@ -143,7 +146,7 @@ input[type=color]::-moz-color-swatch{border:none;border-radius:8px}
 .tabs{display:flex;gap:6px;width:max-content}
 .tab{flex-shrink:0;padding:8px 13px;background:var(--c);border:1px solid var(--br);border-radius:8px;cursor:pointer;font-family:'Cairo',sans-serif;font-size:.82rem;font-weight:700;color:var(--so);transition:all .2s;display:flex;flex-direction:column;align-items:center;gap:2px}
 .tab:hover{border-color:var(--ac);color:var(--tx)}
-.tab.act{background:#2563eb;border-color:#2563eb;color:#fff}
+.tab.act{background:var(--ac);border-color:var(--ac);color:#fff}
 .tab.tod:not(.act){border-color:var(--gr);color:var(--gr)}
 .gdot{width:5px;height:5px;border-radius:50%;background:var(--or)}
 .tab.act .gdot{background:rgba(255,255,255,.7)}
@@ -158,7 +161,7 @@ input[type=color]::-moz-color-swatch{border:none;border-radius:8px}
 .gbr{background:rgba(100,116,139,.1);color:var(--mu)}
 .prow{display:flex;gap:5px;margin-bottom:10px;overflow-x:auto;scrollbar-width:none}
 .prow::-webkit-scrollbar{display:none}
-.ppill{flex-shrink:0;padding:6px 10px;background:var(--c);border:2px solid var(--br);border-radius:8px;text-align:center;min-width:60px;transition:all .2s}
+.ppill{flex-shrink:0;padding:7px 12px;background:var(--c);border:2px solid var(--br);border-radius:8px;text-align:center;min-width:70px;transition:all .2s}
 .ppill.done{border-color:var(--gr);background:rgba(16,185,129,.1)}
 .ppill.sunrise-pill{border-color:var(--or);background:rgba(245,158,11,.06)}
 .pnam{font-size:.6rem;color:var(--so);font-weight:700}
@@ -166,7 +169,7 @@ input[type=color]::-moz-color-swatch{border:none;border-radius:8px}
 .tl{position:relative;padding-right:20px}
 .tl::before{content:'';position:absolute;right:7px;top:0;bottom:0;width:2px;background:linear-gradient(to bottom,var(--ac),transparent);border-radius:2px}
 .tc{position:relative;margin-bottom:8px;padding:12px 14px;background:var(--c);border:1px solid var(--br);border-radius:12px;display:flex;align-items:flex-start;gap:10px;transition:border-color .2s,background .2s}
-.tc::before{content:'';position:absolute;right:-24px;top:16px;width:10px;height:10px;border-radius:50%;background:var(--c2);border:2px solid var(--br)}
+.tc::before{content:'';position:absolute;right:-24px;top:16px;width:10px;height:10px;border-radius:50%;background:color-mix(in srgb, var(--ac) 25%, var(--c2));border:2px solid var(--ac)}
 .tc.done{background:rgba(16,185,129,.05);border-color:rgba(16,185,129,.3)}
 .tc.done::before{border-color:var(--gr);background:var(--gr)}
 .tc.excx{background:rgba(6,182,212,.04);border-color:rgba(6,182,212,.2)}
@@ -1679,14 +1682,15 @@ function applyTheme(){
     const bg=USER_SETTINGS.themeBg||getComputedStyle(r).getPropertyValue('--bg').trim()||'#0a0e1a';
     sbar.style.background=bg.startsWith('#')?`color-mix(in srgb, ${bg} 96%, transparent)`:'';
   }
-  const ac=USER_SETTINGS.themeAccent||getComputedStyle(r).getPropertyValue('--ac').trim()||'#3b82f6';
+  // Numbers/labels inherit via CSS var(--ac). Clear inline colors so the
+  // stylesheet rule wins; updateUI only sets inline color when pts are negative.
   const sv1=document.getElementById('sv1');
   const sv2=document.getElementById('sv2');
   const sv3=document.getElementById('sv3');
-  if(sv1) sv1.style.color=ac;
-  if(sv2) sv2.style.color=ac;
-  if(sv3) sv3.style.color=ac;
-  document.querySelectorAll('#sbar .sl').forEach(el=>{ el.style.color=ac; el.style.opacity='0.85'; });
+  if(sv1) sv1.style.color='';
+  if(sv2 && !(STATS && STATS.pts<0)) sv2.style.color='';
+  if(sv3) sv3.style.color='';
+  document.querySelectorAll('#sbar .sl').forEach(el=>{ el.style.color=''; el.style.opacity=''; });
 }
 function applyI18n(){
   document.querySelectorAll('[data-i18n]').forEach(el=>{
@@ -3760,7 +3764,9 @@ function updateUI(){
   document.querySelectorAll('.pw').forEach(el=>{ el.style.display=showTrack?'block':'none'; });
 
   const s1=document.getElementById('sv1'); if(s1) s1.textContent=STATS.cur;
-  const s2=document.getElementById('sv2'); if(s2){s2.textContent=STATS.pts;s2.style.color=STATS.pts<0?'var(--rd)':'var(--ye)';}
+  // Points stay on theme accent; only go red when negative. Never force yellow —
+  // that overrode the user's chosen theme accent on every updateUI() call.
+  const s2=document.getElementById('sv2'); if(s2){s2.textContent=STATS.pts;s2.style.color=STATS.pts<0?'var(--rd)':'';}
   const s3=document.getElementById('sv3'); if(s3) s3.textContent=STATS.best;
 
   const jd=getJDfromISO(SELECTED_DATE);
