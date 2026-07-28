@@ -946,7 +946,7 @@ const mkBr=(p)=>[p+'-br','7:00 م','recovery','🏊','مع أخوك — جاكو
 // middaySnack figure Abdullah specified directly, identical on gym/rest days.
 const mkSnackA=(p,t='11:15 ص',isGym)=>[p+'-sn1',t,'snack','🥜','سناك منتصف النهار','حفنة مكسرات نيئة + ثمرة فاكهة',5,null,null,false,null,isGym?MACROS_GYM.middaySnack:MACROS_REST.middaySnack,mealKeyFor('middaySnack',isGym)];
 const mkSnackB=(p,t='4:30 م',isGym)=>[p+'-sn2',t,'snack','🥤','سناك ٢ (بعد الظهر)',isGym?'إضافي اختياري — لو لسه جعت قبل التمرين':'فشار منزلي أو سلطة فواكه',5,null,null,false,null,isGym?null:MACROS_REST.afternoonSnack,mealKeyFor('afternoonSnack',isGym)];
-const mkSnackC=(p,t='9:30 م',isGym)=>[p+'-sn3',t,'snack','🍇','سناك ٣ (مسائي خفيف)','فاكهة خفيفة أو حفنة مكسرات — لو جعت قبل النوم',5,null,null,false,null,null,mealKeyFor('bedtimeSnack',isGym)];
+const mkSnackC=(p,t='9:30 م',isGym)=>[p+'-sn3',t,'snack','🍇','سناك ٣ (مسائي خفيف)','فاكهة خفيفة أو حفنة مكسرات — لو جعت قبل النوم',5,null,null,false,null,{p:3,c:15,f:8,b:3,k:140},mealKeyFor('bedtimeSnack',isGym)];
 
 const PMETA={
   Fajr:{ar:'الفجر',ic:'🌙',pts:10,sunnah:'سنة الفجر (ركعتان قبل)'},
@@ -1339,7 +1339,14 @@ const I18N={
     saved:'✅ تم الحفظ', need_login:'لازم تسجّل دخول عشان تضيف مهام',
     name_required:'⚠️ اكتب اسم المهمة أولاً', task_saved:'✅ اتحفظت المهمة',
     streak:'🔥 استريك', points:'⭐ نقاطي', best_streak:'🏆 أعلى استريك',
-    notif_on:'🔔 مفعّلة', notif_off:'🔕 التذكيرات'
+    notif_on:'🔔 مفعّلة', notif_off:'🔕 التذكيرات',
+    day_sun:'الأحد', day_mon:'الاثنين', day_tue:'الثلاثاء', day_wed:'الأربعاء',
+    day_thu:'الخميس', day_fri:'الجمعة', day_sat:'السبت',
+    today:'اليوم', prev_day:'← يوم سابق', next_day:'يوم تالٍ →',
+    confirm:'تأكيد ✓', late:'متأخر', expired:'فات الوقت', not_yet:'⏳ لسه مجاش وقتها',
+    log_food:'🍽️ سجل الأكل', qada:'قضاء (50%)', loading:'جاري التحميل...',
+    nutrition:'🍽️ التغذية اليومية', tasks_done:'مهمة', pts_today:'نقطة اليوم',
+    rest_day:'يوم راحة', cancel:'إلغاء'
   },
   en:{
     settings:'⚙️ Settings', close:'Close', save:'Save ✅', sign_out:'Sign out', sign_in:'Sign in',
@@ -1360,12 +1367,22 @@ const I18N={
     saved:'✅ Saved', need_login:'Sign in to add tasks',
     name_required:'⚠️ Enter a task name first', task_saved:'✅ Task saved',
     streak:'🔥 Streak', points:'⭐ Points', best_streak:'🏆 Best streak',
-    notif_on:'🔔 On', notif_off:'🔕 Reminders'
+    notif_on:'🔔 On', notif_off:'🔕 Reminders',
+    day_sun:'Sunday', day_mon:'Monday', day_tue:'Tuesday', day_wed:'Wednesday',
+    day_thu:'Thursday', day_fri:'Friday', day_sat:'Saturday',
+    today:'Today', prev_day:'← Previous day', next_day:'Next day →',
+    confirm:'Confirm ✓', late:'Late', expired:'Missed', not_yet:'⏳ Not yet',
+    log_food:'🍽️ Log food', qada:'Makeup (50%)', loading:'Loading...',
+    nutrition:'🍽️ Daily nutrition', tasks_done:'tasks', pts_today:'pts today',
+    rest_day:'Rest day', cancel:'Cancel'
   }
 };
 function t(key){
   const lang=(USER_SETTINGS&&USER_SETTINGS.lang)==='en'?'en':'ar';
   return (I18N[lang]&&I18N[lang][key])||(I18N.ar[key])||key;
+}
+function dayLabel(jd){
+  return t(['day_sun','day_mon','day_tue','day_wed','day_thu','day_fri','day_sat'][jd]||'day_sun');
 }
 function applyI18n(){
   document.querySelectorAll('[data-i18n]').forEach(el=>{
@@ -1376,12 +1393,16 @@ function applyI18n(){
   if(setTitle) setTitle.textContent=t('settings');
   const closeBtn=document.getElementById('setCloseBtn');
   if(closeBtn) closeBtn.textContent=t('close');
-  const s1=document.querySelector('#sv1 + .sl, .st .sl');
-  // streak labels
   const labels=document.querySelectorAll('#sbar .sl');
   if(labels[0]) labels[0].textContent=t('streak');
   if(labels[1]) labels[1].textContent=t('points');
   if(labels[2]) labels[2].textContent=t('best_streak');
+  const prev=document.getElementById('btn-hist-prev');
+  const next=document.getElementById('btn-hist-next');
+  if(prev) prev.textContent=t('prev_day');
+  if(next) next.textContent=t('next_day');
+  const macroTitle=document.querySelector('.macrotitle');
+  if(macroTitle) macroTitle.textContent=t('nutrition');
 }
 const APP_ICON_PRESETS=['🏋️','📅','✅','🎯','💪','📖','⭐','🔥','🧠','🌙'];
 function renderIconPresets(){
@@ -1609,7 +1630,8 @@ function getAllTasks(jd,iso){
   const d=getEffectiveSched(jd);if(!d)return applyUserEditsToTasks([],effIso).sort((a,b)=>sortKey(a)-sortKey(b));
   const isAbdullah=fbAuth?.currentUser?.uid===ABDULLAH_UID;
   const frees=isAbdullah?(FREE_TIME[jd]||[]).map((f,i)=>[`fr-${jd}-${i}`,f.t,'free','🎮','وقت حر',f.d,0,null,null,false]):[];
-  const showPrayers=isAbdullah || (USER_SETTINGS.trackPrayers && USER_SETTINGS.onboardingComplete);
+  // Prayer tracking is ONLY controlled by the setting — never forced on for any account.
+  const showPrayers=!!USER_SETTINGS.trackPrayers;
   const prayers=showPrayers?buildPTasks(jd):[];
   const base=[...prayers,...d.ts,...frees];
   return applyUserEditsToTasks(base,effIso).sort((a,b)=>sortKey(a)-sortKey(b));
@@ -1617,8 +1639,7 @@ function getAllTasks(jd,iso){
 function getReqTasks(jd,iso){
   const effIso=iso||dateForWeekday(jd,TODAY);
   const d=getEffectiveSched(jd);
-  const isAbdullah=fbAuth?.currentUser?.uid===ABDULLAH_UID;
-  const showPrayers=isAbdullah || (USER_SETTINGS.trackPrayers && USER_SETTINGS.onboardingComplete);
+  const showPrayers=!!USER_SETTINGS.trackPrayers;
   const prayers=showPrayers?buildPTasks(jd):[];
   const base=[...prayers,...(d?.ts||[])].filter(t=>!t[9]&&t[6]>0&&t[2]!=='snack');
   return applyUserEditsToTasks(base,effIso).filter(t=>!t._deleted).sort((a,b)=>sortKey(a)-sortKey(b));
@@ -2494,7 +2515,7 @@ function buildTodayReminderPayload(){
 
 const NOTIF_LEAD_MIN=30;
 const NOTIF_END_LEAD_MIN=30;
-const NOTIF_DEFAULT_DURATION_MIN=60;
+const NOTIF_DEFAULT_DURATION_MIN=180;
 
 function notifTaskEndMin(task){
   const start=toMin(task[10]||task[1]);
@@ -3019,7 +3040,7 @@ function renderCard(task,isToday,jd){
   const done=DONE[id];
   const isDone=done!==undefined&&done!==false;
   const state=getState(task);
-  const isFoodLoggable=(cat==='food'||cat==='snack')&&!!task[11]; // has macro data => goes through the log modal
+  const isFoodLoggable=cat==='food'||cat==='snack';
 
   if(cat==='free'){
     const customColor=task[10]||null;
@@ -3151,7 +3172,7 @@ function renderTabs(){
     const b=document.createElement('div');
     b.className=`tab${isT?' act':''}${j===todayJD()?' tod':''}`;
     b.dataset.jd=j;
-    b.innerHTML=`<div>${DSHORT[j]}</div>${isG?'<div class="gdot"></div>':''}`;
+    b.innerHTML=`<div>${dayLabel(j)}</div>${isG?'<div class="gdot"></div>':''}`;
     b.onclick=()=>{
       saveDay();
       // Use the single canonical Sat->Fri week function so tab dates and report
@@ -3288,9 +3309,11 @@ function setAppLang(lang){
   USER_SETTINGS.lang=lang==='en'?'en':'ar';
   document.documentElement.lang=USER_SETTINGS.lang;
   document.documentElement.dir=USER_SETTINGS.lang==='en'?'ltr':'rtl';
+  document.body.style.direction=USER_SETTINGS.lang==='en'?'ltr':'rtl';
   try{ saveUserSettings(); }catch(e){}
   applyI18n();
   updateAuthUI(fbAuth?.currentUser||null);
+  try{ renderTabs();renderPanels();switchDay(typeof SELECTED_DATE!=='undefined'?getJDfromISO(SELECTED_DATE):todayJD());updateUI(); }catch(e){}
   showToast(USER_SETTINGS.lang==='en'?'Switched to English':'تم التحويل للعربية',1800);
 }
 
@@ -3315,8 +3338,6 @@ function updateAuthUI(user){
         <button type="button" class="profile-btn" id="profileBtn">👤 ${display} ▾</button>
         <div class="profile-menu" id="profileMenu">
           <button type="button" id="pm-settings">${t('profile_settings')}</button>
-          <button type="button" id="pm-lang-ar">${t('lang_ar')}</button>
-          <button type="button" id="pm-lang-en">${t('lang_en')}</button>
           <div class="pm-sep"></div>
           <button type="button" class="pm-danger" id="btn-signout">${t('sign_out')}</button>
         </div>
