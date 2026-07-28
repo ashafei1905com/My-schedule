@@ -43,7 +43,7 @@ body{font-family:'Cairo',sans-serif;background:var(--bg);color:var(--tx);directi
 @keyframes lateGlow{0%{box-shadow:0 0 0 rgba(245,158,11,0);border-color:var(--br)}40%{box-shadow:0 0 18px 3px rgba(245,158,11,.55);border-color:var(--or)}100%{box-shadow:0 0 0 rgba(245,158,11,0)}}
 @keyframes qadaGlow{0%{box-shadow:0 0 0 rgba(148,163,184,0)}40%{box-shadow:0 0 14px 2px rgba(148,163,184,.4)}100%{box-shadow:0 0 0 rgba(148,163,184,0)}}
 @keyframes barGold{0%{filter:brightness(1)}50%{filter:brightness(1.6) saturate(1.4)}100%{filter:brightness(1)}}
-#sbar{position:sticky;top:0;z-index:100;background:rgba(10,14,26,.96);backdrop-filter:blur(12px);border-bottom:1px solid var(--br);padding:12px 16px;display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap}
+#sbar{position:sticky;top:0;z-index:100;background:rgba(10,14,26,.96);backdrop-filter:blur(12px);border-bottom:1px solid var(--br);padding:12px 16px;display:flex;justify-content:center;align-items:center;gap:8px;flex-wrap:wrap;min-height:64px}
 .penalty-flash{animation:flashRed 1s ease}
 .streak-broke{animation:shakeX .5s ease}
 .streak-win{display:inline-block;animation:streakPulse .7s ease}
@@ -188,6 +188,15 @@ body{font-family:'Cairo',sans-serif;background:var(--bg);color:var(--tx);directi
 .icon-presets{display:flex;flex-wrap:wrap;gap:10px}
 .icon-preset{width:48px;height:48px;border-radius:12px;border:2px solid var(--br);background:var(--c);cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:1.5rem}
 .icon-preset.sel{border-color:var(--ac);box-shadow:0 0 0 1px var(--ac)}
+.theme-swatches{display:flex;flex-wrap:wrap;gap:8px;margin:8px 0 4px}
+.theme-swatch{width:36px;height:36px;border-radius:10px;border:2px solid transparent;cursor:pointer;box-shadow:inset 0 0 0 1px rgba(255,255,255,.12)}
+.theme-swatch.sel{border-color:#fff;box-shadow:0 0 0 2px var(--ac)}
+.task-icon-row{display:flex;flex-wrap:wrap;gap:8px}
+.task-icon-btn{width:40px;height:40px;border-radius:10px;border:2px solid var(--br);background:var(--c);cursor:pointer;font-size:1.2rem;display:flex;align-items:center;justify-content:center}
+.task-icon-btn.sel{border-color:var(--ac);box-shadow:0 0 0 1px var(--ac)}
+#sbar{justify-content:center}
+#sbar > div:first-child{flex:1;justify-content:center}
+#sbar > div:last-child{position:absolute;inset-inline-end:16px;top:50%;transform:translateY(-50%)}
 #toast{z-index:10050 !important}
 
 /* Prayer Modal */
@@ -438,21 +447,19 @@ body{font-family:'Cairo',sans-serif;background:var(--bg);color:var(--tx);directi
           <p class="desc" data-i18n="sec_appearance_desc">أيقونة التطبيق وألوان الجدول.</p>
           <div class="icon-presets" id="iconPresets"></div>
           <p class="desc" style="margin-top:12px" data-i18n="icon_hint">بعد الاختيار، احذف التطبيق من الشاشة الرئيسية وأضفه من جديد لتحديث الأيقونة.</p>
-          <div class="set-row" style="margin-top:16px">
-            <label for="themeAccent">لون التمييز</label>
-            <input type="color" id="themeAccent" value="#3b82f6" style="width:48px;height:32px;border:none;background:transparent;cursor:pointer">
-          </div>
-          <div class="set-row">
-            <label for="themeCard">لون البطاقة</label>
-            <input type="color" id="themeCard" value="#111827" style="width:48px;height:32px;border:none;background:transparent;cursor:pointer">
-          </div>
-          <div class="set-row">
-            <label for="themeBg">لون الخلفية</label>
-            <input type="color" id="themeBg" value="#0a0e1a" style="width:48px;height:32px;border:none;background:transparent;cursor:pointer">
-          </div>
-          <div class="set-actions" style="margin-top:12px">
+          <p class="desc" style="margin-top:16px" data-i18n="theme_accent">لون التمييز</p>
+          <div class="theme-swatches" id="swatchAccent"></div>
+          <p class="desc" style="margin-top:12px" data-i18n="theme_card">لون البطاقة</p>
+          <div class="theme-swatches" id="swatchCard"></div>
+          <p class="desc" style="margin-top:12px" data-i18n="theme_bg">لون الخلفية</p>
+          <div class="theme-swatches" id="swatchBg"></div>
+          <div class="set-actions" style="margin-top:16px">
             <button type="button" id="setSaveThemeBtn" class="fl-submit-btn" style="margin:0">حفظ المظهر ✅</button>
+            <button type="button" id="setResetThemeBtn" class="altbtn">افتراضي</button>
           </div>
+          <input type="hidden" id="themeAccent" value="#3b82f6">
+          <input type="hidden" id="themeCard" value="#111827">
+          <input type="hidden" id="themeBg" value="#0a0e1a">
         </div>
         <div class="set-section" id="setsec-language">
           <h3 data-i18n="sec_language">اللغة / Language</h3>
@@ -583,11 +590,15 @@ body{font-family:'Cairo',sans-serif;background:var(--bg);color:var(--tx);directi
         <input id="stPts" type="number" min="0" max="100" class="ob-textinput" style="text-align:right;font-size:.9rem;padding:12px 14px" value="5">
       </div>
       <div>
+        <label style="font-size:.72rem;color:var(--so);font-weight:700;display:block;margin-bottom:8px" data-i18n="task_icon">أيقونة المهمة</label>
+        <div id="stIconRow" class="task-icon-row"></div>
+      </div>
+      <div>
         <label style="font-size:.72rem;color:var(--so);font-weight:700;display:block;margin-bottom:8px">اللون</label>
         <div id="stColorRow" style="display:flex;gap:8px;flex-wrap:wrap"></div>
       </div>
       <div class="set-row" style="border:none;padding:8px 0">
-        <label for="stFoodLog" style="font-size:.82rem;font-weight:700">🍽️ تسجيل أكل؟ (يسأل المستخدم ماذا أكل)</label>
+        <label for="stFoodLog" style="font-size:.82rem;font-weight:700" data-i18n="food_log_opt">🍽️ تسجيل أكل؟</label>
         <input type="checkbox" id="stFoodLog" style="width:20px;height:20px;accent-color:var(--ac)">
       </div>
     </div>
@@ -1204,10 +1215,10 @@ async function saveScheduleTask(jd,existingId,{time,name,desc,pts,color,foodLog}
   const id=existingId||scheduleGenTaskId();
   // foodLog: cat=food so renderCard opens the food-log modal; macros placeholder allows logging.
   const cat=foodLog?'food':'free';
-  const ico=foodLog?'🍽️':'✨';
+  const ico=ST_SELECTED_ICON||(foodLog?'🍽️':'✨');
   const macros=foodLog?{p:0,c:0,f:0,b:0,k:0}:null;
   const mealKey=foodLog?('custom:'+id):null;
-  // Index 10 = color (also used for free custom color). Index 11 = macros. Index 12 = mealKey.
+  // Index 10 = color. Index 11 = macros. Index 12 = mealKey.
   const tuple=[id,time,cat,ico,name,desc||'',pts||0,null,null,false,color||null,macros,mealKey];
   const idx=ts.findIndex(t=>t[0]===id);
   if(idx>=0) ts[idx]=tuple; else ts.push(tuple);
@@ -1244,6 +1255,7 @@ function openScheduleTaskEditor(jd,existingTask){
   ST_ACTIVE_JD=jd;
   ST_ACTIVE_TASK_ID=existingTask?existingTask[0]:null;
   ST_SELECTED_COLOR=(existingTask&&existingTask[10])||OB_TASK_COLORS[0];
+  ST_SELECTED_ICON=(existingTask&&existingTask[3])||'✨';
 
   const titleEl=document.getElementById('stTitle');
   if(titleEl) titleEl.textContent=existingTask?'تعديل المهمة':'إضافة مهمة';
@@ -1265,6 +1277,7 @@ function openScheduleTaskEditor(jd,existingTask){
   if(foodEl) foodEl.checked=!!(existingTask&&(existingTask[2]==='food'||existingTask[2]==='snack'));
 
   stRenderColorChips();
+  stRenderIconRow();
   document.getElementById('schedTaskModal')?.classList.add('open');
   setTimeout(()=>nameEl?.focus(),80);
 }
@@ -1347,7 +1360,7 @@ const I18N={
     sec_notif:'التذكيرات', sec_notif_desc:'تفعيل أو إيقاف إشعارات المهام.',
     sec_reports:'التقارير', sec_reports_desc:'سجل التقارير الأسبوعية السابقة.',
     report_history:'🗂️ سجل التقارير', weekly_report:'📊 تقرير الأسبوع',
-    sec_appearance:'المظهر', sec_appearance_desc:'أيقونة التطبيق على الشاشة الرئيسية.',
+    sec_appearance:'المظهر', sec_appearance_desc:'أيقونة التطبيق وألوان الجدول.',
     icon_hint:'بعد الاختيار، احذف التطبيق من الشاشة الرئيسية وأضفه من جديد لتحديث الأيقونة.',
     sec_language:'اللغة', sec_language_desc:'واجهة التطبيق.',
     sec_account:'الحساب', sec_account_desc:'إدارة جلسة الدخول.',
@@ -1356,7 +1369,18 @@ const I18N={
     saved:'✅ تم الحفظ', need_login:'لازم تسجّل دخول عشان تضيف مهام',
     name_required:'⚠️ اكتب اسم المهمة أولاً', task_saved:'✅ اتحفظت المهمة',
     streak:'🔥 استريك', points:'⭐ نقاطي', best_streak:'🏆 أعلى استريك',
-    notif_on:'🔔 مفعّلة', notif_off:'🔕 التذكيرات'
+    notif_on:'🔔 مفعّلة', notif_off:'🔕 التذكيرات',
+    day_sun:'الأحد', day_mon:'الاثنين', day_tue:'الثلاثاء', day_wed:'الأربعاء',
+    day_thu:'الخميس', day_fri:'الجمعة', day_sat:'السبت',
+    today:'اليوم', prev_day:'← يوم سابق', next_day:'يوم تالٍ →',
+    tasks_label:'مهمة', pts_today:'نقطة اليوم', nutrition:'🍽️ التغذية اليومية',
+    protein:'بروتين', carbs:'كارب', fats:'دهون', fiber:'ألياف', kcal:'سعرة',
+    rest_day:'يوم راحة', save_theme:'حفظ المظهر ✅', reset_theme:'افتراضي',
+    theme_accent:'لون التمييز', theme_card:'لون البطاقة', theme_bg:'لون الخلفية',
+    ai_title:'🤖 مساعد الجدول', ai_ready:'جاهز للمساعدة', ai_close:'إغلاق', ai_send:'إرسال',
+    ai_placeholder:'اكتب أمرك...', ai_welcome:'👋 أهلاً! قولّي أي حاجة عايز تعملها في جدولك.',
+    not_yet:'⏳ لسه مجاش وقتها', expired:'فات الوقت', late:'متأخر', log_food:'🍽️ سجل الأكل',
+    task_icon:'أيقونة المهمة', food_log_opt:'🍽️ تسجيل أكل؟'
   },
   en:{
     settings:'⚙️ Settings', close:'Close', save:'Save ✅', sign_out:'Sign out', sign_in:'Sign in',
@@ -1368,7 +1392,7 @@ const I18N={
     sec_notif:'Reminders', sec_notif_desc:'Enable or disable task notifications.',
     sec_reports:'Reports', sec_reports_desc:'Past weekly reports.',
     report_history:'🗂️ Report history', weekly_report:'📊 Weekly report',
-    sec_appearance:'Appearance', sec_appearance_desc:'Home-screen app icon.',
+    sec_appearance:'Appearance', sec_appearance_desc:'App icon and schedule colors.',
     icon_hint:'After choosing, remove the app from the home screen and add it again to refresh the icon.',
     sec_language:'Language', sec_language_desc:'App interface language.',
     sec_account:'Account', sec_account_desc:'Session management.',
@@ -1377,12 +1401,26 @@ const I18N={
     saved:'✅ Saved', need_login:'Sign in to add tasks',
     name_required:'⚠️ Enter a task name first', task_saved:'✅ Task saved',
     streak:'🔥 Streak', points:'⭐ Points', best_streak:'🏆 Best streak',
-    notif_on:'🔔 On', notif_off:'🔕 Reminders'
+    notif_on:'🔔 On', notif_off:'🔕 Reminders',
+    day_sun:'Sunday', day_mon:'Monday', day_tue:'Tuesday', day_wed:'Wednesday',
+    day_thu:'Thursday', day_fri:'Friday', day_sat:'Saturday',
+    today:'Today', prev_day:'← Previous', next_day:'Next →',
+    tasks_label:'tasks', pts_today:'pts today', nutrition:'🍽️ Daily nutrition',
+    protein:'Protein', carbs:'Carbs', fats:'Fats', fiber:'Fiber', kcal:'kcal',
+    rest_day:'Rest day', save_theme:'Save appearance ✅', reset_theme:'Default',
+    theme_accent:'Accent color', theme_card:'Card color', theme_bg:'Background',
+    ai_title:'🤖 Schedule assistant', ai_ready:'Ready to help', ai_close:'Close', ai_send:'Send',
+    ai_placeholder:'Type a command...', ai_welcome:'👋 Hi! Tell me anything you want to do with your schedule.',
+    not_yet:'⏳ Not yet', expired:'Missed', late:'Late', log_food:'🍽️ Log food',
+    task_icon:'Task icon', food_log_opt:'🍽️ Log food for this task?'
   }
 };
 function t(key){
   const lang=(USER_SETTINGS&&USER_SETTINGS.lang)==='en'?'en':'ar';
   return (I18N[lang]&&I18N[lang][key])||(I18N.ar[key])||key;
+}
+function dayLabel(jd){
+  return t(['day_sun','day_mon','day_tue','day_wed','day_thu','day_fri','day_sat'][jd]||'day_sun');
 }
 // Built-in schedule strings → English when lang=en. Custom user text stays as typed.
 const TASK_EN={
@@ -1408,6 +1446,71 @@ function tn(text){
   if((USER_SETTINGS&&USER_SETTINGS.lang)!=='en') return text;
   return TASK_EN[text]||text;
 }
+function arEn(ar,en){ return (USER_SETTINGS&&USER_SETTINGS.lang)==='en'?en:ar; }
+// Auto-translate AI bot replies when language is English.
+function translateAiReply(text){
+  if(!text || (USER_SETTINGS&&USER_SETTINGS.lang)!=='en') return text;
+  const pairs=[
+    [/مش لاقي صلاة (.+) في جدول يوم (.+)\./g,"Can't find prayer $1 on $2."],
+    [/صلاة (.+) يوم (.+) مسجلة كمُنجزة بالفعل\. لو عايز تعدّلها، لازم تشيلها الأول من الجدول\./g,'Prayer $1 on $2 is already marked done. To change it, remove it from the schedule first.'],
+    [/تمام، هفتكر إن (.+) ✅/g,"Got it — I'll remember that $1 ✅"],
+    [/مش لاقي المهمة دي في الجدول\. ممكن تقولي اسمها بالظبط زي ما هي ظاهرة\؟/g,"Can't find that task. Please use the exact name shown on the schedule."],
+    [/مش لاقي المهمة دي\. جرب تكتب اسمها زي ما هو ظاهر في الجدول\./g,"Can't find that task. Try the exact name shown on the schedule."],
+    [/"(.+)" مسجلة بالفعل في (.+)\. لو عايز تعدّلها استخدم زرار ✏️ تعديل على الكارت\./g,'"$1" is already logged on $2. Use ✏️ Edit on the card to change it.'],
+    [/فتحت لك نافذة تسجيل "(.+)" — راجع الوصف واحسب القيم ✅/g,'Opened the log window for "$1" — check the description and values ✅'],
+    [/تمام، سجلت "(.+)" بتاريخ (.+) كمُنجزة ✅/g,'Done — marked "$1" on $2 as completed ✅'],
+    [/لأي يوم عايز تنقل "(.+)"\؟ \(مثلاً: بكرة، الأربعاء\.\.\.\)/g,'Which day should I move "$1" to? (e.g. tomorrow, Wednesday…)'],
+    [/تم نقل "(.+)" من (.+) إلى (.+)/g,'Moved "$1" from $2 to $3'],
+    [/تم حذف "(.+)" من (.+)/g,'Deleted "$1" from $2'],
+    [/مش لاقي مهمة محذوفة بالاسم ده\. جرب تكتب اسمها زي ما هي ظاهرة في الجدول\./g,"Can't find a deleted task with that name."],
+    [/"(.+)" مش محذوفة أصلاً — مفيش حاجة أرجعها\./g,'"$1" is not deleted — nothing to restore.'],
+    [/تم إرجاع "(.+)" في (.+) ✅/g,'Restored "$1" on $2 ✅'],
+    [/"(.+)" مش مسجلة كمُنجزة أصلاً في (.+)\./g,'"$1" is not marked done on $2.'],
+    [/تم إلغاء تسجيل "(.+)" كمُنجزة في (.+) — النقاط اتخصمت لو كانت اتضافت ✅/g,'Unmarked "$1" as done on $2 — points removed if they were added ✅'],
+    [/تم تغيير نقاط "(.+)" إلى (.+)⭐ ✅/g,'Changed points for "$1" to $2⭐ ✅'],
+    [/تم إضافة "(.+)" يوم (.+) الساعة (.+) بـ (.+)⭐ ✅/g,'Added "$1" on $2 at $3 for $4⭐ ✅'],
+    [/تم تغيير أعلى استريك إلى (.+) يوم ✅/g,'Best streak set to $1 days ✅'],
+    [/تم تغيير الاستريك الحالي إلى (.+) يوم ✅/g,'Current streak set to $1 days ✅'],
+    [/تم تغيير رصيد النقاط الأسبوعي إلى (.+)⭐ ✅/g,'Weekly points balance set to $1⭐ ✅'],
+    [/تم تغيير نسبة الخصم إلى (.+)٪ ✅/g,'Penalty rate set to $1% ✅'],
+    [/"(.+)" محذوفة بالفعل\./g,'"$1" is already deleted.'],
+    [/"(.+)" مش محذوفة أصلاً\./g,'"$1" is not deleted.'],
+    [/⚠️ مش لاقي المهمة اللي حددها الذكاء الاصطناعي في الجدول الحقيقي — جرب تاني بصياغة أوضح\./g,'⚠️ Could not find that AI-selected task on the real schedule — rephrase and try again.'],
+    [/⚠️ المهمة اللي حددها الذكاء الاصطناعي مش موجودة في الجدول الحقيقي — جرب تكتب اسمها بشكل أوضح\./g,'⚠️ That AI-selected task is not on the schedule — use a clearer name.'],
+    [/⚠️ مش قادر أحدد الوقت المناسب — قول لي الوقت أو اليوم بالظبط\./g,'⚠️ Could not determine the time — say the exact time or day.'],
+    [/⚠️ رد الذكاء الاصطناعي مش مفهوم — جرب تاني\./g,'⚠️ AI reply was unclear — try again.'],
+    [/⚠️ المهمة اللي حددها الذكاء الاصطناعي مش موجودة في الجدول الحقيقي\./g,'⚠️ That task is not on the real schedule.'],
+    [/⚠️ مش قادر أحدد التاريخ الصحيح — قول اليوم بالظبط\./g,'⚠️ Could not determine the date — say the exact day.'],
+    [/⚠️ مش قادر أحدد الوقت الصحيح — قول الساعة بالظبط\./g,'⚠️ Could not determine the time — say the exact hour.'],
+    [/⚠️ قيمة النقاط دي مش منطقية — قول رقم واضح\./g,'⚠️ That points value does not make sense — give a clear number.'],
+    [/⚠️ مش واضح اسم المهمة الجديدة\./g,'⚠️ The new task name is unclear.'],
+    [/⚠️ القيمة دي مش منطقية — قول رقم واضح\./g,'⚠️ That value does not make sense — give a clear number.'],
+    [/⚠️ القيمة دي مش منطقية\./g,'⚠️ That value does not make sense.'],
+    [/⚠️ نسبة الخصم لازم تكون بين ٠ و ١٠٠٪\./g,'⚠️ Penalty rate must be between 0 and 100%.'],
+    [/⚠️ مش واضح إيه اللي المفروض أفتكره\./g,'⚠️ Unclear what I should remember.'],
+    [/⚠️ الذكاء الاصطناعي طلب حاجة مش معروفة — جرب تصيغ طلبك بشكل تاني\./g,'⚠️ Unknown request — try rephrasing.'],
+    [/⚠️ المساعد الذكي لسه مش متوصل بالسيرفر \(Cloudflare Worker\)\. لازم تركّب الـ Worker وتحط رابطه في الكود الأول\./g,'⚠️ Assistant not connected (Cloudflare Worker). Deploy the Worker and set its URL first.'],
+    [/⚠️ المساعد الذكي لسه مش متوصل بالسيرفر\./g,'⚠️ The assistant is not connected to the server yet.'],
+    [/⚠️ حصل خطأ من السيرفر — جرب تاني\./g,'⚠️ Server error — try again.'],
+    [/⚠️ مش فاهم الطلب ده كويس — جرب تصيغه بشكل أوضح\./g,'⚠️ Did not understand that request — try rephrasing.'],
+    [/⚠️ مش قادر أوصل للسيرفر دلوقتي\./g,'⚠️ Cannot reach the server right now.'],
+    [/فتحت لك نافذة تأكيد (.+) ومعبّي اللي قلته — كمّل باقي الأسئلة وأكّد 🕌/g,'Opened confirmation for $1 with what you said — finish the questions and confirm 🕌'],
+    [/فتحت لك نافذة تأكيد (.+) — جاوب على الأسئلة عشان تاخد النقاط الصح 🕌/g,'Opened confirmation for $1 — answer the questions for correct points 🕌'],
+    [/لسه ظاهرة بس متعلّم عليها كمحذوفة/g,'still visible, marked deleted'],
+    [/بنفس وقتها الأصلي/g,'same original time'],
+    [/الساعة /g,'at '],
+    [/تم ✅/g,'Done ✅'],
+    [/تمام ✅/g,'Got it ✅'],
+    [/بيفكر\.\.\./g,'Thinking...'],
+    [/تراجع/g,'Undo'],
+    [/حصل خطأ/g,'An error occurred'],
+    [/جرب تاني/g,'try again'],
+    [/مش فاهم/g,"I don't understand"]
+  ];
+  let out=String(text);
+  for(const [re,en] of pairs){ out=out.replace(re,en); }
+  return out;
+}
 function applyTheme(){
   const r=document.documentElement;
   if(USER_SETTINGS.themeAccent) r.style.setProperty('--ac',USER_SETTINGS.themeAccent);
@@ -1423,14 +1526,86 @@ function applyI18n(){
   if(setTitle) setTitle.textContent=t('settings');
   const closeBtn=document.getElementById('setCloseBtn');
   if(closeBtn) closeBtn.textContent=t('close');
-  const s1=document.querySelector('#sv1 + .sl, .st .sl');
-  // streak labels
   const labels=document.querySelectorAll('#sbar .sl');
   if(labels[0]) labels[0].textContent=t('streak');
   if(labels[1]) labels[1].textContent=t('points');
   if(labels[2]) labels[2].textContent=t('best_streak');
+  const prev=document.getElementById('btn-hist-prev');
+  const next=document.getElementById('btn-hist-next');
+  const hist=document.getElementById('hist-label');
+  if(prev) prev.textContent=t('prev_day');
+  if(next) next.textContent=t('next_day');
+  if(hist && SELECTED_DATE===TODAY) hist.textContent=t('today');
+  document.querySelectorAll('.macrotitle').forEach(el=>{ el.textContent=t('nutrition'); });
+  const aiTitle=document.querySelector('.ai-title');
+  if(aiTitle) aiTitle.textContent=t('ai_title');
+  const aiSub=document.getElementById('aiSubStatus');
+  if(aiSub) aiSub.textContent=t('ai_ready');
+  const aiClose=document.querySelector('#aiPanel [data-ai="close"], #aiCloseBtn, .ai-close');
+  // AI panel buttons
+  document.querySelectorAll('#aiPanel button').forEach(b=>{
+    if(/إغلاق|Close/i.test(b.textContent||'')) b.textContent=t('ai_close');
+    if(/إرسال|Send/i.test(b.textContent||'')) b.textContent=t('ai_send');
+  });
+  const aiInp=document.getElementById('aiInput');
+  if(aiInp) aiInp.placeholder=t('ai_placeholder');
+  const saveTheme=document.getElementById('setSaveThemeBtn');
+  if(saveTheme) saveTheme.textContent=t('save_theme');
+  const resetTheme=document.getElementById('setResetThemeBtn');
+  if(resetTheme) resetTheme.textContent=t('reset_theme');
 }
 const APP_ICON_PRESETS=['🏋️','📅','✅','🎯','💪','📖','⭐','🔥','🧠','🌙'];
+const TASK_ICON_PRESETS=['✨','📚','💻','🏋️','🍽️','🥤','🏃','🧘','📝','🎵','💤','🎯','🧠','🕌','🏊','📖','⭐','🔥','💪','🎮'];
+const THEME_PALETTES={
+  accent:['#3b82f6','#10b981','#f59e0b','#ef4444','#8b5cf6','#ec4899','#06b6d4','#f97316','#14b8a6','#a855f7','#eab308','#64748b'],
+  card:['#111827','#1a2235','#0f172a','#1e293b','#18181b','#27272a','#1c1917','#292524','#3f3f46','#1e1b4b'],
+  bg:['#0a0e1a','#020617','#0f172a','#18181b','#1c1917','#000000','#111827','#0c0a09','#1a1a2e','#16213e']
+};
+const THEME_DEFAULTS={themeAccent:'#3b82f6',themeCard:'#111827',themeBg:'#0a0e1a'};
+function renderThemeSwatches(){
+  const bind=(rowId,hiddenId,colors)=>{
+    const row=document.getElementById(rowId);
+    const hid=document.getElementById(hiddenId);
+    if(!row||!hid) return;
+    const cur=hid.value||colors[0];
+    row.innerHTML='';
+    colors.forEach(col=>{
+      const b=document.createElement('button');
+      b.type='button';
+      b.className='theme-swatch'+(col.toLowerCase()===cur.toLowerCase()?' sel':'');
+      b.style.background=col;
+      b.title=col;
+      b.onclick=()=>{ hid.value=col; renderThemeSwatches(); applyThemePreview(); };
+      row.appendChild(b);
+    });
+  };
+  bind('swatchAccent','themeAccent',THEME_PALETTES.accent);
+  bind('swatchCard','themeCard',THEME_PALETTES.card);
+  bind('swatchBg','themeBg',THEME_PALETTES.bg);
+}
+function applyThemePreview(){
+  const r=document.documentElement;
+  const a=document.getElementById('themeAccent')?.value;
+  const c=document.getElementById('themeCard')?.value;
+  const b=document.getElementById('themeBg')?.value;
+  if(a) r.style.setProperty('--ac',a);
+  if(c) r.style.setProperty('--c',c);
+  if(b){ r.style.setProperty('--bg',b); document.body.style.background=b; }
+}
+let ST_SELECTED_ICON='✨';
+function stRenderIconRow(){
+  const row=document.getElementById('stIconRow');
+  if(!row) return;
+  row.innerHTML='';
+  TASK_ICON_PRESETS.forEach(ic=>{
+    const b=document.createElement('button');
+    b.type='button';
+    b.className='task-icon-btn'+(ic===ST_SELECTED_ICON?' sel':'');
+    b.textContent=ic;
+    b.onclick=()=>{ ST_SELECTED_ICON=ic; stRenderIconRow(); };
+    row.appendChild(b);
+  });
+}
 function renderIconPresets(){
   const row=document.getElementById('iconPresets');
   if(!row) return;
@@ -3087,49 +3262,37 @@ function renderCard(task,isToday,jd){
   }
 
   const isSnack=cat==='snack';
+  const en=(USER_SETTINGS.lang==='en');
   let act='';
-  if(isEx){act=`<div class="excbadge">🔓 استثناء</div>`;}
+  if(isEx){act=`<div class="excbadge">🔓 ${en?'Exception':'استثناء'}</div>`;}
   else if(isToday){
     if(isDone){
       const lbl=typeof done==='number'?`✅ +${done}⭐`:'✅';
-      // Food/snack tasks that were logged through the food-log modal get an edit
-      // button next to the done badge — previously there was NO way back into the
-      // modal once a task was marked done, so a wrong entry (wrong meal, wrong
-      // description, mis-tapped) was stuck forever with no way to correct it.
       const canEditFood=isFoodLoggable && !!(historyData[SELECTED_DATE||TODAY]||{}).foodLog?.[id];
-      const editBtn=canEditFood?`<button class="cbtn" data-action="editfood" data-id="${id}" style="margin-top:4px;background:rgba(59,130,246,.1);border-color:rgba(59,130,246,.4);color:#60a5fa">✏️ تعديل</button>`:'';
+      const editBtn=canEditFood?`<button class="cbtn" data-action="editfood" data-id="${id}" style="margin-top:4px;background:rgba(59,130,246,.1);border-color:rgba(59,130,246,.4);color:#60a5fa">✏️ ${en?'Edit':'تعديل'}</button>`:'';
       act=`<div style="display:flex;flex-direction:column;align-items:flex-end;gap:0"><div class="cbtn done">${lbl}</div>${editBtn}</div>`;
     }else if(state==='NOTYET'){
-      act=`<div class="cbtn exp">⏳ لسه مجاش وقتها</div>`;
+      act=`<div class="cbtn exp">${t('not_yet')}</div>`;
     }else if(state==='QADA'){
       const half=Math.floor(pts/2);
-      act=`<button class="cbtn qada" data-action="qada" data-id="${id}" data-pts="${pts}">قضاء (50%)<span class="ptslbl">+${half}⭐</span></button>`;
+      act=`<button class="cbtn qada" data-action="qada" data-id="${id}" data-pts="${pts}">${en?'Makeup (50%)':'قضاء (50%)'}<span class="ptslbl">+${half}⭐</span></button>`;
     }else if(state==='EXPIRED' && !isFoodLoggable){
-      // Snacks never truly "expire" into a punishable state — they just stop being
-      // clickable once very late, same visual as other expired tasks but never fed
-      // into punishment math (getReqTasks excludes cat==='snack' entirely).
-      act=isSnack?`<div class="excbadge">🍎 فات وقته — مفيش خصم</div>`:`<div class="cbtn exp">فات الوقت</div>`;
+      act=isSnack?`<div class="excbadge">🍎 ${en?'Missed — no penalty':'فات وقته — مفيش خصم'}</div>`:`<div class="cbtn exp">${t('expired')}</div>`;
     }else if(isFoodLoggable){
-      // Food/snack tasks with macro data ALWAYS stay loggable, even past the 3-hour
-      // expiry window that closes every other task type. Forgetting to log a meal
-      // the same day and coming back hours later is a completely normal, common
-      // case (this is exactly the scenario behind "أكلت وجبة... بس نسيت اسجلها") —
-      // nutrition tracking has real value independent of whether points still count,
-      // so the ability to record what was actually eaten should never disappear.
-      // A late log still visually distinguishes itself (different label/color) so
-      // it's clear this is a late entry, separate from the normal on-time flow.
       const isLateLog=state==='EXPIRED';
-      const lbl=isLateLog?(isSnack?'🍎 سناك متأخر — سجله':'⏰ متأخر — سجل الأكل'):(isSnack?'🍎 سناك — سجل الأكل':'🍽️ سجل الأكل');
-      const optLbl=isSnack?` (اختياري)`:(isLateLog?' (متأخر)':'');
+      const lbl=isLateLog
+        ?(isSnack?(en?'🍎 Late snack — log':'🍎 سناك متأخر — سجله'):(en?'⏰ Late — log food':'⏰ متأخر — سجل الأكل'))
+        :(isSnack?(en?'🍎 Snack — log food':'🍎 سناك — سجل الأكل'):t('log_food'));
+      const optLbl=isSnack?(en?' (optional)':' (اختياري)'):(isLateLog?(en?' (late)':' (متأخر)'):'');
       const lateStyle=isLateLog?'style="background:rgba(245,158,11,.1);border-color:rgba(245,158,11,.4);color:var(--or)"':'';
       act=`<button class="cbtn${isSnack?' snack':''}" ${lateStyle} data-action="logfood" data-id="${id}" data-pts="${pts}">${lbl}<span class="ptslbl">+${pts}⭐${optLbl}</span></button>`;
     }else if(isSnack){
-      act=`<button class="cbtn snack" data-action="confirm" data-id="${id}" data-pts="${pts}">🍎 سناك ✓<span class="ptslbl">+${pts}⭐ (اختياري)</span></button>`;
+      act=`<button class="cbtn snack" data-action="confirm" data-id="${id}" data-pts="${pts}">🍎 ${en?'Snack ✓':'سناك ✓'}<span class="ptslbl">+${pts}⭐ ${en?'(optional)':'(اختياري)'}</span></button>`;
     }else{
-      act=`<button class="cbtn" data-action="confirm" data-id="${id}" data-pts="${pts}">تأكيد ✓<span class="ptslbl">+${pts}⭐</span></button>`;
+      act=`<button class="cbtn" data-action="confirm" data-id="${id}" data-pts="${pts}">${en?'Confirm ✓':'تأكيد ✓'}<span class="ptslbl">+${pts}⭐</span></button>`;
     }
   }else{
-    act=isDone?`<div class="cbtn done">✅</div>`:(isSnack?`<div class="ptsbdg">🍎 ${pts}⭐ اختياري</div>`:`<div class="ptsbdg">${pts}⭐</div>`);
+    act=isDone?`<div class="cbtn done">✅</div>`:(isSnack?`<div class="ptsbdg">🍎 ${pts}⭐ ${en?'optional':'اختياري'}</div>`:`<div class="ptsbdg">${pts}⭐</div>`);
   }
 
   const hwH=hw?`<div class="hwtag">⏰ ${hw}</div>`:'';
@@ -3160,7 +3323,7 @@ function renderPanel(jd){
   const d=getEffectiveSched(jd);if(!d)return'';
   const k=DKEYS[jd];
   const isToday=(SELECTED_DATE===TODAY)&&(jd===todayJD());
-  const gbLabel=d.gm?`<div class="gbx ${d.gm==='upper'?'gbu':'gbl'}">${d.gm==='upper'?'Upper Body 💪':'Lower Body 🦵'}</div>`:`<div class="gbx gbr">يوم راحة 💤</div>`;
+  const gbLabel=d.gm?`<div class="gbx ${d.gm==='upper'?'gbu':'gbl'}">${d.gm==='upper'?'Upper Body 💪':'Lower Body 🦵'}</div>`:`<div class="gbx gbr">${t('rest_day')} 💤</div>`;
 
   const pills=[];
   const schedList=d.ts||[];
@@ -3169,7 +3332,7 @@ function renderPanel(jd){
   const prayerOrder=['Fajr','Dhuhr','Asr','Maghrib','Isha'];
   for(const pk of prayerOrder){
     if(pk==='Dhuhr'){
-      pills.push(`<div class="ppill sunrise-pill"><div class="pnam" style="color:var(--or)">الشروق ☀️</div><div class="ptim" style="color:var(--or)">${fmt24(PRYT.Sunrise||FALLBK.Sunrise)}</div></div>`);
+      pills.push(`<div class="ppill sunrise-pill"><div class="pnam" style="color:var(--or)">${tn('الشروق')} ☀️</div><div class="ptim" style="color:var(--or)">${fmt24(PRYT.Sunrise||FALLBK.Sunrise)}</div></div>`);
     }
     if(pk==='Dhuhr'&&jd===5){
       if(jumahTask){const pid=jumahTask[0];const dn=!!DONE[pid];pills.push(`<div class="ppill${dn?' done':''}" id="pp-${pid}"><div class="pnam">${jumahTask[4]}</div><div class="ptim">${fmt24(jumahTask[1])}</div></div>`);}
@@ -3177,13 +3340,17 @@ function renderPanel(jd){
     }
     const pm=PMETA[pk];if(!pm)continue;
     const pid=`pr-${k}-${pk}`;const dn=!!DONE[pid];
-    pills.push(`<div class="ppill${dn?' done':''}" id="pp-${pid}"><div class="pnam">${pm.ar}</div><div class="ptim">${fmt24(PRYT[pk]||FALLBK[pk])}</div></div>`);
+    pills.push(`<div class="ppill${dn?' done':''}" id="pp-${pid}"><div class="pnam">${tn(pm.ar)}</div><div class="ptim">${fmt24(PRYT[pk]||FALLBK[pk])}</div></div>`);
   }
 
   const tasks=getAllTasks(jd);
   const addTaskBtn='';
+  const en=(USER_SETTINGS.lang==='en');
+  const dhm=en
+    ?`Fajr ${fmt24(PRYT.Fajr||FALLBK.Fajr)} · Sunrise ${fmt24(PRYT.Sunrise||FALLBK.Sunrise)} ← Wake ${d.wk} · Sleep ${d.bd}`
+    :`فجر ${fmt24(PRYT.Fajr||FALLBK.Fajr)} · شروق ${fmt24(PRYT.Sunrise||FALLBK.Sunrise)} ← صحيان ${d.wk} · نوم ${d.bd}`;
   return`<div class="pan" id="pan-${k}">
-    <div class="dh"><div><div class="dhn">${d.n}</div><div class="dhm">فجر ${fmt24(PRYT.Fajr||FALLBK.Fajr)} · شروق ${fmt24(PRYT.Sunrise||FALLBK.Sunrise)} ← صحيان ${d.wk} · نوم ${d.bd}</div></div>${gbLabel}</div>
+    <div class="dh"><div><div class="dhn">${dayLabel(jd)}</div><div class="dhm">${dhm}</div></div>${gbLabel}</div>
     <div class="prow">${pills.join('')}</div>
     <div class="tl">${tasks.map(t=>renderCard(t,isToday,jd)).join('')}</div>
     ${addTaskBtn}
@@ -3198,7 +3365,7 @@ function renderTabs(){
     const b=document.createElement('div');
     b.className=`tab${isT?' act':''}${j===todayJD()?' tod':''}`;
     b.dataset.jd=j;
-    b.innerHTML=`<div>${DSHORT[j]}</div>${isG?'<div class="gdot"></div>':''}`;
+    b.innerHTML=`<div>${dayLabel(j)}</div>${isG?'<div class="gdot"></div>':''}`;
     b.onclick=()=>{
       saveDay();
       // Use the single canonical Sat->Fri week function so tab dates and report
@@ -3268,12 +3435,18 @@ function updateMacroUI(){
     if(fill) fill.style.width=`${pct}%`;
     if(val) val.textContent=`${r1(cVal)}/${r1(tVal)}${unit}`;
   };
-  setBar('macroFillP','macroValP',consumed.p,target.p,'جم');
-  setBar('macroFillC','macroValC',consumed.c,target.c,'جم');
-  setBar('macroFillF','macroValF',consumed.f,target.f,'جم');
-  setBar('macroFillB','macroValB',consumed.b,target.b,'جم');
+  const unit=(USER_SETTINGS.lang==='en')?'g':'جم';
+  setBar('macroFillP','macroValP',consumed.p,target.p,unit);
+  setBar('macroFillC','macroValC',consumed.c,target.c,unit);
+  setBar('macroFillF','macroValF',consumed.f,target.f,unit);
+  setBar('macroFillB','macroValB',consumed.b,target.b,unit);
   const kcalEl=document.getElementById('macroKcal');
-  if(kcalEl) kcalEl.textContent=`${r1(consumed.k)}/${r1(target.k)} سعرة`;
+  if(kcalEl) kcalEl.textContent=`${r1(consumed.k)}/${r1(target.k)} ${t('kcal')}`;
+  const lbls=document.querySelectorAll('.macrolbl');
+  if(lbls[0]) lbls[0].textContent=t('protein');
+  if(lbls[1]) lbls[1].textContent=t('carbs');
+  if(lbls[2]) lbls[2].textContent=t('fats');
+  if(lbls[3]) lbls[3].textContent=t('fiber');
 }
 
 function updateUI(){
@@ -3303,10 +3476,10 @@ function updateUI(){
     }
   }
   const pct=req.length?Math.round(d/req.length*100):0;
-  document.getElementById('ptxt').textContent=`${d}/${req.length} مهمة (${pct}%)`;
-  document.getElementById('ppts').textContent=`${p} نقطة اليوم`;
+  document.getElementById('ptxt').textContent=`${d}/${req.length} ${t('tasks_label')} (${pct}%)`;
+  document.getElementById('ppts').textContent=`${p} ${t('pts_today')}`;
   document.getElementById('pfill').style.width=req.length?`${(d/req.length)*100}%`:'0%';
-  const hlbl=document.getElementById('hist-label'); if(hlbl) hlbl.textContent=SELECTED_DATE===TODAY?'اليوم':SELECTED_DATE;
+  const hlbl=document.getElementById('hist-label'); if(hlbl) hlbl.textContent=SELECTED_DATE===TODAY?t('today'):SELECTED_DATE;
 
   updateMacroUI();
 
@@ -3326,11 +3499,12 @@ function openSettingsScreen(){
   const a=document.getElementById('themeAccent');
   const c=document.getElementById('themeCard');
   const b=document.getElementById('themeBg');
-  if(a) a.value=USER_SETTINGS.themeAccent||'#3b82f6';
-  if(c) c.value=USER_SETTINGS.themeCard||'#111827';
-  if(b) b.value=USER_SETTINGS.themeBg||'#0a0e1a';
+  if(a) a.value=USER_SETTINGS.themeAccent||THEME_DEFAULTS.themeAccent;
+  if(c) c.value=USER_SETTINGS.themeCard||THEME_DEFAULTS.themeCard;
+  if(b) b.value=USER_SETTINGS.themeBg||THEME_DEFAULTS.themeBg;
   applyI18n();
   renderIconPresets();
+  renderThemeSwatches();
   document.getElementById('settingsScreen')?.classList.add('open');
   updateAuthUI(fbAuth?.currentUser||null);
 }
@@ -3346,6 +3520,7 @@ function setAppLang(lang){
   applyI18n();
   updateAuthUI(fbAuth?.currentUser||null);
   try{ renderTabs();renderPanels();switchDay(typeof SELECTED_DATE!=='undefined'?getJDfromISO(SELECTED_DATE):todayJD());updateUI(); }catch(e){}
+  try{ if(typeof aiRenderMessages==='function') aiRenderMessages(); }catch(e){}
   showToast(USER_SETTINGS.lang==='en'?'Switched to English':'تم التحويل للعربية',1800);
 }
 
@@ -5094,21 +5269,21 @@ function aiRenderMessages(){
   if(AI_VIEW_MODE==='memory'){ aiRenderMemoryList(); return; }
   const session=aiGetActiveSession();
   if(!session.messages.length){
-    body.innerHTML=`<div class="ai-empty">👋 أهلاً! قولّي أي حاجة عايز تعملها في جدولك بأي طريقة عايزها — رسمي، عامي، عربي، إنجليزي، مفيش فرق. مثال: "عملت الجيم" أو "ممكن تنقلّي الغدا بكرة الساعة ٢؟" أو "شيل السباحة النهاردة".<br><br>كل تغيير بيعمله المساعد بييجيله زرار ↩️ تراجع تحت الرد، تقدر تستخدمه لو حصل غلط.<br><br>التغييرات دي خاصة بحسابك بس، ومتزامنة على كل أجهزتك.</div>`;
+    const en=USER_SETTINGS.lang==='en';
+    body.innerHTML=en
+      ?`<div class="ai-empty">${t('ai_welcome')}<br><br>Example: "I did gym" or "Move lunch tomorrow to 2pm" or "Remove swimming today".<br><br>Every change gets an ↩️ Undo under the reply. Changes sync to your account only.</div>`
+      :`<div class="ai-empty">👋 أهلاً! قولّي أي حاجة عايز تعملها في جدولك بأي طريقة عايزها — رسمي، عامي، عربي، إنجليزي، مفيش فرق. مثال: "عملت الجيم" أو "ممكن تنقلّي الغدا بكرة الساعة ٢؟" أو "شيل السباحة النهاردة".<br><br>كل تغيير بيعمله المساعد بييجيله زرار ↩️ تراجع تحت الرد، تقدر تستخدمه لو حصل غلط.<br><br>التغييرات دي خاصة بحسابك بس، ومتزامنة على كل أجهزتك.</div>`;
     return;
   }
   body.innerHTML=session.messages.map(m=>{
-    if(m.tone==='typing') return`<div class="ai-msg bot" style="opacity:.6">⏳ بيفكر...</div>`;
+    const en=USER_SETTINGS.lang==='en';
+    if(m.tone==='typing') return`<div class="ai-msg bot" style="opacity:.6">⏳ ${en?'Thinking...':'بيفكر...'}</div>`;
     const cls=m.role==='user'?'user':`bot${m.tone?' '+m.tone:''}`;
-    // undoIds is stamped fresh each render (see aiHandleSend) from the live
-    // AI_UNDO_SNAPSHOTS map — a message carrying hasUndo:true from a PRIOR page load
-    // (after a reload) has no live snapshot to restore, so no button renders for it;
-    // only same-session undos are ever offered, since restoring against data that's
-    // moved on since a reload isn't guaranteed safe.
     const undoBtns=(m.undoIds&&m.undoIds.length)
-      ?`<div style="margin-top:6px;display:flex;gap:6px;flex-wrap:wrap">${m.undoIds.map((uid,i)=>`<button class="ai-undo-btn" data-undo-id="${uid}" type="button">↩️ تراجع${m.undoIds.length>1?' #'+(i+1):''}</button>`).join('')}</div>`
+      ?`<div style="margin-top:6px;display:flex;gap:6px;flex-wrap:wrap">${m.undoIds.map((uid,i)=>`<button class="ai-undo-btn" data-undo-id="${uid}" type="button">↩️ ${en?'Undo':'تراجع'}${m.undoIds.length>1?' #'+(i+1):''}</button>`).join('')}</div>`
       :'';
-    return`<div class="ai-msg ${cls}">${m.text.replace(/</g,'&lt;')}${undoBtns}</div>`;
+    const shown=m.role==='user'?m.text:translateAiReply(m.text);
+    return`<div class="ai-msg ${cls}">${shown.replace(/</g,'&lt;')}${undoBtns}</div>`;
   }).join('');
   body.scrollTop=body.scrollHeight;
 }
@@ -5120,7 +5295,7 @@ function aiRenderSidebarList(){
   const list=document.getElementById('aiSidebarList');
   if(!list) return;
   if(!AI_SESSIONS.length){
-    list.innerHTML=`<div class="ai-empty">لا يوجد محادثات محفوظة بعد.</div>`;
+    list.innerHTML=`<div class="ai-empty">${USER_SETTINGS.lang==='en'?'No saved chats yet.':'لا يوجد محادثات محفوظة بعد.'}</div>`;
     return;
   }
   const sorted=[...AI_SESSIONS].sort((a,b)=>b.lastMsgAt-a.lastMsgAt);
@@ -5156,7 +5331,7 @@ function aiRenderMemoryList(){
   const body=document.getElementById('aiBody');
   if(!body) return;
   if(!USER_MEMORY.length){
-    body.innerHTML=`<div class="ai-empty">لسه مفيش حاجة متسجلة. لما تحكيلي حاجة شخصية مهمة، هسجلها هنا تلقائياً عشان أفتكرها في أي محادثة جديدة.</div>`;
+    body.innerHTML=`<div class="ai-empty">${USER_SETTINGS.lang==='en'?'Nothing saved yet. When you tell me something important, I’ll store it here for future chats.':'لسه مفيش حاجة متسجلة. لما تحكيلي حاجة شخصية مهمة، هسجلها هنا تلقائياً عشان أفتكرها في أي محادثة جديدة.'}</div>`;
     return;
   }
   body.innerHTML=USER_MEMORY.map((fact,i)=>`
@@ -5699,10 +5874,23 @@ document.body.addEventListener('click',async e=>{
     return;
   }
   if(tgt.id==='setSaveThemeBtn'){
-    USER_SETTINGS.themeAccent=document.getElementById('themeAccent')?.value||'#3b82f6';
-    USER_SETTINGS.themeCard=document.getElementById('themeCard')?.value||'#111827';
-    USER_SETTINGS.themeBg=document.getElementById('themeBg')?.value||'#0a0e1a';
+    USER_SETTINGS.themeAccent=document.getElementById('themeAccent')?.value||THEME_DEFAULTS.themeAccent;
+    USER_SETTINGS.themeCard=document.getElementById('themeCard')?.value||THEME_DEFAULTS.themeCard;
+    USER_SETTINGS.themeBg=document.getElementById('themeBg')?.value||THEME_DEFAULTS.themeBg;
     try{ await saveUserSettings(); }catch(e){}
+    applyTheme();
+    showToast(t('saved'),1800);
+    return;
+  }
+  if(tgt.id==='setResetThemeBtn'){
+    document.getElementById('themeAccent').value=THEME_DEFAULTS.themeAccent;
+    document.getElementById('themeCard').value=THEME_DEFAULTS.themeCard;
+    document.getElementById('themeBg').value=THEME_DEFAULTS.themeBg;
+    USER_SETTINGS.themeAccent=THEME_DEFAULTS.themeAccent;
+    USER_SETTINGS.themeCard=THEME_DEFAULTS.themeCard;
+    USER_SETTINGS.themeBg=THEME_DEFAULTS.themeBg;
+    try{ await saveUserSettings(); }catch(e){}
+    renderThemeSwatches();
     applyTheme();
     showToast(t('saved'),1800);
     return;
