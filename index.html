@@ -86,6 +86,7 @@ html[dir="ltr"] .tc[data-c="sunrise"]{border-left:3px solid var(--or)}
 .card-ontime{animation:ontimeGlow 1s ease}
 .card-late{animation:lateGlow 1s ease}
 .card-qada{animation:qadaGlow 1s ease}
+.current-task-highlight{outline:2px solid var(--ac);box-shadow:0 0 0 4px rgba(59,130,246,.25),0 8px 28px rgba(59,130,246,.2);transition:outline .3s,box-shadow .3s}
 .bar-gold{animation:barGold .9s ease}
 .st{display:flex;flex-direction:column;align-items:center;gap:1px}
 .sv{font-size:1.5rem;font-weight:900;line-height:1}
@@ -232,7 +233,7 @@ html[dir="ltr"] .tc[data-c="sunrise"]{border-left:3px solid var(--or)}
 #toast{z-index:10050 !important}
 
 /* Prayer Modal */
-.modal-overlay{position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(10,14,26,.92);display:none;align-items:center;justify-content:center;z-index:10000;padding:20px}
+.modal-overlay{position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(10,14,26,.92);display:none;align-items:center;justify-content:center;z-index:10055;padding:20px}
 .modal-overlay.open{display:flex}
 .modal-box{background:var(--c2);border:2px solid var(--br);border-radius:20px;padding:28px 20px;width:100%;max-width:420px;text-align:center;box-shadow:0 16px 40px rgba(0,0,0,.7)}
 .modal-step-ind{font-size:.65rem;color:var(--mu);margin-bottom:10px}
@@ -1312,7 +1313,11 @@ function stUpdateFoodLogVisibility(){
   row.style.display=show?'flex':'none';
   if(show&&foodEl&&isFoodishName(name)) foodEl.checked=true;
 }
-function openScheduleTaskEditor(jd,existingTask){
+let ST_RETURN_TO_SETTINGS=false;
+function openScheduleTaskEditor(jd,existingTask,opts){
+  opts=opts||{};
+  // Remember if Settings was open so save/cancel returns there instead of the schedule.
+  ST_RETURN_TO_SETTINGS=!!opts.fromSettings || !!document.getElementById('settingsScreen')?.classList.contains('open');
   ST_ACTIVE_JD=jd;
   ST_ACTIVE_TASK_ID=existingTask?existingTask[0]:null;
   ST_SELECTED_COLOR=(existingTask&&existingTask[10])||OB_TASK_COLORS[0];
@@ -1366,6 +1371,10 @@ function closeScheduleTaskEditor(){
   document.getElementById('schedTaskModal')?.classList.remove('open');
   ST_ACTIVE_JD=null;
   ST_ACTIVE_TASK_ID=null;
+  if(ST_RETURN_TO_SETTINGS){
+    ST_RETURN_TO_SETTINGS=false;
+    try{ openSettingsScreen(); }catch(e){}
+  }
 }
 
 async function stHandleSave(){
@@ -1391,6 +1400,7 @@ async function stHandleSave(){
   }
 
   const foodLog=!!document.getElementById('stFoodLog')?.checked;
+  const returnToSettings=ST_RETURN_TO_SETTINGS;
   try{
     await saveScheduleTask(ST_ACTIVE_JD,ST_ACTIVE_TASK_ID,{time:displayTime,name,desc,pts,color:ST_SELECTED_COLOR,foodLog});
   }catch(e){
@@ -1398,8 +1408,15 @@ async function stHandleSave(){
     if(errEl){ errEl.textContent='⚠️ Save failed'; errEl.style.display='block'; }
     return;
   }
-  closeScheduleTaskEditor();
+  // Close modal without auto-restoring settings yet — we re-open after schedule re-render.
+  document.getElementById('schedTaskModal')?.classList.remove('open');
+  ST_ACTIVE_JD=null;
+  ST_ACTIVE_TASK_ID=null;
+  ST_RETURN_TO_SETTINGS=false;
   try{ renderTabs();renderPanels();switchDay(getJDfromISO(SELECTED_DATE));updateUI(); }catch(e){ console.warn('re-render after schedule edit failed',e); }
+  if(returnToSettings){
+    try{ openSettingsScreen(); }catch(e){}
+  }
   showToast(t('task_saved'),2200);
 }
 
@@ -3492,6 +3509,45 @@ function switchDay(jd){
   document.querySelectorAll('.tab').forEach(t=>{if(parseInt(t.dataset.jd,10)===jd)t.classList.add('act');else t.classList.remove('act');});
   document.querySelectorAll('.pan').forEach(p=>p.classList.remove('act'));
   const p=document.getElementById(`pan-${DKEYS[jd]}`);if(p)p.classList.add('act');
+  if(jd===todayJD() && SELECTED_DATE===TODAY){
+    setTimeout(()=>{ try{ scrollToCurrentTask(); }catch(e){} },80);
+  }
+}
+
+// Smooth-scroll the schedule to the task that matches "right now" (Kuwait time):
+// prefer the block covering the current minute; if already done, jump to the next
+// incomplete task; otherwise the most recent pending task.
+function scrollToCurrentTask(){
+  if(SELECTED_DATE!==TODAY) return;
+  if(document.getElementById('settingsScreen')?.classList.contains('open')) return;
+  const jd=todayJD();
+  const tasks=(typeof getAllTasks==='function'?getAllTasks(jd):[]).filter(t=>t&&!t._deleted);
+  if(!tasks.length) return;
+  const now=getKuwaitNow();
+  const sorted=[...tasks].sort((a,b)=>toMin(a[10]||a[1])-toMin(b[10]||b[1]));
+  const isDone=id=>{const v=DONE[id];return v!==undefined&&v!==false;};
+  let target=null;
+  // Latest task that has already started
+  for(const t of sorted){
+    if(toMin(t[10]||t[1])<=now) target=t;
+    else break;
+  }
+  // If that one is done, prefer next incomplete
+  if(target&&isDone(target[0])){
+    const next=sorted.find(t=>toMin(t[10]||t[1])>toMin(target[10]||target[1])&&!isDone(t[0]));
+    if(next) target=next;
+  }
+  // Fallback: first incomplete of the day, else first task
+  if(!target||(isDone(target[0])&&!sorted.some(t=>!isDone(t[0])))){
+    target=sorted.find(t=>!isDone(t[0]))||sorted[0];
+  }
+  if(!target) return;
+  const el=document.getElementById('c-'+target[0]);
+  if(!el) return;
+  document.querySelectorAll('.current-task-highlight').forEach(n=>n.classList.remove('current-task-highlight'));
+  el.classList.add('current-task-highlight');
+  el.scrollIntoView({behavior:'smooth',block:'center',inline:'nearest'});
+  setTimeout(()=>el.classList.remove('current-task-highlight'),2800);
 }
 
 function renderPanels(){
@@ -4850,8 +4906,8 @@ function openFoodLogModal(task,existingEntry,prefillText){
 
   // Change the submit button label in edit mode so it's clear this replaces the old
   // entry rather than adding a second one.
-  const submitBtn=document.getElementById('flSubmitBtn');
-  if(submitBtn) submitBtn.textContent=isEdit?'احسب واستبدل ✏️':'احسب واحفظ ✅';
+  const flSubmitBtnEl = document.getElementById('flSubmitBtn');
+  if(flSubmitBtnEl) flSubmitBtnEl.textContent=isEdit?'احسب واستبدل ✏️':'احسب واحفظ ✅';
 
   if(modal) modal.classList.add('open');
 }
@@ -6027,9 +6083,9 @@ document.body.addEventListener('click',async e=>{
     return;
   }
   if(tgt.id==='setAddTaskBtn'){
-    closeSettingsScreen();
     if(!fbAuth.currentUser){ showToast(t('need_login'),3000,'warn'); return; }
-    openScheduleTaskEditor(todayJD(),null);
+    // Keep Settings open underneath; task modal is higher z-index. On save/cancel we return here.
+    openScheduleTaskEditor(todayJD(),null,{fromSettings:true});
     return;
   }
   if(tgt.id==='setLangAr'){ setAppLang('ar'); return; }
@@ -6197,6 +6253,8 @@ function revealApp(){
       applyI18n();
     }
   }catch(e){}
+  // After the schedule paints, jump to the task for "right now".
+  setTimeout(()=>{ try{ scrollToCurrentTask(); }catch(e){} },200);
 }
 
 function initAppFlow(user){
