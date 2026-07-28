@@ -139,7 +139,7 @@ body{font-family:'Cairo',sans-serif;background:var(--bg);color:var(--tx);directi
 .ptslbl{font-size:.58rem;color:var(--mu)}
 .ptsbdg{padding:4px 8px;background:rgba(100,116,139,.1);border:1px solid var(--br);border-radius:6px;font-size:.67rem;color:var(--mu);flex-shrink:0}
 .floatpts{position:fixed;pointer-events:none;z-index:9999;font-size:1.1rem;font-weight:900;color:var(--ye);font-family:'Cairo',sans-serif;animation:up .8s ease-out forwards}
-#toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%);background:var(--c2);border:2px solid var(--gr);border-radius:12px;padding:14px 20px;font-size:.85rem;font-weight:700;color:var(--gr);z-index:10050;display:none;text-align:center;box-shadow:0 4px 20px rgba(0,0,0,.5);max-width:340px;white-space:pre-line}
+#toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%);background:var(--c2);border:2px solid var(--gr);border-radius:12px;padding:14px 20px;font-size:.85rem;font-weight:700;color:var(--gr);z-index:9999;display:none;text-align:center;box-shadow:0 4px 20px rgba(0,0,0,.5);max-width:340px;white-space:pre-line}
 #toast.show{display:block;animation:ti .3s ease}
 #toast.toast-warn{border-color:#ef4444;color:#ef4444}
 #toast.toast-qada{border-color:var(--so);color:var(--so)}
@@ -157,6 +157,39 @@ body{font-family:'Cairo',sans-serif;background:var(--bg);color:var(--tx);directi
 .topbtn-signout:hover{background:rgba(239,68,68,.22)}
 .topbtn-signin{background:linear-gradient(135deg,#10b981,#059669);color:#fff;box-shadow:0 2px 10px rgba(16,185,129,.35)}
 .topbtn-signin:hover{box-shadow:0 4px 16px rgba(16,185,129,.5);transform:translateY(-1px)}
+
+/* Profile menu (click name) */
+.profile-wrap{position:relative}
+.profile-btn{background:transparent;border:none;color:var(--tx);font-family:'Cairo',sans-serif;font-size:.85rem;font-weight:800;cursor:pointer;padding:6px 10px;border-radius:8px;display:inline-flex;align-items:center;gap:6px}
+.profile-btn:hover{background:rgba(255,255,255,.06)}
+.profile-menu{position:absolute;top:100%;left:0;margin-top:6px;min-width:220px;background:var(--c2);border:1px solid var(--br);border-radius:12px;box-shadow:0 12px 40px rgba(0,0,0,.55);z-index:200;display:none;overflow:hidden}
+.profile-menu.open{display:block}
+.profile-menu button{width:100%;text-align:right;padding:12px 16px;background:transparent;border:none;color:var(--tx);font-family:'Cairo',sans-serif;font-size:.85rem;font-weight:700;cursor:pointer;display:flex;align-items:center;gap:10px}
+.profile-menu button:hover{background:rgba(59,130,246,.1)}
+.profile-menu .pm-danger{color:#f87171}
+.profile-menu .pm-sep{height:1px;background:var(--br);margin:4px 0}
+
+/* Full-screen settings */
+#settingsScreen{position:fixed;inset:0;background:var(--bg);z-index:10040;display:none;flex-direction:column}
+#settingsScreen.open{display:flex}
+.set-header{display:flex;align-items:center;justify-content:space-between;padding:16px 20px;border-bottom:1px solid var(--br);flex-shrink:0}
+.set-header h2{font-size:1.15rem;font-weight:900;margin:0}
+.set-body{flex:1;display:flex;overflow:hidden}
+.set-nav{width:200px;border-left:1px solid var(--br);padding:16px 10px;overflow-y:auto;flex-shrink:0}
+.set-nav button{width:100%;text-align:right;padding:12px 14px;margin-bottom:4px;background:transparent;border:none;border-radius:10px;color:var(--so);font-family:'Cairo',sans-serif;font-size:.85rem;font-weight:700;cursor:pointer}
+.set-nav button:hover{background:rgba(255,255,255,.05);color:var(--tx)}
+.set-nav button.act{background:rgba(59,130,246,.15);color:var(--ac)}
+.set-content{flex:1;padding:24px 20px;overflow-y:auto}
+.set-section{display:none;max-width:520px}
+.set-section.act{display:block}
+.set-section h3{font-size:1rem;font-weight:900;margin:0 0 6px}
+.set-section p.desc{font-size:.78rem;color:var(--mu);margin:0 0 18px;line-height:1.5}
+.set-row{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:14px 0;border-bottom:1px solid var(--br)}
+.set-row:last-child{border-bottom:none}
+.set-row label{font-size:.88rem;font-weight:700}
+.set-row input[type=checkbox]{width:20px;height:20px;accent-color:var(--ac)}
+.set-actions{display:flex;flex-direction:column;gap:10px;margin-top:8px}
+.set-actions .altbtn,.set-actions .topbtn{width:100%;justify-content:center}
 
 /* Prayer Modal */
 .modal-overlay{position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(10,14,26,.92);display:none;align-items:center;justify-content:center;z-index:10000;padding:20px}
@@ -345,8 +378,78 @@ body{font-family:'Cairo',sans-serif;background:var(--bg);color:var(--tx);directi
       <div id="networkStatusBadge" class="net-badge" style="display:none">⚠️ جاري التحقق...</div>
     </div>
     <div style="display:flex;flex-direction:column;align-items:flex-end;gap:6px">
-      <div id="authName" style="font-size:.8rem;font-weight:700;color:var(--so)"></div>
       <div id="authBtn" style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;justify-content:flex-end"></div>
+    </div>
+  </div>
+
+  <!-- Full-screen settings -->
+  <div id="settingsScreen">
+    <div class="set-header">
+      <h2 id="setTitle">⚙️ الإعدادات</h2>
+      <button type="button" id="setCloseBtn" class="topbtn" style="background:rgba(100,116,139,.15);border:1px solid var(--br);color:var(--tx)">إغلاق</button>
+    </div>
+    <div class="set-body">
+      <div class="set-nav" id="setNav">
+        <button type="button" data-setsec="general" class="act">عام</button>
+        <button type="button" data-setsec="tracking">التتبع</button>
+        <button type="button" data-setsec="notifications">التذكيرات</button>
+        <button type="button" data-setsec="reports">التقارير</button>
+        <button type="button" data-setsec="language">اللغة</button>
+        <button type="button" data-setsec="account">الحساب</button>
+      </div>
+      <div class="set-content">
+        <div class="set-section act" id="setsec-general">
+          <h3>عام</h3>
+          <p class="desc">إدارة مهامك اليومية من هنا.</p>
+          <div class="set-actions">
+            <button type="button" id="setAddTaskBtn" class="altbtn">➕ إضافة مهمة لليوم الحالي</button>
+          </div>
+        </div>
+        <div class="set-section" id="setsec-tracking">
+          <h3>التتبع</h3>
+          <p class="desc">أظهر أو أخفِ أنظمة النقاط والصلاة.</p>
+          <div class="set-row">
+            <label for="setShowTracking">إظهار النقاط والاستريك والتغذية</label>
+            <input type="checkbox" id="setShowTracking">
+          </div>
+          <div class="set-row">
+            <label for="setTrackPrayers">تتبع مواعيد الصلاة</label>
+            <input type="checkbox" id="setTrackPrayers">
+          </div>
+          <div class="set-actions" style="margin-top:16px">
+            <button type="button" id="setSaveTrackingBtn" class="fl-submit-btn" style="margin:0">حفظ ✅</button>
+          </div>
+        </div>
+        <div class="set-section" id="setsec-notifications">
+          <h3>التذكيرات</h3>
+          <p class="desc">تفعيل أو إيقاف إشعارات المهام.</p>
+          <div class="set-actions">
+            <button type="button" id="btn-notif-toggle" class="topbtn" style="background:rgba(100,116,139,.15);border:1px solid var(--br);color:var(--tx)">🔕 التذكيرات</button>
+          </div>
+        </div>
+        <div class="set-section" id="setsec-reports">
+          <h3>التقارير</h3>
+          <p class="desc">سجل التقارير الأسبوعية السابقة.</p>
+          <div class="set-actions">
+            <button type="button" id="btn-report-history" class="topbtn topbtn-history">🗂️ سجل التقارير</button>
+          </div>
+        </div>
+        <div class="set-section" id="setsec-language">
+          <h3>اللغة / Language</h3>
+          <p class="desc">واجهة التطبيق بالكامل. App UI language.</p>
+          <div class="set-actions">
+            <button type="button" id="setLangAr" class="altbtn">العربية</button>
+            <button type="button" id="setLangEn" class="altbtn">English</button>
+          </div>
+        </div>
+        <div class="set-section" id="setsec-account">
+          <h3>الحساب</h3>
+          <p class="desc">إدارة جلسة الدخول.</p>
+          <div class="set-actions">
+            <button type="button" id="btn-signout" class="topbtn topbtn-signout">خروج</button>
+          </div>
+        </div>
+      </div>
     </div>
   </div>
 
@@ -438,31 +541,9 @@ body{font-family:'Cairo',sans-serif;background:var(--bg);color:var(--tx);directi
      modal-box pattern and a chip-style color picker matching the onboarding
      wizard's visual language. Only ever opened for signed-in users (the "+ إضافة
      مهمة" button that opens this is itself hidden for guests — see renderPanel). -->
-<div id="settingsModal" class="modal-overlay">
-  <div class="modal-box" style="max-width:420px;text-align:right">
-    <div class="modal-title" style="text-align:center">⚙️ الإعدادات</div>
-    <div style="display:flex;flex-direction:column;gap:14px;margin-top:18px">
-      <label style="display:flex;align-items:center;justify-content:space-between;gap:12px;cursor:pointer">
-        <span style="font-size:.88rem;font-weight:700">إظهار النقاط والاستريك والتغذية</span>
-        <input type="checkbox" id="setShowTracking" style="width:20px;height:20px;accent-color:var(--ac)">
-      </label>
-      <label style="display:flex;align-items:center;justify-content:space-between;gap:12px;cursor:pointer">
-        <span style="font-size:.88rem;font-weight:700">تتبع مواعيد الصلاة</span>
-        <input type="checkbox" id="setTrackPrayers" style="width:20px;height:20px;accent-color:var(--ac)">
-      </label>
-      <button id="setAddTaskBtn" class="altbtn" type="button" style="width:100%;justify-content:center;margin-top:6px">➕ إضافة مهمة لليوم الحالي</button>
-    </div>
-    <div style="display:flex;gap:8px;margin-top:20px">
-      <button id="setSaveBtn" class="fl-submit-btn" type="button" style="margin-bottom:0">حفظ ✅</button>
-      <button id="setCancelBtn" class="modal-back-btn" type="button" style="margin-top:0;flex-shrink:0">إغلاق</button>
-    </div>
-  </div>
-</div>
-
 <div id="schedTaskModal" class="modal-overlay">
   <div class="modal-box" style="max-width:420px;text-align:right">
     <div class="modal-title" id="stTitle" style="text-align:center">إضافة مهمة</div>
-    <div id="stError" style="display:none;margin-top:10px;padding:10px 12px;border-radius:10px;background:rgba(239,68,68,.15);border:1px solid rgba(239,68,68,.45);color:#f87171;font-size:.82rem;font-weight:700;text-align:center"></div>
     <div style="display:flex;flex-direction:column;gap:12px;margin-top:16px">
       <div>
         <label style="font-size:.72rem;color:var(--so);font-weight:700;display:block;margin-bottom:6px">اسم المهمة</label>
@@ -1162,8 +1243,6 @@ function openScheduleTaskEditor(jd,existingTask){
   }
 
   stRenderColorChips();
-  const errEl=document.getElementById('stError');
-  if(errEl){ errEl.style.display='none'; errEl.textContent=''; }
   document.getElementById('schedTaskModal')?.classList.add('open');
   setTimeout(()=>nameEl?.focus(),80);
 }
@@ -1175,14 +1254,8 @@ function closeScheduleTaskEditor(){
 }
 
 async function stHandleSave(){
-  const errEl=document.getElementById('stError');
-  if(errEl){ errEl.style.display='none'; errEl.textContent=''; }
   const name=(document.getElementById('stName')?.value||'').trim();
-  if(!name){
-    if(errEl){ errEl.textContent='⚠️ اكتب اسم المهمة أولاً'; errEl.style.display='block'; }
-    document.getElementById('stName')?.focus();
-    return;
-  }
+  if(!name){ showToast('اكتب اسم المهمة الأول',2000,'warn'); return; }
   const timeVal=document.getElementById('stTime')?.value||'09:00';
   const [h24,m]=timeVal.split(':').map(Number);
   const pm=h24>=12;
@@ -1191,16 +1264,13 @@ async function stHandleSave(){
   const desc=(document.getElementById('stDesc')?.value||'').trim();
   const pts=Math.max(0,Math.min(100,parseInt(document.getElementById('stPts')?.value,10)||0));
 
-  if(ST_ACTIVE_JD===null){
-    if(errEl){ errEl.textContent='⚠️ حصل خطأ — جرب تفتح المهمة تاني'; errEl.style.display='block'; }
-    return;
-  }
+  if(ST_ACTIVE_JD===null){ showToast('⚠️ حصل خطأ — جرب تفتح المهمة تاني',3000,'warn'); return; }
 
   try{
     await saveScheduleTask(ST_ACTIVE_JD,ST_ACTIVE_TASK_ID,{time:displayTime,name,desc,pts,color:ST_SELECTED_COLOR});
   }catch(e){
     console.error('saveScheduleTask failed',e);
-    if(errEl){ errEl.textContent='⚠️ حصل خطأ أثناء الحفظ — جرب تاني'; errEl.style.display='block'; }
+    showToast('⚠️ حصل خطأ أثناء الحفظ — جرب تاني',3500,'warn');
     return;
   }
   closeScheduleTaskEditor();
@@ -1232,7 +1302,7 @@ async function stHandleDelete(jd,taskId){
 // through onboarding (Stage 1) is asked explicitly and their answer is stored here
 // before they ever see a schedule — this default only matters for accounts that
 // predate the toggle existing at all.
-let USER_SETTINGS={trackPrayers:true,showTracking:true};
+let USER_SETTINGS={trackPrayers:true,showTracking:true,lang:'ar'};
 
 async function saveUserSettings(){
   await sSet(LS.userSettings,USER_SETTINGS);
@@ -1443,9 +1513,12 @@ function getAllTasks(jd,iso){
 function getReqTasks(jd,iso){
   const effIso=iso||dateForWeekday(jd,TODAY);
   const d=getEffectiveSched(jd);
-  const isAbdullah=fbAuth?.currentUser?.uid===ABDULLAH_UID;
-  const showPrayers=isAbdullah || (USER_SETTINGS.trackPrayers && USER_SETTINGS.onboardingComplete);
-  const prayers=showPrayers?buildPTasks(jd):[];
+  // cat==='snack' is excluded here — this is the actual mechanism that exempts snacks
+  // from both the punishment scan (applyPunishmentOnce loops over getReqTasks) and the
+  // streak "all required tasks done" check (checkStreak also uses getReqTasks). Snacks
+  // still carry pts>0 and are fully completable via their own button; they just never
+  // appear in the "required" list that punishment/streak logic reads.
+  const prayers=USER_SETTINGS.trackPrayers?buildPTasks(jd):[];
   const base=[...prayers,...(d?.ts||[])].filter(t=>!t[9]&&t[6]>0&&t[2]!=='snack');
   return applyUserEditsToTasks(base,effIso).filter(t=>!t._deleted).sort((a,b)=>sortKey(a)-sortKey(b));
 }
@@ -2951,7 +3024,7 @@ function renderPanel(jd){
   }
 
   const tasks=getAllTasks(jd);
-  const addTaskBtn=fbAuth.currentUser?`<div style="text-align:center;margin-top:12px;font-size:.72rem;color:var(--mu)">أضف مهام من زر ⚙️ الإعدادات بالأعلى</div>`:'';
+  const addTaskBtn='';
   return`<div class="pan" id="pan-${k}">
     <div class="dh"><div><div class="dhn">${d.n}</div><div class="dhm">فجر ${fmt24(PRYT.Fajr||FALLBK.Fajr)} · شروق ${fmt24(PRYT.Sunrise||FALLBK.Sunrise)} ← صحيان ${d.wk} · نوم ${d.bd}</div></div>${gbLabel}</div>
     <div class="prow">${pills.join('')}</div>
@@ -3088,24 +3161,64 @@ function updateUI(){
   }
 }
 
+function openSettingsScreen(){
+  const showEl=document.getElementById('setShowTracking');
+  const prayEl=document.getElementById('setTrackPrayers');
+  if(showEl) showEl.checked=USER_SETTINGS.showTracking!==false;
+  if(prayEl) prayEl.checked=!!USER_SETTINGS.trackPrayers;
+  document.getElementById('settingsScreen')?.classList.add('open');
+  updateAuthUI(fbAuth?.currentUser||null);
+}
+function closeSettingsScreen(){
+  document.getElementById('settingsScreen')?.classList.remove('open');
+}
+function setAppLang(lang){
+  USER_SETTINGS.lang=lang==='en'?'en':'ar';
+  document.documentElement.lang=USER_SETTINGS.lang==='en'?'en':'ar';
+  document.documentElement.dir=USER_SETTINGS.lang==='en'?'ltr':'rtl';
+  try{ saveUserSettings(); }catch(e){}
+  // Minimal chrome strings — full string table can expand later
+  const ar=USER_SETTINGS.lang!=='en';
+  const setTitle=document.getElementById('setTitle');
+  if(setTitle) setTitle.textContent=ar?'⚙️ الإعدادات':'⚙️ Settings';
+  const closeBtn=document.getElementById('setCloseBtn');
+  if(closeBtn) closeBtn.textContent=ar?'إغلاق':'Close';
+  showToast(ar?'تم التحويل للعربية':'Switched to English',1800);
+  try{ updateAuthUI(fbAuth?.currentUser||null); }catch(e){}
+}
+
 function updateAuthUI(user){
-  const nameEl=document.getElementById('authName');
   const btnEl=document.getElementById('authBtn');
-  if(!nameEl||!btnEl)return;
+  if(!btnEl)return;
   const isSat=todayJD()===6;
-  const historyBtn=`<button class="topbtn topbtn-history" id="btn-report-history">🗂️ سجل التقارير</button>`;
-  const reportBtn=`<button class="topbtn topbtn-report" id="btn-report" ${isSat?'':'disabled'}>📊 تقرير الأسبوع</button>`;
+  // Weekly report: only visible on Saturday (when report is generated). Hidden all other days.
+  const reportBtn=isSat?`<button class="topbtn topbtn-report" id="btn-report">📊 تقرير الأسبوع</button>`:'';
   const permState=(typeof Notification!=='undefined')?Notification.permission:'unsupported';
   const isPWANow=isStandalonePWA();
-  const diagLabel=permState==='granted'?(isPWANow?'✅ مفعّلة (PWA)':'⚠️ مفعّلة بس مش PWA'):permState==='denied'?'🚫 متبلوكة':permState==='unsupported'?'❌ غير مدعومة':'⏳ لسه ما اتسألتش';
-  const notifBtn=`<button class="topbtn" id="btn-notif-toggle" title="${diagLabel}" style="background:${NOTIF_ENABLED?'rgba(16,185,129,.18)':'rgba(100,116,139,.15)'};border:1px solid ${NOTIF_ENABLED?'rgba(16,185,129,.5)':'var(--br)'};color:${NOTIF_ENABLED?'var(--gr)':'var(--so)'}">${NOTIF_ENABLED?'🔔 مفعّلة':'🔕 التذكيرات'} <span style="font-size:.6rem;opacity:.75">${diagLabel}</span></button>`;
-  const settingsBtn=`<button class="topbtn" id="btn-settings" style="background:rgba(100,116,139,.18);border:1px solid var(--br);color:var(--tx)">⚙️ إعدادات</button>`;
+  const diagLabel=permState==='granted'?(isPWANow?'✅ PWA':'⚠️ not PWA'):permState==='denied'?'blocked':permState==='unsupported'?'n/a':'pending';
+  // Sync notif button label inside settings if present
+  const notifInSettings=document.getElementById('btn-notif-toggle');
+  if(notifInSettings){
+    notifInSettings.textContent=NOTIF_ENABLED?`🔔 مفعّلة (${diagLabel})`:`🔕 التذكيرات (${diagLabel})`;
+    notifInSettings.style.background=NOTIF_ENABLED?'rgba(16,185,129,.18)':'rgba(100,116,139,.15)';
+    notifInSettings.style.borderColor=NOTIF_ENABLED?'rgba(16,185,129,.5)':'var(--br)';
+    notifInSettings.style.color=NOTIF_ENABLED?'var(--gr)':'var(--so)';
+  }
   if(user){
-    nameEl.textContent=(user.displayName||user.email||'').split('@')[0];
-    btnEl.innerHTML=`${settingsBtn}<button class="topbtn topbtn-signout" id="btn-signout">خروج</button>${notifBtn}${reportBtn}${historyBtn}`;
+    const display=(user.displayName||user.email||'').split('@')[0];
+    btnEl.innerHTML=`${reportBtn}
+      <div class="profile-wrap">
+        <button type="button" class="profile-btn" id="profileBtn">👤 ${display} ▾</button>
+        <div class="profile-menu" id="profileMenu">
+          <button type="button" id="pm-settings">⚙️ الإعدادات</button>
+          <button type="button" id="pm-lang-ar">🌐 العربية</button>
+          <button type="button" id="pm-lang-en">🌐 English</button>
+          <div class="pm-sep"></div>
+          <button type="button" class="pm-danger" id="btn-signout">خروج</button>
+        </div>
+      </div>`;
   }else{
-    nameEl.textContent='';
-    btnEl.innerHTML=`${settingsBtn}<button class="topbtn topbtn-signin" id="btn-signin">تسجيل دخول</button>${notifBtn}${reportBtn}${historyBtn}`;
+    btnEl.innerHTML=`${reportBtn}<button class="topbtn topbtn-signin" id="btn-signin">تسجيل دخول</button>`;
   }
 }
 
@@ -5408,33 +5521,43 @@ document.body.addEventListener('click',async e=>{
   if(tgt.id==='stSaveBtn'){ await stHandleSave(); return; }
   if(tgt.id==='stCancelBtn'){ closeScheduleTaskEditor(); return; }
 
-  if(tgt.id==='btn-settings'){
-    const showEl=document.getElementById('setShowTracking');
-    const prayEl=document.getElementById('setTrackPrayers');
-    if(showEl) showEl.checked=USER_SETTINGS.showTracking!==false;
-    if(prayEl) prayEl.checked=!!USER_SETTINGS.trackPrayers;
-    document.getElementById('settingsModal')?.classList.add('open');
+  // Profile menu toggle
+  if(tgt.id==='profileBtn' || tgt.closest?.('#profileBtn')){
+    document.getElementById('profileMenu')?.classList.toggle('open');
     return;
   }
-  if(tgt.id==='setCancelBtn'){
-    document.getElementById('settingsModal')?.classList.remove('open');
+  // Close profile menu on outside click handled below via generic close
+  if(tgt.id==='pm-settings'){
+    document.getElementById('profileMenu')?.classList.remove('open');
+    openSettingsScreen();
     return;
   }
-  if(tgt.id==='setSaveBtn'){
+  if(tgt.id==='pm-lang-ar'){ document.getElementById('profileMenu')?.classList.remove('open'); setAppLang('ar'); return; }
+  if(tgt.id==='pm-lang-en'){ document.getElementById('profileMenu')?.classList.remove('open'); setAppLang('en'); return; }
+  if(tgt.id==='setCloseBtn'){ closeSettingsScreen(); return; }
+  if(tgt.id==='setSaveTrackingBtn'){
     const showEl=document.getElementById('setShowTracking');
     const prayEl=document.getElementById('setTrackPrayers');
     USER_SETTINGS.showTracking=showEl?showEl.checked:true;
     USER_SETTINGS.trackPrayers=prayEl?prayEl.checked:false;
     try{ await saveUserSettings(); }catch(e){}
-    document.getElementById('settingsModal')?.classList.remove('open');
     try{ renderTabs();renderPanels();switchDay(todayJD());updateUI(); }catch(e){}
-    showToast('✅ تم حفظ الإعدادات',2000);
+    showToast('✅ تم الحفظ',1800);
     return;
   }
   if(tgt.id==='setAddTaskBtn'){
-    document.getElementById('settingsModal')?.classList.remove('open');
+    closeSettingsScreen();
     if(!fbAuth.currentUser){ showToast('لازم تسجّل دخول عشان تضيف مهام',3000,'warn'); return; }
     openScheduleTaskEditor(todayJD(),null);
+    return;
+  }
+  if(tgt.id==='setLangAr'){ setAppLang('ar'); return; }
+  if(tgt.id==='setLangEn'){ setAppLang('en'); return; }
+  const setNavBtn=closest('[data-setsec]');
+  if(setNavBtn){
+    const sec=setNavBtn.getAttribute('data-setsec');
+    document.querySelectorAll('#setNav button').forEach(b=>b.classList.toggle('act',b===setNavBtn));
+    document.querySelectorAll('.set-section').forEach(s=>s.classList.toggle('act',s.id==='setsec-'+sec));
     return;
   }
 
