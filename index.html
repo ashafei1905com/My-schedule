@@ -1445,6 +1445,8 @@ async function saveScheduleTask(jd,existingId,{time,name,desc,pts,color,foodLog,
     const tuple=[id,time,cat,ico,name,desc||'',pts||0,null,null,isEx,color||null,macros,mealKey,timeEnd||null,notif!==false];
     const idx=ts.findIndex(t=>t[0]===id);
     if(idx>=0) ts[idx]=tuple; else ts.push(tuple);
+    // Keep the day's array in chronological order (source of truth for saves)
+    ts.sort((a,b)=>sortKey(a)-sortKey(b));
     USER_SETTINGS.taskNotif[id]=notif!==false;
   }
   await saveUserSchedule();
@@ -1994,7 +1996,10 @@ function applyI18n(){
   const sideClose=document.getElementById('aiSidebarClose');
   if(sideClose) sideClose.title=t('ai_close');
     const editBtn=document.getElementById('btn-enter-edit-mode');
-  if(editBtn) editBtn.textContent=(USER_SETTINGS.lang==='en')?'✏️ Enter Edit Mode':'✏️ دخول وضع التعديل';
+  if(editBtn){
+    editBtn.textContent=(USER_SETTINGS.lang==='en')?'✏️ Enter Edit Mode':'✏️ دخول وضع التعديل';
+    editBtn.style.display=(fbAuth&&fbAuth.currentUser)?'':'none';
+  }
   const emSave=document.getElementById('editModeSave');
   if(emSave) emSave.textContent=(USER_SETTINGS.lang==='en')?'Save Edits ✅':'حفظ التعديلات ✅';
   const emCancel=document.getElementById('editModeCancel');
@@ -2358,7 +2363,14 @@ function buildPTasks(jd){
       return[`pr-${k}-${pk}`,fmt24(t24),'prayer',pm.ic,pm.ar,desc,pm.pts,null,null,false,t24];
     });
 }
-function sortKey(t){const base=toMin(t[10]||t[1]);return t[2]==='sleep'?base+1440:base;}
+function sortKey(t){
+  // t[1] is always the display time. t[10] is 24h time ONLY for prayers (buildPTasks);
+  // for custom tasks t[10] is a hex color and must NEVER be used for sorting.
+  const t10=t[10];
+  const t10IsTime=typeof t10==='string' && /\d{1,2}:\d{2}/.test(t10) && t10.charAt(0)!=='#';
+  const base=toMin(t10IsTime?t10:t[1]);
+  return t[2]==='sleep'?base+1440:base;
+}
 // Both functions now accept an optional `iso` (the actual calendar date being viewed).
 // When omitted they fall back to the natural date for weekday `jd` relative to TODAY's
 // week, preserving old behavior for any call site that hasn't been updated. The user's
@@ -2376,9 +2388,11 @@ function getAllTasks(jd,iso){
   // d.ts must not re-introduce prayers (sanitize may lag one frame)
   const schedTs=(d.ts||[]).filter(t=>!(t&&(t[2]==='prayer'||String(t[0]||'').startsWith('pr-'))));
   const base=[...prayers,...schedTs,...frees];
-  let list=applyUserEditsToTasks(base,effIso).sort((a,b)=>sortKey(a)-sortKey(b));
+  let list=applyUserEditsToTasks(base,effIso);
   // Outside edit mode, hide soft-deleted cards so the schedule stays clean
   if(typeof EDIT_MODE==='undefined' || !EDIT_MODE) list=list.filter(t=>!t._deleted);
+  // ALWAYS chronological by start time (2pm before 5pm) for every account and guests
+  list.sort((a,b)=>sortKey(a)-sortKey(b) || String(a[0]).localeCompare(String(b[0])));
   return list;
 }
 function getReqTasks(jd,iso){
@@ -2387,7 +2401,7 @@ function getReqTasks(jd,iso){
   const showPrayers=!!USER_SETTINGS.trackPrayers;
   const prayers=showPrayers?buildPTasks(jd):[];
   const base=[...prayers,...(d?.ts||[])].filter(t=>!t[9]&&t[6]>0&&t[2]!=='snack');
-  return applyUserEditsToTasks(base,effIso).filter(t=>!t._deleted).sort((a,b)=>sortKey(a)-sortKey(b));
+  return applyUserEditsToTasks(base,effIso).filter(t=>!t._deleted).sort((a,b)=>sortKey(a)-sortKey(b)||String(a[0]).localeCompare(String(b[0])));
 }
 
 // ===== State =====
@@ -3946,7 +3960,7 @@ function renderPanel(jd){
     pills.push(`<div class="ppill${dn?' done':''}" id="pp-${pid}"><div class="pnam">${tn(pm.ar)}</div><div class="ptim">${fmt24(PRYT[pk]||FALLBK[pk])}</div></div>`);
   }
 
-  const tasks=getAllTasks(jd);
+  const tasks=getAllTasks(jd, SELECTED_DATE||TODAY).slice().sort((a,b)=>sortKey(a)-sortKey(b));
   const addTaskBtn='';
   const en=(USER_SETTINGS.lang==='en');
   const dhm=en
@@ -7107,6 +7121,11 @@ async function toggleDayType(jd){
 }
 
 function enterEditMode(from){
+  if(!(fbAuth&&fbAuth.currentUser)){
+    const en=(USER_SETTINGS.lang==='en');
+    showToast(en?'Sign in to edit your schedule':'سجّل دخول عشان تعدّل جدولك',2800);
+    return;
+  }
   EDIT_MODE=true;
   EDIT_MODE_PREV_VIEW=from||'schedule';
   document.body.classList.add('edit-mode');
