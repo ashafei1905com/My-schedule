@@ -567,6 +567,14 @@ body.edit-mode .em-day-toggle{display:inline-flex;align-items:center;gap:6px}
           <p class="desc" data-i18n="sec_general_desc">إدارة مهامك اليومية من هنا.</p>
           <div class="set-actions">
             <button type="button" id="setAddTaskBtn" class="altbtn" data-i18n="add_task">➕ إضافة مهمة لليوم الحالي</button>
+            <div style="margin-top:12px;display:flex;flex-direction:column;gap:8px">
+              <textarea id="buildScheduleInput" class="ob-textinput" rows="2"
+                placeholder="e.g. gym tomorrow at 7am for 1 hour"
+                style="text-align:left;direction:ltr;font-size:.85rem;padding:10px 12px;resize:vertical"></textarea>
+              <button type="button" id="btn-build-schedule" class="fl-submit-btn" style="margin:0">
+                ✨ Build Schedule from text
+              </button>
+            </div>
           </div>
         </div>
         
@@ -1142,109 +1150,95 @@ function fireConfetti(){
 
 function floatPts(x,y,n){const e=document.createElement('div');e.className='floatpts';e.textContent=`+${n}⭐`;e.style.cssText=`left:${x}px;top:${y}px`;document.body.appendChild(e);setTimeout(()=>e.remove(),900);}
 
-/* ========== PREMIUM FEATURES (parser + buffers + gamified points) ========== */
-
-function parseMessyTaskString(raw) {
-  if (!raw || typeof raw !== 'string') return null;
-  let text = raw.trim().replace(/\s+/g, ' ');
-  if (!text) return null;
-
-  let durationMin = 60;
-  const durMatch = text.match(/(?:for\s+)?(\d+(?:\.\d+)?)\s*(hours?|hrs?|h|minutes?|mins?|m)\b/i);
-  if (durMatch) {
-    const n = parseFloat(durMatch[1]);
-    const unit = durMatch[2].toLowerCase();
-    durationMin = /h/.test(unit) ? Math.round(n * 60) : Math.round(n);
-    text = text.replace(durMatch[0], ' ').replace(/\s+/g, ' ').trim();
+/* ========== PREMIUM: text parser + visual buffers + gamified points ========== */
+function parseMessyTaskString(raw){
+  if(!raw||typeof raw!=='string') return null;
+  let text=raw.trim().replace(/\s+/g,' ');
+  if(!text) return null;
+  let durationMin=60;
+  const durMatch=text.match(/(?:for\s+)?(\d+(?:\.\d+)?)\s*(hours?|hrs?|h|minutes?|mins?|m)\b/i);
+  if(durMatch){
+    const n=parseFloat(durMatch[1]);
+    const unit=durMatch[2].toLowerCase();
+    durationMin=/h/.test(unit)?Math.round(n*60):Math.round(n);
+    text=text.replace(durMatch[0],' ').replace(/\s+/g,' ').trim();
   }
-
-  let startMin = null;
-  const timeMatch = text.match(/\b(\d{1,2})(?::(\d{2}))?\s*(am|pm|ص|م)?\b/i);
-  if (timeMatch) {
-    let h = parseInt(timeMatch[1], 10);
-    const m = timeMatch[2] ? parseInt(timeMatch[2], 10) : 0;
-    const mer = (timeMatch[3] || '').toLowerCase();
-    if (mer === 'pm' || mer === 'م') { if (h < 12) h += 12; }
-    else if (mer === 'am' || mer === 'ص') { if (h === 12) h = 0; }
-    startMin = h * 60 + m;
-    text = text.replace(timeMatch[0], ' ').replace(/\s+/g, ' ').trim();
+  let startMin=null;
+  const timeMatch=text.match(/\b(\d{1,2})(?::(\d{2}))?\s*(am|pm|ص|م)?\b/i);
+  if(timeMatch){
+    let h=parseInt(timeMatch[1],10);
+    const m=timeMatch[2]?parseInt(timeMatch[2],10):0;
+    const mer=(timeMatch[3]||'').toLowerCase();
+    if(mer==='pm'||mer==='م'){ if(h<12) h+=12; }
+    else if(mer==='am'||mer==='ص'){ if(h===12) h=0; }
+    startMin=h*60+m;
+    text=text.replace(timeMatch[0],' ').replace(/\s+/g,' ').trim();
   }
-
-  let dayOffset = 0;
-  if (/\b(tomorrow|بكرة|غداً|غدا)\b/i.test(text)) {
-    dayOffset = 1;
-    text = text.replace(/\b(tomorrow|بكرة|غداً|غدا)\b/gi, ' ').replace(/\s+/g, ' ').trim();
+  let dayOffset=0;
+  if(/\b(tomorrow|بكرة|غداً|غدا)\b/i.test(text)){
+    dayOffset=1;
+    text=text.replace(/\b(tomorrow|بكرة|غداً|غدا)\b/gi,' ').replace(/\s+/g,' ').trim();
   }
-
-  text = text.replace(/\b(at|for|from|to|on|the|a|an|في|الساعة|لمدة)\b/gi, ' ').replace(/\s+/g, ' ').trim();
-  const name = text || 'New task';
-  if (startMin == null) startMin = 9 * 60;
-
-  const endMin = startMin + durationMin;
-  const toDisplay = (mins) => {
-    const h24 = Math.floor(mins / 60) % 24;
-    const m = mins % 60;
-    const pm = h24 >= 12;
-    const h12 = h24 % 12 || 12;
-    return `${h12}:${String(m).padStart(2, '0')} ${pm ? 'م' : 'ص'}`;
+  text=text.replace(/\b(at|for|from|to|on|the|a|an|في|الساعة|لمدة)\b/gi,' ').replace(/\s+/g,' ').trim();
+  const name=text||'New task';
+  if(startMin==null) startMin=9*60;
+  const endMin=startMin+durationMin;
+  const toDisplay=(mins)=>{
+    const h24=Math.floor(mins/60)%24, m=mins%60;
+    const pm=h24>=12, h12=h24%12||12;
+    return `${h12}:${String(m).padStart(2,'0')} ${pm?'م':'ص'}`;
   };
-
-  const pts = durationMin >= 90 ? 25 : durationMin >= 45 ? 15 : 10;
-  return { name, startDisplay: toDisplay(startMin), endDisplay: toDisplay(endMin), durationMin, pts, dayOffset };
+  const pts=durationMin>=90?25:durationMin>=45?15:10;
+  return{name,startDisplay:toDisplay(startMin),endDisplay:toDisplay(endMin),durationMin,pts,dayOffset};
 }
 
-async function handleBuildScheduleFromText(rawText) {
-  const input = rawText ?? document.getElementById('buildScheduleInput')?.value ?? '';
-  const parsed = parseMessyTaskString(input);
-  if (!parsed) {
-    showToast('⚠️ Could not parse that task — try "gym at 7am for 1 hour"', 3500, 'warn');
+async function handleBuildScheduleFromText(rawText){
+  const input=rawText??document.getElementById('buildScheduleInput')?.value??'';
+  const parsed=parseMessyTaskString(input);
+  if(!parsed){
+    showToast('⚠️ Could not parse — try "gym at 7am for 1 hour"',3500,'warn');
     return;
   }
-  const targetIso = dateOff(parsed.dayOffset, TODAY);
-  const jd = getJDfromISO(targetIso);
+  const targetIso=dateOff(parsed.dayOffset,TODAY);
+  const jd=getJDfromISO(targetIso);
   scheduleEnsureDay(jd);
-
-  const id = `custom-${Date.now()}-${Math.floor(Math.random() * 9999)}`;
-  const tuple = [
-    id, parsed.startDisplay, 'free', '✨', parsed.name,
-    parsed.durationMin + ' min', parsed.pts, null, null, false,
-    null, null, null, parsed.endDisplay, true
-  ];
+  const id=`custom-${Date.now()}-${Math.floor(Math.random()*9999)}`;
+  const tuple=[id,parsed.startDisplay,'free','✨',parsed.name,parsed.durationMin+' min',parsed.pts,null,null,false,null,null,null,parsed.endDisplay,true];
   USER_SCHEDULE[jd].ts.push(tuple);
-  USER_SCHEDULE[jd].ts.sort((a, b) => sortKey(a) - sortKey(b));
+  USER_SCHEDULE[jd].ts.sort((a,b)=>sortKey(a)-sortKey(b));
   await saveUserSchedule();
-  SELECTED_DATE = targetIso;
-  try { renderTabs(); renderPanels(); switchDay(jd); updateUI(); } catch (e) {}
-  showToast(`✅ Added "${parsed.name}" at ${parsed.startDisplay}`, 2500);
-  const el = document.getElementById('buildScheduleInput');
-  if (el) el.value = '';
+  SELECTED_DATE=targetIso;
+  try{ renderTabs();renderPanels();switchDay(jd);updateUI(); }catch(e){}
+  showToast(`✅ Added "${parsed.name}" at ${parsed.startDisplay}`,2500);
+  const el=document.getElementById('buildScheduleInput');
+  if(el) el.value='';
 }
 
-function injectVisualSmartBuffers(tasks) {
-  if (!Array.isArray(tasks) || tasks.length < 2) return tasks || [];
-  const out = [];
-  for (let i = 0; i < tasks.length; i++) {
+function injectVisualSmartBuffers(tasks){
+  if(!Array.isArray(tasks)||tasks.length<2) return tasks||[];
+  const out=[];
+  for(let i=0;i<tasks.length;i++){
     out.push(tasks[i]);
-    if (i >= tasks.length - 1) break;
-    const cur = tasks[i], next = tasks[i + 1];
-    const endSrc = cur[13] || cur[1];
-    const endM = toMin(endSrc), nextM = toMin(next[1]);
-    let gap = nextM - endM;
-    if (gap < 0) gap += 24 * 60;
-    if (gap >= 0 && gap < 15) {
-      const bufStart = endM, bufEnd = endM + 15;
-      const toDisp = (mins) => {
-        const h24 = Math.floor(mins / 60) % 24, m = mins % 60;
-        const pm = h24 >= 12, h12 = h24 % 12 || 12;
-        return `${h12}:${String(m).padStart(2, '0')} ${pm ? 'م' : 'ص'}`;
+    if(i>=tasks.length-1) break;
+    const cur=tasks[i], next=tasks[i+1];
+    const endSrc=cur[13]||cur[1];
+    const endM=toMin(endSrc), nextM=toMin(next[1]);
+    let gap=nextM-endM;
+    if(gap<0) gap+=24*60;
+    if(gap>=0 && gap<15){
+      const bufStart=endM, bufEnd=endM+15;
+      const toDisp=(mins)=>{
+        const h24=Math.floor(mins/60)%24, m=mins%60;
+        const pm=h24>=12, h12=h24%12||12;
+        return `${h12}:${String(m).padStart(2,'0')} ${pm?'م':'ص'}`;
       };
-      out.push({ _visualBuffer: true, startDisplay: toDisp(bufStart), endDisplay: toDisp(bufEnd), label: '☕ Rest Buffer (15 mins)' });
+      out.push({_visualBuffer:true,startDisplay:toDisp(bufStart),endDisplay:toDisp(bufEnd),label:'☕ Rest Buffer (15 mins)'});
     }
   }
   return out;
 }
 
-function renderBufferCard(buf) {
+function renderBufferCard(buf){
   return `<div class="tc" data-c="free" style="border-right:3px dashed #64748b;opacity:.85;background:rgba(100,116,139,.06)">
     <div class="tctime" style="direction:ltr">${buf.startDisplay}</div>
     <div class="tcico">☕</div>
@@ -1255,58 +1249,43 @@ function renderBufferCard(buf) {
   </div>`;
 }
 
-function persistPointsLocally() {
-  try {
-    localStorage.setItem('sc:stats', JSON.stringify({
-      pts: STATS.pts || 0, cur: STATS.cur || 0, best: STATS.best || 0,
-      lastPtsWeekStart: STATS.lastPtsWeekStart || null
+function persistPointsLocally(){
+  try{
+    localStorage.setItem('sc:stats_mirror',JSON.stringify({
+      pts:STATS.pts||0,cur:STATS.cur||0,best:STATS.best||0,
+      lastPtsWeekStart:STATS.lastPtsWeekStart||null
     }));
-  } catch (e) {}
+  }catch(e){}
 }
 
-function loadPointsFromLocal() {
-  try {
-    const raw = localStorage.getItem('sc:stats');
-    if (!raw) return;
-    const s = JSON.parse(raw);
-    if (typeof s.pts === 'number') STATS.pts = s.pts;
-    if (typeof s.cur === 'number') STATS.cur = s.cur;
-    if (typeof s.best === 'number') STATS.best = s.best;
-  } catch (e) {}
-}
-
-async function onTaskCheckmarkClick(id, starValue, clientX, clientY, options = {}) {
-  if (!id || DONE[id] !== undefined) return;
-  const pts = Math.max(0, parseInt(starValue, 10) || 0);
-  const isQada = !!options.qada;
-  const awarded = isQada ? Math.floor(pts / 2) : pts;
-
-  DONE[id] = isQada ? 'qada' : awarded;
-  STATS.pts = (STATS.pts || 0) + awarded;
-
-  try { floatPts(clientX || window.innerWidth / 2, clientY || 120, awarded); } catch (e) {}
-  try { if (!isQada) fireConfetti(); } catch (e) {}
-  cardEffect(id, isQada ? 'qada' : options.late ? 'late' : 'ontime');
-
-  const s2 = document.getElementById('sv2');
-  if (s2) {
-    s2.textContent = STATS.pts;
-    s2.style.color = STATS.pts < 0 ? 'var(--rd)' : '';
+async function onTaskCheckmarkClick(id,starValue,clientX,clientY,options={}){
+  if(!id||DONE[id]!==undefined) return;
+  const pts=Math.max(0,parseInt(starValue,10)||0);
+  const isQada=!!options.qada;
+  const awarded=isQada?Math.floor(pts/2):pts;
+  DONE[id]=isQada?'qada':awarded;
+  STATS.pts=(STATS.pts||0)+awarded;
+  try{ floatPts(clientX||window.innerWidth/2,clientY||120,awarded); }catch(e){}
+  try{ if(!isQada) fireConfetti(); }catch(e){}
+  cardEffect(id,isQada?'qada':(options.late?'late':'ontime'));
+  const s2=document.getElementById('sv2');
+  if(s2){
+    s2.textContent=STATS.pts;
+    s2.style.color=STATS.pts<0?'var(--rd)':'';
     s2.classList.add('streak-win');
-    setTimeout(() => s2.classList.remove('streak-win'), 700);
+    setTimeout(()=>s2.classList.remove('streak-win'),700);
   }
-
   persistPointsLocally();
-  try { checkStreak(); } catch (e) {}
-  try { await saveAll(); } catch (e) {
-    showToast('⚠️ Saved locally — cloud sync failed', 3000, 'warn');
+  try{ checkStreak(); }catch(e){}
+  try{ await saveAll(); }catch(e){
+    showToast('⚠️ Saved locally — cloud sync failed',3000,'warn');
   }
-  try { renderPanels(); switchDay(getJDfromISO(SELECTED_DATE)); updateUI(); } catch (e) {}
-
-  if (isQada) showToast('تم تسجيل القضاء — حاول بدري بكرة 🌙', 3500, 'qada');
-  else if (options.late) showToast('⏰ Late but logged — keep going 💪', 3000, 'late');
-  else showToast(`✅ +${awarded}⭐`, 2000);
+  try{ renderPanels();switchDay(getJDfromISO(SELECTED_DATE));updateUI(); }catch(e){}
+  if(isQada) showToast('تم تسجيل القضاء — حاول بدري بكرة 🌙',3500,'qada');
+  else if(options.late) showToast('⏰ Late but logged — keep going 💪',3000,'late');
+  else showToast(`✅ +${awarded}⭐`,2000);
 }
+/* ========== end premium helpers ========== */
 
 let toastT;
 function showToast(msg,ms=3500,type='ok'){
@@ -3135,6 +3114,7 @@ async function saveAll(){
   migrateSavedReports();
 
   await sSet(LS.stats,STATS);
+  try{ persistPointsLocally(); }catch(e){}
   await sSet(LS.history,historyData);
   await sSet(LS.reports,savedReports);
   await sSet(LS.penalized,penalizedDates);
@@ -4299,6 +4279,10 @@ function renderPanel(jd){
   }
 
   const tasks=sortTasksChrono(getAllTasks(jd, SELECTED_DATE||TODAY));
+  const withBuffers=(typeof injectVisualSmartBuffers==='function')?injectVisualSmartBuffers(tasks):tasks;
+  const timelineHtml=withBuffers.map(item=>
+    (item&&item._visualBuffer)?renderBufferCard(item):renderCard(item,isToday,jd)
+  ).join('');
   const addTaskBtn='';
   const en=(USER_SETTINGS.lang==='en');
   const dhm=en
@@ -4307,7 +4291,7 @@ function renderPanel(jd){
   return`<div class="pan" id="pan-${k}">
     <div class="dh"><div><div class="dhn">${dayLabel(jd)}</div><div class="dhm">${dhm}</div></div>${gbLabel}${dayToggle}</div>
     <div class="prow">${pills.join('')}</div>
-    <div class="tl">${tasks.map(t=>renderCard(t,isToday,jd)).join('')}</div>
+    <div class="tl">${timelineHtml}</div>
     ${addTaskBtn}
   </div>`;
 }
@@ -7117,6 +7101,11 @@ document.body.addEventListener('click',async e=>{
     openScheduleTaskEditor(todayJD(),null,{fromSettings:true});
     return;
   }
+  if(tgt.id==='btn-build-schedule'){
+    if(!fbAuth.currentUser){ showToast(t('need_login'),3000,'warn'); return; }
+    await handleBuildScheduleFromText();
+    return;
+  }
   if(tgt.id==='setLangAr'){ setAppLang('ar'); return; }
   if(tgt.id==='setLangEn'){ setAppLang('en'); return; }
   const setNavBtn=closest('[data-setsec]');
@@ -7205,10 +7194,6 @@ document.body.addEventListener('click',async e=>{
   if(action==='confirm'){
     if(DONE[id]!==undefined)return;
     const pts=parseInt(ptsAttr||'0',10);
-    try{ fireConfetti(); }catch(e){}
-    // Gamified minimum: always grant at least +15 visual celebration points when
-    // task pts are 0, else keep task pts (already added below). Extra +15 boost:
-    try{ STATS.pts=(STATS.pts||0)+15; }catch(e){}
     const isPr=id.startsWith('pr-')||id.includes('-jm');
     const jd=getJDfromISO(SELECTED_DATE);
     const taskObj=getAllTasks(jd).find(t=>t[0]===id);
@@ -7218,42 +7203,15 @@ document.body.addEventListener('click',async e=>{
       startPrayerFlow(id,cardName,pts,e.clientX,e.clientY,late);return;
     }
     const late=taskObj?isLateNonPrayer(taskObj):false;
-    DONE[id]=pts;STATS.pts+=pts;
-    floatPts(e.clientX,e.clientY,pts);
-    if(late){showToast('⏰ متأخر شوي بس تم — استمر كذا 💪',3000,'late');cardEffect(id,'late');}
-    else{showToast('✅ في الوقت المثالي، أحسنت',2200);cardEffect(id,'ontime');}
-    // checkStreak() and the re-render below must never be able to swallow the save.
-    // Previously, if checkStreak() (or anything after it) threw, saveAll() was never
-    // reached — the user saw the success animation but the completion was silently
-    // never persisted. That's what caused tasks to vanish from historyData while
-    // looking completed in the moment.
-    try{ checkStreak(); }catch(err){ console.error('checkStreak failed, saving anyway:',err); }
-    try{
-      await saveAll();
-    }catch(err){
-      console.error('saveAll failed after confirm:',err);
-      showToast('⚠️ حصل خطأ أثناء الحفظ — جرب تاني أو أعد تحميل الصفحة',4000,'warn');
-    }
-    try{ renderPanels();switchDay(getJDfromISO(SELECTED_DATE));updateUI(); }catch(err){ console.error('re-render failed:',err); }
+    await onTaskCheckmarkClick(id,pts,e.clientX,e.clientY,{late});
     return;
   }
 
   if(action==='qada'){
     if(DONE[id]!==undefined)return;
     const pts=parseInt(ptsAttr||'0',10);
-    const half=Math.floor(pts/2);
-    DONE[id]='qada';STATS.pts+=half;
-    floatPts(e.clientX,e.clientY,half);
-    cardEffect(id,'qada');
-    try{ checkStreak(); }catch(err){ console.error('checkStreak failed, saving anyway:',err); }
-    try{
-      await saveAll();
-    }catch(err){
-      console.error('saveAll failed after qada:',err);
-      showToast('⚠️ حصل خطأ أثناء الحفظ — جرب تاني أو أعد تحميل الصفحة',4000,'warn');
-    }
-    try{ renderPanels();switchDay(getJDfromISO(SELECTED_DATE));updateUI(); }catch(err){ console.error('re-render failed:',err); }
-    showToast('تم تسجيل القضاء — حاول تصلي بدري بكرة 🌙',3500,'qada');return;
+    await onTaskCheckmarkClick(id,pts,e.clientX,e.clientY,{qada:true});
+    return;
   }
 });
 
