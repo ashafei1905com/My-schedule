@@ -4,7 +4,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1.0,maximum-scale=1.0,user-scalable=no">
-<title>الجدول الذكي 🏋️</title>
+<title>Your Schedule 🏋️</title>
 <link rel="icon" href="data:," />
 <!-- Web app manifest — REQUIRED for iOS to treat "Add to Home Screen" as a real PWA
      install rather than a plain bookmark. Without this + the apple-mobile-web-app-*
@@ -18,7 +18,7 @@
 <link rel="manifest" href="./manifest.json" />
 <meta name="apple-mobile-web-app-capable" content="yes" />
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
-<meta name="apple-mobile-web-app-title" content="الجدول الذكي" />
+<meta name="apple-mobile-web-app-title" content="Your Schedule" />
 <meta name="theme-color" content="#0a0e1a" />
 <!-- Apple-specific home-screen icon link (separate from the generic favicon above —
      iOS ignores rel="icon" for the home-screen icon and requires rel="apple-touch-icon"
@@ -117,11 +117,45 @@ input[type=color]::-moz-color-swatch{border:none;border-radius:8px}
 .card-late{animation:lateGlow 1s ease}
 .card-qada{animation:qadaGlow 1s ease}
 .current-task-highlight{outline:2px solid var(--ac);box-shadow:0 0 0 4px rgba(59,130,246,.25),0 8px 28px rgba(59,130,246,.2);transition:outline .3s,box-shadow .3s}
+
+@keyframes iosWobble{0%{transform:rotate(-1.2deg)}50%{transform:rotate(1.2deg)}100%{transform:rotate(-1.2deg)}}
+body.edit-mode .tc:not(.done){animation:iosWobble 0.28s ease-in-out infinite;transform-origin:center center}
+body.edit-mode .tc{cursor:grab}
+#editModeBar{display:none;position:fixed;bottom:24px;left:50%;transform:translateX(-50%);z-index:10020;gap:10px;align-items:center;padding:12px 16px;border-radius:16px;background:color-mix(in srgb,var(--c2) 90%,transparent);backdrop-filter:blur(12px);border:1px solid var(--br);box-shadow:0 8px 32px rgba(0,0,0,.45)}
+body.edit-mode #editModeBar{display:flex}
+#editModeBar button{font-family:'Cairo',sans-serif;font-weight:800;font-size:.82rem;padding:10px 16px;border-radius:10px;border:none;cursor:pointer}
+#editModeSave{background:var(--gr);color:#fff}
+#editUndoToast{display:none;position:fixed;bottom:90px;left:50%;transform:translateX(-50%);z-index:10025;padding:12px 16px;border-radius:14px;background:color-mix(in srgb,var(--c2) 92%,transparent);backdrop-filter:blur(12px);border:1px solid var(--br);box-shadow:0 8px 28px rgba(0,0,0,.4);align-items:center;gap:12px;max-width:min(420px,92vw)}
+#editUndoToast.show{display:flex}
+#editUndoToast button{font-family:'Cairo',sans-serif;font-weight:800;font-size:.78rem;padding:8px 12px;border-radius:8px;border:1px solid var(--ac);background:color-mix(in srgb,var(--ac) 20%,var(--c));color:var(--tx);cursor:pointer}
+.em-actions{display:flex;flex-wrap:wrap;gap:4px;margin-top:6px}
+.em-btn{font-family:'Cairo',sans-serif;font-size:.65rem;font-weight:800;padding:4px 8px;border-radius:7px;border:1px solid var(--br);background:var(--c);color:var(--tx);cursor:pointer}
+.em-btn:hover{border-color:var(--ac)}
+.em-btn.danger{color:#f87171;border-color:rgba(239,68,68,.45);background:rgba(239,68,68,.1)}
+.em-day-toggle{display:none;margin:8px 0;padding:8px 12px;border-radius:10px;border:1px solid var(--br);background:var(--c);font-family:'Cairo',sans-serif;font-weight:800;font-size:.78rem;cursor:pointer;color:var(--tx)}
+body.edit-mode .em-day-toggle{display:inline-flex;align-items:center;gap:6px}
+.ai-svg, .ai-icon svg, #aiFab svg, .ai-title svg{color:var(--ac)!important;fill:currentColor}
+#aiFab{color:#fff}
+
+#editModeCancel{background:rgba(239,68,68,.15);color:#f87171;border:1px solid rgba(239,68,68,.4)!important}
+
+.st-day-chip{padding:6px 10px;border-radius:8px;border:2px solid var(--br);background:var(--c);color:var(--so);font-family:'Cairo',sans-serif;font-size:.72rem;font-weight:800;cursor:pointer}
+.st-day-chip.on{border-color:var(--ac);background:color-mix(in srgb,var(--ac) 18%,var(--c));color:var(--tx)}
+.notif-task-row{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:10px 12px;border:1px solid var(--br);border-radius:10px;margin-bottom:8px;background:var(--c)}
+.notif-task-row span{font-size:.8rem;font-weight:700;color:var(--tx);flex:1}
+.tc.dragging{opacity:.45}
+.tc.drag-over{outline:2px dashed var(--ac)}
 .bar-gold{animation:barGold .9s ease}
 .st{display:flex;flex-direction:column;align-items:center;gap:1px}
 .sv{font-size:1.5rem;font-weight:900;line-height:1}
 .sl{font-size:.6rem;color:var(--so);font-weight:700}
-#sv1,#sv2,#sv3{color:var(--ac)!important}#sbar .sl{color:var(--ac);opacity:.85}
+:root{--stat-streak:#FF9500;--stat-points:#FFD60A;--stat-best:#AF52DE}
+#sv1{color:var(--stat-streak)!important}
+#sv2{color:var(--stat-points)!important}
+#sv3{color:var(--stat-best)!important}
+#sbar .st:nth-child(1) .sl{color:var(--stat-streak);opacity:.9}
+#sbar .st:nth-child(2) .sl{color:var(--stat-points);opacity:.9}
+#sbar .st:nth-child(3) .sl{color:var(--stat-best);opacity:.9}
 .pw{padding:10px 16px 0}
 .pb{background:var(--c);border:1px solid var(--br);border-radius:10px;padding:10px 14px}
 .ph{display:flex;justify-content:space-between;font-size:.77rem;color:var(--so);margin-bottom:6px}
@@ -391,11 +425,11 @@ input[type=color]::-moz-color-swatch{border:none;border-radius:8px}
 @keyframes aiPopIn{0%{opacity:0;transform:scale(.85) translateY(30px)}100%{opacity:1;transform:scale(1) translateY(0)}}
 @keyframes aiFullIn{0%{opacity:0;transform:scale(.96)}100%{opacity:1;transform:scale(1)}}
 @keyframes fabPop{0%{transform:scale(0);opacity:0}70%{transform:scale(1.15)}100%{transform:scale(1);opacity:1}}
-#aiFab{position:fixed;bottom:22px;left:22px;width:58px;height:58px;border-radius:50%;background:linear-gradient(135deg,#8b5cf6,#6d28d9);display:flex;align-items:center;justify-content:center;font-size:1.6rem;cursor:pointer;z-index:9998;box-shadow:0 4px 20px rgba(139,92,246,.5);border:none;transition:transform .2s;animation:fabPop .4s ease}
+#aiFab{position:fixed;bottom:22px;left:22px;width:58px;height:58px;border-radius:50%;background:linear-gradient(135deg,var(--ac),color-mix(in srgb,var(--ac) 55%,#000));color:#fff;display:flex;align-items:center;justify-content:center;font-size:1.6rem;cursor:pointer;z-index:9998;box-shadow:0 4px 20px rgba(139,92,246,.5);border:none;transition:transform .2s;animation:fabPop .4s ease}
 #aiFab:hover{transform:scale(1.08)}
 #aiFab:active{transform:scale(.94)}
 #aiFab.hidden{display:none}
-#aiPanel{position:fixed;bottom:0;left:0;width:100%;max-width:420px;height:min(640px,88vh);background:var(--c2);border:2px solid var(--br);border-radius:20px 20px 0 0;z-index:9999;display:none;flex-direction:column;box-shadow:0 -8px 40px rgba(0,0,0,.6)}
+#aiPanel{position:fixed;bottom:0;left:0;width:100%;max-width:420px;height:min(640px,88vh);background:color-mix(in srgb,var(--c2) 82%,transparent);backdrop-filter:blur(18px) saturate(1.3);-webkit-backdrop-filter:blur(18px) saturate(1.3);border:2px solid color-mix(in srgb,var(--ac) 35%,var(--br));border-radius:20px 20px 0 0;z-index:9999;display:none;flex-direction:column;box-shadow:0 -8px 40px rgba(0,0,0,.55),0 0 40px color-mix(in srgb,var(--ac) 18%,transparent);color:var(--tx)}
 #aiPanel.open{display:flex;animation:aiPopIn .32s cubic-bezier(.2,.9,.3,1.3)}
 @media(min-width:460px){#aiPanel:not(.full){bottom:22px;left:22px;border-radius:20px}}
 #aiPanel.full{top:0;left:0;right:0;bottom:0;width:100%;max-width:100%;height:100%;border-radius:0;border-width:0}
@@ -473,7 +507,7 @@ input[type=color]::-moz-color-swatch{border:none;border-radius:8px}
     }
     var lang=(s&&s.lang)||'en';
     var t=document.getElementById('ldText');
-    if(t) t.textContent=lang==='en'?'Loading Smart Schedule...':'جاري تحميل الجدول الذكي...';
+    if(t) t.textContent=lang==='en'?'Loading Your Schedule...':'جاري تحميل جدولك...';
     if(lang==='en'){ document.documentElement.lang='en'; document.documentElement.dir='ltr'; }
     else { document.documentElement.lang='ar'; document.documentElement.dir='rtl'; }
   }catch(e){}
@@ -516,6 +550,11 @@ input[type=color]::-moz-color-swatch{border:none;border-radius:8px}
             <button type="button" id="setAddTaskBtn" class="altbtn" data-i18n="add_task">➕ إضافة مهمة لليوم الحالي</button>
           </div>
         </div>
+        
+          <div class="set-actions" style="margin-top:16px">
+            <button type="button" id="btn-enter-edit-mode" class="topbtn topbtn-report" style="width:100%">✏️ Enter Edit Mode</button>
+          </div>
+
         <div class="set-section" id="setsec-tracking">
           <h3 data-i18n="sec_tracking">التتبع</h3>
           <p class="desc" data-i18n="sec_tracking_desc">أظهر أو أخفِ أنظمة النقاط والصلاة.</p>
@@ -537,6 +576,8 @@ input[type=color]::-moz-color-swatch{border:none;border-radius:8px}
           <div class="set-actions">
             <button type="button" id="btn-notif-toggle" class="topbtn" style="background:rgba(100,116,139,.15);border:1px solid var(--br);color:var(--tx)">🔕 التذكيرات</button>
           </div>
+          <p class="desc" style="margin-top:14px" id="notifPerTaskDesc">Per-task notifications</p>
+          <div id="notifTaskList" style="margin-top:8px;max-height:320px;overflow-y:auto"></div>
         </div>
         <div class="set-section" id="setsec-reports">
           <h3 data-i18n="sec_reports">التقارير</h3>
@@ -658,7 +699,7 @@ input[type=color]::-moz-color-swatch{border:none;border-radius:8px}
      the very first thing a brand-new account ever sees. -->
 <div id="obWizard">
   <div class="ob-topbar">
-    <div class="ob-brand">🏋️ الجدول الذكي</div>
+    <div class="ob-brand">🏋️ <span data-i18n="app_brand">Your Schedule</span></div>
     <div class="ob-stepcount" id="obStepCount"></div>
   </div>
   <div class="ob-body">
@@ -691,9 +732,23 @@ input[type=color]::-moz-color-swatch{border:none;border-radius:8px}
         <label style="font-size:.72rem;color:var(--so);font-weight:700;display:block;margin-bottom:6px">اسم المهمة</label>
         <input id="stName" type="text" class="ob-textinput" style="text-align:right;font-size:.9rem;padding:12px 14px" placeholder="مثلاً: قراءة، مذاكرة، مشي">
       </div>
+      <div style="display:flex;gap:10px">
+        <div style="flex:1">
+          <label style="font-size:.72rem;color:var(--so);font-weight:700;display:block;margin-bottom:6px" id="stTimeLabel">Start</label>
+          <input id="stTime" type="time" class="ob-textinput" style="text-align:left;font-size:.9rem;padding:12px 14px;direction:ltr">
+        </div>
+        <div style="flex:1">
+          <label style="font-size:.72rem;color:var(--so);font-weight:700;display:block;margin-bottom:6px" id="stTimeEndLabel">End</label>
+          <input id="stTimeEnd" type="time" class="ob-textinput" style="text-align:left;font-size:.9rem;padding:12px 14px;direction:ltr">
+        </div>
+      </div>
       <div>
-        <label style="font-size:.72rem;color:var(--so);font-weight:700;display:block;margin-bottom:6px">الوقت</label>
-        <input id="stTime" type="time" class="ob-textinput" style="text-align:right;font-size:.9rem;padding:12px 14px">
+        <label style="font-size:.72rem;color:var(--so);font-weight:700;display:block;margin-bottom:8px" id="stDaysLabel">Days</label>
+        <div id="stDaysRow" style="display:flex;flex-wrap:wrap;gap:6px"></div>
+      </div>
+      <div class="set-row" style="border:none;padding:8px 0;display:flex;align-items:center;justify-content:space-between;gap:12px">
+        <label for="stNotif" style="font-size:.82rem;font-weight:700;flex:1" id="stNotifLabel">Enable push notifications</label>
+        <input type="checkbox" id="stNotif" style="width:20px;height:20px;accent-color:var(--ac)" checked>
       </div>
       <div>
         <label style="font-size:.72rem;color:var(--so);font-weight:700;display:block;margin-bottom:6px">وصف (اختياري)</label>
@@ -794,7 +849,7 @@ input[type=color]::-moz-color-swatch{border:none;border-radius:8px}
 </div>
 
 <!-- AI Assistant Widget -->
-<button id="aiFab" class="hidden" type="button" title="مساعد الجدول">🤖</button>
+<button id="aiFab" class="hidden" type="button" title="مساعد الجدول" style="color:#fff">🤖</button>
 <div id="aiPanel">
   <div class="ai-head">
     <div>
@@ -1331,23 +1386,29 @@ function scheduleEnsureDay(jd){
 // codebase exactly ([id,time,cat,ico,name,desc,pts,alts,hw,isEx,...]) so it renders
 // through the exact same renderCard path as SCHED-derived tasks — no special-casing
 // needed anywhere else.
-async function saveScheduleTask(jd,existingId,{time,name,desc,pts,color,foodLog,mandatory}){
-  scheduleEnsureDay(jd);
-  const ts=USER_SCHEDULE[jd].ts;
-  const id=existingId||scheduleGenTaskId();
-  // foodLog: cat=food so renderCard opens the food-log modal; macros placeholder allows logging.
+async function saveScheduleTask(jd,existingId,{time,name,desc,pts,color,foodLog,mandatory,timeEnd,days,notif}){
+  // days: array of weekday indices to write into. Defaults to [jd] only.
+  const targets=(Array.isArray(days)&&days.length)?days:[jd];
+  const baseId=existingId||scheduleGenTaskId();
   const cat=foodLog?'food':'free';
   const ico=ST_SELECTED_ICON||(foodLog?'🍽️':'✨');
   const macros=foodLog?{p:0,c:0,f:0,b:0,k:0}:null;
-  const mealKey=foodLog?('custom:'+id):null;
-  // isEx (index 9): true = optional / does NOT break streak if missed.
-  // mandatory checkbox checked => isEx=false (required); unchecked => isEx=true.
   const isEx = mandatory === false;
-  // Index 10 = color. Index 11 = macros. Index 12 = mealKey.
-  const tuple=[id,time,cat,ico,name,desc||'',pts||0,null,null,isEx,color||null,macros,mealKey];
-  const idx=ts.findIndex(t=>t[0]===id);
-  if(idx>=0) ts[idx]=tuple; else ts.push(tuple);
+  if(!USER_SETTINGS.taskNotif) USER_SETTINGS.taskNotif={};
+  for(const dayJd of targets){
+    scheduleEnsureDay(dayJd);
+    const ts=USER_SCHEDULE[dayJd].ts;
+    // Same id when editing one day; unique per day when multi-adding new
+    const id=(existingId && targets.length===1)?existingId:(targets.length===1?baseId:`${baseId}-d${dayJd}`);
+    const mealKey=foodLog?('custom:'+id):null;
+    // Index 10=color, 11=macros, 12=mealKey, 13=timeEnd (display), 14=notifEnabled
+    const tuple=[id,time,cat,ico,name,desc||'',pts||0,null,null,isEx,color||null,macros,mealKey,timeEnd||null,notif!==false];
+    const idx=ts.findIndex(t=>t[0]===id);
+    if(idx>=0) ts[idx]=tuple; else ts.push(tuple);
+    USER_SETTINGS.taskNotif[id]=notif!==false;
+  }
   await saveUserSchedule();
+  try{ await saveUserSettings(); }catch(e){}
 }
 
 async function deleteScheduleTask(jd,taskId){
@@ -1360,6 +1421,23 @@ async function deleteScheduleTask(jd,taskId){
 let ST_ACTIVE_JD=null;
 let ST_ACTIVE_TASK_ID=null;
 let ST_SELECTED_COLOR=OB_TASK_COLORS[0];
+let ST_SELECTED_DAYS=new Set();
+const ST_DAY_LABELS={en:['Sat','Sun','Mon','Tue','Wed','Thu','Fri'],ar:['سبت','أحد','اثن','ثلا','أرب','خمي','جمع']};
+function stRenderDayChips(){
+  const row=document.getElementById('stDaysRow');
+  if(!row) return;
+  const en=(USER_SETTINGS.lang==='en');
+  const labels=en?ST_DAY_LABELS.en:ST_DAY_LABELS.ar;
+  row.innerHTML='';
+  for(let i=0;i<7;i++){
+    const btn=document.createElement('button');
+    btn.type='button';
+    btn.className='st-day-chip'+(ST_SELECTED_DAYS.has(i)?' on':'');
+    btn.textContent=labels[i];
+    btn.onclick=()=>{ if(ST_SELECTED_DAYS.has(i)) ST_SELECTED_DAYS.delete(i); else ST_SELECTED_DAYS.add(i); stRenderDayChips(); };
+    row.appendChild(btn);
+  }
+}
 
 function stRenderColorChips(){
   const row=document.getElementById('stColorRow');
@@ -1437,6 +1515,33 @@ function openScheduleTaskEditor(jd,existingTask,opts){
   if(mandLbl) mandLbl.textContent=en?'Mandatory (Break streak if missed)':'إلزامية (تكسر الاستريك لو فاتت)';
   // existing isEx=true means optional; default new tasks are mandatory (checked)
   if(mandEl) mandEl.checked=existingTask?(!existingTask[9]):true;
+  // Multi-day selection defaults to the active day only
+  ST_SELECTED_DAYS=new Set([jd]);
+  stRenderDayChips();
+  const timeEndEl=document.getElementById('stTimeEnd');
+  if(timeEndEl){
+    // existingTask[13] may hold end time as Arabic display or HH:MM
+    timeEndEl.value='';
+    if(existingTask&&existingTask[13]){
+      const et=String(existingTask[13]);
+      // try parse "H:MM ص/م"
+      const m=et.match(/(\d{1,2}):(\d{2})\s*([صم])?/);
+      if(m){
+        let h=parseInt(m[1],10); const mi=m[2];
+        if(m[3]==='م'&&h<12) h+=12; if(m[3]==='ص'&&h===12) h=0;
+        timeEndEl.value=`${String(h).padStart(2,'0')}:${mi}`;
+      } else if(/^\d{2}:\d{2}$/.test(et)) timeEndEl.value=et;
+    }
+  }
+  const notifEl=document.getElementById('stNotif');
+  if(notifEl){
+    const pref=USER_SETTINGS.taskNotif&&existingTask?USER_SETTINGS.taskNotif[existingTask[0]]:undefined;
+    notifEl.checked=pref!==false && (existingTask?existingTask[14]!==false:true);
+  }
+  const tl=document.getElementById('stTimeLabel'); if(tl) tl.textContent=en?'Start':'البداية';
+  const tel=document.getElementById('stTimeEndLabel'); if(tel) tel.textContent=en?'End':'النهاية';
+  const dl=document.getElementById('stDaysLabel'); if(dl) dl.textContent=en?'Days':'الأيام';
+  const nl=document.getElementById('stNotifLabel'); if(nl) nl.textContent=en?'Enable push notifications':'تفعيل إشعارات الدفع';
   const saveBtn=document.getElementById('stSaveBtn');
   const cancelBtn=document.getElementById('stCancelBtn');
   if(saveBtn) saveBtn.textContent=en?'Save ✅':'حفظ ✅';
@@ -1482,9 +1587,19 @@ async function stHandleSave(){
 
   const foodLog=!!document.getElementById('stFoodLog')?.checked;
   const mandatory=!!document.getElementById('stMandatory')?.checked;
+  const notif=!!document.getElementById('stNotif')?.checked;
+  const endVal=document.getElementById('stTimeEnd')?.value||'';
+  let timeEnd=null;
+  if(endVal){
+    const [eh,em]=endVal.split(':').map(Number);
+    const epm=eh>=12; const eh12=eh%12||12;
+    timeEnd=`${eh12}:${String(em).padStart(2,'0')} ${epm?'م':'ص'}`;
+  }
+  const days=[...ST_SELECTED_DAYS];
+  if(!days.length) days.push(ST_ACTIVE_JD);
   const returnToSettings=ST_RETURN_TO_SETTINGS;
   try{
-    await saveScheduleTask(ST_ACTIVE_JD,ST_ACTIVE_TASK_ID,{time:displayTime,name,desc,pts,color:ST_SELECTED_COLOR,foodLog,mandatory});
+    await saveScheduleTask(ST_ACTIVE_JD,ST_ACTIVE_TASK_ID,{time:displayTime,name,desc,pts,color:ST_SELECTED_COLOR,foodLog,mandatory,timeEnd,days,notif});
   }catch(e){
     console.error('saveScheduleTask failed',e);
     if(errEl){ errEl.textContent='⚠️ Save failed'; errEl.style.display='block'; }
@@ -1526,7 +1641,44 @@ async function stHandleDelete(jd,taskId){
 // through onboarding (Stage 1) is asked explicitly and their answer is stored here
 // before they ever see a schedule — this default only matters for accounts that
 // predate the toggle existing at all.
-let USER_SETTINGS={trackPrayers:true,showTracking:true,lang:'en',appIcon:'🏋️'};
+let USER_SETTINGS={trackPrayers:true,showTracking:true,lang:'en',appIcon:'🏋️',taskNotif:{}};
+let EDIT_MODE=false;
+let EDIT_MODE_PREV_VIEW=null;
+let scheduleStateHistory=[]; // snapshots for edit-mode undo
+const SCHEDULE_HISTORY_MAX=20;
+function pushScheduleSnapshot(label){
+  try{
+    scheduleStateHistory.push({
+      label:label||'edit',
+      at:Date.now(),
+      schedule:JSON.parse(JSON.stringify(USER_SCHEDULE)),
+      edits:JSON.parse(JSON.stringify(USER_EDITS)),
+    });
+    if(scheduleStateHistory.length>SCHEDULE_HISTORY_MAX) scheduleStateHistory.shift();
+  }catch(e){}
+}
+function showEditUndoToast(msg){
+  const el=document.getElementById('editUndoToast');
+  const m=document.getElementById('editUndoMsg');
+  if(m) m.textContent=msg||((USER_SETTINGS.lang==='en')?'Change applied':'تم التعديل');
+  if(el){ el.classList.add('show'); clearTimeout(showEditUndoToast._t); showEditUndoToast._t=setTimeout(()=>el.classList.remove('show'),6000); }
+}
+async function undoLastScheduleEdit(){
+  if(!scheduleStateHistory.length){
+    showToast((USER_SETTINGS.lang==='en')?'Nothing to undo':'مفيش حاجة تتراجع عنها',2200);
+    return;
+  }
+  const snap=scheduleStateHistory.pop();
+  USER_SCHEDULE=snap.schedule;
+  USER_EDITS=snap.edits;
+  try{ await saveUserSchedule(); }catch(e){}
+  try{ await saveUserEdits(); }catch(e){}
+  try{ renderPanels(); switchDay(getJDfromISO(SELECTED_DATE)); updateUI(); if(EDIT_MODE) bindEditModeDrag(); }catch(e){}
+  document.getElementById('editUndoToast')?.classList.remove('show');
+  showToast((USER_SETTINGS.lang==='en')?'Undone ↩️':'تم التراجع ↩️',2200);
+}
+
+
 let AI_REPLY_LANG='en';
 function detectTextLang(text){
   const s=String(text||'');
@@ -1565,6 +1717,7 @@ const I18N={
     rest_day:'يوم راحة', save_theme:'حفظ المظهر ✅', reset_theme:'افتراضي',
     theme_accent:'لون التمييز', theme_card:'لون البطاقة', theme_bg:'لون الخلفية',
     color_palette:'لوحة الألوان',
+    app_brand:'جدولك', deleted:'محذوفة', chat_history:'سجل المحادثات', new_chat:'محادثة جديدة',
     ai_title:'🤖 مساعد الجدول', ai_ready:'جاهز للمساعدة', ai_close:'إغلاق', ai_send:'إرسال',
     ai_placeholder:'اكتب أمرك...', ai_welcome:'👋 أهلاً! قولّي أي حاجة عايز تعملها في جدولك.',
     not_yet:'⏳ لسه مجاش وقتها', expired:'فات الوقت', late:'متأخر', log_food:'🍽️ سجل الأكل',
@@ -1598,6 +1751,7 @@ const I18N={
     rest_day:'Rest day', save_theme:'Save appearance ✅', reset_theme:'Default',
     theme_accent:'Accent color', theme_card:'Card color', theme_bg:'Background',
     color_palette:'Color palette',
+    app_brand:'Your Schedule', deleted:'Deleted', chat_history:'Chat history', new_chat:'New chat',
     ai_title:'🤖 Schedule assistant', ai_ready:'Ready to help', ai_close:'Close', ai_send:'Send',
     ai_placeholder:'Type a command...', ai_welcome:'👋 Hi! Tell me anything you want to do with your schedule.',
     not_yet:'⏳ Not yet', expired:'Missed', late:'Late', log_food:'🍽️ Log food',
@@ -1706,14 +1860,17 @@ function applyTheme(){
   if(USER_SETTINGS.themeAccent) r.style.setProperty('--ac',USER_SETTINGS.themeAccent);
   if(USER_SETTINGS.themeCard) r.style.setProperty('--c',USER_SETTINGS.themeCard);
   if(USER_SETTINGS.themeBg){ r.style.setProperty('--bg',USER_SETTINGS.themeBg); document.body.style.background=USER_SETTINGS.themeBg; }
-  // Top nav + score numbers follow the selected accent / background
   const sbar=document.getElementById('sbar');
   if(sbar){
     const bg=USER_SETTINGS.themeBg||getComputedStyle(r).getPropertyValue('--bg').trim()||'#0a0e1a';
     sbar.style.background=bg.startsWith('#')?`color-mix(in srgb, ${bg} 96%, transparent)`:'';
   }
-  // Numbers/labels inherit via CSS var(--ac). Clear inline colors so the
-  // stylesheet rule wins; updateUI only sets inline color when pts are negative.
+  // Per-theme stat badge colors
+  try{
+    const presetId=USER_SETTINGS.themePresetId||matchThemePresetId(USER_SETTINGS.themeAccent,USER_SETTINGS.themeCard,USER_SETTINGS.themeBg);
+    const preset=THEME_PRESETS.find(p=>p.id===presetId);
+    if(typeof applyStatColors==='function') applyStatColors(preset&&preset.stats);
+  }catch(e){}
   const sv1=document.getElementById('sv1');
   const sv2=document.getElementById('sv2');
   const sv3=document.getElementById('sv3');
@@ -1758,19 +1915,50 @@ function applyI18n(){
   if(saveTheme) saveTheme.textContent=t('save_theme');
   const resetTheme=document.getElementById('setResetThemeBtn');
   if(resetTheme) resetTheme.textContent=t('reset_theme');
+  const sideTitle=document.querySelector('.ai-sidebar-title');
+  if(sideTitle) sideTitle.textContent='🗂️ '+t('chat_history');
+  const sideNew=document.getElementById('aiSidebarNewChat');
+  if(sideNew) sideNew.textContent='➕ '+t('new_chat');
+  const histBtn=document.getElementById('aiHistoryBtn');
+  if(histBtn) histBtn.title=t('chat_history');
+  const sideClose=document.getElementById('aiSidebarClose');
+  if(sideClose) sideClose.title=t('ai_close');
+    const editBtn=document.getElementById('btn-enter-edit-mode');
+  if(editBtn) editBtn.textContent=(USER_SETTINGS.lang==='en')?'✏️ Enter Edit Mode':'✏️ دخول وضع التعديل';
+  const emSave=document.getElementById('editModeSave');
+  if(emSave) emSave.textContent=(USER_SETTINGS.lang==='en')?'Save Edits ✅':'حفظ التعديلات ✅';
+  const emCancel=document.getElementById('editModeCancel');
+  if(emCancel) emCancel.textContent=(USER_SETTINGS.lang==='en')?'Cancel':'إلغاء';
+  document.querySelectorAll('[data-i18n="app_brand"]').forEach(el=>{ el.textContent=t('app_brand'); });
+  try{ document.title=t('app_brand')+' 🏋️'; }catch(e){}
 }
 const APP_ICON_PRESETS=['🏋️','📅','✅','🎯','💪','📖','⭐','🔥','🧠','🌙'];
 const TASK_ICON_PRESETS=['✨','📚','💻','🏋️','🍽️','🥤','🏃','🧘','📝','🎵','💤','🎯','🧠','🕌','🏊','📖','⭐','🔥','💪','🎮'];
 const THEME_DEFAULTS={themeAccent:'#3b82f6',themeCard:'#111827',themeBg:'#0a0e1a'};
 // Samsung-style curated palettes — each sets accent + card + background together.
 const THEME_PRESETS=[
-  {id:'default', name:{en:'Default',ar:'افتراضي'}, accent:'#3b82f6', card:'#111827', bg:'#0a0e1a'},
-  {id:'ocean', name:{en:'Ocean',ar:'محيط'}, accent:'#06b6d4', card:'#0f172a', bg:'#020617'},
-  {id:'sunset', name:{en:'Sunset',ar:'غروب'}, accent:'#f97316', card:'#1c1917', bg:'#0c0a09'},
-  {id:'amoled', name:{en:'AMOLED',ar:'أسود'}, accent:'#a855f7', card:'#000000', bg:'#000000'},
-  {id:'forest', name:{en:'Forest',ar:'غابة'}, accent:'#10b981', card:'#14532d', bg:'#0a1a12'},
-  {id:'rose', name:{en:'Rose',ar:'وردي'}, accent:'#ec4899', card:'#1a1025', bg:'#0f0a14'}
+  {id:'default', name:{en:'Default',ar:'افتراضي'}, accent:'#3b82f6', card:'#111827', bg:'#0a0e1a',
+   stats:{streak:'#FF9500',points:'#FFD60A',best:'#AF52DE'}},
+  {id:'ocean', name:{en:'Ocean',ar:'محيط'}, accent:'#06b6d4', card:'#0f172a', bg:'#020617',
+   stats:{streak:'#00E5FF',points:'#7000FF',best:'#00FF66'}},
+  {id:'sunset', name:{en:'Sunset',ar:'غروب'}, accent:'#f97316', card:'#1c1917', bg:'#0c0a09',
+   stats:{streak:'#FF3B30',points:'#FF9500',best:'#FF2D55'}},
+  {id:'amoled', name:{en:'AMOLED',ar:'أسود'}, accent:'#a855f7', card:'#000000', bg:'#000000',
+   stats:{streak:'#FF9500',points:'#FFD60A',best:'#AF52DE'}},
+  {id:'forest', name:{en:'Forest',ar:'غابة'}, accent:'#10b981', card:'#14532d', bg:'#0a1a12',
+   stats:{streak:'#30D158',points:'#FFD60A',best:'#64D2FF'}},
+  {id:'rose', name:{en:'Rose',ar:'وردي'}, accent:'#ec4899', card:'#1a1025', bg:'#0f0a14',
+   stats:{streak:'#FF2D55',points:'#FFD60A',best:'#BF5AF2'}},
+  {id:'desert', name:{en:'Desert',ar:'صحراء'}, accent:'#E5C07B', card:'#1c1917', bg:'#1a1208',
+   stats:{streak:'#FF8C00',points:'#E5C07B',best:'#D19A66'}}
 ];
+function applyStatColors(stats){
+  const r=document.documentElement;
+  const s=stats||{streak:'#FF9500',points:'#FFD60A',best:'#AF52DE'};
+  r.style.setProperty('--stat-streak', s.streak);
+  r.style.setProperty('--stat-points', s.points);
+  r.style.setProperty('--stat-best', s.best);
+}
 function themePresetCircleStyle(p){
   // Tri-split circle: accent / card / background (like Samsung palette previews)
   return `background:conic-gradient(from 210deg, ${p.accent} 0deg 120deg, ${p.card} 120deg 240deg, ${p.bg} 240deg 360deg);`;
@@ -1818,6 +2006,7 @@ function renderThemeSwatches(){
     btn.innerHTML=`<div class="theme-preset-circle" style="${themePresetCircleStyle(p)}"></div><span class="theme-preset-label">${en?p.name.en:p.name.ar}</span>`;
     btn.onclick=async()=>{
       applyThemeColors(p.accent,p.card,p.bg,p.id);
+      applyStatColors(p.stats);
       USER_SETTINGS.themeAccent=p.accent;
       USER_SETTINGS.themeCard=p.card;
       USER_SETTINGS.themeBg=p.bg;
@@ -1947,7 +2136,7 @@ const OB_TOTAL_STEPS=4;
 // adding a future step (e.g. a Stage 2 theme-color chip step) means adding one entry
 // here, not touching the render/advance logic itself.
 const OB_STEPS=[
-  {key:'name',type:'text',title:'أهلاً بيك في الجدول الذكي 👋',sub:'إيه اسمك؟',placeholder:'اكتب اسمك هنا'},
+  {key:'name',type:'text',title:'أهلاً بيك في جدولك 👋',sub:'إيه اسمك؟',placeholder:'اكتب اسمك هنا'},
   {key:'trackPrayers',type:'chips',title:'هل تحب نتابعلك مواعيد الصلاة؟',sub:'لو موافق، هنضيف الصلوات الخمسة لجدولك اليومي بمواقيتها الفعلية — تقدر تغيّر ده بعدين من الإعدادات في أي وقت',chips:[
     {value:true,icon:'🕌',label:'أيوه، ضيفهم',desc:'الصلوات الخمسة + مواقيتها الفعلية في جدولك اليومي'},
     {value:false,icon:'📅',label:'لأ، جدول عادي',desc:'من غير تتبع صلاة — تقدر تفعّلها بعدين من الإعدادات'}
@@ -2974,16 +3163,19 @@ function buildTodayReminderPayload(){
     if(isEx) continue;
     const id=t[0];
     if(DONE[id]!==undefined && DONE[id]!==false) continue;
-    const startMin=toMin(t[10]||t[1]);
+    // Per-task notification mute (Settings → Reminders or task modal toggle)
+    const notifOn=(USER_SETTINGS.taskNotif&&USER_SETTINGS.taskNotif[id]!==undefined)
+      ?!!USER_SETTINGS.taskNotif[id]
+      :(t[14]!==false);
+    if(!notifOn) continue;
+    const startMin=toMin(t[1]); // t[10] is color for custom tasks — never use for time
 
-    // 'lead' (30-min-before) reminder removed per explicit instruction. Only 'start'
-    // (at task time) and 'ending' (30 min before task's effective end) remain.
     reminders.push({taskId:id,taskName:t[4],type:'start',date:TODAY,time:minToHHMM(startMin)});
 
     if(t[2]!=='sleep'){
       const endMin=notifTaskEndMin(t);
       const endLeadMin=endMin-NOTIF_END_LEAD_MIN;
-      if(endLeadMin>startMin){ // skip nonsensical "ending soon" before the task even starts
+      if(endLeadMin>startMin){
         reminders.push({taskId:id,taskName:t[4],type:'ending',date:TODAY,time:minToHHMM(endLeadMin)});
       }
     }
@@ -2996,7 +3188,11 @@ const NOTIF_END_LEAD_MIN=30;
 const NOTIF_DEFAULT_DURATION_MIN=180;
 
 function notifTaskEndMin(task){
-  const start=toMin(task[10]||task[1]);
+  if(task[13]){ // explicit end time on custom tasks
+    const e=toMin(task[13]);
+    if(e>0) return e;
+  }
+  const start=toMin(task[1]);
   if(isPrayer(task)){
     const pk=(task[0].split('-')[2])||'';
     if(pk==='Fajr')return toMin(PRYT.Sunrise||FALLBK.Sunrise);
@@ -3309,7 +3505,7 @@ function buildWeekReportData(){
       if(t._deleted){
         // Soft-deleted tasks are shown but excluded from totals/percentages — they
         // were removed on purpose and shouldn't count as "missed".
-        byCat[cat].push(`<div class="report-day-row" style="opacity:.5"><span>${t[4]}${movedNote}${customNote}</span><span class="badge-alt">🗑️ محذوفة</span></div>`);
+        byCat[cat].push(`<div class="report-day-row" style="opacity:.5"><span>${t[4]}${movedNote}${customNote}</span><span class="badge-alt">🗑️ ${((USER_SETTINGS&&USER_SETTINGS.lang)==='en')?'Deleted':'محذوفة'}</span></div>`);
         continue;
       }
 
@@ -3553,8 +3749,18 @@ function renderCard(task,isToday,jd){
         freeAct=`<button class="cbtn" data-action="confirm" data-id="${id}" data-pts="${pts}">✓<span class="ptslbl">+${pts}⭐</span></button>`;
       }
     }
+    const emStyleF=EDIT_MODE?'display:flex':'display:none';
+    const enF=(USER_SETTINGS.lang==='en');
+    const emFree=`<div class="em-actions" style="${emStyleF}">
+      <button type="button" class="em-btn" data-action="postpone" data-id="${id}" data-mins="15">+15m</button>
+      <button type="button" class="em-btn" data-action="postpone" data-id="${id}" data-mins="30">+30m</button>
+      <button type="button" class="em-btn" data-action="postpone" data-id="${id}" data-mins="60">+1h</button>
+      <button type="button" class="em-btn" data-action="postponeNextDay" data-id="${id}">${enF?'→ next day':'→ بكرة'}</button>
+      ${isCustom?`<button type="button" class="em-btn" data-action="editSchedTask" data-id="${id}" data-jd="${jd}">✏️</button>
+      <button type="button" class="em-btn danger" data-action="quickDeleteTask" data-id="${id}" data-jd="${jd}">🗑️</button>`:''}
+    </div>`;
     const editBtns=isCustom?`<div style="display:flex;gap:4px;flex-shrink:0">${freeAct}<button class="cbtn" data-action="editSchedTask" data-id="${id}" data-jd="${jd}" style="padding:5px 9px;font-size:.68rem">✏️</button><button class="cbtn" data-action="deleteSchedTask" data-id="${id}" data-jd="${jd}" style="padding:5px 9px;font-size:.68rem;background:rgba(239,68,68,.1);border-color:rgba(239,68,68,.4);color:#ef4444">🗑️</button></div>`:(freeAct||'');
-    return`<div class="tc" data-c="free" style="${borderStyle}"><div class="tctime">${arTime}</div><div class="tcico">${ico}</div><div class="tcbody"><div class="tcname" style="color:${nameColor}">${dispName}</div><div class="tcdesc">${tn(task[5])}</div></div>${editBtns}</div>`;
+    return`<div class="tc" data-c="free" id="c-${id}" style="${borderStyle}"><div class="tctime">${arTime}</div><div class="tcico">${ico}</div><div class="tcbody"><div class="tcname" style="color:${nameColor}">${dispName}</div><div class="tcdesc">${tn(task[5])}</div>${emFree}</div>${editBtns}</div>`;
   }
 
   const isSnack=cat==='snack';
@@ -3599,8 +3805,9 @@ function renderCard(task,isToday,jd){
   const isDeleted=!!task._deleted;
   const movedBadge=task._movedFrom?`<div class="hwtag" style="background:rgba(59,130,246,.15);border-color:rgba(59,130,246,.3);color:#60a5fa">🔀 نُقلت من ${task._movedFrom}</div>`:'';
   const customBadge=task._custom?`<div class="hwtag" style="background:rgba(139,92,246,.15);border-color:rgba(139,92,246,.3);color:#a78bfa">✨ مهمة مخصصة</div>`:'';
-  const deletedBadge=isDeleted?`<div class="hwtag">🗑️ محذوفة</div>`:'';
-  if(isDeleted) act=`<div class="cbtn exp" style="opacity:.6">🗑️ محذوفة</div>`;
+  const delLbl=t('deleted')||((USER_SETTINGS&&USER_SETTINGS.lang)==='en'?'Deleted':'محذوفة');
+  const deletedBadge=isDeleted?`<div class="hwtag">🗑️ ${delLbl}</div>`:'';
+  if(isDeleted) act=`<div class="cbtn exp" style="opacity:.6">🗑️ ${delLbl}</div>`;
 
   // If a food entry was actually logged, show its computed macros under the
   // description as a compact badge — makes the card itself carry the real intake,
@@ -3608,9 +3815,20 @@ function renderCard(task,isToday,jd){
   const loggedMacro=(historyData[SELECTED_DATE||TODAY]||{}).foodLog?.[id]?.macro;
   const loggedBadge=loggedMacro?`<div class="hwtag" style="background:rgba(16,185,129,.12);border-color:rgba(16,185,129,.3);color:#34d399">🍽️ ${Math.round(loggedMacro.k)} سعرة · ب${Math.round(loggedMacro.p)} · ك${Math.round(loggedMacro.c)} · د${Math.round(loggedMacro.f)} · أ${Math.round(loggedMacro.b||0)}</div>`:'';
 
+  const enEm=(USER_SETTINGS.lang==='en');
+  const emStyle=EDIT_MODE?'display:flex':'display:none';
+  const emActions=(!isDeleted)?`<div class="em-actions" style="${emStyle}">
+    <button type="button" class="em-btn" data-action="postpone" data-id="${id}" data-mins="15">+15m</button>
+    <button type="button" class="em-btn" data-action="postpone" data-id="${id}" data-mins="30">+30m</button>
+    <button type="button" class="em-btn" data-action="postpone" data-id="${id}" data-mins="60">+1h</button>
+    <button type="button" class="em-btn" data-action="postponeNextDay" data-id="${id}">${enEm?'→ next day':'→ بكرة'}</button>
+    <button type="button" class="em-btn" data-action="editSchedTask" data-id="${id}" data-jd="${jd}">✏️</button>
+    <button type="button" class="em-btn danger" data-action="quickDeleteTask" data-id="${id}" data-jd="${jd}">🗑️</button>
+  </div>`:'';
+
   return`<div class="tc${isDone?' done':''}${isEx?' excx':''}${isDeleted?' excx':''}" data-c="${cat}" id="c-${id}" ${isDeleted?'style="opacity:.5"':''}>
     <div class="tctime">${arTime}</div><div class="tcico">${ico}</div>
-    <div class="tcbody"><div class="tcname">${dispName}</div><div class="tcdesc">${getDisplayDesc(task,SELECTED_DATE||TODAY)}</div>${hwH}${movedBadge}${customBadge}${deletedBadge}${loggedBadge}</div>
+    <div class="tcbody"><div class="tcname">${dispName}</div><div class="tcdesc">${getDisplayDesc(task,SELECTED_DATE||TODAY)}</div>${hwH}${movedBadge}${customBadge}${deletedBadge}${loggedBadge}${emActions}</div>
     ${act}
   </div>`;
 }
@@ -3620,6 +3838,7 @@ function renderPanel(jd){
   const k=DKEYS[jd];
   const isToday=(SELECTED_DATE===TODAY)&&(jd===todayJD());
   const gbLabel=d.gm?`<div class="gbx ${d.gm==='upper'?'gbu':'gbl'}">${d.gm==='upper'?'Upper Body 💪':'Lower Body 🦵'}</div>`:`<div class="gbx gbr">${t('rest_day')} 💤</div>`;
+  const dayToggle=`<button type="button" class="em-day-toggle" data-action="toggleDayType" data-jd="${jd}">${d.gm?((USER_SETTINGS.lang==='en')?'Switch to Rest day 💤':'حوّل ليوم راحة 💤'):((USER_SETTINGS.lang==='en')?'Switch to Gym day 🏋️':'حوّل ليوم جيم 🏋️')}</button>`;
 
   const pills=[];
   const schedList=d.ts||[];
@@ -3646,7 +3865,7 @@ function renderPanel(jd){
     ?`Fajr ${fmt24(PRYT.Fajr||FALLBK.Fajr)} · Sunrise ${fmt24(PRYT.Sunrise||FALLBK.Sunrise)} ← Wake ${d.wk} · Sleep ${d.bd}`
     :`فجر ${fmt24(PRYT.Fajr||FALLBK.Fajr)} · شروق ${fmt24(PRYT.Sunrise||FALLBK.Sunrise)} ← صحيان ${d.wk} · نوم ${d.bd}`;
   return`<div class="pan" id="pan-${k}">
-    <div class="dh"><div><div class="dhn">${dayLabel(jd)}</div><div class="dhm">${dhm}</div></div>${gbLabel}</div>
+    <div class="dh"><div><div class="dhn">${dayLabel(jd)}</div><div class="dhm">${dhm}</div></div>${gbLabel}${dayToggle}</div>
     <div class="prow">${pills.join('')}</div>
     <div class="tl">${tasks.map(t=>renderCard(t,isToday,jd)).join('')}</div>
     ${addTaskBtn}
@@ -3753,7 +3972,13 @@ function computeDayMacros(jd,iso){
     target.p+=macro.p;target.c+=macro.c;target.f+=macro.f;target.b+=(macro.b||0);target.k+=macro.k;
     const v=dayDone[t[0]];
     if(v!==undefined && v!==false){
-      const logged=dayFoodLog[t[0]]?.macro;
+      const entry=dayFoodLog[t[0]];
+      // Gym/rest isolation: if a log was tagged with a different dayType, ignore it
+      // for this day's consumed totals (targets still come from today's schedule macros).
+      const daySched=(typeof getEffectiveSched==='function'?getEffectiveSched(jd):null);
+      const expectType=daySched&&daySched.gm?'gym':'rest';
+      let logged=entry?.macro;
+      if(entry&&entry.dayType&&entry.dayType!==expectType) logged=null;
       const m=logged||macro;
       // (m.b||0) — old foodLog entries saved before fiber tracking existed won't
       // have a b field; treat that as 0 rather than NaN so old logged days still
@@ -3847,6 +4072,7 @@ function openSettingsScreen(){
   applyI18n();
   renderIconPresets();
   renderThemeSwatches();
+  try{ renderNotifTaskList(); }catch(e){}
   document.getElementById('settingsScreen')?.classList.add('open');
   updateAuthUI(fbAuth?.currentUser||null);
 }
@@ -4542,6 +4768,29 @@ async function saveUserMemory(){
   }catch(e){console.warn('userMemory cloud save failed',e);}
 }
 
+
+async function aiAutoExtractMemory(userMsg, assistantReply){
+  // Lightweight local heuristics — no extra LLM call (cost/latency).
+  // Captures durable preferences the user stated clearly.
+  const src=(userMsg||'')+'\n'+(assistantReply||'');
+  const patterns=[
+    /(?:I always|I usually|I prefer|I never|remember that|أنا دايمًا|دائمًا|بفضل|مبحبش|افتكر إن)\s+(.{8,120})/gi,
+    /(?:my (?:protein|calorie|carb|target|goal)|هدفي|بروتين|سعرات)\s*(?:is|are|=|هو)?\s*(\d+\s*(?:g|جم|kcal|سعرة)?)/gi,
+  ];
+  let added=0;
+  for(const re of patterns){
+    let m;
+    while((m=re.exec(src))){
+      const fact=m[0].replace(/\s+/g,' ').trim().slice(0,160);
+      if(fact.length<12) continue;
+      const before=USER_MEMORY.length;
+      aiMemoryAdd(fact);
+      if(USER_MEMORY.length>before) added++;
+    }
+  }
+  if(added){ try{ await saveUserMemory(); }catch(e){} }
+}
+
 function aiMemoryAdd(fact){
   const f=fact.trim();
   if(!f) return;
@@ -4566,7 +4815,15 @@ const AI_WORKER_URL='https://falling-frost-7656.ashafei1905.workers.dev'; // Clo
 // Mentor persona, per Abdullah's explicit instructions — citation/sourcing requirement
 // intentionally dropped since this Worker has no web search tool attached, and
 // fabricating citations would be worse than not having them.
-const AI_SYSTEM_PROMPT=`You are a skeptical, research-oriented mentor for Abdullah, embedded in his personal schedule/habit-tracking app "جدول عبدالله". Your purpose is to sharpen his thinking, not validate his ego.
+const AI_SYSTEM_PROMPT=`You are a skeptical, research-oriented mentor for Abdullah, embedded in his personal schedule/habit-tracking app "Your Schedule" (جدولك). Your purpose is to sharpen his thinking, not validate his ego.
+
+APP CONTROL & FUZZY TASK MATCHING:
+- When the user refers to a task by partial name, synonym, or intent (e.g. "workout"/"gym"/"تمرين", "lunch"/"غدا", "quran"/"ورد"), match it to the closest task from TODAY'S TASK LIST provided in context — do NOT require exact string match.
+- Prefer semantic match: category (gym/food/prayer/quran/prog), partial title, or time-of-day hints.
+- If multiple tasks could match, pick the most likely and state which one you chose; if truly ambiguous, ask one short clarifying question.
+- You can help change theme colors when asked (dark violet + neon green, etc.) by describing the hex values so the app tools can apply them.
+
+MEMORY: When the user clearly states a durable preference or habit (e.g. "I always skip swimming on Fridays", "my protein target is 150g"), note it naturally; the app may persist important facts.
 
 TONE: Strictly formal, professional, precise. No flattery, no colloquialisms, no emotional cushioning. If he is wrong, say so directly and correct him.
 
@@ -4832,6 +5089,21 @@ function aiValidateToolCall(parsed, allTasksFlat){
       if(!parsed.fact || !String(parsed.fact).trim()) return{ok:false,reply:'⚠️ مش واضح إيه اللي المفروض أفتكره.'};
       return{ok:true,tool,fact:String(parsed.fact).trim()};
     }
+    case 'setTheme': {
+      const hex=s=>typeof s==='string' && /^#?[0-9a-fA-F]{6}$/.test(s.trim());
+      const norm=s=>{ s=String(s).trim(); return s.startsWith('#')?s:'#'+s; };
+      if(!hex(parsed.accent)&&!hex(parsed.card)&&!hex(parsed.bg))
+        return{ok:false,reply:'⚠️ محتاج لون hex واحد على الأقل (accent/card/bg).'};
+      return{ok:true,tool,
+        accent:hex(parsed.accent)?norm(parsed.accent):undefined,
+        card:hex(parsed.card)?norm(parsed.card):undefined,
+        bg:hex(parsed.bg)?norm(parsed.bg):undefined};
+    }
+    case 'setLang': {
+      const lang=String(parsed.lang||'').toLowerCase();
+      if(lang!=='en'&&lang!=='ar') return{ok:false,reply:'⚠️ اللغة لازم en أو ar.'};
+      return{ok:true,tool,lang};
+    }
     default:
       return{ok:false,reply:'⚠️ الذكاء الاصطناعي طلب حاجة مش معروفة — جرب تصيغ طلبك بشكل تاني.'};
   }
@@ -4999,6 +5271,25 @@ async function aiExecuteToolCall(v){
     case 'setWeeklyPoints': { STATS.pts=v.value; await saveAll(); break; }
     case 'setPunishRate': { STATS.punishRateOverride=v.value; await saveAll(); break; }
     case 'rememberFact': { aiMemoryAdd(v.fact); await saveUserMemory(); break; }
+    case 'setTheme': {
+      if(v.accent) USER_SETTINGS.themeAccent=v.accent;
+      if(v.card) USER_SETTINGS.themeCard=v.card;
+      if(v.bg) USER_SETTINGS.themeBg=v.bg;
+      USER_SETTINGS.themePresetId='custom';
+      try{ applyTheme(); applyThemeColors(USER_SETTINGS.themeAccent,USER_SETTINGS.themeCard,USER_SETTINGS.themeBg,'custom'); }catch(e){}
+      try{ await saveUserSettings(); }catch(e){}
+      break;
+    }
+    case 'setLang': {
+      if(v.lang==='en'||v.lang==='ar'){
+        USER_SETTINGS.lang=v.lang;
+        document.documentElement.lang=v.lang;
+        document.documentElement.dir=v.lang==='en'?'ltr':'rtl';
+        try{ applyI18n(); }catch(e){}
+        try{ await saveUserSettings(); }catch(e){}
+      }
+      break;
+    }
   }
   try{ renderPanels();switchDay(getJDfromISO(SELECTED_DATE));updateUI(); }catch(e){ console.error('re-render after tool exec failed',e); }
   return snapshot;
@@ -5363,7 +5654,11 @@ async function flFinalizeLog(task,description,macro,verdict,showVerdictUI,itemsB
 
   if(!historyData[iso]) historyData[iso]={};
   if(!historyData[iso].foodLog) historyData[iso].foodLog={};
-  historyData[iso].foodLog[id]={description,macro,loggedAt:Date.now()};
+  const _jd=getJDfromISO(iso);
+  const _sched=(typeof getEffectiveSched==='function'?getEffectiveSched(_jd):null);
+  const _dayType=_sched&&_sched.gm?'gym':'rest';
+  historyData[iso].foodLog[id]={description,macro,loggedAt:Date.now(),dayType:_dayType};
+
 
   const alreadyDone=DONE[id]!==undefined && DONE[id]!==false;
   if(!alreadyDone){
@@ -5957,6 +6252,7 @@ async function aiHandleSend(){
     session.lastMsgAt=Date.now();
     aiRenderMessages();
     await saveAiChat();
+    try{ await aiAutoExtractMemory(text, combinedText); }catch(e){}
     return;
   }
 
@@ -5972,6 +6268,7 @@ async function aiHandleSend(){
   session.lastMsgAt=Date.now();
   aiRenderMessages();
   await saveAiChat();
+  if(result.ok){ try{ await aiAutoExtractMemory(text, result.text); }catch(e){} }
 }
 
 // Human-readable Arabic confirmation for a successfully executed tool call — mirrors
@@ -5992,14 +6289,18 @@ function aiToolCallReplyText(v){
     case 'setWeeklyPoints': return `تم تغيير نقاط الأسبوع إلى ${v.value}⭐`;
     case 'setPunishRate': return `تم تغيير نسبة الخصم إلى ${Math.round(v.value*100)}٪`;
     case 'rememberFact': return `تمام، هفتكر إن ${v.fact} ✅`;
+    case 'setTheme': return (USER_SETTINGS.lang==='en')?'Theme updated ✅':'تم تحديث الثيم ✅';
+    case 'setLang': return (USER_SETTINGS.lang==='en')?'Language updated ✅':'تم تغيير اللغة ✅';
     default: return 'تم ✅';
   }
 }
 
 async function aiOpenPanel(){
+  try{ applyI18n(); }catch(e){}
+
   const panel=document.getElementById('aiPanel');
   const sub=document.getElementById('aiSubStatus');
-  if(sub) sub.textContent=fbAuth.currentUser?'جاهز للمساعدة':'سجل دخول عشان أقدر أحفظلك التغييرات';
+  if(sub){ const en=(USER_SETTINGS.lang==='en'); sub.textContent=fbAuth.currentUser?(en?'Ready to help':t('ai_ready')):(en?'Sign in so I can save your changes':'سجل دخول عشان أقدر أحفظلك التغييرات'); }
   // Auto-roll to a new session if the last one went idle 3+ hours ago, so reopening
   // the app after a long gap starts fresh instead of resuming a stale conversation —
   // the old one stays fully intact and reachable from 🗂️ history.
@@ -6070,6 +6371,37 @@ document.body.addEventListener('click',async e=>{
   if(closest('#flSaveOptYes')){await flHandleSaveOptYes();return;}
   if(closest('#flSaveOptNo')){document.getElementById('flSaveOptRow').style.display='none';return;}
   if(closest('#flAskSubmitBtn')){await flHandleAskAnswer();return;}
+
+  if(tgt.id==='btn-enter-edit-mode'){
+    enterEditMode('settings');
+    return;
+  }
+  if(tgt.id==='editModeSave'){ exitEditMode(true); return; }
+  if(tgt.id==='editModeCancel'){ exitEditMode(false); return; }
+  if(tgt.id==='editUndoBtn'){ await undoLastScheduleEdit(); return; }
+  const postponeBtn=tgt.closest('[data-action="postpone"]');
+  if(postponeBtn){
+    const id=postponeBtn.getAttribute('data-id');
+    const mins=parseInt(postponeBtn.getAttribute('data-mins'),10)||15;
+    await postponeTaskByMinutes(id, mins);
+    return;
+  }
+  const nextDayBtn=tgt.closest('[data-action="postponeNextDay"]');
+  if(nextDayBtn){
+    await postponeTaskNextDay(nextDayBtn.getAttribute('data-id'));
+    return;
+  }
+  const qdel=tgt.closest('[data-action="quickDeleteTask"]');
+  if(qdel){
+    await quickDeleteTask(qdel.getAttribute('data-id'), parseInt(qdel.getAttribute('data-jd'),10));
+    return;
+  }
+  const tdt=tgt.closest('[data-action="toggleDayType"]');
+  if(tdt){
+    await toggleDayType(parseInt(tdt.getAttribute('data-jd'),10));
+    return;
+  }
+
 
   // closest(), not tgt.id — buttons containing emoji/text can report the click's
   // target as an inner text node rather than the button itself on some mobile
@@ -6466,6 +6798,188 @@ document.body.addEventListener('keydown',async e=>{
 // initAppFlow so the AI fab button can NEVER become visible/clickable before this
 // fires. Previously #aiFab had no gating tied to load state at all and was tappable
 // during the loading spinner.
+
+
+function renderNotifTaskList(){
+  const box=document.getElementById('notifTaskList');
+  if(!box) return;
+  const en=(USER_SETTINGS.lang==='en');
+  const desc=document.getElementById('notifPerTaskDesc');
+  if(desc) desc.textContent=en?'Per-task notifications (today)':'إشعارات لكل مهمة (اليوم)';
+  if(!USER_SETTINGS.taskNotif) USER_SETTINGS.taskNotif={};
+  const jd=todayJD();
+  const tasks=(typeof getAllTasks==='function'?getAllTasks(jd,TODAY):[]).filter(t=>t&&!t._deleted&&t[2]!=='free');
+  if(!tasks.length){
+    box.innerHTML=`<div style="color:var(--mu);font-size:.78rem">${en?'No tasks today':'مفيش مهام النهاردة'}</div>`;
+    return;
+  }
+  box.innerHTML=tasks.map(t=>{
+    const id=t[0];
+    const on=USER_SETTINGS.taskNotif[id]!==undefined?!!USER_SETTINGS.taskNotif[id]:(t[14]!==false);
+    const name=(typeof tn==='function'?tn(t[4]):t[4])||t[4];
+    return `<div class="notif-task-row"><span>${name} · ${t[1]}</span><input type="checkbox" data-notif-task="${id}" ${on?'checked':''} style="width:20px;height:20px;accent-color:var(--ac)"></div>`;
+  }).join('');
+  box.querySelectorAll('[data-notif-task]').forEach(inp=>{
+    inp.onchange=async()=>{
+      const tid=inp.getAttribute('data-notif-task');
+      USER_SETTINGS.taskNotif[tid]=!!inp.checked;
+      try{ await saveUserSettings(); }catch(e){}
+      try{ await syncPushSchedule(); }catch(e){}
+    };
+  });
+}
+
+
+let _dragTaskId=null;
+function bindEditModeDrag(){
+  if(!EDIT_MODE) return;
+  const jd=getJDfromISO(SELECTED_DATE);
+  document.querySelectorAll(`#pan-${DKEYS[jd]} .tc[id^="c-"]`).forEach(card=>{
+    if(card.dataset.dragBound) return;
+    card.dataset.dragBound='1';
+    card.setAttribute('draggable','true');
+    card.addEventListener('dragstart',e=>{
+      _dragTaskId=card.id.replace(/^c-/,'');
+      card.classList.add('dragging');
+      try{ e.dataTransfer.setData('text/plain',_dragTaskId); }catch(err){}
+    });
+    card.addEventListener('dragend',()=>{ card.classList.remove('dragging'); _dragTaskId=null; document.querySelectorAll('.drag-over').forEach(n=>n.classList.remove('drag-over')); });
+    card.addEventListener('dragover',e=>{ e.preventDefault(); card.classList.add('drag-over'); });
+    card.addEventListener('dragleave',()=>card.classList.remove('drag-over'));
+    card.addEventListener('drop',async e=>{
+      e.preventDefault();
+      card.classList.remove('drag-over');
+      const fromId=_dragTaskId||e.dataTransfer.getData('text/plain');
+      const toId=card.id.replace(/^c-/,'');
+      if(!fromId||fromId===toId) return;
+      await reorderScheduleTasks(jd,fromId,toId);
+    });
+  });
+}
+async function reorderScheduleTasks(jd,fromId,toId){
+  scheduleEnsureDay(jd);
+  const ts=USER_SCHEDULE[jd].ts;
+  const fi=ts.findIndex(t=>t[0]===fromId);
+  const ti=ts.findIndex(t=>t[0]===toId);
+  if(fi<0||ti<0) return; // only reorder custom USER_SCHEDULE tasks
+  const [item]=ts.splice(fi,1);
+  ts.splice(ti,0,item);
+  await saveUserSchedule();
+  try{ renderPanels(); switchDay(jd); updateUI(); bindEditModeDrag(); }catch(e){}
+  const en=(USER_SETTINGS.lang==='en');
+  showToast(en?'Order updated — tap Save Edits when done':'تم تغيير الترتيب — اضغط حفظ لما تخلّص',2200);
+}
+
+
+function displayTimeAddMinutes(arTime, mins){
+  // arTime like "11:30 ص" or "1:00 م"
+  const m=String(arTime).match(/(\d{1,2}):(\d{2})\s*([صم])/);
+  if(!m) return arTime;
+  let h=parseInt(m[1],10); let mi=parseInt(m[2],10); const ap=m[3];
+  if(ap==='م'&&h<12) h+=12; if(ap==='ص'&&h===12) h=0;
+  let total=h*60+mi+mins;
+  total=((total%1440)+1440)%1440;
+  let nh=Math.floor(total/60), nm=total%60;
+  const nap=nh>=12?'م':'ص';
+  nh=nh%12||12;
+  return `${nh}:${String(nm).padStart(2,'0')} ${nap}`;
+}
+async function postponeTaskByMinutes(taskId, mins){
+  const iso=SELECTED_DATE||TODAY;
+  const jd=getJDfromISO(iso);
+  const tasks=getAllTasks(jd,iso);
+  const task=tasks.find(t=>t[0]===taskId);
+  if(!task) return;
+  pushScheduleSnapshot('postpone');
+  const newTime=displayTimeAddMinutes(task[1], mins);
+  // Prefer USER_SCHEDULE mutation for custom tasks
+  scheduleEnsureDay(jd);
+  const ts=USER_SCHEDULE[jd].ts;
+  const idx=ts.findIndex(t=>t[0]===taskId);
+  if(idx>=0){
+    ts[idx]=[...ts[idx]];
+    ts[idx][1]=newTime;
+    await saveUserSchedule();
+  }else{
+    // soft move via USER_EDITS for template tasks
+    if(!USER_EDITS.moves) USER_EDITS.moves={};
+    USER_EDITS.moves[taskId]={toDate:iso,toTime:newTime,fromDate:iso};
+    await saveUserEdits();
+  }
+  try{ renderPanels(); switchDay(jd); updateUI(); if(EDIT_MODE) bindEditModeDrag(); }catch(e){}
+  showEditUndoToast((USER_SETTINGS.lang==='en')?`Postponed +${mins}m`:`اتأجل +${mins} د`);
+}
+async function postponeTaskNextDay(taskId){
+  const iso=SELECTED_DATE||TODAY;
+  const jd=getJDfromISO(iso);
+  const tasks=getAllTasks(jd,iso);
+  const task=tasks.find(t=>t[0]===taskId);
+  if(!task) return;
+  pushScheduleSnapshot('postponeNextDay');
+  // next calendar day
+  const d=new Date(iso+'T12:00:00');
+  d.setDate(d.getDate()+1);
+  const toDate=d.toISOString().slice(0,10);
+  if(typeof aiMoveTaskExec==='function'){
+    await aiMoveTaskExec(task, iso, toDate, task[1]);
+  }else{
+    if(!USER_EDITS.moves) USER_EDITS.moves={};
+    USER_EDITS.moves[taskId]={toDate,toTime:task[1],fromDate:iso};
+    await saveUserEdits();
+  }
+  try{ renderPanels(); switchDay(jd); updateUI(); if(EDIT_MODE) bindEditModeDrag(); }catch(e){}
+  showEditUndoToast((USER_SETTINGS.lang==='en')?'Moved to next day':'اتنقل ليوم تاني');
+}
+async function quickDeleteTask(taskId, jd){
+  pushScheduleSnapshot('delete');
+  const id=taskId;
+  // Prefer schedule delete for custom, else soft-delete
+  scheduleEnsureDay(jd);
+  const ts=USER_SCHEDULE[jd].ts||[];
+  if(ts.some(t=>t[0]===id)){
+    await deleteScheduleTask(jd,id);
+  }else{
+    USER_EDITS.deletes[id]=true;
+    await saveUserEdits();
+  }
+  try{ renderPanels(); switchDay(jd); updateUI(); if(EDIT_MODE) bindEditModeDrag(); }catch(e){}
+  showEditUndoToast((USER_SETTINGS.lang==='en')?'Task deleted':'تم حذف المهمة');
+}
+async function toggleDayType(jd){
+  pushScheduleSnapshot('dayType');
+  scheduleEnsureDay(jd);
+  const d=USER_SCHEDULE[jd];
+  // Cycle: rest -> upper -> lower -> rest
+  if(!d.gm) d.gm='upper';
+  else if(d.gm==='upper') d.gm='lower';
+  else d.gm=null;
+  await saveUserSchedule();
+  try{ renderPanels(); switchDay(jd); updateUI(); if(EDIT_MODE) bindEditModeDrag(); }catch(e){}
+  const en=(USER_SETTINGS.lang==='en');
+  const label=!d.gm?(en?'Rest day':'راحة'):(d.gm==='upper'?'Upper Body':'Lower Body');
+  showEditUndoToast(en?`Day type: ${label}`:`نوع اليوم: ${label}`);
+}
+
+function enterEditMode(from){
+  EDIT_MODE=true;
+  EDIT_MODE_PREV_VIEW=from||'schedule';
+  document.body.classList.add('edit-mode');
+  scheduleStateHistory=[]; // fresh undo stack for this session
+  try{ document.getElementById('settingsScreen')?.classList.remove('open'); }catch(e){}
+  const en=(USER_SETTINGS.lang==='en');
+  showToast(en?'Edit mode — drag, postpone, delete, toggle gym/rest':'وضع التعديل — اسحب، أجّل، احذف، غيّر جيم/راحة',3200);
+  try{ renderPanels(); switchDay(getJDfromISO(SELECTED_DATE)); updateUI(); bindEditModeDrag(); }catch(e){}
+}
+function exitEditMode(save){
+  EDIT_MODE=false;
+  document.body.classList.remove('edit-mode');
+  const prev=EDIT_MODE_PREV_VIEW; EDIT_MODE_PREV_VIEW=null;
+  const en=(USER_SETTINGS.lang==='en');
+  if(save) showToast(en?'Edits saved':'تم حفظ التعديلات',2200);
+  try{ renderPanels(); switchDay(getJDfromISO(SELECTED_DATE)); updateUI(); }catch(e){}
+  if(prev==='settings'){ try{ openSettingsScreen(); }catch(e){} }
+}
+
 function revealApp(){
   // Apply theme + i18n WHILE still behind the loading screen so the first painted
   // frame is fully correct (no FOUC, no Arabic flash in EN mode, no default colors).
