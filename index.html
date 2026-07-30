@@ -2579,17 +2579,13 @@ const OB_TOTAL_STEPS=5;
 // adding a future step (e.g. a Stage 2 theme-color chip step) means adding one entry
 // here, not touching the render/advance logic itself.
 const OB_STEPS = [
-  { key: 'name', type: 'text', title: 'أهلاً بيك في جدولك 👋', sub: 'إيه اسمك؟', placeholder: 'اكتب اسمك هنا' },
-  { key: 'trackPrayers', type: 'chips', title: 'هل تحب نتابعلك مواعيد الصلاة؟', sub: 'لو موافق، هنضيف الصلوات الخمسة لجدولك اليومي بمواقيتها الفعلية — تقدر تغيّر ده بعدين من الإعدادات في أي وقت', chips: [
-    { value: true, icon: '🕌', label: 'أيوه، ضيفهم', desc: 'الصلوات الخمسة + مواقيتها الفعلية في جدولك اليومي' },
-    { value: false, icon: '📅', label: 'لأ، جدول عادي', desc: 'من غير تتبع صلاة — تقدر تفعّلها بعدين من الإعدادات' }
+  { key: 'name', type: 'text', title: 'Welcome to your Schedule 👋', sub: 'What is your name?', placeholder: 'Enter your name' },
+  { key: 'trackPrayers', type: 'chips', title: 'Would you like us to track prayer times?', sub: 'If yes, we’ll add the five daily prayers at their actual times — you can change this later in settings.', chips: [
+    { value: true, icon: '🕌', label: 'Yes, add them', desc: 'Five prayers with actual times in your daily schedule' },
+    { value: false, icon: '📅', label: 'No, regular schedule', desc: 'Without prayer tracking — you can enable it later' }
   ]},
-  { key: 'buildMode', type: 'chips', title: 'عايز تبدأ إزاي؟', sub: 'تقدر تغيّر ده بعدين برضه', chips: [
-    { value: 'template', icon: '📋', label: 'ابدأ بجدول جاهز', desc: 'قالب مبدئي جاهز تقدر تعدّل فيه بعدين' },
-    { value: 'custom', icon: '✨', label: 'هبني جدولي من الصفر', desc: 'ابدأ بجدول فاضي وضيف مهامك بنفسك' }
-  ]},
-  { key: 'workspaceName', type: 'text', title: 'سمّي جدولك', sub: 'اسم يميّز مساحتك — تقدر تغيّره في أي وقت من الإعدادات', placeholder: 'مثلاً: جدول أحمد اليومي' },
-  { key: 'messyTasks', type: 'textarea', title: 'احكي مهامك الحالية', sub: 'اكتب كل المهام اللي عايز تتابعها، بالوقت اللي يناسبك (زي: "جيم ٧ ص لمدة ساعة، دراسة ١١, dentist 3pm")', placeholder: 'مثال:\nجيم 7am لمدة ساعة\nدراسة 11\ndentist 3pm\nغدا 2' }
+  { key: 'messyTasks', type: 'textarea', title: 'Tell us about your daily routine', sub: 'Paste your messy task list or describe what you do every day (e.g., "gym at 7am for 1 hour, study 11, dentist 3pm")', placeholder: 'Example:\ngym 7am for 1 hour\nstudy 11\ndentist 3pm\nlunch 2' },
+  { key: 'workspaceName', type: 'text', title: 'Name your schedule', sub: 'A name that defines your space — you can change it anytime in settings.', placeholder: 'e.g. Ahmed\'s Daily Plan' }
 ];
 
 function obUpdateProgress(){
@@ -2790,14 +2786,16 @@ async function obApplyPlanToSchedule(plan){
 }
 
 async function obFinish() {
-  const en = obIsEn();
+  const en = (USER_SETTINGS && USER_SETTINGS.lang === 'en');
   const nextBtn = document.getElementById('btn-onboard-next');
-  if (nextBtn) { nextBtn.disabled = true; nextBtn.textContent = en ? 'Generating…' : 'جاري التوليد…'; }
+  if (nextBtn) {
+    nextBtn.disabled = true;
+    nextBtn.textContent = en ? 'Generating…' : 'جاري التوليد…';
+  }
 
   USER_SETTINGS = {
     ...USER_SETTINGS,
     trackPrayers: !!OB_ANSWERS.trackPrayers,
-    buildMode: OB_ANSWERS.buildMode || 'custom',
     displayNameChosen: OB_ANSWERS.name,
     workspaceName: OB_ANSWERS.workspaceName,
     energyPreference: OB_ANSWERS.energy || 'morning',
@@ -2847,8 +2845,14 @@ async function obFinish() {
       console.warn('Onboarding parsing error', e);
       showToast(en ? '⚠️ Could not parse your tasks – you can add them later.' : '⚠️ مش قادرين نفهم مهامك – تقدر تضيفهم بعدين.', 4000, 'warn');
     }
-  } else if (OB_ANSWERS.buildMode === 'template') {
-    // (Optional) if template mode and no messy text, you could still seed with default template? We'll leave empty.
+  } else {
+    // If no messy tasks, seed an empty schedule so the user can add later
+    if (!USER_SCHEDULE || Object.keys(USER_SCHEDULE).length === 0) {
+      for (let jd = 0; jd < 7; jd++) {
+        USER_SCHEDULE[jd] = { n: DSHORT[jd], wk: '9:00 ص', bd: '11:00 م', gm: null, ts: [] };
+      }
+      await saveUserSchedule();
+    }
   }
 
   try {
@@ -2858,11 +2862,21 @@ async function obFinish() {
     console.warn('Onboarding save failed', e);
     showToast(en ? '⚠️ Save error – try again' : '⚠️ حصل خطأ أثناء حفظ إعداداتك — جرب تاني', 3500, 'warn');
   } finally {
-    if (nextBtn) { nextBtn.disabled = false; nextBtn.textContent = en ? 'Finish ✅' : 'إنهاء ✅'; }
+    if (nextBtn) {
+      nextBtn.disabled = false;
+      nextBtn.textContent = en ? 'Finish ✅' : 'إنهاء ✅';
+    }
   }
 
   document.getElementById('obWizard')?.classList.remove('open');
-  try { renderTabs(); renderPanels(); switchDay(getJDfromISO(SELECTED_DATE || TODAY)); updateUI(); } catch (e) { console.warn('Post-onboarding re-render failed', e); }
+  try {
+    renderTabs();
+    renderPanels();
+    switchDay(getJDfromISO(SELECTED_DATE || TODAY));
+    updateUI();
+  } catch (e) {
+    console.warn('Post-onboarding re-render failed', e);
+  }
 }
 
 function buildPTasks(jd){
