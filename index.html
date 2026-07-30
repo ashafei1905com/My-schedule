@@ -1192,26 +1192,204 @@ function parseMessyTaskString(raw){
   return{name,startDisplay:toDisplay(startMin),endDisplay:toDisplay(endMin),durationMin,pts,dayOffset};
 }
 
-async function handleBuildScheduleFromText(rawText){
-  const input=rawText??document.getElementById('buildScheduleInput')?.value??'';
-  const parsed=parseMessyTaskString(input);
-  if(!parsed){
-    showToast('⚠️ Could not parse — try "gym at 7am for 1 hour"',3500,'warn');
+// ---------- NEW LOCAL PARSER (no AI) ----------
+function parseMessyTextToSchedule(text, energyPref = 'morning') {
+  const lines = text.split(/\n|\.|,|;/).map(s => s.trim()).filter(s => s.length > 0);
+  const tasks = [];
+
+  // Helper: parse time string like "7am" or "11:00" to { hour, minute }
+  function parseTime(str) {
+    str = str.trim().toLowerCase();
+    let m = str.match(/(\d{1,2})(?::(\d{2}))?\s*(am|pm|ص|م)?/);
+    if (!m) return null;
+    let h = parseInt(m[1], 10);
+    let min = m[2] ? parseInt(m[2], 10) : 0;
+    let period = (m[3] || '').toLowerCase();
+    if (period === 'pm' || period === 'م') { if (h < 12) h += 12; }
+    if (period === 'am' || period === 'ص') { if (h === 12) h = 0; }
+    // If no period, treat as 24h if h>=13 else assume AM (or just keep)
+    return { hour: h, minute: min };
+  }
+
+  // Helper: parse duration like "for 1 hour", "30 min"
+  function parseDuration(str) {
+    let m = str.match(/(\d+(?:\.\d+)?)\s*(?:hours?|hrs?|h|minutes?|mins?|m)/i);
+    if (m) {
+      let val = parseFloat(m[1]);
+      let unit = m[2].toLowerCase();
+      if (unit.startsWith('h')) return Math.round(val * 60);
+      return Math.round(val);
+    }
+    return 60;
+  }
+
+  // Detect category and emoji
+  function detectCategory(name) {
+    const lower = name.toLowerCase();
+    if (/(gym|workout|exercise|training|تمرين|جيم)/i.test(lower)) return { cat: 'gym', emoji: '🏋️' };
+    if (/(study|reading|math|science|lecture|محاضرة|دراسة|قراءة)/i.test(lower)) return { cat: 'prog', emoji: '📚' };
+    if (/(dentist|doctor|appointment|موعد|دكتور|طبيب)/i.test(lower)) return { cat: 'free', emoji: '🦷' };
+    if (/(lunch|dinner|food|meal|وجبة|غداء|عشاء|فطار)/i.test(lower)) return { cat: 'food', emoji: '🍽️' };
+    if (/(prayer|صلاة|pray)/i.test(lower)) return { cat: 'prayer', emoji: '🕌' };
+    if (/(sleep|نوم)/i.test(lower)) return { cat: 'sleep', emoji: '🌙' };
+    return { cat: 'free', emoji: '✨' };
+  }
+
+  // Assign default time based on energy preference and index
+  function defaultTime(index, total) {
+    const morningStart = 9; // 9 AM
+    const eveningStart = 16; // 4 PM
+    const base = energyPref === 'morning' ? morningStart : eveningStart;
+    const spread = Math.min(6, total > 1 ? 6 / total : 1);
+    const offset = index * spread;
+    const h = Math.floor(base + offset);
+    const m = Math.round((base + offset - h) * 60);
+    return { hour: h, minute: m };
+  }
+
+  let currentDayOffset = 0;
+  const result = [];
+
+  for (let line of lines) {
+    // Detect "tomorrow" or "today"
+    if (/\b(tomorrow|بكرة|غداً|غدا)\b/i.test(line)) {
+      currentDayOffset = 1;
+      line = line.replace(/\b(tomorrow|بكرة|غداً|غدا)\b/gi, '').trim();
+    } else if (/\b(today|اليوم)\b/i.test(line)) {
+      currentDayOffset = 0;
+      line = line.replace(/\b(today|اليوم)\b/gi, '').trim();
+    }
+
+    // Try to find a time: "at 7am", "7:00pm", "11:00"
+    let timeMatch = line.match(/\b(?:at\s+)?(\d{1,2}(?::\d{2})?\s*(?:am|pm|ص|م)?)\b/i);
+    let parsedTime = null;
+    if (timeMatch) {
+      parsedTime = parseTime(timeMatch[1]);
+      line = line.replace(timeMatch[0], '').trim();
+    }
+
+    // Try to find duration: "for 1 hour", "30 min"
+    let duration = 60;
+    let durMatch = line.match(/\b(?:for\s+)?(\d+(?:\.\d+)?)\s*(?:hours?|hrs?|h|minutes?|mins?|m)\b/i);
+    if (durMatch) {
+      duration = parseDuration(durMatch[0]);
+      line = line.replace(durMatch[0], '').trim();
+    } else {
+      if (/(gym|workout|تمرين|جيم)/i.test(line)) duration = 90;
+      else if (/(study|reading|math|قراءة|دراسة)/i.test(line)) duration = 60;
+      else duration = 45;
+    }
+
+    let name = line.replace(/^(?:at|for|from|to|on|the|a|an|في|الساعة|لمدة)\b/gi, '').trim();
+    if (!name) continue;
+
+    let startHour, startMin;
+    if (parsedTime) {
+      startHour = parsedTime.hour;
+      startMin = parsedTime.minute;
+    } else {
+      const defaultT = defaultTime(result.length, lines.length);
+      startHour = defaultT.hour;
+      startMin = defaultT.minute;
+    }
+
+    let endHour = startHour + Math.floor((startMin + duration) / 60);
+    let endMin = (startMin + duration) % 60;
+
+    function toDisplay(h, m) {
+      const period = h >= 12 ? 'م' : 'ص';
+      const h12 = h % 12 || 12;
+      return `${h12}:${String(m).padStart(2, '0')} ${period}`;
+    }
+
+    const startDisplay = toDisplay(startHour, startMin);
+    const endDisplay = toDisplay(endHour, endMin);
+
+    let pts = 10;
+    if (duration >= 90) pts = 25;
+    else if (duration >= 45) pts = 15;
+
+    const { cat, emoji } = detectCategory(name);
+
+    result.push({
+      name,
+      startDisplay,
+      endDisplay,
+      duration,
+      pts,
+      cat,
+      emoji,
+      dayOffset: currentDayOffset,
+      startHour,
+      startMin
+    });
+  }
+
+  return result;
+}
+// ---------- end local parser ----------
+
+async function handleBuildScheduleFromText(rawText) {
+  const input = rawText ?? document.getElementById('buildScheduleInput')?.value ?? '';
+  if (!input.trim()) {
+    showToast('⚠️ Please enter some tasks first.', 3000, 'warn');
     return;
   }
-  const targetIso=dateOff(parsed.dayOffset,TODAY);
-  const jd=getJDfromISO(targetIso);
-  scheduleEnsureDay(jd);
-  const id=`custom-${Date.now()}-${Math.floor(Math.random()*9999)}`;
-  const tuple=[id,parsed.startDisplay,'free','✨',parsed.name,parsed.durationMin+' min',parsed.pts,null,null,false,null,null,null,parsed.endDisplay,true];
-  USER_SCHEDULE[jd].ts.push(tuple);
-  USER_SCHEDULE[jd].ts.sort((a,b)=>sortKey(a)-sortKey(b));
+
+  const energyPref = USER_SETTINGS.energyPreference || 'morning';
+  const tasks = parseMessyTextToSchedule(input, energyPref);
+
+  if (!tasks.length) {
+    showToast('⚠️ Could not parse any task – try "gym at 7am for 1 hour"', 3500, 'warn');
+    return;
+  }
+
+  let addedCount = 0;
+  for (const t of tasks) {
+    const targetIso = dateOff(t.dayOffset || 0, TODAY);
+    const jd = getJDfromISO(targetIso);
+    scheduleEnsureDay(jd);
+
+    const id = `custom-${Date.now()}-${Math.floor(Math.random() * 9999)}`;
+    const tuple = [
+      id,
+      t.startDisplay,
+      t.cat,
+      t.emoji,
+      t.name,
+      `Duration: ${t.duration} min`,
+      t.pts,
+      null, // alts (unused)
+      null, // hw
+      false, // isEx
+      null, // color
+      null, // macros
+      null, // mealKey
+      t.endDisplay,
+      true // notif
+    ];
+    USER_SCHEDULE[jd].ts.push(tuple);
+    addedCount++;
+  }
+
+  for (const jd of Object.keys(USER_SCHEDULE)) {
+    USER_SCHEDULE[jd].ts.sort((a, b) => sortKey(a) - sortKey(b));
+  }
   await saveUserSchedule();
-  SELECTED_DATE=targetIso;
-  try{ renderTabs();renderPanels();switchDay(jd);updateUI(); }catch(e){}
-  showToast(`✅ Added "${parsed.name}" at ${parsed.startDisplay}`,2500);
-  const el=document.getElementById('buildScheduleInput');
-  if(el) el.value='';
+
+  SELECTED_DATE = dateOff(0, TODAY);
+  try {
+    renderTabs();
+    renderPanels();
+    switchDay(getJDfromISO(SELECTED_DATE));
+    updateUI();
+  } catch (e) {
+    console.warn('Post-schedule render failed', e);
+  }
+
+  showToast(`✅ Added ${addedCount} tasks from your text.`, 3000);
+  const el = document.getElementById('buildScheduleInput');
+  if (el) el.value = '';
 }
 
 function injectVisualSmartBuffers(tasks){
@@ -2392,7 +2570,7 @@ async function saveUserSettings(){
 // oversight — flagged in the finish handler below too.
 let OB_STEP=0;
 let OB_ANSWERS={name:'',energy:null,trackPrayers:null,buildMode:null,workspaceName:'',messyTasks:''};
-const OB_TOTAL_STEPS=4;
+const OB_TOTAL_STEPS=5;
 
 // Step definitions: each step is either type 'text' (free text input, Next enabled
 // once non-empty) or 'chips' (2-column selectable cards, Next enabled once one is
@@ -2400,17 +2578,18 @@ const OB_TOTAL_STEPS=4;
 // obGetAnswerKey stay short and every step follows one consistent rendering path —
 // adding a future step (e.g. a Stage 2 theme-color chip step) means adding one entry
 // here, not touching the render/advance logic itself.
-const OB_STEPS=[
-  {key:'name',type:'text',title:'أهلاً بيك في جدولك 👋',sub:'إيه اسمك؟',placeholder:'اكتب اسمك هنا'},
-  {key:'trackPrayers',type:'chips',title:'هل تحب نتابعلك مواعيد الصلاة؟',sub:'لو موافق، هنضيف الصلوات الخمسة لجدولك اليومي بمواقيتها الفعلية — تقدر تغيّر ده بعدين من الإعدادات في أي وقت',chips:[
-    {value:true,icon:'🕌',label:'أيوه، ضيفهم',desc:'الصلوات الخمسة + مواقيتها الفعلية في جدولك اليومي'},
-    {value:false,icon:'📅',label:'لأ، جدول عادي',desc:'من غير تتبع صلاة — تقدر تفعّلها بعدين من الإعدادات'}
+const OB_STEPS = [
+  { key: 'name', type: 'text', title: 'أهلاً بيك في جدولك 👋', sub: 'إيه اسمك؟', placeholder: 'اكتب اسمك هنا' },
+  { key: 'trackPrayers', type: 'chips', title: 'هل تحب نتابعلك مواعيد الصلاة؟', sub: 'لو موافق، هنضيف الصلوات الخمسة لجدولك اليومي بمواقيتها الفعلية — تقدر تغيّر ده بعدين من الإعدادات في أي وقت', chips: [
+    { value: true, icon: '🕌', label: 'أيوه، ضيفهم', desc: 'الصلوات الخمسة + مواقيتها الفعلية في جدولك اليومي' },
+    { value: false, icon: '📅', label: 'لأ، جدول عادي', desc: 'من غير تتبع صلاة — تقدر تفعّلها بعدين من الإعدادات' }
   ]},
-  {key:'buildMode',type:'chips',title:'عايز تبدأ إزاي؟',sub:'تقدر تغيّر ده بعدين برضه',chips:[
-    {value:'template',icon:'📋',label:'ابدأ بجدول جاهز',desc:'قالب مبدئي جاهز تقدر تعدّل فيه بعدين'},
-    {value:'custom',icon:'✨',label:'هبني جدولي من الصفر',desc:'ابدأ بجدول فاضي وضيف مهامك بنفسك'}
+  { key: 'buildMode', type: 'chips', title: 'عايز تبدأ إزاي؟', sub: 'تقدر تغيّر ده بعدين برضه', chips: [
+    { value: 'template', icon: '📋', label: 'ابدأ بجدول جاهز', desc: 'قالب مبدئي جاهز تقدر تعدّل فيه بعدين' },
+    { value: 'custom', icon: '✨', label: 'هبني جدولي من الصفر', desc: 'ابدأ بجدول فاضي وضيف مهامك بنفسك' }
   ]},
-  {key:'workspaceName',type:'text',title:'سمّي جدولك',sub:'اسم يميّز مساحتك — تقدر تغيّره في أي وقت من الإعدادات',placeholder:'مثلاً: جدول أحمد اليومي'}
+  { key: 'workspaceName', type: 'text', title: 'سمّي جدولك', sub: 'اسم يميّز مساحتك — تقدر تغيّره في أي وقت من الإعدادات', placeholder: 'مثلاً: جدول أحمد اليومي' },
+  { key: 'messyTasks', type: 'textarea', title: 'احكي مهامك الحالية', sub: 'اكتب كل المهام اللي عايز تتابعها، بالوقت اللي يناسبك (زي: "جيم ٧ ص لمدة ساعة، دراسة ١١, dentist 3pm")', placeholder: 'مثال:\nجيم 7am لمدة ساعة\nدراسة 11\ndentist 3pm\nغدا 2' }
 ];
 
 function obUpdateProgress(){
@@ -2427,7 +2606,7 @@ function obCanAdvance(){
   const step=OB_STEPS[OB_STEP];
   if(!step) return false;
   const val=OB_ANSWERS[step.key];
-  if(step.type==='text') return typeof val==='string' && val.trim().length>0;
+  if(step.type==='text' || step.type==='textarea') return typeof val==='string' && val.trim().length>0;
   if(step.type==='chips') return val!==null && val!==undefined;
   return false;
 }
@@ -2455,7 +2634,17 @@ function obRenderStep(){
     input.oninput=()=>{ OB_ANSWERS[step.key]=input.value; obUpdateNavButtons(); };
     bodyEl.appendChild(input);
     setTimeout(()=>input.focus(),80);
-  }else if(step.type==='chips'){
+  } else if(step.type==='textarea'){
+    const ta=document.createElement('textarea');
+    ta.id='obActiveTextarea';
+    ta.className='ob-textinput';
+    ta.rows=6;
+    ta.placeholder=step.placeholder||'';
+    ta.value=OB_ANSWERS[step.key]||'';
+    ta.oninput=()=>{ OB_ANSWERS[step.key]=ta.value; obUpdateNavButtons(); };
+    bodyEl.appendChild(ta);
+    setTimeout(()=>ta.focus(),80);
+  } else if(step.type==='chips'){
     const wrap=document.createElement('div');
     wrap.className='ob-chips';
     step.chips.forEach(chip=>{
@@ -2600,65 +2789,81 @@ async function obApplyPlanToSchedule(plan){
   SELECTED_DATE=targetIso;
 }
 
-async function obFinish(){
-  const en=obIsEn();
-  const nextBtn=document.getElementById('btn-onboard-next');
-  if(nextBtn){ nextBtn.disabled=true; nextBtn.textContent=en?'Generating…':'جاري التوليد…'; }
+async function obFinish() {
+  const en = obIsEn();
+  const nextBtn = document.getElementById('btn-onboard-next');
+  if (nextBtn) { nextBtn.disabled = true; nextBtn.textContent = en ? 'Generating…' : 'جاري التوليد…'; }
 
-  USER_SETTINGS={
+  USER_SETTINGS = {
     ...USER_SETTINGS,
-    trackPrayers:!!OB_ANSWERS.trackPrayers,
-    buildMode:OB_ANSWERS.buildMode||'custom',
-    displayNameChosen:OB_ANSWERS.name,
-    workspaceName:OB_ANSWERS.workspaceName,
-    energyPreference:OB_ANSWERS.energy||'morning',
-    onboardingComplete:true
+    trackPrayers: !!OB_ANSWERS.trackPrayers,
+    buildMode: OB_ANSWERS.buildMode || 'custom',
+    displayNameChosen: OB_ANSWERS.name,
+    workspaceName: OB_ANSWERS.workspaceName,
+    energyPreference: OB_ANSWERS.energy || 'morning',
+    onboardingComplete: true
   };
 
-  try{
-    const messy=(OB_ANSWERS.messyTasks||'').trim();
-    if(messy && typeof AI_WORKER_URL==='string' && AI_WORKER_URL){
-      try{
-        const plan=await obGenerateScheduleFromMessy(messy);
-        await obApplyPlanToSchedule(plan);
-        if(plan.pro_tip){
-          setTimeout(()=>showToast((en?'💡 ':'')+plan.pro_tip, 5000), 600);
+  // If user provided messy tasks, parse them and create schedule
+  const messy = (OB_ANSWERS.messyTasks || '').trim();
+  if (messy) {
+    try {
+      const parsed = parseMessyTextToSchedule(messy, USER_SETTINGS.energyPreference);
+      if (parsed.length) {
+        // Build empty schedule first (if not already)
+        if (!USER_SCHEDULE || Object.keys(USER_SCHEDULE).length === 0) {
+          for (let jd = 0; jd < 7; jd++) {
+            USER_SCHEDULE[jd] = { n: DSHORT[jd], wk: '9:00 ص', bd: '11:00 م', gm: null, ts: [] };
+          }
         }
-      }catch(aiErr){
-        console.warn('AI schedule generate failed, empty week seeded', aiErr);
-        // still seed empty week
-        const emptySchedule={};
-        for(let jd=0; jd<7; jd++){
-          emptySchedule[jd]={n:DSHORT[jd], wk:'9:00 ص', bd:'11:00 م', gm:null, ts:[]};
+        // Add each task
+        for (const t of parsed) {
+          const targetIso = dateOff(t.dayOffset || 0, TODAY);
+          const jd = getJDfromISO(targetIso);
+          scheduleEnsureDay(jd);
+          const id = `custom-${Date.now()}-${Math.floor(Math.random() * 9999)}`;
+          const tuple = [
+            id,
+            t.startDisplay,
+            t.cat,
+            t.emoji,
+            t.name,
+            `Duration: ${t.duration} min`,
+            t.pts,
+            null, null, false, null, null, null,
+            t.endDisplay,
+            true
+          ];
+          USER_SCHEDULE[jd].ts.push(tuple);
         }
-        USER_SCHEDULE=emptySchedule;
-        showToast(en?'Could not reach AI — empty week ready. Add tasks anytime.':'مش قادر أوصل للـ AI — جدول فاضي جاهز. ضيف مهامك في أي وقت.',4000,'warn');
+        // Sort each day
+        for (const jd of Object.keys(USER_SCHEDULE)) {
+          USER_SCHEDULE[jd].ts.sort((a, b) => sortKey(a) - sortKey(b));
+        }
+        await saveUserSchedule();
+        showToast(en ? `✅ Added ${parsed.length} tasks from your list.` : `✅ أضفنا ${parsed.length} مهمة من كلامك.`, 4000);
       }
-    }else{
-      const emptySchedule={};
-      for(let jd=0; jd<7; jd++){
-        emptySchedule[jd]={n:DSHORT[jd], wk:'9:00 ص', bd:'11:00 م', gm:null, ts:[]};
-      }
-      USER_SCHEDULE=emptySchedule;
+    } catch (e) {
+      console.warn('Onboarding parsing error', e);
+      showToast(en ? '⚠️ Could not parse your tasks – you can add them later.' : '⚠️ مش قادرين نفهم مهامك – تقدر تضيفهم بعدين.', 4000, 'warn');
     }
-
-    try{ localStorage.setItem('has_onboarded','true'); }catch(e){}
-    try{
-      await saveUserSettings();
-      await saveUserSchedule();
-    }catch(e){
-      console.warn('onboarding save failed',e);
-      showToast(en?'⚠️ Save error — try again':'⚠️ حصل خطأ أثناء حفظ إعداداتك — جرب تاني',3500,'warn');
-    }
-  }finally{
-    if(nextBtn){ nextBtn.disabled=false; nextBtn.textContent=en?'Generate My Schedule ✨':'ولّد جدولي ✨'; }
+  } else if (OB_ANSWERS.buildMode === 'template') {
+    // (Optional) if template mode and no messy text, you could still seed with default template? We'll leave empty.
   }
 
-  const wizard=document.getElementById('obWizard');
-  if(wizard) wizard.classList.remove('open');
-  try{ renderTabs();renderPanels();switchDay(getJDfromISO(SELECTED_DATE||TODAY));updateUI(); }catch(e){ console.warn('post-onboarding re-render failed',e); }
-}
+  try {
+    await saveUserSettings();
+    await saveUserSchedule();
+  } catch (e) {
+    console.warn('Onboarding save failed', e);
+    showToast(en ? '⚠️ Save error – try again' : '⚠️ حصل خطأ أثناء حفظ إعداداتك — جرب تاني', 3500, 'warn');
+  } finally {
+    if (nextBtn) { nextBtn.disabled = false; nextBtn.textContent = en ? 'Finish ✅' : 'إنهاء ✅'; }
+  }
 
+  document.getElementById('obWizard')?.classList.remove('open');
+  try { renderTabs(); renderPanels(); switchDay(getJDfromISO(SELECTED_DATE || TODAY)); updateUI(); } catch (e) { console.warn('Post-onboarding re-render failed', e); }
+}
 
 function buildPTasks(jd){
   const k=DKEYS ? DKEYS[jd] : ['sun','mon','tue','wed','thu','fri','sat'][jd];
@@ -3224,12 +3429,12 @@ function getPunishRate(){
 
 // In-flight lock — onAuthStateChanged can legitimately fire more than once during a
 // single page session (initial resolution, token refresh, tab regaining focus), and
-// each firing calls initAppFlow() -> applyPunishmentOnce() again. Without this lock,
-// two overlapping calls could both read penalizedDates BEFORE either one's saveAll()
-// had persisted the "already penalized" flag, so both would deduct points for the
-// same missed day — this is what caused the mid-day "-16 points, then it fixed
-// itself" symptom: a second concurrent punishment pass firing before the first pass's
-// save had landed, later overwritten by a subsequent, correct save.
+// each firing calls initAppFlow() -> applyPunishmentOnce(). Without this lock, two
+// overlapping calls could both read penalizedDates BEFORE either one's saveAll() had
+// persisted the "already penalized" flag, so both would deduct points for the same
+// missed day — this is what caused the mid-day "-16 points, then it fixed itself"
+// symptom: a second concurrent punishment pass firing before the first pass's save
+// had landed, later overwritten by a subsequent, correct save.
 let PUNISHMENT_IN_PROGRESS=false;
 
 async function applyPunishmentOnce(){
@@ -5450,6 +5655,8 @@ const AI_TOOL_DEFS = `Available tools (respond with EXACTLY ONE of these as a JS
 {"tool":"setWeeklyPoints","value":<integer>}
 {"tool":"setPunishRate","value":<number between 0 and 1, e.g. 0.15 for 15%>}
 {"tool":"rememberFact","fact":"<durable personal fact, stated plainly in third person>"}
+{"tool":"setTheme","accent":"#hex","card":"#hex","bg":"#hex"}  (any combination, at least one)
+{"tool":"setLang","lang":"en"|"ar"}
 {"tool":"none","reason":"<short Arabic explanation of why no tool applies — e.g. this is a question, not a command>"}
 
 Rules:
@@ -7481,8 +7688,7 @@ function initAppFlow(user){
   // screen, then the real data pops in a moment later" flash. The loading spinner now
   // stays up for exactly as long as the real chain takes, however long that is; if
   // something in the chain hangs, the .catch() below still reveals the app rather
-  // than leaving it stuck forever, so a genuinely broken step still doesn't strand
-  // the user on the spinner permanently.
+  // than leaving it stuck forever.
   fetchPrayers().then(async ()=>{
     // Weekly points reset MUST run before punishment. Previously punishment ran
     // first and deducted from last week's leftover STATS.pts, which the reset then
