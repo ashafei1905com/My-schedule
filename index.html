@@ -273,9 +273,17 @@ input[type=color]::-moz-color-swatch{border:none;border-radius:8px}
 #toast{z-index:10050 !important}
 
 /* Prayer Modal */
-.modal-overlay{position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(10,14,26,.92);display:none;align-items:center;justify-content:center;z-index:10055;padding:20px}
+.modal-overlay{position:fixed;top:0;left:0;width:100%;height:100%;background:color-mix(in srgb, var(--bg) 88%, #000);display:none;align-items:center;justify-content:center;z-index:10055;padding:20px}
 .modal-overlay.open{display:flex}
-.modal-box{background:var(--c2);border:2px solid var(--br);border-radius:20px;padding:28px 20px;width:100%;max-width:420px;text-align:center;box-shadow:0 16px 40px rgba(0,0,0,.7)}
+.modal-box{background:var(--c2);border:2px solid var(--br);border-radius:20px;padding:28px 20px;width:100%;max-width:420px;text-align:center;box-shadow:0 16px 40px rgba(0,0,0,.7);color:var(--tx)}
+.modal-box .modal-title,.modal-box .modal-sub,.modal-box .modal-step-ind{color:var(--tx)}
+.modal-box .modal-sub{color:var(--so)}
+.modal-opt{border-color:var(--br)!important;background:var(--c)!important;color:var(--tx)!important}
+.modal-opt:hover,.modal-opt.gold:hover{border-color:var(--ac)!important}
+.modal-opt.gold{border-color:var(--ac)!important;background:color-mix(in srgb, var(--ac) 12%, var(--c))!important;color:var(--tx)!important;box-shadow:0 0 14px color-mix(in srgb, var(--ac) 25%, transparent)!important}
+.modal-opt .opt-pts{color:var(--ye)}
+.fl-submit-btn{background:linear-gradient(135deg,var(--gr),color-mix(in srgb,var(--gr) 70%,#000))!important}
+.fl-textarea,.ob-textinput{background:var(--c)!important;border-color:var(--br)!important;color:var(--tx)!important}
 .modal-step-ind{font-size:.65rem;color:var(--mu);margin-bottom:10px}
 .modal-title{font-size:1.1rem;font-weight:900;margin-bottom:4px;color:var(--tx)}
 .modal-sub{font-size:.75rem;color:var(--so);margin-bottom:20px}
@@ -445,12 +453,34 @@ input[type=color]::-moz-color-swatch{border:none;border-radius:8px}
 </head>
 <body>
 
-<div id="ld" style="display:flex;align-items:center;justify-content:center;height:100vh;flex-direction:column;gap:16px">
-  <div style="width:40px;height:40px;border:3px solid #1e2d45;border-top-color:#3b82f6;border-radius:50%;animation:spin .8s linear infinite"></div>
-  <span style="color:#64748b;font-family:Cairo,sans-serif;font-size:.9rem">جاري تحميل الجدول الذكي...</span>
+<div id="ld" style="display:flex;align-items:center;justify-content:center;height:100vh;flex-direction:column;gap:16px;background:var(--bg,#0a0e1a)">
+  <div id="ldSpinner" style="width:40px;height:40px;border:3px solid var(--br,#1e2d45);border-top-color:var(--ac,#3b82f6);border-radius:50%;animation:spin .8s linear infinite"></div>
+  <span id="ldText" style="color:var(--so,#64748b);font-family:Cairo,sans-serif;font-size:.9rem">Loading Smart Schedule...</span>
 </div>
+<script>
+/* Early boot: apply saved theme + language to loading screen BEFORE main JS runs
+   so the spinner is never stuck on hardcoded Arabic/blue. */
+(function(){
+  try{
+    var raw=localStorage.getItem('sc:userSettings1');
+    var s=raw?JSON.parse(raw):null;
+    if(s&&s.themeAccent) document.documentElement.style.setProperty('--ac',s.themeAccent);
+    if(s&&s.themeCard) document.documentElement.style.setProperty('--c',s.themeCard);
+    if(s&&s.themeBg){
+      document.documentElement.style.setProperty('--bg',s.themeBg);
+      document.body&&(document.body.style.background=s.themeBg);
+      var ld=document.getElementById('ld'); if(ld) ld.style.background=s.themeBg;
+    }
+    var lang=(s&&s.lang)||'en';
+    var t=document.getElementById('ldText');
+    if(t) t.textContent=lang==='en'?'Loading Smart Schedule...':'جاري تحميل الجدول الذكي...';
+    if(lang==='en'){ document.documentElement.lang='en'; document.documentElement.dir='ltr'; }
+    else { document.documentElement.lang='ar'; document.documentElement.dir='rtl'; }
+  }catch(e){}
+})();
+</script>
 
-<main id="app" style="display:none">
+<main id="app" style="display:none;visibility:hidden">
   <div id="sbar">
     <div class="sbar-stats">
       <div class="st"><div class="sv" id="sv1">0</div><div class="sl">🔥 Streak</div></div>
@@ -1071,12 +1101,12 @@ const mkSnackB=(p,t='4:30 م',isGym)=>[p+'-sn2',t,'snack','🥤','سناك ٢ (�
 const mkSnackC=(p,t='9:30 م',isGym)=>[p+'-sn3',t,'snack','🍇','سناك ٣ (مسائي خفيف)','فاكهة خفيفة أو حفنة مكسرات — لو جعت قبل النوم',5,null,null,false,null,null,mealKeyFor('bedtimeSnack',isGym)];
 
 const PMETA={
-  Fajr:{ar:'الفجر',ic:'🌙',pts:10,sunnah:'سنة الفجر (ركعتان قبل)'},
-  Sunrise:{ar:'الشروق',ic:'🌅',pts:5,sunnah:null},
-  Dhuhr:{ar:'الظهر',ic:'☀️',pts:10,sunnah:'سنة الظهر (٤ قبل + ٢ بعد)'},
-  Asr:{ar:'العصر',ic:'🌤️',pts:10,sunnah:null},
-  Maghrib:{ar:'المغرب',ic:'🌅',pts:10,sunnah:'سنة المغرب (ركعتان بعد)'},
-  Isha:{ar:'العشاء',ic:'🌙',pts:10,sunnah:'سنة العشاء (ركعتان بعد)'}
+  Fajr:{ar:'الفجر',en:'Fajr',ic:'🌙',pts:10,sunnah:'سنة الفجر (ركعتان قبل)',sunnahEn:'Fajr sunnah (2 rakah before)'},
+  Sunrise:{ar:'الشروق',en:'Sunrise',ic:'🌅',pts:5,sunnah:null,sunnahEn:null},
+  Dhuhr:{ar:'الظهر',en:'Dhuhr',ic:'☀️',pts:10,sunnah:'سنة الظهر (٤ قبل + ٢ بعد)',sunnahEn:'Dhuhr sunnah (4 before + 2 after)'},
+  Asr:{ar:'العصر',en:'Asr',ic:'🌤️',pts:10,sunnah:null,sunnahEn:null},
+  Maghrib:{ar:'المغرب',en:'Maghrib',ic:'🌅',pts:10,sunnah:'سنة المغرب (ركعتان بعد)',sunnahEn:'Maghrib sunnah (2 rakah after)'},
+  Isha:{ar:'العشاء',en:'Isha',ic:'🌙',pts:10,sunnah:'سنة العشاء (ركعتان بعد)',sunnahEn:'Isha sunnah (2 rakah after)'}
 };
 const DKEYS=['sun','mon','tue','wed','thu','fri','sat'];
 const DSHORT=['الأحد','الاثنين','الثلاثاء','الأربعاء','الخميس','الجمعة','السبت'];
@@ -3096,17 +3126,19 @@ function showPrayerStep(){
     if(qEl) qEl.textContent=en?`How did you pray ${dispName}?`:`كيف أديت صلاة ${name}؟`;
     if(subEl) subEl.textContent=en?'Choose how you prayed':'اختر طريقة الأداء';
     renderOpts(en
-      ?[{label:'After-prayer 👥',pts:4,gold:true},{label:'Alone 🧍',pts:2,gold:false}]
+      ?[{label:'Congregation 👥',pts:4,gold:true},{label:'Alone 🧍',pts:2,gold:false}]
       :[{label:'جماعة 👥',pts:4,gold:true},{label:'منفرد 🧍',pts:2,gold:false}],'style');
   }else if(step===2){
-    if(qEl) qEl.textContent=en?'Did you say the post-prayer dhikr?':'هل قلت أذكار الصلاة؟';
+    if(qEl) qEl.textContent=en?'Did you say the after-prayer dhikr?':'هل قلت أذكار الصلاة؟';
     if(subEl) subEl.textContent=en?'SubhanAllah · Alhamdulillah · Allahu Akbar':'سبحان الله · الحمد لله · الله أكبر';
     renderOpts(en
       ?[{label:'Yes ✅',pts:3,gold:true},{label:'No ❌',pts:1,gold:false}]
       :[{label:'نعم ✅',pts:3,gold:true},{label:'لا ❌',pts:1,gold:false}],'dhikr');
   }else if(step===3){
-    const sunnahText=PMETA[pk]?.sunnah||(en?`Sunnah of ${dispName}`:`سنة ${name}`);
-    if(qEl) qEl.textContent=en?`Did you pray ${sunnahText}?`:`هل صليت ${sunnahText}؟`;
+    const sunnahText=en
+      ?(PMETA[pk]?.sunnahEn||`Sunnah of ${dispName}`)
+      :(PMETA[pk]?.sunnah||`سنة ${name}`);
+    if(qEl) qEl.textContent=en?`Did you pray the ${sunnahText}?`:`هل صليت ${sunnahText}؟`;
     if(subEl) subEl.textContent=en?'The regular sunnah':'السنة الراتبة';
     renderOpts(en
       ?[{label:'Yes ✅',pts:3,gold:true},{label:'No ❌',pts:1,gold:false}]
@@ -4982,6 +5014,8 @@ const FL_MAX_CLARIFY_ROUNDS=1;
 
 function fmtMacroShort(m){
   const r1=n=>Math.round(n*10)/10;
+  const en=(USER_SETTINGS&&USER_SETTINGS.lang)==='en';
+  if(en) return `${r1(m.k)} kcal · P${r1(m.p)} · C${r1(m.c)} · F${r1(m.f)} · Fi${r1(m.b||0)}`;
   return `${r1(m.k)} سعرة · ب${r1(m.p)} · ك${r1(m.c)} · د${r1(m.f)} · أ${r1(m.b||0)}`;
 }
 
@@ -5049,8 +5083,27 @@ function openFoodLogModal(task,existingEntry,prefillText){
   }
 
   // Change the submit button label in edit mode so it's clear this replaces the old
-  // entry rather than adding a second one.
-  if(submitBtn) submitBtn.textContent=isEdit?'احسب واستبدل ✏️':'احسب واحفظ ✅';
+  // entry rather than adding a second one. ALWAYS respect active language.
+  if(submitBtn){
+    if(isEdit) submitBtn.textContent=en?'Recalculate & replace ✏️':'احسب واستبدل ✏️';
+    else submitBtn.textContent=en?'Calculate & save ✅':'احسب واحفظ ✅';
+  }
+  // cancelBtn already declared earlier in this function — do not redeclare
+  if(cancelBtn) cancelBtn.textContent=en?'Cancel':'إلغاء';
+  const doneBtn=document.getElementById('flDoneBtn');
+  if(doneBtn) doneBtn.textContent=en?'Done 👍':'تمام 👍';
+  const saveYes=document.getElementById('flSaveOptYes');
+  if(saveYes) saveYes.textContent=en?'Yes ✅':'نعم ✅';
+  const saveNo=document.getElementById('flSaveOptNo');
+  if(saveNo) saveNo.textContent=en?'No':'لا';
+  const saveRow=document.querySelector('#flSaveOptRow > span');
+  if(saveRow) saveRow.textContent=en?'Save as a quick option next time?':'تحفظها كخيار سريع للمرة الجاية؟';
+  const divSpan=document.querySelector('#foodLogModal .fl-divider span');
+  if(divSpan) divSpan.textContent=en?'Or type exactly what you ate':'أو اكتب إيه اللي أكلته بالظبط';
+  const freeTa=document.getElementById('flFreeText');
+  if(freeTa) freeTa.placeholder=en?'e.g. grilled chicken with rice and salad, and a cup of milk':'مثال: طبق فراخ مشوي مع رز وسلطة، وكوب لبن';
+  const loadMsg=document.querySelector('#flLoadingStep div:last-child');
+  if(loadMsg) loadMsg.textContent=en?'Calculating nutrition accurately...':'بيحسب القيم الغذائية بدقة...';
 
   if(modal) modal.classList.add('open');
 }
@@ -5086,12 +5139,24 @@ function flBuildExtractionPrompt(){
 
 Your ONLY job is to figure out WHAT he ate and HOW MUCH, precisely enough to look up in a nutrition database. You never estimate or state calorie/macro numbers yourself — that always comes from a real lookup done separately.
 
+CRITICAL — Middle Eastern / Egyptian / Gulf food entity mapping (NEVER ignore these):
+- "جبنة دمياطي" / "جبنه دمياطي" / "دمياطي" / "جبنة بيضاء" / "جبنة بيضاء مالحة" / "Egyptian white cheese" / "Domiati" → food name MUST be "queso blanco" or "feta cheese" (high-protein white brine cheese). NEVER map to "labneh", "labne", "strained yogurt", or "yogurt cheese".
+- "جبنة قريش" → "cottage cheese" or "quark".
+- "لبنة" / "لبنه" / "labneh" → only when the user actually said labneh (not Domiati).
+- "عيش أسمر" / "رغيف أسمر" / "خبز أسمر" → "whole wheat pita" or "whole wheat bread". 1 رغيف ≈ 60–80g unless user specifies grams.
+- "لبن" / "حليب" with "مل" or "ملل" or "ml" → liquid milk. "250 مل لبن" = qty 250, unit "ml" (≈250g). NEVER default liquids to 100g when a volume is stated.
+- Pay STRICT attention to liquid volumes: "مل", "ملل", "مليلتر", "ml", "mL", "cup", "كوب". A number before مل is milliliters — keep unit as "ml".
+- "طماطم" / "ثمرة طماطم" / "tomato" (fresh) → "raw tomato" or "tomato, red, ripe, raw". NEVER "tomato soup", "tomato sauce", or "canned tomato". 1 ثمرة ≈ 100–120g (NOT 300g).
+- "خيار" / "ثمرة خيار" / "cucumber" → "cucumber, raw". 1 ثمرة ≈ 100–120g (a single cucumber), NEVER 300g unless the user said 300g.
+- Map raw ingredients EXACTLY. Do not upgrade plain vegetables into soups, sauces, or cooked dishes unless the user said so.
+- When the user gives an explicit gram/ml number, use that number exactly — do not substitute a default portion size.
+
 Respond with ONLY a raw JSON object, nothing else — no markdown fences, no text outside the JSON:
 {"status":"needs_info" | "ready","followUpQuestion":"<if needs_info: ONE short casual question in his own dialect/language asking for the missing detail — otherwise empty string>","items":[{"food":"<plain English food name, e.g. 'grilled chicken breast'>","qty":<number>,"unit":"<e.g. 'g','oz','cup','piece','tbsp'>"}]}
 
 Rules for deciding needs_info vs ready:
 - Missing QUANTITY entirely (no size/count/weight/volume mentioned at all, anywhere in the message) -> needs_info.
-- If ANY number + unit is already stated for an item (e.g. "1 كوب", "100 جرام", "2 ملعقة", "كوب لبن", "250 ملل") that item's quantity is COMPLETE — never ask about it again, never ask "what exactly is in the cup" or any variant. A stated volume/weight/count IS the answer; do not second-guess it or ask for more precision than the user gave.
+- If ANY number + unit is already stated for an item (e.g. "1 كوب", "100 جرام", "2 ملعقة", "كوب لبن", "250 مل", "250 ملل", "250ml") that item's quantity is COMPLETE — never ask about it again, never ask "what exactly is in the cup" or any variant. A stated volume/weight/count IS the answer; do not second-guess it or ask for more precision than the user gave. For liquids, preserve ml/ملل as unit "ml" with the exact number (250 مل → qty:250, unit:"ml").
 - SIZE-DESCRIPTOR answers are ALSO complete quantity info, even with no explicit number — "طبق متوسط" (medium plate), "طبق كبير/صغير" (large/small plate), "كوب كبير/صغير", "حصة عادية" (normal portion), "شوية كبيرة/صغيرة", or their English equivalents ("a medium plate", "a small bowl", "a big serving"). When he answers with a size descriptor like this, treat it as COMPLETE — assign your own reasonable gram estimate for a plate/bowl/serving of THAT SPECIFIC food at that size (e.g. a medium plate of a rice-and-lentil dish like koshary is roughly 350-450g total) and go straight to "ready", outputting that estimate directly as {"qty":<your gram number>,"unit":"g"} in items — never leave qty as a size word or ask him to state the number himself. NEVER ask him to weigh his food or state an exact gram number after he's already given a size descriptor — no one weighs a plate of food before eating it, and asking is what actually produced the complaint this rule exists to fix. A size word is the maximum precision a normal person gives for a home-cooked composite dish; do not ask for more.
 - Missing COOKING METHOD when it meaningfully changes the calories (fried vs grilled/boiled/baked for meat, chicken, fish, eggs, potatoes) -> needs_info. This does NOT apply to dairy, drinks, bread, fruit, nuts, or anything already covered by the dairy rule below.
 - Vague quantity words like "a bit", "شوية", "حبة" for a countable item (e.g. "حبة موز") are FINE — treat "a piece/حبة" as qty:1, unit:"piece" and proceed to ready IMMEDIATELY, status "ready", with NO followUpQuestion at all. This is a hard rule, not a suggestion: "أكلت حبة موز" ALONE, with zero other words, is already 100% complete information (food=banana, qty=1, unit=piece) — asking anything else about it is WRONG and violates this instruction. Do not ask for grams, do not ask for ripeness, do not ask anything — a single piece of a whole fruit/vegetable needs no further detail, ever. Don't ask for more precision than a normal person would give.
@@ -5321,7 +5386,10 @@ async function flFinalizeLog(task,description,macro,verdict,showVerdictUI,itemsB
     document.getElementById('flAskStep').style.display='none';
     const resStep=document.getElementById('flResultStep');
     resStep.style.display='block';
-    document.getElementById('flMacroResult').innerHTML=`<span><b>${Math.round(macro.k)}</b> سعرة</span><span>بروتين <b>${Math.round(macro.p)}</b>جم</span><span>كارب <b>${Math.round(macro.c)}</b>جم</span><span>دهون <b>${Math.round(macro.f)}</b>جم</span><span>ألياف <b>${Math.round(macro.b||0)}</b>جم</span>`;
+    const enUi=(USER_SETTINGS&&USER_SETTINGS.lang)==='en';
+    document.getElementById('flMacroResult').innerHTML=enUi
+      ?`<span><b>${Math.round(macro.k)}</b> kcal</span><span>Protein <b>${Math.round(macro.p)}</b>g</span><span>Carbs <b>${Math.round(macro.c)}</b>g</span><span>Fats <b>${Math.round(macro.f)}</b>g</span><span>Fiber <b>${Math.round(macro.b||0)}</b>g</span>`
+      :`<span><b>${Math.round(macro.k)}</b> سعرة</span><span>بروتين <b>${Math.round(macro.p)}</b>جم</span><span>كارب <b>${Math.round(macro.c)}</b>جم</span><span>دهون <b>${Math.round(macro.f)}</b>جم</span><span>ألياف <b>${Math.round(macro.b||0)}</b>جم</span>`;
     // Per-item breakdown — this is the actual traceability fix: instead of one
     // opaque total, show exactly which food-database entry each part of the meal
     // matched to, its assumed serving size, and its individual macro contribution.
@@ -5380,9 +5448,20 @@ async function flFinalizeLog(task,description,macro,verdict,showVerdictUI,itemsB
     const mealKey=task[12];
     const alreadySaved=mealKey && (MEAL_OPTIONS[mealKey]||[]).some(o=>o.description.trim().toLowerCase()===description.trim().toLowerCase());
     document.getElementById('flSaveOptRow').style.display=alreadySaved?'none':'flex';
+    // Re-apply EN/AR labels every time the result step is shown
+    const enR=(USER_SETTINGS&&USER_SETTINGS.lang)==='en';
+    const doneBtn=document.getElementById('flDoneBtn');
+    if(doneBtn) doneBtn.textContent=enR?'Done 👍':'تمام 👍';
+    const saveYes=document.getElementById('flSaveOptYes');
+    if(saveYes) saveYes.textContent=enR?'Yes ✅':'نعم ✅';
+    const saveNo=document.getElementById('flSaveOptNo');
+    if(saveNo) saveNo.textContent=enR?'No':'لا';
+    const saveRow=document.querySelector('#flSaveOptRow > span');
+    if(saveRow) saveRow.textContent=enR?'Save as a quick option next time?':'تحفظها كخيار سريع للمرة الجاية؟';
   }else{
     closeFoodLogModal();
-    showToast(`🍽️ تم تسجيل "${description}" ✅`,2600);
+    const enT=(USER_SETTINGS&&USER_SETTINGS.lang)==='en';
+    showToast(enT?`🍽️ Logged "${description}" ✅`:`🍽️ تم تسجيل "${description}" ✅`,2600);
   }
 }
 
@@ -6388,19 +6467,21 @@ document.body.addEventListener('keydown',async e=>{
 // fires. Previously #aiFab had no gating tied to load state at all and was tappable
 // during the loading spinner.
 function revealApp(){
-  const ldEl=document.getElementById('ld'); if(ldEl) ldEl.style.display='none';
-  const appEl=document.getElementById('app'); if(appEl) appEl.style.display='block';
-  const fabEl=document.getElementById('aiFab'); if(fabEl) fabEl.classList.remove('hidden');
-  updateNetworkBadge();
+  // Apply theme + i18n WHILE still behind the loading screen so the first painted
+  // frame is fully correct (no FOUC, no Arabic flash in EN mode, no default colors).
   try{ applyTheme(); }catch(e){}
   try{
-    if(USER_SETTINGS.lang==='en'){
-      document.documentElement.lang='en';
-      document.documentElement.dir='ltr';
-      document.body.style.direction='ltr';
-      applyI18n();
-    }
+    const en=(USER_SETTINGS&&USER_SETTINGS.lang)==='en';
+    document.documentElement.lang=en?'en':'ar';
+    document.documentElement.dir=en?'ltr':'rtl';
+    document.body.style.direction=en?'ltr':'rtl';
+    applyI18n();
   }catch(e){}
+  try{ updateUI(); }catch(e){}
+  const ldEl=document.getElementById('ld'); if(ldEl) ldEl.style.display='none';
+  const appEl=document.getElementById('app'); if(appEl){ appEl.style.display='block'; appEl.style.visibility='visible'; }
+  const fabEl=document.getElementById('aiFab'); if(fabEl) fabEl.classList.remove('hidden');
+  updateNetworkBadge();
   // After the schedule paints, jump to the task for "right now" — ONCE on initial load only.
   if(!window.__didInitialScroll){
     window.__didInitialScroll=true;
