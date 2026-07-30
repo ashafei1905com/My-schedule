@@ -561,6 +561,7 @@ body.edit-mode .em-day-toggle{display:inline-flex;align-items:center;gap:6px}
         <button type="button" data-setsec="language" data-i18n="nav_language">اللغة</button>
         <button type="button" data-setsec="account" data-i18n="nav_account">الحساب</button>
       </div>
+
       <div class="set-content">
         <div class="set-section act" id="setsec-general">
           <h3 data-i18n="sec_general">عام</h3>
@@ -570,6 +571,14 @@ body.edit-mode .em-day-toggle{display:inline-flex;align-items:center;gap:6px}
           </div>
         </div>
         
+        <section id="aiScheduleBuilder" style="max-width:520px;margin:0 0 20px;padding:16px;border:1px solid var(--br);border-radius:14px;background:var(--c)">
+  <h3 style="margin:0 0 8px;font-size:1rem;font-weight:900">Build my day</h3>
+  <p style="margin:0 0 12px;color:var(--mu);font-size:.78rem;line-height:1.5">Paste your messy tasks. Example: gym tomorrow morning, study for exam, dentist at 2pm</p>
+  <textarea id="messyTasksInput" rows="4" placeholder="Type your tasks here..." style="width:100%;padding:12px;border-radius:10px;border:1px solid var(--br);background:var(--bg);color:var(--tx);font-family:Cairo,sans-serif;font-size:.85rem;box-sizing:border-box"></textarea>
+  <button type="button" id="buildScheduleBtn" class="topbtn" style="width:100%;margin-top:12px;justify-content:center">Build schedule</button>
+  <pre id="scheduleResult" style="white-space:pre-wrap;margin-top:14px;font-size:.78rem;line-height:1.55;color:var(--tx)"></pre>
+</section>
+
           <div class="set-actions" style="margin-top:16px">
             <button type="button" id="btn-enter-edit-mode" class="topbtn topbtn-report" style="width:100%">✏️ Enter Edit Mode</button>
           </div>
@@ -3367,6 +3376,44 @@ async function syncPushSchedule(){
   const reminders=buildTodayReminderPayload();
   try{
     const res=await fetch(AI_WORKER_URL+'/api/save-subscription',{
+      async function buildScheduleFromMessyList(messyText) {
+  const today = (typeof TODAY !== 'undefined' ? TODAY : new Date().toISOString().slice(0, 10));
+  const lang = (typeof USER_SETTINGS !== 'undefined' && USER_SETTINGS.lang === 'ar') ? 'ar' : 'en';
+  const res = await fetch(AI_WORKER_URL + '/api/build-schedule', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ messyText, today, lang })
+  });
+  const data = await res.json();
+  if (!res.ok || data.error) throw new Error(data.error || 'Request failed');
+  const raw = (data.text || '').replace(/^```json\s*|```$/g, '').trim();
+  return JSON.parse(raw);
+}
+function showSchedulePlan(plan) {
+  const lines = ['Time | Task | Category | Buffer', '-----|------|----------|--------'];
+  for (const b of (plan.blocks || [])) {
+    lines.push(`${b.start} – ${b.end} | ${(b.emoji || '')} ${b.task} | ${b.category || ''} | ${b.buffer_after_min ?? 15} mins`);
+  }
+  lines.push('', 'Pro tip: ' + (plan.pro_tip || ''));
+  const el = document.getElementById('scheduleResult');
+  if (el) el.textContent = lines.join('\n');
+}
+document.addEventListener('click', async (e) => {
+  if (e.target?.id !== 'buildScheduleBtn') return;
+  const messy = document.getElementById('messyTasksInput')?.value?.trim();
+  if (!messy) { if (typeof showToast === 'function') showToast('Type your tasks first', 2500); else alert('Type your tasks first'); return; }
+  const btn = document.getElementById('buildScheduleBtn');
+  if (btn) btn.textContent = 'Building…';
+  try {
+    const plan = await buildScheduleFromMessyList(messy);
+    showSchedulePlan(plan);
+  } catch (err) {
+    console.error(err);
+    if (typeof showToast === 'function') showToast('Could not build schedule — try again', 3000); else alert('Could not build schedule — try again');
+  } finally {
+    if (btn) btn.textContent = 'Build schedule';
+  }
+});
       method:'POST',
       headers:{'Content-Type':'application/json'},
       body:JSON.stringify({uid:user.uid,subscription:PUSH_SUBSCRIPTION,reminders})

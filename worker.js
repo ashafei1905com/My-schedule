@@ -78,6 +78,55 @@ export default {
 
     const url = new URL(request.url);
 
+        // ===== Build schedule from messy task list =====
+    if (request.method === "POST" && url.pathname === "/api/build-schedule") {
+      try {
+        const body = await request.json();
+        const messyText = (body.messyText || "").trim();
+        const today = body.today || new Date().toISOString().slice(0, 10);
+        const lang = body.lang === "ar" ? "ar" : "en";
+
+        if (!messyText) {
+          return Response.json({ error: "messyText is required" }, { status: 400 });
+        }
+
+        const system = `You are an expert AI Scheduling Agent. Turn a messy task list into a realistic daily schedule.
+RULES: 15-min buffers between tasks; high-focus in the morning; every block has start, end, emoji.
+Return ONLY JSON:
+{"date":"YYYY-MM-DD","blocks":[{"start":"HH:MM","end":"HH:MM","task":"string","emoji":"📚","category":"Deep Work","buffer_after_min":15}],"pro_tip":"short tip"}`;
+
+        const userContent = `Today is ${today}. Language: ${lang}.\n\nMessy task list:\n${messyText}`;
+
+        const groqRes = await fetch("https://api.groq.com/openai/v1/chat/completions", {
+          method: "POST",
+          headers: {
+            Authorization: `Bearer ${env.GROQ_API_KEY}`,
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            model: "llama-3.3-70b-versatile",
+            temperature: 0.3,
+            response_format: { type: "json_object" },
+            messages: [
+              { role: "system", content: system },
+              { role: "user", content: userContent },
+            ],
+          }),
+        });
+
+        const data = await groqRes.json();
+        if (!groqRes.ok) {
+          return Response.json({ error: data.error?.message || "groq failed" }, { status: 502 });
+        }
+
+        const text = data.choices?.[0]?.message?.content || "";
+        return Response.json({ text });
+      } catch (e) {
+        return Response.json({ error: String(e) }, { status: 500 });
+      }
+    }
+    // ===== end build-schedule =====
+
     if (url.pathname === '/api/save-subscription') {
       return handleSaveSubscription(request, env);
     }
