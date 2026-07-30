@@ -118,9 +118,18 @@ input[type=color]::-moz-color-swatch{border:none;border-radius:8px}
 .card-qada{animation:qadaGlow 1s ease}
 .current-task-highlight{outline:2px solid var(--ac);box-shadow:0 0 0 4px rgba(59,130,246,.25),0 8px 28px rgba(59,130,246,.2);transition:outline .3s,box-shadow .3s}
 
-@keyframes iosWobble{0%{transform:rotate(-1.2deg)}50%{transform:rotate(1.2deg)}100%{transform:rotate(-1.2deg)}}
-body.edit-mode .tc:not(.done){animation:iosWobble 0.28s ease-in-out infinite;transform-origin:center center}
-body.edit-mode .tc{cursor:grab}
+body.edit-mode .tc{cursor:grab;border-style:dashed;box-shadow:0 0 0 1px color-mix(in srgb,var(--ac) 35%,transparent)}
+body.edit-mode .tc .em-actions{display:flex!important}
+body.edit-mode #editModeBar{display:flex}
+body.edit-mode #editUndoToast.armed{display:flex}
+#notifTaskList{scrollbar-width:thin;scrollbar-color:var(--br) transparent}
+#notifTaskList::-webkit-scrollbar{width:5px}
+#notifTaskList::-webkit-scrollbar-track{background:transparent}
+#notifTaskList::-webkit-scrollbar-thumb{background:var(--br);border-radius:8px}
+#notifTaskList::-webkit-scrollbar-thumb:hover{background:var(--ac)}
+#aiSidebar .ai-sidebar-list{scrollbar-width:thin;scrollbar-color:var(--br) transparent}
+#aiSidebar .ai-sidebar-list::-webkit-scrollbar{width:5px}
+#aiSidebar .ai-sidebar-list::-webkit-scrollbar-thumb{background:var(--br);border-radius:8px}
 #editModeBar{display:none;position:fixed;bottom:24px;left:50%;transform:translateX(-50%);z-index:10020;gap:10px;align-items:center;padding:12px 16px;border-radius:16px;background:color-mix(in srgb,var(--c2) 90%,transparent);backdrop-filter:blur(12px);border:1px solid var(--br);box-shadow:0 8px 32px rgba(0,0,0,.45)}
 body.edit-mode #editModeBar{display:flex}
 #editModeBar button{font-family:'Cairo',sans-serif;font-weight:800;font-size:.82rem;padding:10px 16px;border-radius:10px;border:none;cursor:pointer}
@@ -128,7 +137,7 @@ body.edit-mode #editModeBar{display:flex}
 #editUndoToast{display:none;position:fixed;bottom:90px;left:50%;transform:translateX(-50%);z-index:10025;padding:12px 16px;border-radius:14px;background:color-mix(in srgb,var(--c2) 92%,transparent);backdrop-filter:blur(12px);border:1px solid var(--br);box-shadow:0 8px 28px rgba(0,0,0,.4);align-items:center;gap:12px;max-width:min(420px,92vw)}
 #editUndoToast.show{display:flex}
 #editUndoToast button{font-family:'Cairo',sans-serif;font-weight:800;font-size:.78rem;padding:8px 12px;border-radius:8px;border:1px solid var(--ac);background:color-mix(in srgb,var(--ac) 20%,var(--c));color:var(--tx);cursor:pointer}
-.em-actions{display:flex;flex-wrap:wrap;gap:4px;margin-top:6px}
+.em-actions{display:none;flex-wrap:wrap;gap:4px;margin-top:6px}
 .em-btn{font-family:'Cairo',sans-serif;font-size:.65rem;font-weight:800;padding:4px 8px;border-radius:7px;border:1px solid var(--br);background:var(--c);color:var(--tx);cursor:pointer}
 .em-btn:hover{border-color:var(--ac)}
 .em-btn.danger{color:#f87171;border-color:rgba(239,68,68,.45);background:rgba(239,68,68,.1)}
@@ -849,16 +858,23 @@ body.edit-mode .em-day-toggle{display:inline-flex;align-items:center;gap:6px}
 </div>
 
 <!-- AI Assistant Widget -->
+
+<div id="editUndoToast"><span id="editUndoMsg">Change applied</span><button type="button" id="editUndoBtn">Undo ↩️</button></div>
+<div id="editModeBar">
+  <button type="button" id="editModeUndo" style="background:rgba(59,130,246,.15);color:#93c5fd;border:1px solid rgba(59,130,246,.4)">Undo ↩️</button>
+  <button type="button" id="editModeCancel">Cancel</button>
+  <button type="button" id="editModeSave">Save Edits ✅</button>
+</div>
 <button id="aiFab" class="hidden" type="button" title="مساعد الجدول" style="color:#fff">🤖</button>
 <div id="aiPanel">
   <div class="ai-head">
     <div>
       <div class="ai-title">🤖 مساعد الجدول</div>
-      <div class="ai-sub" id="aiSubStatus">جاهز للمساعدة</div>
+      <div class="ai-sub" id="aiSubStatus">Ready to help</div>
     </div>
     <div class="ai-headbtns">
-      <button class="ai-iconbtn" id="aiNewChatBtn" type="button" title="محادثة جديدة">➕</button>
-      <button class="ai-iconbtn" id="aiHistoryBtn" type="button" title="سجل المحادثات">🗂️</button>
+      <button class="ai-iconbtn" id="aiNewChatBtn" type="button" title="New chat">➕</button>
+      <button class="ai-iconbtn" id="aiHistoryBtn" type="button" title="Chat history">🗂️</button>
       <button class="ai-iconbtn" id="aiMemoryBtn" type="button" title="ما يتذكره عنك">🧠</button>
       <button class="ai-iconbtn" id="aiFullToggleBtn" type="button" title="ملء الشاشة">⤢</button>
       <button class="ai-close" id="aiCloseBtn" type="button">✕ إغلاق</button>
@@ -877,10 +893,10 @@ body.edit-mode .em-day-toggle{display:inline-flex;align-items:center;gap:6px}
 <div id="aiSidebarOverlay"></div>
 <div id="aiSidebar">
   <div class="ai-sidebar-head">
-    <div class="ai-sidebar-title">🗂️ سجل المحادثات</div>
-    <button class="ai-iconbtn" id="aiSidebarClose" type="button" title="إغلاق">✕</button>
+    <div class="ai-sidebar-title">🗂️ Chat history</div>
+    <button class="ai-iconbtn" id="aiSidebarClose" type="button" title="Close">✕</button>
   </div>
-  <div class="ai-sidebar-newbtn" id="aiSidebarNewChat">➕ محادثة جديدة</div>
+  <div class="ai-sidebar-newbtn" id="aiSidebarNewChat">➕ New chat</div>
   <div class="ai-sidebar-list" id="aiSidebarList"></div>
 </div>
 
@@ -1661,7 +1677,9 @@ function showEditUndoToast(msg){
   const el=document.getElementById('editUndoToast');
   const m=document.getElementById('editUndoMsg');
   if(m) m.textContent=msg||((USER_SETTINGS.lang==='en')?'Change applied':'تم التعديل');
-  if(el){ el.classList.add('show'); clearTimeout(showEditUndoToast._t); showEditUndoToast._t=setTimeout(()=>el.classList.remove('show'),6000); }
+  if(el){ el.classList.add('show','armed'); clearTimeout(showEditUndoToast._t); showEditUndoToast._t=setTimeout(()=>el.classList.remove('show'),8000); }
+  const barUndo=document.getElementById('editModeUndo');
+  if(barUndo) barUndo.style.opacity=scheduleStateHistory.length?'1':'.4';
 }
 async function undoLastScheduleEdit(){
   if(!scheduleStateHistory.length){
@@ -1879,6 +1897,35 @@ function applyTheme(){
   if(sv3) sv3.style.color='';
   document.querySelectorAll('#sbar .sl').forEach(el=>{ el.style.color=''; el.style.opacity=''; });
 }
+
+function applyAiI18n(){
+  const en=(USER_SETTINGS&&USER_SETTINGS.lang)==='en';
+  const aiTitle=document.querySelector('.ai-title');
+  if(aiTitle) aiTitle.textContent=t('ai_title');
+  const aiSub=document.getElementById('aiSubStatus');
+  if(aiSub){
+    if(fbAuth&&fbAuth.currentUser) aiSub.textContent=t('ai_ready');
+    else aiSub.textContent=en?'Sign in so I can save your changes':'سجل دخول عشان أقدر أحفظلك التغييرات';
+  }
+  document.querySelectorAll('#aiPanel button').forEach(b=>{
+    const tx=(b.textContent||'').trim();
+    if(/^(إغلاق|Close)$/i.test(tx)) b.textContent=t('ai_close');
+    if(/^(إرسال|Send)$/i.test(tx)) b.textContent=t('ai_send');
+  });
+  const aiInp=document.getElementById('aiInput');
+  if(aiInp) aiInp.placeholder=t('ai_placeholder')||(en?'Type a command...':'اكتب أمر...');
+  const sideTitle=document.querySelector('.ai-sidebar-title');
+  if(sideTitle) sideTitle.textContent='🗂️ '+t('chat_history');
+  const sideNew=document.getElementById('aiSidebarNewChat');
+  if(sideNew) sideNew.textContent='➕ '+t('new_chat');
+  const histBtn=document.getElementById('aiHistoryBtn');
+  if(histBtn) histBtn.title=t('chat_history');
+  const newBtn=document.getElementById('aiNewChatBtn');
+  if(newBtn) newBtn.title=t('new_chat');
+  const sideClose=document.getElementById('aiSidebarClose');
+  if(sideClose) sideClose.title=t('ai_close');
+}
+
 function applyI18n(){
   document.querySelectorAll('[data-i18n]').forEach(el=>{
     const k=el.getAttribute('data-i18n');
@@ -1929,8 +1976,11 @@ function applyI18n(){
   if(emSave) emSave.textContent=(USER_SETTINGS.lang==='en')?'Save Edits ✅':'حفظ التعديلات ✅';
   const emCancel=document.getElementById('editModeCancel');
   if(emCancel) emCancel.textContent=(USER_SETTINGS.lang==='en')?'Cancel':'إلغاء';
+  const emUndo=document.getElementById('editModeUndo');
+  if(emUndo) emUndo.textContent=(USER_SETTINGS.lang==='en')?'Undo ↩️':'تراجع ↩️';
   document.querySelectorAll('[data-i18n="app_brand"]').forEach(el=>{ el.textContent=t('app_brand'); });
   try{ document.title=t('app_brand')+' 🏋️'; }catch(e){}
+  try{ applyAiI18n(); }catch(e){}
 }
 const APP_ICON_PRESETS=['🏋️','📅','✅','🎯','💪','📖','⭐','🔥','🧠','🌙'];
 const TASK_ICON_PRESETS=['✨','📚','💻','🏋️','🍽️','🥤','🏃','🧘','📝','🎵','💤','🎯','🧠','🕌','🏊','📖','⭐','🔥','💪','🎮'];
@@ -2512,7 +2562,7 @@ function aiGetActiveSession(){
 function aiSessionTitle(s){
   if(s.title) return s.title;
   const firstUser=s.messages.find(m=>m.role==='user');
-  if(!firstUser) return'محادثة جديدة';
+  if(!firstUser) return (USER_SETTINGS.lang==='en')?'New chat':'محادثة جديدة';
   const t=firstUser.text.trim();
   return t.length>40?t.slice(0,40)+'…':t;
 }
@@ -3749,9 +3799,8 @@ function renderCard(task,isToday,jd){
         freeAct=`<button class="cbtn" data-action="confirm" data-id="${id}" data-pts="${pts}">✓<span class="ptslbl">+${pts}⭐</span></button>`;
       }
     }
-    const emStyleF=EDIT_MODE?'display:flex':'display:none';
     const enF=(USER_SETTINGS.lang==='en');
-    const emFree=`<div class="em-actions" style="${emStyleF}">
+    const emFree=`<div class="em-actions" style="display:none">
       <button type="button" class="em-btn" data-action="postpone" data-id="${id}" data-mins="15">+15m</button>
       <button type="button" class="em-btn" data-action="postpone" data-id="${id}" data-mins="30">+30m</button>
       <button type="button" class="em-btn" data-action="postpone" data-id="${id}" data-mins="60">+1h</button>
@@ -3816,8 +3865,7 @@ function renderCard(task,isToday,jd){
   const loggedBadge=loggedMacro?`<div class="hwtag" style="background:rgba(16,185,129,.12);border-color:rgba(16,185,129,.3);color:#34d399">🍽️ ${Math.round(loggedMacro.k)} سعرة · ب${Math.round(loggedMacro.p)} · ك${Math.round(loggedMacro.c)} · د${Math.round(loggedMacro.f)} · أ${Math.round(loggedMacro.b||0)}</div>`:'';
 
   const enEm=(USER_SETTINGS.lang==='en');
-  const emStyle=EDIT_MODE?'display:flex':'display:none';
-  const emActions=(!isDeleted)?`<div class="em-actions" style="${emStyle}">
+  const emActions=(!isDeleted)?`<div class="em-actions" style="display:none">
     <button type="button" class="em-btn" data-action="postpone" data-id="${id}" data-mins="15">+15m</button>
     <button type="button" class="em-btn" data-action="postpone" data-id="${id}" data-mins="30">+30m</button>
     <button type="button" class="em-btn" data-action="postpone" data-id="${id}" data-mins="60">+1h</button>
@@ -3838,7 +3886,7 @@ function renderPanel(jd){
   const k=DKEYS[jd];
   const isToday=(SELECTED_DATE===TODAY)&&(jd===todayJD());
   const gbLabel=d.gm?`<div class="gbx ${d.gm==='upper'?'gbu':'gbl'}">${d.gm==='upper'?'Upper Body 💪':'Lower Body 🦵'}</div>`:`<div class="gbx gbr">${t('rest_day')} 💤</div>`;
-  const dayToggle=`<button type="button" class="em-day-toggle" data-action="toggleDayType" data-jd="${jd}">${d.gm?((USER_SETTINGS.lang==='en')?'Switch to Rest day 💤':'حوّل ليوم راحة 💤'):((USER_SETTINGS.lang==='en')?'Switch to Gym day 🏋️':'حوّل ليوم جيم 🏋️')}</button>`;
+  const dayToggle=EDIT_MODE?`<button type="button" class="em-day-toggle" data-action="toggleDayType" data-jd="${jd}" style="display:inline-flex">${d.gm?((USER_SETTINGS.lang==='en')?'Switch to Rest day 💤':'حوّل ليوم راحة 💤'):((USER_SETTINGS.lang==='en')?'Switch to Gym day 🏋️':'حوّل ليوم جيم 🏋️')}</button>`:'';
 
   const pills=[];
   const schedList=d.ts||[];
@@ -6003,6 +6051,7 @@ function aiRenderSidebarList(){
 }
 
 function aiOpenSidebar(){
+  try{ applyAiI18n(); }catch(e){}
   aiRenderSidebarList();
   document.getElementById('aiSidebarOverlay')?.classList.add('open');
   document.getElementById('aiSidebar')?.classList.add('open');
@@ -6296,11 +6345,9 @@ function aiToolCallReplyText(v){
 }
 
 async function aiOpenPanel(){
-  try{ applyI18n(); }catch(e){}
+  try{ applyI18n(); applyAiI18n(); }catch(e){}
 
   const panel=document.getElementById('aiPanel');
-  const sub=document.getElementById('aiSubStatus');
-  if(sub){ const en=(USER_SETTINGS.lang==='en'); sub.textContent=fbAuth.currentUser?(en?'Ready to help':t('ai_ready')):(en?'Sign in so I can save your changes':'سجل دخول عشان أقدر أحفظلك التغييرات'); }
   // Auto-roll to a new session if the last one went idle 3+ hours ago, so reopening
   // the app after a long gap starts fresh instead of resuming a stale conversation —
   // the old one stays fully intact and reachable from 🗂️ history.
@@ -6378,7 +6425,7 @@ document.body.addEventListener('click',async e=>{
   }
   if(tgt.id==='editModeSave'){ exitEditMode(true); return; }
   if(tgt.id==='editModeCancel'){ exitEditMode(false); return; }
-  if(tgt.id==='editUndoBtn'){ await undoLastScheduleEdit(); return; }
+  if(tgt.id==='editUndoBtn'||tgt.id==='editModeUndo'){ await undoLastScheduleEdit(); return; }
   const postponeBtn=tgt.closest('[data-action="postpone"]');
   if(postponeBtn){
     const id=postponeBtn.getAttribute('data-id');
@@ -6667,8 +6714,23 @@ document.body.addEventListener('click',async e=>{
   if(editSchedBtn){
     const jd=parseInt(editSchedBtn.getAttribute('data-jd'),10);
     const taskId=editSchedBtn.getAttribute('data-id');
-    const existing=(USER_SCHEDULE[jd]?.ts||[]).find(t=>t[0]===taskId);
+    const iso=SELECTED_DATE||TODAY;
+    // Prefer live task from full schedule (template + custom), not only USER_SCHEDULE
+    let existing=(USER_SCHEDULE[jd]?.ts||[]).find(t=>t[0]===taskId);
+    if(!existing){
+      const live=(getAllTasks(jd,iso)||[]).find(t=>t[0]===taskId);
+      if(live){
+        // Clone template task into USER_SCHEDULE so edits persist
+        scheduleEnsureDay(jd);
+        const clone=[...live];
+        // strip runtime flags
+        delete clone._deleted; delete clone._movedFrom; delete clone._custom;
+        if(!USER_SCHEDULE[jd].ts.some(t=>t[0]===clone[0])) USER_SCHEDULE[jd].ts.push(clone);
+        existing=clone;
+      }
+    }
     if(existing) openScheduleTaskEditor(jd,existing);
+    else showToast((USER_SETTINGS.lang==='en')?'Could not open this task':'مش قادر أفتح المهمة دي',2500);
     return;
   }
   const delSchedBtn=closest('[data-action="deleteSchedTask"]');
