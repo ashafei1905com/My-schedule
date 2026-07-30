@@ -303,13 +303,23 @@ body.edit-mode .em-day-toggle{display:inline-flex;align-items:center;gap:6px}
 .theme-preset-circle{width:56px;height:56px;border-radius:50%;border:3px solid transparent;box-shadow:0 2px 10px rgba(0,0,0,.35);transition:transform .15s,box-shadow .15s,border-color .15s}
 .theme-preset:hover .theme-preset-circle{transform:scale(1.06)}
 .theme-preset.sel .theme-preset-circle{border-color:#fff;box-shadow:0 0 0 3px var(--ac),0 4px 16px rgba(0,0,0,.4)}
-.theme-preset-label{font-size:.68rem;font-weight:700;color:var(--so);max-width:76px;text-align:center;line-height:1.2}
+.theme-preset-label{font-size:.68rem;font-weight:700;color:var(--so);max-width:92px;text-align:center;line-height:1.2;overflow:visible}
 .theme-preset.sel .theme-preset-label{color:var(--tx)}
-.theme-custom-panel{display:none;margin-top:12px;padding:14px;background:var(--c);border:1px solid var(--br);border-radius:14px}
+.theme-custom-panel{display:none;margin-top:12px;padding:14px;background:var(--c);border:1px solid var(--br);border-radius:14px;max-height:min(50vh,360px);overflow-y:auto;-webkit-overflow-scrolling:touch;scrollbar-width:thin;scrollbar-color:var(--br) transparent}
 .theme-custom-panel.open{display:block}
-.theme-custom-row{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:10px 0;border-bottom:1px solid var(--br)}
+.theme-custom-panel::-webkit-scrollbar{width:5px}
+.theme-custom-panel::-webkit-scrollbar-thumb{background:var(--br);border-radius:8px}
+.theme-custom-row{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:12px 0;border-bottom:1px solid var(--br)}
 .theme-custom-row:last-child{border-bottom:none}
-.theme-custom-row label{font-size:.82rem;font-weight:700}
+.theme-custom-row label{font-size:.82rem;font-weight:700;color:var(--tx)}
+.theme-color-swatch{width:48px;height:36px;border-radius:10px;border:2px solid rgba(255,255,255,.55);box-shadow:0 0 0 1px rgba(0,0,0,.55),inset 0 0 0 1px rgba(255,255,255,.12);padding:0;overflow:hidden;background:#111;cursor:pointer;flex-shrink:0}
+.theme-color-swatch::-webkit-color-swatch-wrapper{padding:0;border:none}
+.theme-color-swatch::-webkit-color-swatch{border:none;border-radius:8px}
+.theme-color-swatch::-moz-color-swatch{border:none;border-radius:8px}
+.theme-preset-label{max-width:88px!important}
+#setsec-appearance{padding-bottom:40px}
+.set-content{overflow-y:auto;-webkit-overflow-scrolling:touch;overscroll-behavior:contain}
+
 .task-icon-row{display:flex;flex-wrap:wrap;gap:8px}
 .task-icon-btn{width:40px;height:40px;border-radius:10px;border:2px solid var(--br);background:var(--c);cursor:pointer;font-size:1.2rem;display:flex;align-items:center;justify-content:center}
 .task-icon-btn.sel{border-color:var(--ac);box-shadow:0 0 0 1px var(--ac)}
@@ -605,15 +615,15 @@ body.edit-mode .em-day-toggle{display:inline-flex;align-items:center;gap:6px}
           <div class="theme-custom-panel" id="themeCustomPanel">
             <div class="theme-custom-row">
               <label data-i18n="theme_accent">Accent</label>
-              <input type="color" id="themeAccentPick" value="#3b82f6" style="width:42px;height:32px;border:none;background:transparent;cursor:pointer">
+              <input type="color" id="themeAccentPick" class="theme-color-swatch" value="#3b82f6">
             </div>
             <div class="theme-custom-row">
               <label data-i18n="theme_card">Card</label>
-              <input type="color" id="themeCardPick" value="#111827" style="width:42px;height:32px;border:none;background:transparent;cursor:pointer">
+              <input type="color" id="themeCardPick" class="theme-color-swatch" value="#111827">
             </div>
             <div class="theme-custom-row">
               <label data-i18n="theme_bg">Background</label>
-              <input type="color" id="themeBgPick" value="#0a0e1a" style="width:42px;height:32px;border:none;background:transparent;cursor:pointer">
+              <input type="color" id="themeBgPick" class="theme-color-swatch" value="#0a0e1a">
             </div>
           </div>
           <div class="set-actions" style="margin-top:16px">
@@ -1389,6 +1399,20 @@ function scheduleGenTaskId(){return `custom-${Date.now()}-${Math.floor(Math.rand
 // it — a brand-new account's USER_SCHEDULE is seeded empty-but-valid by obFinish(),
 // but this guards defensively in case it's ever called before that (e.g. a future
 // direct-to-editor entry point that skips onboarding).
+
+function sanitizeUserSchedulePrayers(){
+  // Remove prayer tasks wrongly copied into USER_SCHEDULE.ts (they belong only in buildPTasks)
+  let changed=false;
+  for(const jd of Object.keys(USER_SCHEDULE||{})){
+    const day=USER_SCHEDULE[jd];
+    if(!day||!Array.isArray(day.ts)) continue;
+    const before=day.ts.length;
+    day.ts=day.ts.filter(t=>!(t&&(t[2]==='prayer'||String(t[0]||'').startsWith('pr-'))));
+    if(day.ts.length!==before) changed=true;
+  }
+  return changed;
+}
+
 function scheduleEnsureDay(jd){
   if(!USER_SCHEDULE[jd]){
     USER_SCHEDULE[jd]={n:DSHORT[jd],wk:'9:00 ص',bd:'11:00 م',gm:null,ts:[]};
@@ -1814,7 +1838,7 @@ function translateAiReply(text){
   if(!text || AI_REPLY_LANG!=='en') return text;
   const pairs=[
     [/مش لاقي صلاة (.+) في جدول يوم (.+)\./g,"Can't find prayer $1 on $2."],
-    [/صلاة (.+) يوم (.+) مسجلة كمُنجزة بالفعل\. لو عايز تعدّلها، لازم تشيلها الأول من الجدول\./g,'Prayer $1 on $2 is already marked done. To change it, remove it from the schedule first.'],
+    [/صلاة (.+) يوم (.+) مسجلة كمُنجزة بالفعل\. لو عايز تعدّلها، لازم تشيلها الأول من الجدول\./g,'"$1" on $2 is already marked done. Say "unmark $1" to reverse it.'],
     [/تمام، هفتكر إن (.+) ✅/g,"Got it — I'll remember that $1 ✅"],
     [/مش لاقي المهمة دي في الجدول\. ممكن تقولي اسمها بالظبط زي ما هي ظاهرة\؟/g,"Can't find that task. Please use the exact name shown on the schedule."],
     [/مش لاقي المهمة دي\. جرب تكتب اسمها زي ما هو ظاهر في الجدول\./g,"Can't find that task. Try the exact name shown on the schedule."],
@@ -1866,7 +1890,6 @@ function translateAiReply(text){
     [/بيفكر\.\.\./g,'Thinking...'],
     [/تراجع/g,'Undo'],
     [/حصل خطأ/g,'An error occurred'],
-    [/جرب تاني/g,'try again'],
     [/مش فاهم/g,"I don't understand"]
   ];
   let out=String(text);
@@ -2350,8 +2373,13 @@ function getAllTasks(jd,iso){
   const frees=isAbdullah?(FREE_TIME[jd]||[]).map((f,i)=>[`fr-${jd}-${i}`,f.t,'free','🎮','وقت حر',f.d,0,null,null,false]):[];
   const showPrayers=!!USER_SETTINGS.trackPrayers;
   const prayers=showPrayers?buildPTasks(jd):[];
-  const base=[...prayers,...d.ts,...frees];
-  return applyUserEditsToTasks(base,effIso).sort((a,b)=>sortKey(a)-sortKey(b));
+  // d.ts must not re-introduce prayers (sanitize may lag one frame)
+  const schedTs=(d.ts||[]).filter(t=>!(t&&(t[2]==='prayer'||String(t[0]||'').startsWith('pr-'))));
+  const base=[...prayers,...schedTs,...frees];
+  let list=applyUserEditsToTasks(base,effIso).sort((a,b)=>sortKey(a)-sortKey(b));
+  // Outside edit mode, hide soft-deleted cards so the schedule stays clean
+  if(typeof EDIT_MODE==='undefined' || !EDIT_MODE) list=list.filter(t=>!t._deleted);
+  return list;
 }
 function getReqTasks(jd,iso){
   const effIso=iso||dateForWeekday(jd,TODAY);
@@ -2448,7 +2476,19 @@ function applyUserEditsToTasks(baseTasks, iso){
     tup._custom=true;
     out.push(tup);
   }
-  return out;
+  // Dedupe by task id — prefer the live (non-deleted) copy. Prevents ghost duplicates
+  // when a prayer/template was wrongly cloned into USER_SCHEDULE or move+delete raced.
+  const byId=new Map();
+  for(const t of out){
+    const id=t[0];
+    const prev=byId.get(id);
+    if(!prev){ byId.set(id,t); continue; }
+    const prevDel=!!prev._deleted, curDel=!!t._deleted;
+    if(prevDel && !curDel) byId.set(id,t);
+    else if(!prevDel && curDel){ /* keep prev */ }
+    else byId.set(id,t);
+  }
+  return [...byId.values()];
 }
 
 async function saveUserEdits(){
@@ -4415,34 +4455,65 @@ function aiParsePrayerDetail(raw,low){
   const pk=aiDetectPrayerKey(low);
   if(!pk) return null;
 
-  const hasCompletionVerb=/صليت|صليتها|صلّيت|prayed|pray$|i prayed|mark.*(done|complete)|خلصت|عملت/.test(low);
-  const hasDetailWord=/مسجد|جامع|mosque|بيت|home|house|جيم|gym|جماعة|جماعه|congregation|منفرد|لوحدي|alone|أذكار|اذكار|dhikr|athkar|سنة|سنه|sunnah|max|أقصى|اقصى|كامل|كل النقاط/.test(low);
-  if(!hasCompletionVerb && !hasDetailWord) return null; // just mentions a prayer name, not a completion
+  const en=(USER_SETTINGS&&USER_SETTINGS.lang)==='en';
+  const prayerLabel=en?(PMETA[pk]?.en||pk):(PMETA[pk]?.ar||taskNameFallback(pk));
 
-  // Resolve which date this prayer instance is on — same day-word resolution the rest
-  // of the assistant uses, defaulting to whatever day is currently selected/viewed.
+  // CRITICAL: "mark X as undone" / "unmark" must NOT be treated as completion.
+  // Old regex mark.*(done|complete) matched the substring "done" inside "undone".
+  const isUnmark=/unmark|undo\s*(done|complete|prayer|task)?|mark\s+\w+\s+as\s+undone|mark\s+.*\s+undone|not\s+done|الغي.*(انجاز|إنجاز|تسجيل)|امسح.*(انجاز|إنجاز|تسجيل)|مش\s*منجز|غير\s*منجز/.test(low);
+
+  const hasCompletionVerb=/صليت|صليتها|صلّيت|prayed|i\s+prayed|\bpray\b|mark\s+.*\b(done|complete)\b|خلصت|عملت/.test(low)
+    && !/\bundone\b|\bnot\s+done\b|unmark/.test(low);
+  const hasDetailWord=/مسجد|جامع|mosque|بيت|home|house|جيم|gym|جماعة|جماعه|congregation|منفرد|لوحدي|alone|أذكار|اذكار|dhikr|athkar|سنة|سنه|sunnah|max|أقصى|اقصى|كامل|كل النقاط/.test(low);
+  if(!isUnmark && !hasCompletionVerb && !hasDetailWord) return null;
+
   const targetIso=aiResolveDate(raw)||SELECTED_DATE;
   const targetJd=getJDfromISO(targetIso);
   const dKey=DKEYS[targetJd];
   const taskId=`pr-${dKey}-${pk}`;
   const task=aiFindTaskByIdOnDate(taskId,targetIso);
   if(!task){
-    return{action:'unrecognizedTask',reply:`مش لاقي صلاة ${PMETA[pk]?.ar||pk} في جدول يوم ${targetIso}.`};
+    return{action:'unrecognizedTask',reply:en
+      ?`Can't find prayer ${prayerLabel} on ${targetIso}.`
+      :`مش لاقي صلاة ${PMETA[pk]?.ar||pk} في جدول يوم ${targetIso}.`};
   }
 
   const existingDone=(historyData[targetIso]||{}).done?.[taskId];
-  if(existingDone!==undefined && existingDone!==false){
-    return{action:'alreadyDone',reply:`صلاة ${PMETA[pk]?.ar||task[4]} يوم ${targetIso} مسجلة كمُنجزة بالفعل. لو عايز تعدّلها، لازم تشيلها الأول من الجدول.`};
+  const isDone=existingDone!==undefined && existingDone!==false;
+
+  // Unmark path: clear completion for this prayer
+  if(isUnmark){
+    if(!isDone){
+      return{action:'needMoreInfo',reply:en
+        ?`"${prayerLabel}" is not marked done on ${targetIso}.`
+        :`"${task[4]}" مش مسجلة كمُنجزة أصلاً في ${targetIso}.`};
+    }
+    return{action:'unmarkDone',task,iso:targetIso,
+      reply:en
+        ?`Unmarked "${prayerLabel}" on ${targetIso}. Points were reversed if they had been added ✅`
+        :`تم إلغاء تسجيل "${task[4]}" كمُنجزة في ${targetIso} — النقاط اتخصمت لو كانت اتضافت ✅`};
+  }
+
+  if(isDone){
+    return{action:'alreadyDone',reply:en
+      ?`"${prayerLabel}" on ${targetIso} is already marked done. Say "unmark ${prayerLabel}" or "mark ${prayerLabel} as undone" to reverse it.`
+      :`صلاة ${PMETA[pk]?.ar||task[4]} يوم ${targetIso} مسجلة كمُنجزة بالفعل. لو عايز تلغيها، اكتب "الغي إنجاز ${PMETA[pk]?.ar||task[4]}"`};
   }
 
   const wantsMax=/max|أقصى|اقصى|كامل النقاط|كل النقاط|maximum/.test(low);
   const parsedLog=aiParsePrayerDetailLog(low,wantsMax);
 
   return{action:'openPrayerModal',task,iso:targetIso,parsedLog,
-    reply:parsedLog.length
-      ?`فتحت لك نافذة تأكيد ${PMETA[pk]?.ar||task[4]} ومعبّي اللي قلته — كمّل باقي الأسئلة وأكّد 🕌`
-      :`فتحت لك نافذة تأكيد ${PMETA[pk]?.ar||task[4]} — جاوب على الأسئلة عشان تاخد النقاط الصح 🕌`};
+    reply:en
+      ?(parsedLog.length
+        ?`Opened confirmation for ${prayerLabel} with your details — finish the remaining steps 🕌`
+        :`Opened confirmation for ${prayerLabel} — answer the questions for full points 🕌`)
+      :(parsedLog.length
+        ?`فتحت لك نافذة تأكيد ${PMETA[pk]?.ar||task[4]} ومعبّي اللي قلته — كمّل باقي الأسئلة وأكّد 🕌`
+        :`فتحت لك نافذة تأكيد ${PMETA[pk]?.ar||task[4]} — جاوب على الأسئلة عشان تاخد النقاط الصح 🕌`)};
 }
+function taskNameFallback(pk){return PMETA[pk]?.ar||pk;}
+
 
 function aiParseIntent(msg){
   const raw=msg.trim();
@@ -4553,7 +4624,7 @@ function aiParseIntent(msg){
   // gym as done" / "undo dinner". Same gap as restoreTask above: there was no way to
   // clear DONE[id]/historyData[iso].done[id] once set, so a wrongly-logged completion
   // (e.g. the Isha/dinner mixup) could never actually be corrected through chat.
-  if(/الغي.*(انجاز|إنجاز|تسجيل)|امسح.*(انجاز|إنجاز|تسجيل)|مش صح.*سجلت|غلط.*سجلت|unmark|undo.*(done|complete)|mark.*(not\s*done|undone)/.test(low)){
+  if(/الغي.*(انجاز|إنجاز|تسجيل)|امسح.*(انجاز|إنجاز|تسجيل)|مش صح.*سجلت|غلط.*سجلت|unmark|undo\s*(done|complete|task|prayer)?|mark\s+.+\s+as\s+undone|\bas\s+undone\b|not\s+done/.test(low)){
     const found=aiFindTask(raw,SELECTED_DATE);
     if(!found) return{action:'unrecognizedTask',reply:'مش لاقي المهمة دي. جرب تكتب اسمها زي ما هي ظاهرة في الجدول.'};
     const existingDone=(historyData[found.iso]||{}).done?.[found.task[0]];
@@ -4935,7 +5006,7 @@ Rules: "before X" means schedule at least 15 minutes earlier than X's time, same
       })
     });
     const data=await res.json();
-    if(!res.ok || data.error) return{ok:false,reply:'⚠️ حصل خطأ من السيرفر — جرب تاني.'};
+    if(!res.ok || data.error) return{ok:false,reply:(USER_SETTINGS.lang==='en')?'⚠️ Server error — try again.':'⚠️ حصل خطأ من السيرفر — جرب تاني.'};
     let raw=(data.text||'').trim().replace(/^```json\s*|```$/g,'').trim();
     let parsed;
     try{ parsed=JSON.parse(raw); }catch{ return{ok:false,reply:'⚠️ مش فاهم الطلب ده كويس — جرب تصيغه بشكل أوضح.'}; }
@@ -5196,7 +5267,7 @@ async function aiResolveToolCall(msg){
       body:JSON.stringify({system:sys,messages:[{role:'user',content:msg}]})
     });
     const data=await res.json();
-    if(!res.ok || data.error) return{ok:false,reply:'⚠️ حصل خطأ من السيرفر — جرب تاني.'};
+    if(!res.ok || data.error) return{ok:false,reply:(USER_SETTINGS.lang==='en')?'⚠️ Server error — try again.':'⚠️ حصل خطأ من السيرفر — جرب تاني.'};
     let raw=(data.text||'').trim().replace(/^```json\s*|```$/g,'').trim();
     let parsed;
     try{ parsed=JSON.parse(raw); }catch{ return{ok:false,reply:'⚠️ مش فاهم الطلب ده كويس — جرب تصيغه بشكل أوضح.'}; }
@@ -5537,7 +5608,7 @@ async function flExtractMealInfo(description,priorTurns){
       body:JSON.stringify({system:sys,messages})
     });
     const data=await res.json();
-    if(!res.ok || data.error) return{ok:false,error:'⚠️ حصل خطأ من السيرفر — جرب تاني.'};
+    if(!res.ok || data.error) return{ok:false,error:(USER_SETTINGS.lang==='en')?'⚠️ Server error — try again.':'⚠️ حصل خطأ من السيرفر — جرب تاني.'};
     let raw=(data.text||'').trim().replace(/^```json\s*|```$/g,'').trim();
     let parsed;
     try{ parsed=JSON.parse(raw); }catch{ return{ok:false,error:'⚠️ مش فاهم الوصف ده كويس — جرب تكتبه بشكل أوضح.'}; }
@@ -5584,7 +5655,7 @@ async function flLookupNutrition(items){
         return{ok:false,error:'⚠️ مش لاقي بيانات غذائية دقيقة للوصف ده — جرب تبسطه أكتر (مثلاً: "200 جرام فراخ مشوية").'};
       }
       if(res.status>=500){
-        return{ok:false,error:'⚠️ السيرفر واقع أو فيه مشكلة مؤقتة — جرب تاني بعد شوية (مش مشكلة في الوصف اللي كتبته).'};
+        return{ok:false,error:(USER_SETTINGS.lang==='en')?'⚠️ Server is down or temporarily unavailable — try again shortly.':'⚠️ السيرفر واقع أو فيه مشكلة مؤقتة — جرب تاني بعد شوية (مش مشكلة في الوصف اللي كتبته).'};
       }
       return{ok:false,error:`⚠️ حصل خطأ (${data.error||res.status}) — جرب تاني، ولو تكرر قولّي.`};
     }
@@ -5965,7 +6036,7 @@ async function aiCallLiveModel(){
     const data=await res.json();
     if(!res.ok || data.error){
       console.error('AI worker error:',data.error||res.status);
-      return{ok:false,text:'⚠️ حصل خطأ من السيرفر — جرب تاني بعد شوية.'};
+      return{ok:false,text:(USER_SETTINGS.lang==='en')?'⚠️ Server error — try again in a moment.':'⚠️ حصل خطأ من السيرفر — جرب تاني بعد شوية.'};
     }
     let text=data.text||'(رد فارغ)';
     // Parse out the [REMEMBER: ...] tag the model may have appended, store it in
@@ -6720,10 +6791,16 @@ document.body.addEventListener('click',async e=>{
     if(!existing){
       const live=(getAllTasks(jd,iso)||[]).find(t=>t[0]===taskId);
       if(live){
-        // Clone template task into USER_SCHEDULE so edits persist
+        // NEVER clone prayers into USER_SCHEDULE — they are generated by buildPTasks
+        // and cloning them creates a second card for the same prayer id.
+        if(live[2]==='prayer' || String(taskId).startsWith('pr-')){
+          const en=(USER_SETTINGS.lang==='en');
+          showToast(en?'Prayers are edited from the prayer card, not Edit Mode':'الصلوات بتتعدل من كارت الصلاة، مش من وضع التعديل',3200);
+          return;
+        }
+        // For non-prayer template tasks, clone once into USER_SCHEDULE so edits persist
         scheduleEnsureDay(jd);
         const clone=[...live];
-        // strip runtime flags
         delete clone._deleted; delete clone._movedFrom; delete clone._custom;
         if(!USER_SCHEDULE[jd].ts.some(t=>t[0]===clone[0])) USER_SCHEDULE[jd].ts.push(clone);
         existing=clone;
@@ -6952,9 +7029,13 @@ async function postponeTaskByMinutes(taskId, mins){
   const tasks=getAllTasks(jd,iso);
   const task=tasks.find(t=>t[0]===taskId);
   if(!task) return;
+  // Prayers follow adhan times — don't postpone into USER_SCHEDULE clones
+  if(task[2]==='prayer'||String(taskId).startsWith('pr-')){
+    showToast((USER_SETTINGS.lang==='en')?'Prayer times come from the prayer calendar':'مواعيد الصلاة من التوقيت الشرعي',2800);
+    return;
+  }
   pushScheduleSnapshot('postpone');
   const newTime=displayTimeAddMinutes(task[1], mins);
-  // Prefer USER_SCHEDULE mutation for custom tasks
   scheduleEnsureDay(jd);
   const ts=USER_SCHEDULE[jd].ts;
   const idx=ts.findIndex(t=>t[0]===taskId);
@@ -6963,7 +7044,6 @@ async function postponeTaskByMinutes(taskId, mins){
     ts[idx][1]=newTime;
     await saveUserSchedule();
   }else{
-    // soft move via USER_EDITS for template tasks
     if(!USER_EDITS.moves) USER_EDITS.moves={};
     USER_EDITS.moves[taskId]={toDate:iso,toTime:newTime,fromDate:iso};
     await saveUserEdits();
@@ -6977,6 +7057,10 @@ async function postponeTaskNextDay(taskId){
   const tasks=getAllTasks(jd,iso);
   const task=tasks.find(t=>t[0]===taskId);
   if(!task) return;
+  if(task[2]==='prayer'||String(taskId).startsWith('pr-')){
+    showToast((USER_SETTINGS.lang==='en')?'Prayers cannot be moved to another day':'لا يمكن نقل الصلوات ليوم تاني',2800);
+    return;
+  }
   pushScheduleSnapshot('postponeNextDay');
   // next calendar day
   const d=new Date(iso+'T12:00:00');
@@ -7027,6 +7111,11 @@ function enterEditMode(from){
   EDIT_MODE_PREV_VIEW=from||'schedule';
   document.body.classList.add('edit-mode');
   scheduleStateHistory=[]; // fresh undo stack for this session
+  try{
+    if(sanitizeUserSchedulePrayers()){
+      saveUserSchedule().catch(()=>{});
+    }
+  }catch(e){}
   try{ document.getElementById('settingsScreen')?.classList.remove('open'); }catch(e){}
   const en=(USER_SETTINGS.lang==='en');
   showToast(en?'Edit mode — drag, postpone, delete, toggle gym/rest':'وضع التعديل — اسحب، أجّل، احذف، غيّر جيم/راحة',3200);
