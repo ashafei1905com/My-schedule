@@ -415,6 +415,36 @@ html[dir="ltr"] .tc[data-c="sunrise"]{border-left:3px solid var(--or)}
 .ai-sidebar-list{flex:1;overflow-y:auto;padding:0 12px 12px}
 .net-badge{padding:8px 10px;border-radius:999px;font-size:.72rem;font-weight:800;background:rgba(248,113,113,.12);color:#f87171;border:1px solid rgba(248,113,113,.25);display:inline-flex;align-items:center;gap:6px}
 .net-badge{padding:8px 10px;border-radius:999px;font-size:.72rem;font-weight:800;background:rgba(248,113,113,.12);color:#f87171;border:1px solid rgba(248,113,113,.25);display:inline-flex;align-items:center;gap:6px}
+
+/* ===== Prestige / Mythic themes ===== */
+@keyframes nebulaShift{0%{background-position:0% 50%}50%{background-position:100% 50%}100%{background-position:0% 50%}}
+@keyframes cyberPulse{0%,100%{box-shadow:0 0 0 0 rgba(236,72,153,0),0 0 12px rgba(34,211,238,.15)}50%{box-shadow:0 0 0 2px rgba(236,72,153,.35),0 0 22px rgba(34,211,238,.45)}}
+@keyframes rankPop{0%{opacity:0;transform:translateY(18px) scale(.94)}100%{opacity:1;transform:translateY(0) scale(1)}}
+@keyframes rebirthGlow{0%,100%{box-shadow:0 0 0 0 rgba(139,92,246,.2)}50%{box-shadow:0 0 24px 4px rgba(139,92,246,.55)}}
+body.theme-nebula,body.theme-nebula #app,body.theme-nebula #sbar{
+  background:linear-gradient(125deg,#0a0e1a,#1a1040,#0c1a3a,#1b0b2e,#0a0e1a)!important;
+  background-size:300% 300%!important;
+  animation:nebulaShift 18s ease infinite;
+}
+body.theme-cyberpunk .tc{
+  animation:cyberPulse 2.8s ease-in-out infinite;
+  border-color:rgba(34,211,238,.45)!important;
+}
+.prestige-badge{display:inline-flex;align-items:center;gap:4px;padding:2px 8px;border-radius:999px;background:linear-gradient(135deg,rgba(251,191,36,.2),rgba(245,158,11,.12));border:1px solid rgba(251,191,36,.45);color:#fbbf24;font-size:.68rem;font-weight:900;margin-inline-start:6px;vertical-align:middle}
+.rank-chip{display:block;font-size:.62rem;font-weight:800;color:#a78bfa;margin-top:2px;text-align:end}
+#rankUpModal{position:fixed;inset:0;z-index:10100;display:none;align-items:center;justify-content:center;background:rgba(0,0,0,.62);padding:16px}
+#rankUpModal.open{display:flex}
+#rankUpModal .rank-box{max-width:420px;width:100%;background:linear-gradient(160deg,#151b2b,#1a1040);border:1px solid rgba(167,139,250,.45);border-radius:18px;padding:28px 22px;text-align:center;animation:rankPop .35s ease;box-shadow:0 20px 60px rgba(0,0,0,.55)}
+#rankUpModal h3{font-size:1.25rem;font-weight:900;margin:0 0 8px}
+#rankUpModal p{color:var(--so);font-size:.9rem;line-height:1.5;margin:0 0 18px}
+.rebirth-btn{width:100%;margin-top:12px;padding:12px 16px;border-radius:12px;border:1px solid rgba(139,92,246,.55);background:linear-gradient(135deg,rgba(139,92,246,.25),rgba(59,130,246,.18));color:#e9d5ff;font-family:inherit;font-weight:900;font-size:.88rem;cursor:pointer;animation:rebirthGlow 2.4s ease-in-out infinite}
+.rebirth-btn[hidden]{display:none!important}
+.mythic-card{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:12px 14px;border:1px solid var(--br);border-radius:12px;background:var(--c);margin-bottom:10px}
+.mythic-card h4{margin:0;font-size:.88rem;font-weight:900}
+.mythic-card p{margin:4px 0 0;font-size:.72rem;color:var(--so)}
+.mythic-card button{font-family:inherit;font-weight:800;font-size:.75rem;padding:8px 12px;border-radius:10px;border:1px solid var(--br);background:var(--c2);color:var(--tx);cursor:pointer;white-space:nowrap}
+.mythic-card button:disabled{opacity:.45;cursor:not-allowed}
+.mythic-card.active{border-color:var(--ac);box-shadow:0 0 0 1px color-mix(in srgb,var(--ac) 40%,transparent)}
 </style>
 </head>
 <body>
@@ -505,6 +535,16 @@ html[dir="ltr"] .tc[data-c="sunrise"]{border-left:3px solid var(--or)}
 .ob-day-tab{font-family:inherit;font-weight:800;font-size:.72rem;padding:8px 12px;border-radius:999px;border:1px solid var(--br);background:var(--c);color:var(--so);cursor:pointer}
 .ob-day-tab.on{border-color:var(--ac);background:color-mix(in srgb,var(--ac) 18%,var(--c));color:var(--tx)}
 </style>
+
+
+<div id="rankUpModal">
+  <div class="rank-box">
+    <div style="font-size:2rem;margin-bottom:8px">LEVEL UP</div>
+    <h3 id="rankUpTitle">New rank unlocked</h3>
+    <p id="rankUpBody">You unlocked a premium profile theme color in settings.</p>
+    <button type="button" id="rankUpClose" class="fl-submit-btn" style="margin:0;width:100%">Awesome</button>
+  </div>
+</div>
 
 <div id="ld"<div id="ld" style="display:flex;align-items:center;justify-content:center;height:100vh;flex-direction:column;gap:16px">
   <div style="width:40px;height:40px;border:3px solid #1e2d45;border-top-color:#3b82f6;border-radius:50%;animation:spin .8s linear infinite"></div>
@@ -597,7 +637,16 @@ html[dir="ltr"] .tc[data-c="sunrise"]{border-left:3px solid var(--or)}
               <input type="color" id="themeBgPick" value="#0a0e1a" style="width:42px;height:32px;border:none;background:transparent;cursor:pointer">
             </div>
           </div>
-          <div class="set-actions" style="margin-top:16px">
+          
+          <div class="desc" style="margin-top:20px;font-weight:900">Mythic Themes</div>
+          <p class="desc" style="margin-top:4px">Unlock with Rebirth Tokens from the Prestige loop.</p>
+          <div id="mythicThemesPanel" style="margin-top:10px"></div>
+          <div id="prestigePanel" style="margin-top:16px">
+            <div class="desc" style="font-weight:900">Prestige</div>
+            <p class="desc" id="prestigeStatsLine" style="margin-top:4px">Lifetime XP · Rank · Tokens</p>
+            <button type="button" id="btnRebirth" class="rebirth-btn" hidden>Rebirth Timeline</button>
+          </div>
+<div class="set-actions" style="margin-top:16px">
             <button type="button" id="setSaveThemeBtn" class="fl-submit-btn" style="margin:0">Save appearance ✅</button>
             <button type="button" id="setResetThemeBtn" class="altbtn">Default</button>
           </div>
@@ -731,8 +780,12 @@ html[dir="ltr"] .tc[data-c="sunrise"]{border-left:3px solid var(--or)}
         <input id="stDesc" type="text" class="ob-textinput" style="text-align:right;font-size:.9rem;padding:12px 14px" placeholder="تفاصيل إضافية">
       </div>
       <div>
-        <label style="font-size:.72rem;color:var(--so);font-weight:700;display:block;margin-bottom:6px">النقاط</label>
-        <input id="stPts" type="number" min="0" max="100" class="ob-textinput" style="text-align:right;font-size:.9rem;padding:12px 14px" value="5">
+        <label style="font-size:.72rem;color:var(--so);font-weight:700;display:block;margin-bottom:6px">Task Difficulty / Intensity</label>
+        <select id="stPts" class="ob-textinput" style="font-size:.9rem;padding:12px 14px;cursor:pointer">
+          <option value="5">Low Intensity / Break (5 pts)</option>
+          <option value="15">Medium / Routine Task (15 pts)</option>
+          <option value="30">High Focus / Deep Work (30 pts)</option>
+        </select>
       </div>
       <div>
         <label style="font-size:.72rem;color:var(--so);font-weight:700;display:block;margin-bottom:8px" data-i18n="task_icon">أيقونة المهمة</label>
@@ -1045,6 +1098,146 @@ function isLatePrayer(task,startOverride){
 }
 
 function floatPts(x,y,n){const e=document.createElement('div');e.className='floatpts';e.textContent=`+${n}⭐`;e.style.cssText=`left:${x}px;top:${y}px`;document.body.appendChild(e);setTimeout(()=>e.remove(),900);}
+
+// ===== Lifetime XP / Rank / Prestige engine =====
+const RANK_TIERS=[
+  {key:'chaos',min:0,max:499,title:'Chaos Coordinator',icon:'🕒'},
+  {key:'habit',min:500,max:999,title:'Habit Builder',icon:'⚡'},
+  {key:'focus',min:1000,max:1999,title:'Focus Master',icon:'🧠'},
+  {key:'defender',min:2000,max:3499,title:'Time Defender',icon:'🛡️'},
+  {key:'timelord',min:3500,max:Infinity,title:'Time Lord',icon:'🌌'}
+];
+function getRankMeta(xp){
+  const n=Math.max(0,Number(xp)||0);
+  for(let i=RANK_TIERS.length-1;i>=0;i--){ if(n>=RANK_TIERS[i].min) return RANK_TIERS[i]; }
+  return RANK_TIERS[0];
+}
+function getPrestigeMultiplier(){
+  const p=Math.max(0,Number(STATS.prestige_level)||0);
+  return 1+(p*0.10);
+}
+function computeAwardedPoints(basePts){
+  const base=Math.max(0,Number(basePts)||0);
+  return Math.round(base*getPrestigeMultiplier());
+}
+function fireConfetti(){
+  try{
+    const colors=['#fbbf24','#a78bfa','#34d399','#60a5fa','#f472b6','#f59e0b'];
+    for(let i=0;i<48;i++){
+      const el=document.createElement('div');
+      el.style.cssText=`position:fixed;left:${50+(Math.random()*40-20)}%;top:${40+(Math.random()*20-10)}%;width:${6+Math.random()*6}px;height:${6+Math.random()*10}px;background:${colors[i%colors.length]};border-radius:2px;pointer-events:none;z-index:10120;opacity:1;transform:translateY(0) rotate(0deg);transition:transform 1.1s ease-out,opacity 1.1s ease-out`;
+      document.body.appendChild(el);
+      requestAnimationFrame(()=>{
+        el.style.transform=`translate(${(Math.random()*360-180)}px,${180+Math.random()*220}px) rotate(${Math.random()*720}deg)`;
+        el.style.opacity='0';
+      });
+      setTimeout(()=>el.remove(),1200);
+    }
+  }catch(e){ console.warn('confetti failed',e); }
+}
+function showRankUpModal(rank){
+  const modal=document.getElementById('rankUpModal');
+  const title=document.getElementById('rankUpTitle');
+  const body=document.getElementById('rankUpBody');
+  if(title) title.textContent=`LEVEL UP! NEW RANK UNLOCKED: ${rank.icon} ${rank.title}`;
+  if(body) body.textContent=`You've unlocked a premium profile theme color in settings! Lifetime XP is climbing — keep checking off tasks.`;
+  if(modal) modal.classList.add('open');
+  fireConfetti();
+}
+function ensureRankTracking(){
+  if(!STATS.lastRankKey) STATS.lastRankKey=getRankMeta(STATS.lifetime_xp||0).key;
+}
+function awardTaskPoints(basePts, opts={}){
+  // Prestige multiplier applied ONLY at completion time
+  const awarded=computeAwardedPoints(basePts);
+  STATS.pts=(STATS.pts||0)+awarded;
+  STATS.lifetime_xp=(STATS.lifetime_xp||0)+awarded;
+  ensureRankTracking();
+  const now=getRankMeta(STATS.lifetime_xp);
+  if(now.key!==STATS.lastRankKey){
+    STATS.lastRankKey=now.key;
+    try{ showRankUpModal(now); }catch(e){ console.warn(e); }
+  }
+  try{ updatePrestigeUI(); }catch(e){}
+  if(opts.x!=null && opts.y!=null) floatPts(opts.x,opts.y,awarded);
+  return awarded;
+}
+async function doRebirth(){
+  const rank=getRankMeta(STATS.lifetime_xp||0);
+  if(rank.key!=='timelord' && (STATS.lifetime_xp||0)<3500){
+    showToast('Reach Time Lord (3500+ Lifetime XP) to Rebirth',3200,'warn');
+    return;
+  }
+  const ok=window.confirm('Are you ready to Rebirth? Your Lifetime XP will reset to 0, but you will permanently increase your score multiplier and earn 1 Rebirth Token!');
+  if(!ok) return;
+  STATS.lifetime_xp=0;
+  STATS.prestige_level=(STATS.prestige_level||0)+1;
+  STATS.rebirth_tokens=(STATS.rebirth_tokens||0)+1;
+  STATS.lastRankKey='chaos';
+  try{ await saveAll(); }catch(e){ console.warn(e); }
+  fireConfetti();
+  showToast(`Rebirth complete — Prestige ${STATS.prestige_level} · Token +1 · +${Math.round(STATS.prestige_level*10)}% points`,4200);
+  try{ updatePrestigeUI(); updateAuthUI(fbAuth?.currentUser||null); updateUI(); }catch(e){}
+}
+function applyMythicThemeClass(themeId){
+  document.body.classList.remove('theme-nebula','theme-cyberpunk');
+  if(themeId==='nebula') document.body.classList.add('theme-nebula');
+  if(themeId==='cyberpunk') document.body.classList.add('theme-cyberpunk');
+}
+async function unlockMythicTheme(themeId, cost){
+  const unlocked=new Set(STATS.unlockedThemes||[]);
+  if(unlocked.has(themeId)){
+    STATS.activeMythicTheme=themeId;
+    applyMythicThemeClass(themeId);
+    try{ await saveAll(); }catch(e){}
+    updatePrestigeUI();
+    showToast('Theme activated',1800);
+    return;
+  }
+  if((STATS.rebirth_tokens||0)<cost){
+    showToast(`Need ${cost} Rebirth Token${cost>1?'s':''}`,2800,'warn');
+    return;
+  }
+  STATS.rebirth_tokens-=cost;
+  unlocked.add(themeId);
+  STATS.unlockedThemes=[...unlocked];
+  STATS.activeMythicTheme=themeId;
+  applyMythicThemeClass(themeId);
+  try{ await saveAll(); }catch(e){}
+  updatePrestigeUI();
+  showToast('Mythic theme unlocked',2200);
+}
+function updatePrestigeUI(){
+  ensureRankTracking();
+  const rank=getRankMeta(STATS.lifetime_xp||0);
+  const line=document.getElementById('prestigeStatsLine');
+  if(line){
+    line.textContent=`Lifetime XP: ${STATS.lifetime_xp||0} · ${rank.icon} ${rank.title} · Prestige ${STATS.prestige_level||0} · Tokens ${STATS.rebirth_tokens||0} · Multiplier x${getPrestigeMultiplier().toFixed(2)}`;
+  }
+  const btn=document.getElementById('btnRebirth');
+  if(btn){
+    const can=(STATS.lifetime_xp||0)>=3500;
+    btn.hidden=!can;
+  }
+  const panel=document.getElementById('mythicThemesPanel');
+  if(panel){
+    const unlocked=new Set(STATS.unlockedThemes||[]);
+    const active=STATS.activeMythicTheme;
+    const themes=[
+      {id:'nebula',name:'Cosmic Nebula',cost:1,desc:'Slow-moving nebula gradient across the dashboard'},
+      {id:'cyberpunk',name:'Cyberpunk Pulse',cost:2,desc:'Neon pulse glow on timeline task cards'}
+    ];
+    panel.innerHTML=themes.map(th=>{
+      const own=unlocked.has(th.id);
+      const isOn=active===th.id;
+      const label=own?(isOn?'Active':'Activate'):`Unlock (${th.cost} token${th.cost>1?'s':''})`;
+      return `<div class="mythic-card${isOn?' active':''}"><div><h4>${th.name}</h4><p>${th.desc}</p></div><button type="button" data-mythic="${th.id}" data-cost="${th.cost}">${label}</button></div>`;
+    }).join('');
+  }
+  applyMythicThemeClass(STATS.activeMythicTheme||null);
+}
+
+
 
 let toastT;
 function showToast(msg,ms=3500,type='ok'){
@@ -1359,6 +1552,7 @@ function scheduleEnsureDay(jd){
 // through the exact same renderCard path as SCHED-derived tasks — no special-casing
 // needed anywhere else.
 async function saveScheduleTask(jd,existingId,{time,name,desc,pts,color,foodLog}){
+  pts=Math.min(parseInt(pts,10)||5,30); if(![5,15,30].includes(pts)) pts=pts>=30?30:(pts>=15?15:5);
   scheduleEnsureDay(jd);
   const ts=USER_SCHEDULE[jd].ts;
   const id=existingId||scheduleGenTaskId();
@@ -1444,7 +1638,14 @@ function openScheduleTaskEditor(jd,existingTask,opts){
     descEl.placeholder=en?'Extra details':'تفاصيل إضافية';
     descEl.style.textAlign=en?'left':'right';
   }
-  if(ptsEl){ ptsEl.value=existingTask?(existingTask[6]||5):5; ptsEl.style.textAlign=en?'left':'right'; }
+  if(ptsEl){
+    const raw=existingTask?(existingTask[6]||5):5;
+    const clamped=Math.min(parseInt(raw,10)||5,30);
+    // snap to allowed intensity buckets
+    const bucket=clamped>=30?30:(clamped>=15?15:5);
+    ptsEl.value=String(bucket);
+    ptsEl.style.textAlign=en?'left':'right';
+  }
   if(timeEl){
     const raw=existingTask?existingTask[1]:'';
     const mins=raw?toMin(raw):9*60;
@@ -1492,7 +1693,7 @@ async function stHandleSave(){
   const h12=h24%12||12;
   const displayTime=`${h12}:${String(m).padStart(2,'0')} ${pm?'م':'ص'}`;
   const desc=(document.getElementById('stDesc')?.value||'').trim();
-  const pts=Math.max(0,Math.min(100,parseInt(document.getElementById('stPts')?.value,10)||0));
+  let checkedPoints=Math.min(parseInt(document.getElementById('stPts')?.value,10)||5,30); if(![5,15,30].includes(checkedPoints)) checkedPoints=checkedPoints>=30?30:(checkedPoints>=15?15:5); const pts=checkedPoints;
 
   if(ST_ACTIVE_JD===null){
     if(errEl){ errEl.textContent='⚠️ Error — reopen the task'; errEl.style.display='block'; }
@@ -2361,7 +2562,7 @@ function getReqTasks(jd,iso){
 
 // ===== State =====
 const LS={stats:'sc:stats2',history:'sc:history2',reports:'sc:reports2',penalized:'sc:penalized2',firstSeen:'sc:firstSeen1',userEdits:'sc:userEdits1',aiChat:'sc:aiChat1',userMemory:'sc:userMemory1',mealOptions:'sc:mealOptions1',weeklyPtsHistory:'sc:weeklyPtsHistory1',userSchedule:'sc:userSchedule1',userSettings:'sc:userSettings1'};
-let STATS={cur:0,best:0,pts:0,lc:null,lf:null,lastPtsWeekStart:null};
+let STATS={cur:0,best:0,pts:0,lc:null,lf:null,lastPtsWeekStart:null,lifetime_xp:0,prestige_level:0,rebirth_tokens:0,unlockedThemes:[],activeMythicTheme:null,lastRankKey:'chaos'};
 // {weekStartISO: finalPointsTotal} — archive of past weeks' final point totals,
 // written right before resetWeeklyPointsIfNewWeek() zeroes STATS.pts, so a week's
 // total is never silently destroyed with zero trace when the week rolls over.
@@ -2732,7 +2933,8 @@ function rescueFutureDatedEntries() {
 }
 
 async function loadAll() {
-    STATS = (await sGet(LS.stats)) || { cur: 0, best: 0, pts: 0, lc: null, lf: null, lastPtsWeekStart: null };
+    STATS = (await sGet(LS.stats)) || { cur: 0, best: 0, pts: 0, lc: null, lf: null, lastPtsWeekStart: null, lifetime_xp:0, prestige_level:0, rebirth_tokens:0, unlockedThemes:[], activeMythicTheme:null, lastRankKey:'chaos' };
+    STATS.lifetime_xp=STATS.lifetime_xp||0; STATS.prestige_level=STATS.prestige_level||0; STATS.rebirth_tokens=STATS.rebirth_tokens||0; STATS.unlockedThemes=STATS.unlockedThemes||[]; STATS.activeMythicTheme=STATS.activeMythicTheme||null; STATS.lastRankKey=STATS.lastRankKey||getRankMeta(STATS.lifetime_xp).key;
     historyData = (await sGet(LS.history)) || {};
     savedReports = (await sGet(LS.reports)) || [];
     penalizedDates = (await sGet(LS.penalized)) || {};
@@ -3437,13 +3639,12 @@ async function finishPrayerFlow(){
   if(document.activeElement && document.activeElement.blur) document.activeElement.blur();
   const scrollYBefore=window.scrollY;
   const total=activePrayer.basePts+activePrayer.bonus;
-  DONE[activePrayer.id]=total;
+  const awardedPr=awardTaskPoints(total,{x:activePrayer.x,y:activePrayer.y});
+  DONE[activePrayer.id]=awardedPr;
   const dk=SELECTED_DATE;
   if(!historyData[dk]) historyData[dk]={};
   if(!historyData[dk].prayerLogs) historyData[dk].prayerLogs={};
-  historyData[dk].prayerLogs[activePrayer.id]={name:activePrayer.name,total,log:activePrayer.log,late:activePrayer.late};
-  STATS.pts+=total;
-  floatPts(activePrayer.x,activePrayer.y,total);
+  historyData[dk].prayerLogs[activePrayer.id]={name:activePrayer.name,total:awardedPr,log:activePrayer.log,late:activePrayer.late};
   if(activePrayer.late){showToast(`⏰ صليت متأخر شوي بس صليت — كمّل كذا`,3200,'late');cardEffect(activePrayer.id,'late');}
   else{showToast(`🕌 صلاة في وقتها، الله يتقبل`,3000);cardEffect(activePrayer.id,'ontime');}
   // Same save-guarantee as confirm/qada: a throw in checkStreak() must never
@@ -4043,6 +4244,7 @@ function updateMacroUI(){
 }
 
 function updateUI(){
+  try{ updatePrestigeUI(); }catch(e){}
   const showTrack=USER_SETTINGS.showTracking!==false;
   const sbarStats=document.querySelector('#sbar .sbar-stats');
   if(sbarStats) sbarStats.style.display=showTrack?'flex':'none';
@@ -4131,11 +4333,16 @@ function updateAuthUI(user){
     notifInSettings.style.background=NOTIF_ENABLED?'rgba(16,185,129,.18)':'rgba(100,116,139,.15)';
     notifInSettings.style.color=NOTIF_ENABLED?'var(--gr)':'var(--so)';
   }
-  if(user){
-    const display=(user.displayName||user.email||'').split('@')[0];
+  const localUser=lsGet('current_user');
+  if(user || localUser){
+    const display=(USER_SETTINGS.displayNameChosen||(user&&(user.displayName||user.email))||localUser||'User').toString().split('@')[0];
+    const rank=getRankMeta(STATS.lifetime_xp||0);
+    const pLevel=STATS.prestige_level||0;
+    const pBadge=pLevel>0?`<span class="prestige-badge">⭐ P${pLevel}</span>`:'';
     btnEl.innerHTML=`${reportBtn}
       <div class="profile-wrap">
-        <button type="button" class="profile-btn" id="profileBtn">👤 ${display} ▾</button>
+        <button type="button" class="profile-btn" id="profileBtn">${display}${pBadge} ▾</button>
+        <span class="rank-chip">${rank.icon} ${rank.title}</span>
         <div class="profile-menu" id="profileMenu">
           <button type="button" id="pm-settings">${t('profile_settings')}</button>
           <div class="pm-sep"></div>
@@ -4676,8 +4883,10 @@ async function aiExecuteAction(intent){
     if(!historyData[iso].done) historyData[iso].done={};
     if(historyData[iso].done[task[0]]===undefined || historyData[iso].done[task[0]]===false){
       historyData[iso].done[task[0]]=task[6]||true;
-      if(iso===SELECTED_DATE) DONE[task[0]]=task[6]||true;
-      if(iso===TODAY) STATS.pts=(STATS.pts||0)+(typeof task[6]==='number'?task[6]:0);
+      const basePts=(typeof task[6]==='number'?task[6]:0);
+      const awarded=(iso===TODAY)?awardTaskPoints(basePts):computeAwardedPoints(basePts);
+      if(iso===SELECTED_DATE) DONE[task[0]]=awarded||true;
+      if(iso!==TODAY) STATS.lifetime_xp=(STATS.lifetime_xp||0)+awarded;
       try{ checkStreak(); }catch(e){ console.error(e); }
     }
     await saveAll();
@@ -5585,8 +5794,9 @@ async function flFinalizeLog(task,description,macro,verdict,showVerdictUI,itemsB
 
   const alreadyDone=DONE[id]!==undefined && DONE[id]!==false;
   if(!alreadyDone){
-    DONE[id]=pts;
-    if(iso===TODAY) STATS.pts=(STATS.pts||0)+pts;
+    const awarded=(iso===TODAY)?awardTaskPoints(pts):computeAwardedPoints(pts);
+    DONE[id]=awarded;
+    if(iso!==TODAY){ /* lifetime still counts for historical logs */ STATS.lifetime_xp=(STATS.lifetime_xp||0)+awarded; }
     try{ checkStreak(); }catch(err){ console.error('checkStreak failed, saving anyway:',err); }
   }
 
@@ -6599,8 +6809,8 @@ document.body.addEventListener('click',async e=>{
       startPrayerFlow(id,cardName,pts,e.clientX,e.clientY,late);return;
     }
     const late=taskObj?isLateNonPrayer(taskObj):false;
-    DONE[id]=pts;STATS.pts+=pts;
-    floatPts(e.clientX,e.clientY,pts);
+    const awarded=awardTaskPoints(pts,{x:e.clientX,y:e.clientY});
+    DONE[id]=awarded;
     if(late){showToast('⏰ متأخر شوي بس تم — استمر كذا 💪',3000,'late');cardEffect(id,'late');}
     else{showToast('✅ في الوقت المثالي، أحسنت',2200);cardEffect(id,'ontime');}
     // checkStreak() and the re-render below must never be able to swallow the save.
@@ -6623,8 +6833,8 @@ document.body.addEventListener('click',async e=>{
     if(DONE[id]!==undefined)return;
     const pts=parseInt(ptsAttr||'0',10);
     const half=Math.floor(pts/2);
-    DONE[id]='qada';STATS.pts+=half;
-    floatPts(e.clientX,e.clientY,half);
+    const awarded=awardTaskPoints(half,{x:e.clientX,y:e.clientY});
+    DONE[id]='qada';
     cardEffect(id,'qada');
     try{ checkStreak(); }catch(err){ console.error('checkStreak failed, saving anyway:',err); }
     try{
@@ -6796,10 +7006,19 @@ function showLandingIfNeeded(){
   lp.style.display='none';
   return false;
 }
+
+document.addEventListener('click',e=>{
+  if(e.target && e.target.id==='rankUpClose'){ document.getElementById('rankUpModal')?.classList.remove('open'); return; }
+  if(e.target && e.target.id==='btnRebirth'){ doRebirth(); return; }
+  const myth=e.target && e.target.closest && e.target.closest('[data-mythic]');
+  if(myth){ unlockMythicTheme(myth.getAttribute('data-mythic'), parseInt(myth.getAttribute('data-cost'),10)||1); return; }
+});
+
 document.addEventListener('DOMContentLoaded', ()=>{
   document.title='Your Schedule';
   wireLandingAuth();
   showLandingIfNeeded();
+  try{ updatePrestigeUI(); applyMythicThemeClass(STATS.activeMythicTheme); }catch(e){}
 });
 
 
@@ -6912,11 +7131,13 @@ if (typeof onAuthStateChanged !== 'undefined' && typeof fbAuth !== 'undefined') 
               lf:laterDate(cloudStats.lf,localStats.lf),
               lastPtsWeekStart:laterDate(cloudStats.lastPtsWeekStart,localStats.lastPtsWeekStart),
               bestFixed:cloudStats.bestFixed||localStats.bestFixed||false,
-              // punishRateOverride is a deliberate one-off setting, not a monotonic
-              // counter like pts/cur/best -- no "max" makes sense for it. Prefer
-              // whichever side actually has a value set, cloud taking priority since
-              // it's more likely to be the most recently-synced device's choice.
-              punishRateOverride:(cloudStats.punishRateOverride!=null)?cloudStats.punishRateOverride:(localStats.punishRateOverride!=null?localStats.punishRateOverride:null)
+              punishRateOverride:(cloudStats.punishRateOverride!=null)?cloudStats.punishRateOverride:(localStats.punishRateOverride!=null?localStats.punishRateOverride:null),
+              lifetime_xp:Math.max(cloudStats.lifetime_xp||0,localStats.lifetime_xp||0),
+              prestige_level:Math.max(cloudStats.prestige_level||0,localStats.prestige_level||0),
+              rebirth_tokens:Math.max(cloudStats.rebirth_tokens||0,localStats.rebirth_tokens||0),
+              unlockedThemes:Array.from(new Set([...(cloudStats.unlockedThemes||[]),...(localStats.unlockedThemes||[])])),
+              activeMythicTheme:cloudStats.activeMythicTheme||localStats.activeMythicTheme||null,
+              lastRankKey:cloudStats.lastRankKey||localStats.lastRankKey||'chaos'
             };
           }
           // FIX: this used to be a flat overwrite (savedReports=d.reports), which is
