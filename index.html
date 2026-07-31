@@ -4,7 +4,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1.0,maximum-scale=1.0,user-scalable=no">
-<title>الجدول الذكي 🏋️</title>
+<title>Your Schedule</title>
 <link rel="icon" href="data:," />
 <!-- Web app manifest — REQUIRED for iOS to treat "Add to Home Screen" as a real PWA
      install rather than a plain bookmark. Without this + the apple-mobile-web-app-*
@@ -18,7 +18,7 @@
 <link rel="manifest" href="./manifest.json" />
 <meta name="apple-mobile-web-app-capable" content="yes" />
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
-<meta name="apple-mobile-web-app-title" content="الجدول الذكي" />
+<meta name="apple-mobile-web-app-title" content="Your Schedule" />
 <meta name="theme-color" content="#0a0e1a" />
 <!-- Apple-specific home-screen icon link (separate from the generic favicon above —
      iOS ignores rel="icon" for the home-screen icon and requires rel="apple-touch-icon"
@@ -419,12 +419,12 @@ html[dir="ltr"] .tc[data-c="sunrise"]{border-left:3px solid var(--or)}
 </head>
 <body>
 
-<!-- ===== PUBLIC LANDING (shown when localStorage.current_user is empty) ===== -->
+<!-- ===== PUBLIC LANDING + MORGEN-STYLE LOGIN CANVAS ===== -->
 <div id="landingPage" style="display:none;position:fixed;inset:0;z-index:10080;background:#0a0e1a;color:#f1f5f9;font-family:'Cairo',sans-serif;overflow-y:auto">
   <nav style="position:sticky;top:0;z-index:10;display:flex;align-items:center;justify-content:space-between;gap:16px;padding:14px 28px;background:rgba(10,14,26,.92);backdrop-filter:blur(14px);border-bottom:1px solid #1e2d45">
     <div style="display:flex;align-items:center;gap:10px;font-weight:900;font-size:1.05rem">
-      <span style="width:34px;height:34px;border-radius:10px;background:#111827;border:1px solid #1e2d45;display:flex;align-items:center;justify-content:center">🏋️</span>
-      <span>Smart Schedule</span>
+      <span style="width:34px;height:34px;border-radius:10px;background:#111827;border:1px solid #1e2d45;display:flex;align-items:center;justify-content:center;font-size:.9rem;color:#60a5fa">YS</span>
+      <span>Your Schedule</span>
     </div>
     <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;justify-content:flex-end">
       <a href="#features" style="color:#94a3b8;text-decoration:none;font-weight:700;font-size:.85rem;padding:8px 10px">Features</a>
@@ -458,23 +458,57 @@ html[dir="ltr"] .tc[data-c="sunrise"]{border-left:3px solid var(--or)}
   </section>
 </div>
 
-<!-- Registration popup -->
-<div id="authModal" style="display:none;position:fixed;inset:0;z-index:10090;background:rgba(0,0,0,.55);align-items:center;justify-content:center;padding:16px">
-  <div style="width:min(420px,100%);background:#111827;border:1px solid #1e2d45;border-radius:16px;padding:22px;box-shadow:0 20px 60px rgba(0,0,0,.5)">
-    <div style="font-size:1.15rem;font-weight:900;margin-bottom:6px">Create your workspace</div>
-    <div style="color:#94a3b8;font-size:.85rem;margin-bottom:14px">Enter a username to continue. Saved on this device.</div>
-    <input id="authUsernameInput" type="text" placeholder="Username" style="width:100%;box-sizing:border-box;font-family:inherit;font-size:.95rem;font-weight:700;padding:12px 14px;border-radius:10px;border:1px solid #1e2d45;background:#0a0e1a;color:#f1f5f9;margin-bottom:12px" />
-    <div style="display:flex;gap:10px;justify-content:flex-end">
-      <button type="button" id="authCancelBtn" style="font-family:inherit;font-weight:800;font-size:.82rem;padding:10px 14px;border-radius:10px;border:1px solid #1e2d45;background:transparent;color:#94a3b8;cursor:pointer">Cancel</button>
-      <button type="button" id="authContinueBtn" style="font-family:inherit;font-weight:900;font-size:.82rem;padding:10px 16px;border-radius:10px;border:none;background:linear-gradient(135deg,#2563eb,#1d4ed8);color:#fff;cursor:pointer">Continue</button>
+<!-- Morgen-style full-canvas login (replaces old modal popup) -->
+<div id="loginCanvas" style="display:none;position:fixed;inset:0;z-index:10085;background:#0b0f19;color:#f1f5f9;font-family:'Cairo',sans-serif">
+  <div style="display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.1fr);height:100%;min-height:100vh">
+    <div style="display:flex;flex-direction:column;justify-content:center;padding:clamp(28px,6vw,64px);max-width:520px;width:100%;margin:0 auto;box-sizing:border-box">
+      <div style="font-weight:900;font-size:.95rem;margin-bottom:28px;letter-spacing:.02em">Your Schedule</div>
+      <h1 style="font-size:clamp(1.55rem,3.2vw,2.15rem);font-weight:900;line-height:1.25;margin:0 0 28px">Take back control of your time with all your schedules in one place.</h1>
+      <button type="button" id="loginGoogleBtn" style="width:100%;display:flex;align-items:center;justify-content:center;gap:10px;font-family:inherit;font-weight:800;font-size:.95rem;padding:14px 18px;border-radius:12px;border:1px solid #2a3548;background:#151b2b;color:#f1f5f9;cursor:pointer;margin-bottom:18px">
+        <svg width="18" height="18" viewBox="0 0 48 48" aria-hidden="true"><path fill="#FFC107" d="M43.6 20.5H42V20H24v8h11.3C33.7 32.7 29.3 36 24 36c-6.6 0-12-5.4-12-12s5.4-12 12-12c3 0 5.8 1.1 7.9 3l5.7-5.7C34 5.1 29.3 3 24 3 12.3 3 3 12.3 3 24s9.3 21 21 21 21-9.3 21-21c0-1.4-.1-2.3-.4-3.5z"/><path fill="#FF3D00" d="M6.3 14.7l6.6 4.8C14.7 16 19 13 24 13c3 0 5.8 1.1 7.9 3l5.7-5.7C34 5.1 29.3 3 24 3 16.1 3 9.2 7.4 6.3 14.7z"/><path fill="#4CAF50" d="M24 45c5.2 0 9.9-2 13.4-5.2l-6.2-5.2C29.3 36 26.8 37 24 37c-5.2 0-9.6-3.3-11.2-7.9l-6.5 5C9.1 40.5 16 45 24 45z"/><path fill="#1976D2" d="M43.6 20.5H42V20H24v8h11.3c-.8 2.2-2.2 4.1-4.1 5.5l.1.1 6.2 5.2C39.2 37.1 45 32 45 24c0-1.4-.1-2.3-.4-3.5z"/></svg>
+        Continue with Google
+      </button>
+      <div style="display:flex;align-items:center;gap:12px;margin:6px 0 18px;color:#64748b;font-size:.78rem;font-weight:700">
+        <div style="flex:1;height:1px;background:#1e2d45"></div>
+        <span>or continue with email</span>
+        <div style="flex:1;height:1px;background:#1e2d45"></div>
+      </div>
+      <label for="authUsernameInput" style="font-size:.78rem;font-weight:800;color:#94a3b8;margin-bottom:8px;display:block">Enter your email or username</label>
+      <input id="authUsernameInput" type="text" placeholder="you@example.com" style="width:100%;box-sizing:border-box;font-family:inherit;font-size:.95rem;font-weight:700;padding:14px 16px;border-radius:12px;border:1px solid #2a3548;background:#0f1522;color:#f1f5f9;margin-bottom:14px" />
+      <button type="button" id="authContinueBtn" style="width:100%;font-family:inherit;font-weight:900;font-size:.95rem;padding:14px 18px;border-radius:12px;border:none;background:#6d5efc;color:#fff;cursor:pointer;margin-bottom:14px">Continue</button>
+      <button type="button" id="authCancelBtn" style="background:transparent;border:none;color:#64748b;font-family:inherit;font-weight:700;font-size:.82rem;cursor:pointer;padding:8px">Back to home</button>
+      <p style="margin-top:18px;color:#475569;font-size:.72rem;line-height:1.5">By continuing you agree to use this free local workspace on this device.</p>
+    </div>
+    <div style="display:none;background:radial-gradient(ellipse at 30% 20%,#1a2744 0%,#0b0f19 55%),linear-gradient(160deg,#0b0f19,#121826);border-left:1px solid #1e2d45;position:relative;overflow:hidden" id="loginCanvasArt">
+      <div style="position:absolute;inset:0;opacity:.55;background-image:linear-gradient(#1e2d45 1px,transparent 1px),linear-gradient(90deg,#1e2d45 1px,transparent 1px);background-size:48px 48px"></div>
+      <div style="position:relative;z-index:1;height:100%;display:flex;align-items:center;justify-content:center;padding:40px">
+        <div style="width:min(420px,90%);display:flex;flex-direction:column;gap:10px">
+          <div style="height:54px;border-radius:12px;background:#151b2b;border:1px solid #243148"></div>
+          <div style="height:54px;border-radius:12px;background:#151b2b;border:1px solid #243148;opacity:.85"></div>
+          <div style="height:54px;border-radius:12px;background:#1a2336;border:1px solid #3b82f6;box-shadow:0 0 0 3px rgba(59,130,246,.15)"></div>
+          <div style="height:54px;border-radius:12px;background:#151b2b;border:1px solid #243148;opacity:.7"></div>
+          <div style="height:54px;border-radius:12px;background:#151b2b;border:1px solid #243148;opacity:.55"></div>
+          <div style="margin-top:18px;color:#94a3b8;font-size:.85rem;font-weight:700;text-align:center">Block time. Protect focus. Ship the day.</div>
+        </div>
+      </div>
     </div>
   </div>
 </div>
+<style>
+@media (min-width:900px){
+  #loginCanvasArt{display:block!important}
+}
+@media (max-width:899px){
+  #loginCanvas > div{grid-template-columns:1fr!important}
+}
+.ob-day-strip{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:12px}
+.ob-day-tab{font-family:inherit;font-weight:800;font-size:.72rem;padding:8px 12px;border-radius:999px;border:1px solid var(--br);background:var(--c);color:var(--so);cursor:pointer}
+.ob-day-tab.on{border-color:var(--ac);background:color-mix(in srgb,var(--ac) 18%,var(--c));color:var(--tx)}
+</style>
 
-
-<div id="ld" style="display:flex;align-items:center;justify-content:center;height:100vh;flex-direction:column;gap:16px">
+<div id="ld"<div id="ld" style="display:flex;align-items:center;justify-content:center;height:100vh;flex-direction:column;gap:16px">
   <div style="width:40px;height:40px;border:3px solid #1e2d45;border-top-color:#3b82f6;border-radius:50%;animation:spin .8s linear infinite"></div>
-  <span style="color:#64748b;font-family:Cairo,sans-serif;font-size:.9rem">جاري تحميل الجدول الذكي...</span>
+  <span style="color:#64748b;font-family:Cairo,sans-serif;font-size:.9rem">Loading Your Schedule...</span>
 </div>
 
 <main id="app" style="display:none">
@@ -655,7 +689,7 @@ html[dir="ltr"] .tc[data-c="sunrise"]{border-left:3px solid var(--or)}
      the very first thing a brand-new account ever sees. -->
 <div id="obWizard">
   <div class="ob-topbar">
-    <div class="ob-brand">🏋️ الجدول الذكي</div>
+    <div class="ob-brand">Your Schedule</div>
     <div class="ob-stepcount" id="obStepCount"></div>
   </div>
   <div class="ob-body">
@@ -668,8 +702,8 @@ html[dir="ltr"] .tc[data-c="sunrise"]{border-left:3px solid var(--or)}
   <div class="ob-bottombar">
     <div class="ob-progress-track"><div class="ob-progress-fill" id="obProgressFill" style="width:0%"></div></div>
     <div class="ob-navrow">
-      <button id="btn-onboard-back" class="ob-navbtn ob-navbtn-back" type="button">→ رجوع</button>
-      <button id="btn-onboard-next" class="ob-navbtn ob-navbtn-next" type="button">التالي ←</button>
+      <button id="btn-onboard-back" class="ob-navbtn ob-navbtn-back" type="button">← Back</button>
+      <button id="btn-onboard-next" class="ob-navbtn ob-navbtn-next" type="button">Next →</button>
     </div>
   </div>
 </div>
@@ -1102,7 +1136,7 @@ const PMETA={
   Isha:{ar:'العشاء',ic:'🌙',pts:10,sunnah:'سنة العشاء (ركعتان بعد)'}
 };
 const DKEYS=['sun','mon','tue','wed','thu','fri','sat'];
-const DSHORT=['الأحد','الاثنين','الثلاثاء','الأربعاء','الخميس','الجمعة','السبت'];
+const DSHORT=['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
 const WEEK_ORDER=[6,0,1,2,3,4,5];
 const FALLBK={Fajr:'03:13',Sunrise:'04:50',Dhuhr:'11:51',Asr:'15:25',Maghrib:'18:51',Isha:'20:26'};
 let PRYT={...FALLBK};
@@ -1906,7 +1940,7 @@ async function saveUserSettings(){
 // until Stage 3 exists. This is an intentional, explicit scope boundary, not an
 // oversight — flagged in the finish handler below too.
 let OB_STEP=0;
-let OB_ANSWERS={name:'',trackPrayers:null,messyTasks:'',workspaceName:''};
+let OB_ANSWERS={name:'',trackPrayers:null,messyTasks:'',workspaceName:'',weeklySchedule:{Sat:'',Sun:'',Mon:'',Tue:'',Wed:'',Thu:'',Fri:''}};
 const OB_TOTAL_STEPS=4;
 
 // Step definitions: each step is either type 'text' (free text input, Next enabled
@@ -1915,6 +1949,10 @@ const OB_TOTAL_STEPS=4;
 // obGetAnswerKey stay short and every step follows one consistent rendering path —
 // adding a future step (e.g. a Stage 2 theme-color chip step) means adding one entry
 // here, not touching the render/advance logic itself.
+const OB_WEEK_DAYS=['Sat','Sun','Mon','Tue','Wed','Thu','Fri'];
+const OB_DAY_TO_JD={Sun:0,Mon:1,Tue:2,Wed:3,Thu:4,Fri:5,Sat:6};
+let OB_ACTIVE_DAY='Mon';
+
 const OB_STEPS=[
   {
     key:'name',
@@ -1934,11 +1972,11 @@ const OB_STEPS=[
     ]
   },
   {
-    key:'messyTasks',
-    type:'textarea',
+    key:'weeklySchedule',
+    type:'weekdays',
     title:'What does a typical day look like?',
-    sub:'Type what you do every day or paste your messy task list here.',
-    placeholder:'e.g. wake up, gym, work on API, lunch, review PRs, walk, sleep...'
+    sub:'Switch days and describe each one. Leave a day blank if it should stay empty.',
+    placeholder:'e.g. wake up, gym, deep work, lunch, review PRs, walk, sleep...'
   },
   {
     key:'workspaceName',
@@ -1965,6 +2003,10 @@ function obCanAdvance(){
   const val=OB_ANSWERS[step.key];
   if(step.type==='text' || step.type==='textarea') return typeof val==='string' && val.trim().length>0;
   if(step.type==='chips') return val!==null && val!==undefined;
+  if(step.type==='weekdays'){
+    const ws=OB_ANSWERS.weeklySchedule||{};
+    return OB_WEEK_DAYS.some(d=>String(ws[d]||'').trim().length>0);
+  }
   return false;
 }
 
@@ -1977,7 +2019,6 @@ function obRenderStep(){
   const subEl=document.getElementById('obSub');
   const bodyEl=document.getElementById('obStepBody');
   if(!titleEl||!subEl||!bodyEl) return;
-  // No default emojis in step headers
   titleEl.textContent=step.title;
   subEl.textContent=step.sub;
   bodyEl.innerHTML='';
@@ -2005,6 +2046,43 @@ function obRenderStep(){
     ta.oninput=()=>{ OB_ANSWERS[step.key]=ta.value; obUpdateNavButtons(); };
     bodyEl.appendChild(ta);
     setTimeout(()=>ta.focus(),80);
+  }else if(step.type==='weekdays'){
+    if(!OB_ANSWERS.weeklySchedule){
+      OB_ANSWERS.weeklySchedule={Sat:'',Sun:'',Mon:'',Tue:'',Wed:'',Thu:'',Fri:''};
+    }
+    const strip=document.createElement('div');
+    strip.className='ob-day-strip';
+    OB_WEEK_DAYS.forEach(d=>{
+      const btn=document.createElement('button');
+      btn.type='button';
+      btn.className='ob-day-tab'+(OB_ACTIVE_DAY===d?' on':'');
+      btn.textContent=d;
+      btn.onclick=()=>{
+        const ta=document.getElementById('obActiveTextInput');
+        if(ta) OB_ANSWERS.weeklySchedule[OB_ACTIVE_DAY]=ta.value;
+        OB_ACTIVE_DAY=d;
+        obRenderStep();
+      };
+      strip.appendChild(btn);
+    });
+    bodyEl.appendChild(strip);
+    const ta=document.createElement('textarea');
+    ta.id='obActiveTextInput';
+    ta.className='ob-textinput';
+    ta.rows=8;
+    ta.style.minHeight='160px';
+    ta.style.resize='vertical';
+    ta.style.lineHeight='1.5';
+    ta.placeholder=(step.placeholder||'')+' ('+OB_ACTIVE_DAY+')';
+    ta.value=OB_ANSWERS.weeklySchedule[OB_ACTIVE_DAY]||'';
+    ta.oninput=()=>{
+      OB_ANSWERS.weeklySchedule[OB_ACTIVE_DAY]=ta.value;
+      // keep messyTasks as a joined mirror for backward compatibility
+      OB_ANSWERS.messyTasks=OB_WEEK_DAYS.map(d=>(OB_ANSWERS.weeklySchedule[d]||'').trim()).filter(Boolean).join('\n');
+      obUpdateNavButtons();
+    };
+    bodyEl.appendChild(ta);
+    setTimeout(()=>ta.focus(),80);
   }else if(step.type==='chips'){
     const wrap=document.createElement('div');
     wrap.className='ob-chips';
@@ -2012,7 +2090,6 @@ function obRenderStep(){
       const card=document.createElement('div');
       const isSel=OB_ANSWERS[step.key]===chip.value;
       card.className='ob-chip'+(isSel?' sel':'');
-      // No icons/emojis on chips
       card.innerHTML=`<div class="ob-chip-label">${chip.label}</div><div class="ob-chip-desc">${chip.desc||''}</div>`;
       card.onclick=()=>{ OB_ANSWERS[step.key]=chip.value; obRenderStep(); };
       wrap.appendChild(card);
@@ -2026,10 +2103,13 @@ function obRenderStep(){
 function obUpdateNavButtons(){
   const backBtn=document.getElementById('btn-onboard-back');
   const nextBtn=document.getElementById('btn-onboard-next');
-  if(backBtn) backBtn.disabled=OB_STEP===0;
+  if(backBtn){
+    backBtn.disabled=OB_STEP===0;
+    backBtn.textContent='← Back';
+  }
   if(!nextBtn) return;
   const isLast=OB_STEP===OB_TOTAL_STEPS-1;
-  nextBtn.textContent=isLast?'Finish':'Next';
+  nextBtn.textContent=isLast?'Finish':'Next →';
   nextBtn.className='ob-navbtn '+(isLast?'ob-navbtn-finish':'ob-navbtn-next');
   nextBtn.disabled=!obCanAdvance();
 }
@@ -2115,20 +2195,20 @@ async function handleBuildScheduleFromText(messyText, opts={}){
   return applyBuiltBlocksToSchedule(blocks, today);
 }
 
-function applyBuiltBlocksToSchedule(blocks, todayIso){
+function applyBuiltBlocksToSchedule(blocks, todayIso, targetJd){
   if(!USER_SCHEDULE || !Object.keys(USER_SCHEDULE).length){
     USER_SCHEDULE={};
     for(let jd=0; jd<7; jd++){
       USER_SCHEDULE[jd]={n:(typeof DSHORT!=='undefined'?DSHORT[jd]:['Sun','Mon','Tue','Wed','Thu','Fri','Sat'][jd]), wk:'8:00 ص', bd:'11:00 م', gm:null, ts:[]};
     }
   }
-  const jd=(typeof getJDfromISO==='function')?getJDfromISO(todayIso):(new Date(todayIso+'T12:00:00').getDay());
-  if(!USER_SCHEDULE[jd]) USER_SCHEDULE[jd]={n:'',wk:'8:00 ص',bd:'11:00 م',gm:null,ts:[]};
+  const jd=(targetJd!=null)?targetJd:((typeof getJDfromISO==='function')?getJDfromISO(todayIso):(new Date(todayIso+'T12:00:00').getDay()));
+  if(!USER_SCHEDULE[jd]) USER_SCHEDULE[jd]={n:(DSHORT&&DSHORT[jd])||'',wk:'8:00 AM',bd:'11:00 PM',gm:null,ts:[]};
 
   const toArDisplay=(hhmm)=>{
     const [h0,m0]=String(hhmm).split(':').map(Number);
-    let h=h0, ap='ص';
-    if(h>=12){ ap='م'; if(h>12) h-=12; }
+    let h=h0, ap='AM';
+    if(h>=12){ ap='PM'; if(h>12) h-=12; }
     if(h===0) h=12;
     return `${h}:${String(m0).padStart(2,'0')} ${ap}`;
   };
@@ -2156,12 +2236,20 @@ function applyBuiltBlocksToSchedule(blocks, todayIso){
 }
 
 async function obFinish(){
-  // FIXED: never reference obIsEn — always read language from USER_SETTINGS
-  const en=(USER_SETTINGS && USER_SETTINGS.lang==='en');
+  document.title='Your Schedule';
+  const en=true;
+
+  // Flush active day textarea if still on weekdays step
+  try{
+    const ta=document.getElementById('obActiveTextInput');
+    if(ta && OB_ANSWERS.weeklySchedule && OB_ACTIVE_DAY){
+      OB_ANSWERS.weeklySchedule[OB_ACTIVE_DAY]=ta.value;
+    }
+  }catch(e){}
 
   USER_SETTINGS={
     ...USER_SETTINGS,
-    lang: USER_SETTINGS.lang || 'en',
+    lang: 'en',
     trackPrayers: !!OB_ANSWERS.trackPrayers,
     displayNameChosen: (OB_ANSWERS.name||'').trim(),
     workspaceName: (OB_ANSWERS.workspaceName||'').trim(),
@@ -2172,23 +2260,39 @@ async function obFinish(){
   for(let jd=0; jd<7; jd++){
     emptySchedule[jd]={
       n:(typeof DSHORT!=='undefined'?DSHORT[jd]:['Sun','Mon','Tue','Wed','Thu','Fri','Sat'][jd]),
-      wk:'8:00 ص',
-      bd:'11:00 م',
+      wk:'8:00 AM',
+      bd:'11:00 PM',
       gm:null,
       ts:[]
     };
   }
   USER_SCHEDULE=emptySchedule;
 
-  const messy=(OB_ANSWERS.messyTasks||'').trim();
-  if(messy){
+  const weekly=OB_ANSWERS.weeklySchedule||{};
+  for(const dayName of OB_WEEK_DAYS){
+    const raw=String(weekly[dayName]||'').trim();
+    if(!raw) continue;
+    const jd=OB_DAY_TO_JD[dayName];
     try{
-      await handleBuildScheduleFromText(messy, {
-        today: (typeof TODAY!=='undefined'?TODAY:new Date().toISOString().slice(0,10)),
-        lang: en?'en':'ar'
-      });
+      // Local parser path — force target weekday
+      const parts=raw.split(/\n|,|•|\u2022|;/).map(s=>s.replace(/^[-*\d\.\)\s]+/,'').trim()).filter(Boolean).slice(0,12);
+      const blocks=[];
+      let cursor=8*60;
+      for(const p of parts){
+        const dur=90;
+        const start=cursor;
+        const end=Math.min(start+dur, 22*60);
+        const h1=String(Math.floor(start/60)).padStart(2,'0');
+        const m1=String(start%60).padStart(2,'0');
+        const h2=String(Math.floor(end/60)).padStart(2,'0');
+        const m2=String(end%60).padStart(2,'0');
+        blocks.push({start:`${h1}:${m1}`, end:`${h2}:${m2}`, task:p, category:'Deep Work'});
+        cursor=end+15;
+        if(cursor>=22*60) break;
+      }
+      applyBuiltBlocksToSchedule(blocks, (typeof TODAY!=='undefined'?TODAY:new Date().toISOString().slice(0,10)), jd);
     }catch(e){
-      console.warn('schedule build from onboarding text failed', e);
+      console.warn('weekday schedule build failed', dayName, e);
     }
   }
 
@@ -2197,7 +2301,7 @@ async function obFinish(){
     await saveUserSchedule();
   }catch(e){
     console.warn('onboarding save failed', e);
-    showToast(en?'Could not save settings — try again':'تعذر حفظ الإعدادات — حاول مرة أخرى',3500,'warn');
+    showToast('Could not save settings — try again',3500,'warn');
   }
 
   lsSet('has_onboarded','true');
@@ -2211,7 +2315,7 @@ async function obFinish(){
     switchDay(typeof todayJD==='function'?todayJD():new Date().getDay());
     updateUI();
     revealApp();
-    showToast(en?'Your schedule is ready':'جدولك جاهز',2400);
+    showToast('Your schedule is ready',2400);
   }catch(e){
     console.warn('post-onboarding re-render failed', e);
   }
@@ -6287,7 +6391,10 @@ document.body.addEventListener('click',async e=>{
     }
 
     try{
-      // Clear app-local state so next anonymous visit looks brand-new.
+      // Session gate: clear identity so public landing + login canvas return
+      lsRemove('current_user');
+      // Keep has_onboarded so a returning user skips the wizard after sign-in
+
       lsRemove(LS.stats);
       lsRemove(LS.history);
       lsRemove(LS.reports);
@@ -6300,7 +6407,6 @@ document.body.addEventListener('click',async e=>{
       lsRemove(LS.userSchedule);
       lsRemove(LS.userSettings);
 
-      // Clear any in-memory state
       STATS={cur:0,best:0,pts:0,lc:null,lf:null};
       DONE={};
       historyData={};
@@ -6311,7 +6417,7 @@ document.body.addEventListener('click',async e=>{
       USER_MEMORY=[];
       MEAL_OPTIONS={};
       USER_SCHEDULE={};
-      USER_SETTINGS={trackPrayers:true};
+      USER_SETTINGS={trackPrayers:true,lang:'en'};
       PENDING_ONBOARDING=false;
       AI_SESSIONS=[];
       AI_ACTIVE_SESSION_ID=null;
@@ -6320,7 +6426,14 @@ document.body.addEventListener('click',async e=>{
       SELECTED_DATE=TODAY;
     }catch(e){console.warn('local reset failed',e);}
 
-    window.location.reload();
+    try{
+      const app=document.getElementById('app'); if(app) app.style.display='none';
+      const wiz=document.getElementById('obWizard'); if(wiz) wiz.classList.remove('open');
+      const lc=document.getElementById('loginCanvas'); if(lc) lc.style.display='none';
+      showLandingIfNeeded();
+    }catch(e){
+      window.location.reload();
+    }
     return;
   }
 
@@ -6562,6 +6675,7 @@ document.body.addEventListener('keydown',async e=>{
 // fires. Previously #aiFab had no gating tied to load state at all and was tappable
 // during the loading spinner.
 function revealApp(){
+  try{ document.title='Your Schedule'; }catch(e){}
   const ldEl=document.getElementById('ld'); if(ldEl) ldEl.style.display='none';
   const appEl=document.getElementById('app'); if(appEl) appEl.style.display='block';
   const fabEl=document.getElementById('aiFab'); if(fabEl) fabEl.classList.remove('hidden');
@@ -6580,36 +6694,53 @@ function revealApp(){
 }
 
 
-// ===== Public landing + client registration =====
+// ===== Public landing + Morgen-style login canvas =====
 function openAuthModal(){
-  const m=document.getElementById('authModal');
-  if(!m) return;
-  m.style.display='flex';
-  const inp=document.getElementById('authUsernameInput');
-  if(inp){ inp.value=''; setTimeout(()=>inp.focus(),50); }
+  const lc=document.getElementById('loginCanvas');
+  const lp=document.getElementById('landingPage');
+  if(lp) lp.style.display='none';
+  if(lc){
+    lc.style.display='block';
+    const inp=document.getElementById('authUsernameInput');
+    if(inp){ inp.value=''; setTimeout(()=>inp.focus(),80); }
+  }
 }
 function closeAuthModal(){
-  const m=document.getElementById('authModal');
-  if(m) m.style.display='none';
+  const lc=document.getElementById('loginCanvas');
+  if(lc) lc.style.display='none';
+  const lp=document.getElementById('landingPage');
+  if(lp && !lsGet('current_user')) lp.style.display='block';
 }
-function completeLocalSignup(username){
+async function completeLocalSignup(username){
   const name=String(username||'').trim();
   if(!name){
-    showToast('Please enter a username',2200,'warn');
+    showToast('Please enter your email or username',2200,'warn');
     return;
   }
   lsSet('current_user', name);
   closeAuthModal();
   const lp=document.getElementById('landingPage');
   if(lp) lp.style.display='none';
-  if(!lsGet('has_onboarded')){
-    OB_STEP=0;
-    OB_ANSWERS={name:'',trackPrayers:null,messyTasks:'',workspaceName:''};
-    try{ document.getElementById('obWizard')?.classList.add('open'); }catch(e){}
-    try{ obShowStep(); }catch(e){ console.warn(e); }
-  }else{
-    try{ revealApp(); }catch(e){}
+  const lc=document.getElementById('loginCanvas');
+  if(lc) lc.style.display='none';
+
+  // Session gatekeeper: skip wizard if already onboarded
+  if(lsGet('has_onboarded')){
+    try{
+      await loadAll();
+      renderTabs(); renderPanels(); switchDay(todayJD()); updateUI();
+      revealApp();
+    }catch(e){
+      try{ revealApp(); }catch(err){}
+    }
+    return;
   }
+
+  OB_STEP=0;
+  OB_ACTIVE_DAY='Mon';
+  OB_ANSWERS={name:'',trackPrayers:null,messyTasks:'',workspaceName:'',weeklySchedule:{Sat:'',Sun:'',Mon:'',Tue:'',Wed:'',Thu:'',Fri:''}};
+  try{ document.getElementById('obWizard')?.classList.add('open'); }catch(e){}
+  try{ obShowStep(); }catch(e){ console.warn(e); }
 }
 function wireLandingAuth(){
   ['landingSignInBtn','landingGetStartedBtn','landingHeroCta','landingPricingCta'].forEach(id=>{
@@ -6623,16 +6754,42 @@ function wireLandingAuth(){
   document.getElementById('authUsernameInput')?.addEventListener('keydown', e=>{
     if(e.key==='Enter') completeLocalSignup(e.target.value);
   });
+  document.getElementById('loginGoogleBtn')?.addEventListener('click', async ()=>{
+    // Reuse existing Firebase Google popup flow if available
+    try{
+      if(typeof fbAuth!=='undefined' && typeof GoogleAuthProvider!=='undefined' && typeof signInWithPopup!=='undefined'){
+        const provider=new GoogleAuthProvider();
+        await signInWithPopup(fbAuth, provider);
+        // onAuthStateChanged will continue the flow; also set local session marker
+        const u=fbAuth.currentUser;
+        if(u){
+          lsSet('current_user', u.email || u.displayName || u.uid);
+          closeAuthModal();
+          if(lsGet('has_onboarded')){
+            try{ revealApp(); }catch(e){}
+          }
+        }
+        return;
+      }
+    }catch(e){
+      console.warn('Google sign-in failed', e);
+      showToast('Google sign-in unavailable — use email/username',3200,'warn');
+    }
+  });
 }
 function showLandingIfNeeded(){
+  document.title='Your Schedule';
   const hasUser=!!lsGet('current_user');
   const lp=document.getElementById('landingPage');
+  const lc=document.getElementById('loginCanvas');
+  if(lc) lc.style.display='none';
   if(!lp) return !hasUser;
   if(!hasUser){
     lp.style.display='block';
     try{
       const app=document.getElementById('app'); if(app) app.style.display='none';
       const ld=document.getElementById('ld'); if(ld) ld.style.display='none';
+      const wiz=document.getElementById('obWizard'); if(wiz) wiz.classList.remove('open');
     }catch(e){}
     return true;
   }
@@ -6640,9 +6797,11 @@ function showLandingIfNeeded(){
   return false;
 }
 document.addEventListener('DOMContentLoaded', ()=>{
+  document.title='Your Schedule';
   wireLandingAuth();
   showLandingIfNeeded();
 });
+
 
 function initAppFlow(user){
   if(showLandingIfNeeded()) return;
@@ -6686,7 +6845,7 @@ function initAppFlow(user){
     // cloud-merge code path), so existing guest access is completely unaffected.
     if((PENDING_ONBOARDING && user) || (lsGet('current_user') && !lsGet('has_onboarded'))){
       OB_STEP=0;
-      OB_ANSWERS={name:'',trackPrayers:null,messyTasks:'',workspaceName:''};
+      OB_ANSWERS={name:'',trackPrayers:null,messyTasks:'',workspaceName:'',weeklySchedule:{Sat:'',Sun:'',Mon:'',Tue:'',Wed:'',Thu:'',Fri:''}};
       obShowStep();
     }
   }).catch(e=>{
