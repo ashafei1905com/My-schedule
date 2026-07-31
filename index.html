@@ -445,6 +445,17 @@ body.theme-cyberpunk .tc{
 .mythic-card button{font-family:inherit;font-weight:800;font-size:.75rem;padding:8px 12px;border-radius:10px;border:1px solid var(--br);background:var(--c2);color:var(--tx);cursor:pointer;white-space:nowrap}
 .mythic-card button:disabled{opacity:.45;cursor:not-allowed}
 .mythic-card.active{border-color:var(--ac);box-shadow:0 0 0 1px color-mix(in srgb,var(--ac) 40%,transparent)}
+
+/* login canvas must fully cover app chrome — no dashboard bleed-through */
+#loginCanvas{
+  position:fixed!important;inset:0!important;z-index:99999!important;
+  background-color:#0b0f19!important;background:#0b0f19!important;
+  color:#f1f5f9;isolation:isolate;
+}
+#loginCanvas[style*="display: block"],#loginCanvas[style*="display:block"]{
+  display:block!important;
+}
+#obWizard{z-index:100060;}
 </style>
 </head>
 <body>
@@ -489,7 +500,7 @@ body.theme-cyberpunk .tc{
 </div>
 
 <!-- Morgen-style full-canvas login (replaces old modal popup) -->
-<div id="loginCanvas" style="display:none;position:fixed;inset:0;z-index:10085;background:#0b0f19;color:#f1f5f9;font-family:'Cairo',sans-serif">
+<div id="loginCanvas" style="display:none;position:fixed;inset:0;z-index:99999;background-color:#0b0f19;background:#0b0f19;color:#f1f5f9;font-family:'Cairo',sans-serif;isolation:isolate">
   <div style="display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.1fr);height:100%;min-height:100vh">
     <div style="display:flex;flex-direction:column;justify-content:center;padding:clamp(28px,6vw,64px);max-width:520px;width:100%;margin:0 auto;box-sizing:border-box">
       <div style="font-weight:900;font-size:.95rem;margin-bottom:28px;letter-spacing:.02em">Your Schedule</div>
@@ -6935,9 +6946,11 @@ async function completeLocalSignup(username){
   if(lc) lc.style.display='none';
 
   // Session gatekeeper: skip wizard if already onboarded
-  if(lsGet('has_onboarded')){
+  try{ await loadAll(); }catch(e){}
+  try{ syncOnboardedFlagFromState(); }catch(e){}
+  if(lsGet('has_onboarded')==='true' || userHasExistingWorkspace()){
+    lsSet('has_onboarded','true');
     try{
-      await loadAll();
       renderTabs(); renderPanels(); switchDay(todayJD()); updateUI();
       revealApp();
     }catch(e){
@@ -6975,9 +6988,10 @@ function wireLandingAuth(){
         if(u){
           lsSet('current_user', u.email || u.displayName || u.uid);
           closeAuthModal();
-          if(lsGet('has_onboarded')){
-            try{ revealApp(); }catch(e){}
-          }
+          try{ document.getElementById('loginCanvas').style.display='none'; }catch(e){}
+          // onAuthStateChanged -> loadAll -> initAppFlow is the source of truth.
+          // Do NOT open onboarding here; existing cloud schedules will set has_onboarded.
+          try{ if(userHasExistingWorkspace()){ lsSet('has_onboarded','true'); revealApp(); } }catch(e){}
         }
         return;
       }
@@ -6987,6 +7001,32 @@ function wireLandingAuth(){
     }
   });
 }
+
+function userHasExistingWorkspace(){
+  try{
+    if(lsGet('has_onboarded')==='true' || lsGet('has_onboarded')===true) return true;
+    if(USER_SETTINGS && USER_SETTINGS.onboardingComplete) return true;
+    if(USER_SCHEDULE && Object.keys(USER_SCHEDULE).length>0){
+      // any day with tasks counts as an existing workspace
+      for(const k of Object.keys(USER_SCHEDULE)){
+        const day=USER_SCHEDULE[k];
+        if(day && Array.isArray(day.ts) && day.ts.length>0) return true;
+      }
+      // non-empty schedule object after migration also counts
+      return true;
+    }
+  }catch(e){}
+  return false;
+}
+function syncOnboardedFlagFromState(){
+  if(userHasExistingWorkspace()){
+    lsSet('has_onboarded','true');
+    PENDING_ONBOARDING=false;
+    return true;
+  }
+  return false;
+}
+
 function showLandingIfNeeded(){
   document.title='Your Schedule';
   const hasUser=!!lsGet('current_user');
@@ -7062,10 +7102,22 @@ function initAppFlow(user){
     // page rather than blocking the initial render. Guests never reach this branch
     // (PENDING_ONBOARDING defaults false and is only ever set inside the signed-in
     // cloud-merge code path), so existing guest access is completely unaffected.
-    if((PENDING_ONBOARDING && user) || (lsGet('current_user') && !lsGet('has_onboarded'))){
+    // Secure launch router: existing workspaces never re-enter the wizard.
+    // has_onboarded may be missing on a fresh browser even for old Firebase accounts —
+    // sync it from cloud/local USER_SCHEDULE before deciding.
+    try{ syncOnboardedFlagFromState(); }catch(e){}
+    try{
+      document.getElementById('loginCanvas')&& (document.getElementById('loginCanvas').style.display='none');
+      document.getElementById('landingPage')&& (document.getElementById('landingPage').style.display='none');
+    }catch(e){}
+    const needsOnboarding = PENDING_ONBOARDING && !userHasExistingWorkspace() && lsGet('has_onboarded')!=='true';
+    if(needsOnboarding && (user || lsGet('current_user'))){
       OB_STEP=0;
       OB_ANSWERS={name:'',trackPrayers:null,messyTasks:'',workspaceName:'',weeklySchedule:{Sat:'',Sun:'',Mon:'',Tue:'',Wed:'',Thu:'',Fri:''}};
       obShowStep();
+    }else{
+      try{ document.getElementById('obWizard')?.classList.remove('open'); }catch(e){}
+      try{ renderTabs(); renderPanels(); switchDay(todayJD()); updateUI(); }catch(e){}
     }
   }).catch(e=>{
     console.warn('Init error bypass:',e);
@@ -7225,6 +7277,9 @@ if (typeof onAuthStateChanged !== 'undefined' && typeof fbAuth !== 'undefined') 
           // at all yet — that case never reaches this line, so it needs its own copy
           // of the same check.
           PENDING_ONBOARDING = !USER_SCHEDULE || Object.keys(USER_SCHEDULE).length===0;
+          if(USER_SETTINGS && USER_SETTINGS.onboardingComplete) PENDING_ONBOARDING=false;
+          if(!PENDING_ONBOARDING){ lsSet('has_onboarded','true'); }
+          else if(userHasExistingWorkspace()){ PENDING_ONBOARDING=false; lsSet('has_onboarded','true'); }
           if(d.userMemory) USER_MEMORY=d.userMemory;
           if(d.mealOptions) MEAL_OPTIONS=d.mealOptions;
           if(d.weeklyPointsHistory) weeklyPointsHistory={...weeklyPointsHistory,...d.weeklyPointsHistory};
@@ -7254,6 +7309,9 @@ if (typeof onAuthStateChanged !== 'undefined' && typeof fbAuth !== 'undefined') 
           // in this branch before that doc exists.
           migrateAbdullahScheduleIfNeeded(user.uid);
           PENDING_ONBOARDING = !USER_SCHEDULE || Object.keys(USER_SCHEDULE).length===0;
+          if(USER_SETTINGS && USER_SETTINGS.onboardingComplete) PENDING_ONBOARDING=false;
+          if(!PENDING_ONBOARDING){ lsSet('has_onboarded','true'); }
+          else if(userHasExistingWorkspace()){ PENDING_ONBOARDING=false; lsSet('has_onboarded','true'); }
         }
       }catch(e){
         console.warn('cloud load failed after retry',e);
