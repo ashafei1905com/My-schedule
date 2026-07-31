@@ -2200,7 +2200,7 @@ async function obFinish(){
     showToast(en?'Could not save settings — try again':'تعذر حفظ الإعدادات — حاول مرة أخرى',3500,'warn');
   }
 
-  localStorage.setItem('has_onboarded','true');
+  lsSet('has_onboarded','true');
 
   const wizard=document.getElementById('obWizard');
   if(wizard) wizard.classList.remove('open');
@@ -2506,8 +2506,35 @@ async function saveAiChat(){
   }catch(e){console.warn('aiChat cloud save failed',e);}
 }
 
-async function sGet(k){try{const r=localStorage.getItem(k);return r?JSON.parse(r):null}catch{return null}}
-async function sSet(k,v){try{localStorage.setItem(k,JSON.stringify(v))}catch{}}
+// Sandbox-safe storage: reading window.localStorage itself can throw SecurityError
+// when the document is sandboxed without allow-same-origin (e.g. some previews/iframes).
+const _memStore = Object.create(null);
+function _ls(){
+  try{ return window.localStorage; }catch(e){ return null; }
+}
+function lsGet(k){
+  try{
+    const ls=_ls();
+    if(ls) return ls.getItem(k);
+  }catch(e){}
+  return Object.prototype.hasOwnProperty.call(_memStore,k) ? _memStore[k] : null;
+}
+function lsSet(k,v){
+  try{
+    const ls=_ls();
+    if(ls){ ls.setItem(k, v); return; }
+  }catch(e){}
+  _memStore[k]=v;
+}
+function lsRemove(k){
+  try{
+    const ls=_ls();
+    if(ls){ ls.removeItem(k); }
+  }catch(e){}
+  try{ delete _memStore[k]; }catch(e){}
+}
+async function sGet(k){try{const r=lsGet(k);return r?JSON.parse(r):null}catch{return null}}
+async function sSet(k,v){try{lsSet(k,JSON.stringify(v))}catch{}}
 
 function loadDay(){const dk=SELECTED_DATE;const day=historyData[dk]||{};DONE={...day.done||{}};}
 // saveDay MERGES DONE into historyData[dk].done rather than replacing it outright.
@@ -6261,17 +6288,17 @@ document.body.addEventListener('click',async e=>{
 
     try{
       // Clear app-local state so next anonymous visit looks brand-new.
-      localStorage.removeItem(LS.stats);
-      localStorage.removeItem(LS.history);
-      localStorage.removeItem(LS.reports);
-      localStorage.removeItem(LS.penalized);
-      localStorage.removeItem(LS.firstSeen);
-      localStorage.removeItem(LS.userEdits);
-      localStorage.removeItem(LS.aiChat);
-      localStorage.removeItem(LS.userMemory);
-      localStorage.removeItem(LS.mealOptions);
-      localStorage.removeItem(LS.userSchedule);
-      localStorage.removeItem(LS.userSettings);
+      lsRemove(LS.stats);
+      lsRemove(LS.history);
+      lsRemove(LS.reports);
+      lsRemove(LS.penalized);
+      lsRemove(LS.firstSeen);
+      lsRemove(LS.userEdits);
+      lsRemove(LS.aiChat);
+      lsRemove(LS.userMemory);
+      lsRemove(LS.mealOptions);
+      lsRemove(LS.userSchedule);
+      lsRemove(LS.userSettings);
 
       // Clear any in-memory state
       STATS={cur:0,best:0,pts:0,lc:null,lf:null};
@@ -6571,11 +6598,11 @@ function completeLocalSignup(username){
     showToast('Please enter a username',2200,'warn');
     return;
   }
-  localStorage.setItem('current_user', name);
+  lsSet('current_user', name);
   closeAuthModal();
   const lp=document.getElementById('landingPage');
   if(lp) lp.style.display='none';
-  if(!localStorage.getItem('has_onboarded')){
+  if(!lsGet('has_onboarded')){
     OB_STEP=0;
     OB_ANSWERS={name:'',trackPrayers:null,messyTasks:'',workspaceName:''};
     try{ document.getElementById('obWizard')?.classList.add('open'); }catch(e){}
@@ -6598,7 +6625,7 @@ function wireLandingAuth(){
   });
 }
 function showLandingIfNeeded(){
-  const hasUser=!!localStorage.getItem('current_user');
+  const hasUser=!!lsGet('current_user');
   const lp=document.getElementById('landingPage');
   if(!lp) return !hasUser;
   if(!hasUser){
@@ -6657,7 +6684,7 @@ function initAppFlow(user){
     // page rather than blocking the initial render. Guests never reach this branch
     // (PENDING_ONBOARDING defaults false and is only ever set inside the signed-in
     // cloud-merge code path), so existing guest access is completely unaffected.
-    if((PENDING_ONBOARDING && user) || (localStorage.getItem('current_user') && !localStorage.getItem('has_onboarded'))){
+    if((PENDING_ONBOARDING && user) || (lsGet('current_user') && !lsGet('has_onboarded'))){
       OB_STEP=0;
       OB_ANSWERS={name:'',trackPrayers:null,messyTasks:'',workspaceName:''};
       obShowStep();
