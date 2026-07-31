@@ -188,7 +188,7 @@ html[dir="ltr"] .tc[data-c="sunrise"]{border-left:3px solid var(--or)}
 
 /* Top bar action buttons — visually distinct per function */
 .topbtn{padding:9px 16px;border-radius:10px;font-family:'Cairo',sans-serif;font-size:.78rem;font-weight:800;cursor:pointer;display:inline-flex;align-items:center;gap:6px;transition:all .2s;border:none}
-.topbtn-report{background:linear-gradient(135deg,#2563eb,#1d4ed8);color:#fff;box-shadow:0 2px 10px rgba(37,99,235,.35)}
+.topbtn-report{background:var(--ac);background-color:var(--ac);color:#fff;box-shadow:0 2px 10px color-mix(in srgb,var(--ac) 40%,transparent)}
 .topbtn-report:hover{box-shadow:0 4px 16px rgba(37,99,235,.5);transform:translateY(-1px)}
 .topbtn-report:disabled{opacity:.4;cursor:not-allowed;transform:none;box-shadow:none}
 .topbtn-history{background:linear-gradient(135deg,#7c3aed,#6d28d9);color:#fff;box-shadow:0 2px 10px rgba(124,58,237,.35)}
@@ -456,6 +456,38 @@ body.theme-cyberpunk .tc{
   display:block!important;
 }
 #obWizard{z-index:100060;}
+
+.topbtn-report{background:var(--ac)!important;background-color:var(--ac)!important;color:#fff;box-shadow:0 2px 10px color-mix(in srgb,var(--ac) 40%,transparent)}
+.topbtn-report:hover{box-shadow:0 4px 16px color-mix(in srgb,var(--ac) 55%,transparent);transform:translateY(-1px);filter:brightness(1.08)}
+.xp-track-wrap{margin:10px 0 14px}
+.xp-track-label{display:flex;justify-content:space-between;font-size:.72rem;font-weight:800;color:var(--so);margin-bottom:6px}
+.xp-track{height:10px;border-radius:999px;background:var(--br);overflow:hidden;border:1px solid rgba(255,255,255,.06)}
+.xp-track-fill{height:100%;border-radius:999px;background:linear-gradient(90deg,#8b5cf6,#fbbf24);transition:width .4s ease}
+.login-preview{position:relative;width:min(420px,90%);min-height:320px}
+.login-preview-slot{height:64px;border-radius:14px;border:1px dashed rgba(148,163,184,.35);background:rgba(21,27,43,.55);margin-bottom:12px;position:relative;overflow:hidden}
+.login-preview-card{position:absolute;left:18px;top:10px;padding:10px 14px;border-radius:12px;background:#151b2b;border:1px solid #3b82f6;box-shadow:0 0 0 3px rgba(59,130,246,.15);font-weight:800;font-size:.85rem;white-space:nowrap;transform:translate(40px,-80px) scale(.92);opacity:0;animation:previewDrag 5.5s ease-in-out infinite}
+.login-preview-buffer{padding:10px 14px;border-radius:12px;background:rgba(16,185,129,.1);border:1px solid rgba(16,185,129,.35);color:#34d399;font-weight:800;font-size:.8rem;opacity:0;transform:translateY(8px);animation:previewBuffer 5.5s ease-in-out infinite}
+.login-preview-cursor{position:absolute;width:18px;height:18px;border-radius:50%;border:2px solid #fff;background:rgba(96,165,250,.35);left:70%;top:0;animation:previewCursor 5.5s ease-in-out infinite;z-index:3;pointer-events:none;box-shadow:0 0 12px rgba(96,165,250,.5)}
+@keyframes previewDrag{0%,8%{opacity:0;transform:translate(60px,-90px) scale(.9)}18%{opacity:1;transform:translate(40px,-40px) scale(.95)}38%,55%{opacity:1;transform:translate(0,0) scale(1)}70%,100%{opacity:.95;transform:translate(0,0) scale(1)}}
+@keyframes previewBuffer{0%,45%{opacity:0;transform:translateY(10px)}58%,100%{opacity:1;transform:translateY(0)}}
+@keyframes previewCursor{0%{top:5%;left:72%;opacity:0}10%{opacity:1}18%{top:12%;left:55%}38%{top:22%;left:28%}55%{top:28%;left:30%;opacity:1}70%,100%{opacity:0}}
+@keyframes matrixRain{0%{background-position:0 0,0 0}100%{background-position:0 120px,40px 80px}}
+body.theme-matrix,body.theme-matrix #app,body.theme-matrix #sbar{
+  background-color:#030712!important;
+  background-image:linear-gradient(rgba(16,185,129,.07) 1px,transparent 1px),linear-gradient(90deg,rgba(16,185,129,.07) 1px,transparent 1px)!important;
+  background-size:28px 28px!important;
+  animation:matrixRain 8s linear infinite;
+}
+body.theme-matrix .tc{border-color:rgba(16,185,129,.35)!important;box-shadow:0 0 12px rgba(16,185,129,.12)}
+body.theme-chrono{font-family:Georgia,'Times New Roman',serif}
+body.theme-chrono #app,body.theme-chrono #sbar{background:linear-gradient(160deg,#1a1208,#0f0a05)!important}
+body.theme-chrono .tc{border-color:rgba(251,191,36,.4)!important;box-shadow:0 0 0 1px rgba(251,191,36,.15),inset 0 0 20px rgba(251,191,36,.04)}
+body.theme-chrono .tcname,.theme-chrono .dhn{letter-spacing:.02em}
+.auth-toggle{background:none;border:none;color:#94a3b8;font-family:inherit;font-weight:700;font-size:.8rem;cursor:pointer;text-decoration:underline;padding:8px 0;margin-top:4px}
+.auth-mode-label{font-size:.72rem;font-weight:800;color:#64748b;margin-bottom:10px;text-transform:uppercase;letter-spacing:.04em}
+.report-grade{margin:0 0 18px;padding:16px 18px;border-radius:14px;border:1px solid var(--br);background:linear-gradient(135deg,rgba(59,130,246,.12),rgba(139,92,246,.1))}
+.report-grade h4{margin:0 0 6px;font-size:1.05rem;font-weight:900}
+.report-grade p{margin:0;color:var(--so);font-size:.85rem;line-height:1.5}
 </style>
 </head>
 <body>
@@ -514,22 +546,27 @@ body.theme-cyberpunk .tc{
         <span>or continue with email</span>
         <div style="flex:1;height:1px;background:#1e2d45"></div>
       </div>
+      <div class="auth-mode-label" id="authModeLabel">Sign in</div>
       <label for="authUsernameInput" style="font-size:.78rem;font-weight:800;color:#94a3b8;margin-bottom:8px;display:block">Enter your email or username</label>
-      <input id="authUsernameInput" type="text" placeholder="you@example.com" style="width:100%;box-sizing:border-box;font-family:inherit;font-size:.95rem;font-weight:700;padding:14px 16px;border-radius:12px;border:1px solid #2a3548;background:#0f1522;color:#f1f5f9;margin-bottom:14px" />
-      <button type="button" id="authContinueBtn" style="width:100%;font-family:inherit;font-weight:900;font-size:.95rem;padding:14px 18px;border-radius:12px;border:none;background:#6d5efc;color:#fff;cursor:pointer;margin-bottom:14px">Continue</button>
-      <button type="button" id="authCancelBtn" style="background:transparent;border:none;color:#64748b;font-family:inherit;font-weight:700;font-size:.82rem;cursor:pointer;padding:8px">Back to home</button>
+      <input id="authUsernameInput" type="text" placeholder="you@example.com" autocomplete="username" style="width:100%;box-sizing:border-box;font-family:inherit;font-size:.95rem;font-weight:700;padding:14px 16px;border-radius:12px;border:1px solid #2a3548;background:#0f1522;color:#f1f5f9;margin-bottom:12px" />
+      <label for="authPasswordInput" style="font-size:.78rem;font-weight:800;color:#94a3b8;margin-bottom:8px;display:block">Password</label>
+      <input id="authPasswordInput" type="password" placeholder="••••••••" autocomplete="current-password" style="width:100%;box-sizing:border-box;font-family:inherit;font-size:.95rem;font-weight:700;padding:14px 16px;border-radius:12px;border:1px solid #2a3548;background:#0f1522;color:#f1f5f9;margin-bottom:14px" />
+      <button type="button" id="authContinueBtn" style="width:100%;font-family:inherit;font-weight:900;font-size:.95rem;padding:14px 18px;border-radius:12px;border:none;background:#6d5efc;color:#fff;cursor:pointer;margin-bottom:10px">Continue</button>
+      <button type="button" class="auth-toggle" id="authModeToggle">Don't have an account? Sign Up</button>
+      <button type="button" id="authCancelBtn" style="background:transparent;border:none;color:#64748b;font-family:inherit;font-weight:700;font-size:.82rem;cursor:pointer;padding:8px;display:block;width:100%">Back to home</button>
       <p style="margin-top:18px;color:#475569;font-size:.72rem;line-height:1.5">By continuing you agree to use this free local workspace on this device.</p>
     </div>
     <div style="display:none;background:radial-gradient(ellipse at 30% 20%,#1a2744 0%,#0b0f19 55%),linear-gradient(160deg,#0b0f19,#121826);border-left:1px solid #1e2d45;position:relative;overflow:hidden" id="loginCanvasArt">
       <div style="position:absolute;inset:0;opacity:.55;background-image:linear-gradient(#1e2d45 1px,transparent 1px),linear-gradient(90deg,#1e2d45 1px,transparent 1px);background-size:48px 48px"></div>
       <div style="position:relative;z-index:1;height:100%;display:flex;align-items:center;justify-content:center;padding:40px">
-        <div style="width:min(420px,90%);display:flex;flex-direction:column;gap:10px">
-          <div style="height:54px;border-radius:12px;background:#151b2b;border:1px solid #243148"></div>
-          <div style="height:54px;border-radius:12px;background:#151b2b;border:1px solid #243148;opacity:.85"></div>
-          <div style="height:54px;border-radius:12px;background:#1a2336;border:1px solid #3b82f6;box-shadow:0 0 0 3px rgba(59,130,246,.15)"></div>
-          <div style="height:54px;border-radius:12px;background:#151b2b;border:1px solid #243148;opacity:.7"></div>
-          <div style="height:54px;border-radius:12px;background:#151b2b;border:1px solid #243148;opacity:.55"></div>
-          <div style="margin-top:18px;color:#94a3b8;font-size:.85rem;font-weight:700;text-align:center">Block time. Protect focus. Ship the day.</div>
+        <div class="login-preview">
+          <div style="font-size:.72rem;font-weight:800;color:#64748b;margin-bottom:12px;letter-spacing:.04em;text-transform:uppercase">Live preview</div>
+          <div class="login-preview-slot">
+            <div class="login-preview-cursor" aria-hidden="true"></div>
+            <div class="login-preview-card">Gym Workout (4:00 PM)</div>
+          </div>
+          <div class="login-preview-buffer">Rest Buffer (15 mins)</div>
+          <div style="margin-top:22px;color:#94a3b8;font-size:.85rem;font-weight:700;text-align:center">Block time. Protect focus. Ship the day.</div>
         </div>
       </div>
     </div>
@@ -653,9 +690,13 @@ body.theme-cyberpunk .tc{
           <p class="desc" style="margin-top:4px">Unlock with Rebirth Tokens from the Prestige loop.</p>
           <div id="mythicThemesPanel" style="margin-top:10px"></div>
           <div id="prestigePanel" style="margin-top:16px">
-            <div class="desc" style="font-weight:900">Prestige</div>
+            <div class="desc" style="font-weight:900">Prestige Hub</div>
             <p class="desc" id="prestigeStatsLine" style="margin-top:4px">Lifetime XP · Rank · Tokens</p>
-            <button type="button" id="btnRebirth" class="rebirth-btn" hidden>Rebirth Timeline</button>
+            <div class="xp-track-wrap">
+              <div class="xp-track-label"><span>Lifetime XP Tracker</span><span id="xpTrackText">0 / 3500 XP</span></div>
+              <div class="xp-track"><div class="xp-track-fill" id="xpTrackFill" style="width:0%"></div></div>
+            </div>
+            <button type="button" id="btnRebirth" class="rebirth-btn" hidden>Trigger Galactic Rebirth</button>
           </div>
 <div class="set-actions" style="margin-top:16px">
             <button type="button" id="setSaveThemeBtn" class="fl-submit-btn" style="margin:0">Save appearance ✅</button>
@@ -878,7 +919,7 @@ body.theme-cyberpunk .tc{
         <div class="report-title" id="reportTitle">📊 التقرير الأسبوعي</div>
         <div class="report-range" id="reportRange"></div>
       </div>
-      <button class="report-close" id="closeReport" onclick="document.getElementById('reportModal').classList.remove('open')">✕ إغلاق</button>
+      <button class="report-close" id="closeReport" onclick="document.getElementById('reportModal').classList.remove('open')" data-i18n-close="1">✕ Close</button>
     </div>
     <div id="reportContent"></div>
   </div>
@@ -1058,7 +1099,7 @@ function dateForWeekday(jd, refISO) {
 const TODAY = todayStr();
 
 function cleanTime(s){if(!s)return'';const m=String(s).match(/\d{1,2}:\d{2}/);return m?m[0]:String(s);}
-function fmt24(t){const s=cleanTime(t);if(!s)return'';const[h,m]=s.split(':').map(Number);const pm=h>=12;const dh=h>12?h-12:(h===0?12:h);return`${dh}:${p2(m)} ${pm?'م':'ص'}`;}
+function fmt24(t){const s=cleanTime(t);if(!s)return'';const[h,m]=s.split(':').map(Number);const pm=h>=12;const dh=h>12?h-12:(h===0?12:h);const en=(typeof USER_SETTINGS!=='undefined'&&USER_SETTINGS.lang==='en');return`${dh}:${p2(m)} ${pm?(en?'PM':'م'):(en?'AM':'ص')}`;}
 function toMin(s){if(!s)return 0;const s0=cleanTime(s);const raw=String(s);if(raw.includes('ص')||raw.includes('م')){const pm=raw.includes('م');const[h,m]=s0.split(':').map(Number);let hr=h;if(pm&&h!==12)hr+=12;if(!pm&&h===12)hr=0;return hr*60+(m||0);}const[h,m]=s0.split(':').map(Number);return h*60+(m||0);} 
 
 function getKuwaitNow(){
@@ -1108,6 +1149,15 @@ function isLatePrayer(task,startOverride){
   return (now-start)>45;
 }
 
+
+function formatTaskTimeDisplay(raw){
+  const s=String(raw||'');
+  const en=(USER_SETTINGS&&USER_SETTINGS.lang)==='en';
+  if(en){
+    return s.replace(/\s*ص\s*$/,' AM').replace(/\s*م\s*$/,' PM').replace(/ص/g,'AM').replace(/م/g,'PM');
+  }
+  return s.replace(/\s*AM\s*$/i,' ص').replace(/\s*PM\s*$/i,' م');
+}
 function floatPts(x,y,n){const e=document.createElement('div');e.className='floatpts';e.textContent=`+${n}⭐`;e.style.cssText=`left:${x}px;top:${y}px`;document.body.appendChild(e);setTimeout(()=>e.remove(),900);}
 
 // ===== Lifetime XP / Rank / Prestige engine =====
@@ -1171,6 +1221,7 @@ function awardTaskPoints(basePts, opts={}){
   }
   try{ updatePrestigeUI(); }catch(e){}
   if(opts.x!=null && opts.y!=null) floatPts(opts.x,opts.y,awarded);
+  try{ playPremiumCompleteSound(); }catch(e){}
   return awarded;
 }
 async function doRebirth(){
@@ -1191,13 +1242,29 @@ async function doRebirth(){
   try{ updatePrestigeUI(); updateAuthUI(fbAuth?.currentUser||null); updateUI(); }catch(e){}
 }
 function applyMythicThemeClass(themeId){
-  document.body.classList.remove('theme-nebula','theme-cyberpunk');
+  document.body.classList.remove('theme-nebula','theme-cyberpunk','theme-matrix','theme-chrono');
   if(themeId==='nebula') document.body.classList.add('theme-nebula');
   if(themeId==='cyberpunk') document.body.classList.add('theme-cyberpunk');
+  if(themeId==='matrix') document.body.classList.add('theme-matrix');
+  if(themeId==='chrono') document.body.classList.add('theme-chrono');
+}
+function playPremiumCompleteSound(){
+  if(!(STATS.unlockedThemes||[]).includes('audio')) return;
+  try{
+    const ctx=new (window.AudioContext||window.webkitAudioContext)();
+    const o=ctx.createOscillator(); const g=ctx.createGain();
+    o.type='triangle'; o.frequency.setValueAtTime(523.25, ctx.currentTime);
+    o.frequency.exponentialRampToValueAtTime(1046.5, ctx.currentTime+0.15);
+    g.gain.setValueAtTime(0.0001, ctx.currentTime);
+    g.gain.exponentialRampToValueAtTime(0.2, ctx.currentTime+0.02);
+    g.gain.exponentialRampToValueAtTime(0.0001, ctx.currentTime+0.45);
+    o.connect(g); g.connect(ctx.destination); o.start(); o.stop(ctx.currentTime+0.5);
+  }catch(e){}
 }
 async function unlockMythicTheme(themeId, cost){
   const unlocked=new Set(STATS.unlockedThemes||[]);
   if(unlocked.has(themeId)){
+    if(themeId==='audio'){ showToast('Premium audio already unlocked',1800); return; }
     STATS.activeMythicTheme=themeId;
     applyMythicThemeClass(themeId);
     try{ await saveAll(); }catch(e){}
@@ -1212,23 +1279,31 @@ async function unlockMythicTheme(themeId, cost){
   STATS.rebirth_tokens-=cost;
   unlocked.add(themeId);
   STATS.unlockedThemes=[...unlocked];
-  STATS.activeMythicTheme=themeId;
-  applyMythicThemeClass(themeId);
+  if(themeId!=='audio'){
+    STATS.activeMythicTheme=themeId;
+    applyMythicThemeClass(themeId);
+  }
   try{ await saveAll(); }catch(e){}
   updatePrestigeUI();
-  showToast('Mythic theme unlocked',2200);
+  showToast(themeId==='audio'?'Premium complete audio unlocked':'Mythic theme unlocked',2200);
 }
 function updatePrestigeUI(){
   ensureRankTracking();
   const rank=getRankMeta(STATS.lifetime_xp||0);
+  const xp=STATS.lifetime_xp||0;
   const line=document.getElementById('prestigeStatsLine');
   if(line){
-    line.textContent=`Lifetime XP: ${STATS.lifetime_xp||0} · ${rank.icon} ${rank.title} · Prestige ${STATS.prestige_level||0} · Tokens ${STATS.rebirth_tokens||0} · Multiplier x${getPrestigeMultiplier().toFixed(2)}`;
+    line.textContent=`Lifetime XP: ${xp} · ${rank.icon} ${rank.title} · Prestige ${STATS.prestige_level||0} · Tokens ${STATS.rebirth_tokens||0} · Multiplier x${getPrestigeMultiplier().toFixed(2)}`;
   }
+  const xpText=document.getElementById('xpTrackText');
+  const xpFill=document.getElementById('xpTrackFill');
+  if(xpText) xpText.textContent=`${Math.min(xp,3500)} / 3500 XP`;
+  if(xpFill) xpFill.style.width=`${Math.min(100, Math.round((xp/3500)*100))}%`;
   const btn=document.getElementById('btnRebirth');
   if(btn){
-    const can=(STATS.lifetime_xp||0)>=3500;
+    const can=xp>=3500;
     btn.hidden=!can;
+    btn.textContent='Trigger Galactic Rebirth';
   }
   const panel=document.getElementById('mythicThemesPanel');
   if(panel){
@@ -1236,7 +1311,10 @@ function updatePrestigeUI(){
     const active=STATS.activeMythicTheme;
     const themes=[
       {id:'nebula',name:'Cosmic Nebula',cost:1,desc:'Slow-moving nebula gradient across the dashboard'},
-      {id:'cyberpunk',name:'Cyberpunk Pulse',cost:2,desc:'Neon pulse glow on timeline task cards'}
+      {id:'cyberpunk',name:'Cyberpunk Pulse',cost:2,desc:'Neon pulse glow on timeline task cards'},
+      {id:'matrix',name:'Deep Space Matrix',cost:1,desc:'Grid matrix field with glowing rain drift'},
+      {id:'chrono',name:'Golden Chrono Luxury',cost:2,desc:'Luxury serif typography and gold borders'},
+      {id:'audio',name:'Premium Complete Audio',cost:1,desc:'Exclusive level-up sound on task check-off',kind:'audio'}
     ];
     panel.innerHTML=themes.map(th=>{
       const own=unlocked.has(th.id);
@@ -2517,6 +2595,13 @@ async function obFinish(){
   }
 
   lsSet('has_onboarded','true');
+  try{
+    const u=lsGet('current_user');
+    if(u){
+      const acc=findLocalAccount(u);
+      upsertLocalAccount(u, acc?acc.password:'', {has_onboarded:true});
+    }
+  }catch(e){}
 
   const wizard=document.getElementById('obWizard');
   if(wizard) wizard.classList.remove('open');
@@ -3863,14 +3948,60 @@ function renderReportSummaryHtml(data){
       <div class="macrorow"><div class="macrolbl">ألياف</div><div class="macrobg"><div class="macrofx macrofx-b" style="width:${Math.min(100,pctOf(c.b,t.b))}%"></div></div><div class="macroval">${r1(c.b)}/${r1(t.b)}جم</div></div>
     </div>`;
   }
+  const en=(USER_SETTINGS.lang==='en');
+  const L={
+    totalPts: en?'Total Points':'إجمالي النقاط',
+    completion: en?'Completion Rate':'نسبة الإنجاز',
+    missed: en?'Missed Tasks':'مهام مفقودة',
+    qada: en?'Missed Prayers / History':'قضاء صلوات',
+    nutrition: en?'Nutrition – Weekly Summary':'التغذية – إجمالي الأسبوع',
+    kcal: en?'kcal':'سعرة',
+    protein: en?'Protein':'بروتين',
+    carbs: en?'Carbs':'كارب',
+    fats: en?'Fats':'دهون',
+    fiber: en?'Fiber':'ألياف',
+    g: en?'g':'جم'
+  };
+  // rebuild macro summary in active language if present
+  let macroSummaryBi=macroSummary;
+  if(data.weekMacroTarget && data.weekMacroTarget.k>0){
+    const t=data.weekMacroTarget,c=data.weekMacroConsumed;
+    const pctOf=(cv,tv)=>tv>0?Math.round(cv/tv*100):0;
+    const r1=n=>Math.round(n*10)/10;
+    macroSummaryBi=`
+    <div class="macrobox" style="margin-bottom:20px">
+      <div class="macrohead"><span class="macrotitle">${L.nutrition}</span><span class="macrokcal">${r1(c.k)}/${r1(t.k)} ${L.kcal} (${pctOf(c.k,t.k)}%)</span></div>
+      <div class="macrorow"><div class="macrolbl">${L.protein}</div><div class="macrobg"><div class="macrofx macrofx-p" style="width:${Math.min(100,pctOf(c.p,t.p))}%"></div></div><div class="macroval">${r1(c.p)}/${r1(t.p)}${L.g}</div></div>
+      <div class="macrorow"><div class="macrolbl">${L.carbs}</div><div class="macrobg"><div class="macrofx macrofx-c" style="width:${Math.min(100,pctOf(c.c,t.c))}%"></div></div><div class="macroval">${r1(c.c)}/${r1(t.c)}${L.g}</div></div>
+      <div class="macrorow"><div class="macrolbl">${L.fats}</div><div class="macrobg"><div class="macrofx macrofx-f" style="width:${Math.min(100,pctOf(c.f,t.f))}%"></div></div><div class="macroval">${r1(c.f)}/${r1(t.f)}${L.g}</div></div>
+      <div class="macrorow"><div class="macrolbl">${L.fiber}</div><div class="macrobg"><div class="macrofx macrofx-b" style="width:${Math.min(100,pctOf(c.b,t.b))}%"></div></div><div class="macroval">${r1(c.b)}/${r1(t.b)}${L.g}</div></div>
+    </div>`;
+  }
+  const pct=data.pct||0;
+  let grade, gradeTitle, gradeMsg;
+  if(pct>=100){
+    grade='A+'; gradeTitle=en?'Flawless Execution':'تنفيذ مثالي';
+    gradeMsg=en?'Elite week. You executed every block — protect this standard.':'أسبوع نخبة. نفّذت كل المهام — حافظ على هذا المستوى.';
+  }else if(pct>=85){
+    grade='A'; gradeTitle=en?'Focus Master':'سيد التركيز';
+    gradeMsg=en?'High performance. Tighten the last gaps and you are in elite range.':'أداء عالٍ. سد الفجوات الصغيرة واقترب من المستوى النخبوي.';
+  }else if(pct>=50){
+    grade='B/C'; gradeTitle=en?'Passing Balance':'توازن مقبول';
+    gradeMsg=en?'Solid base. Optimize deep-work blocks and cut context switching.':'أساس جيد. حسّن فترات التركيز وقلل تبديل المهام.';
+  }else{
+    grade='F'; gradeTitle=en?'Time Recovery Mode':'وضع استعادة الوقت';
+    gradeMsg=en?'Clear the slate. Pick 3 non-negotiables tomorrow and rebuild momentum.':'ابدأ من جديد. اختر 3 مهام غير قابلة للتأجيل غداً وابنِ الزخم.';
+  }
+  const gradeHtml=`<div class="report-grade"><h4>${en?'School Performance Grade':'بطاقة الأداء المدرسية'}: ${grade} — ${gradeTitle}</h4><p>${gradeMsg}</p></div>`;
   return `
+    ${gradeHtml}
     <div class="report-summary">
-      <div class="report-stat"><div class="report-stat-val" style="color:var(--ye)">${data.totalPts}⭐</div><div class="report-stat-lbl">إجمالي النقاط</div></div>
-      <div class="report-stat"><div class="report-stat-val" style="color:var(--gr)">${data.pct}%</div><div class="report-stat-lbl">نسبة الإنجاز</div></div>
-      <div class="report-stat"><div class="report-stat-val" style="color:var(--rd)">${data.totalMissed}</div><div class="report-stat-lbl">مهام مفقودة</div></div>
-      <div class="report-stat"><div class="report-stat-val" style="color:var(--or)">${data.totalQada}</div><div class="report-stat-lbl">قضاء صلوات</div></div>
+      <div class="report-stat"><div class="report-stat-val" style="color:var(--ye)">${data.totalPts}⭐</div><div class="report-stat-lbl">${L.totalPts}</div></div>
+      <div class="report-stat"><div class="report-stat-val" style="color:var(--gr)">${data.pct}%</div><div class="report-stat-lbl">${L.completion}</div></div>
+      <div class="report-stat"><div class="report-stat-val" style="color:var(--rd)">${data.totalMissed}</div><div class="report-stat-lbl">${L.missed}</div></div>
+      <div class="report-stat"><div class="report-stat-val" style="color:var(--or)">${data.totalQada}</div><div class="report-stat-lbl">${L.qada}</div></div>
     </div>
-    ${macroSummary}
+    ${macroSummaryBi}
     ${data.dayBlocksHtml}
   `;
 }
@@ -3880,7 +4011,7 @@ async function showWeeklyReport(){
   const titleEl=document.getElementById('reportTitle');
   const rangeEl=document.getElementById('reportRange');
   if(!el) return;
-  if(titleEl) titleEl.textContent='📊 تقرير آخر أسبوع مكتمل';
+  if(titleEl) titleEl.textContent=(USER_SETTINGS.lang==='en')?'Weekly Report':'تقرير آخر أسبوع مكتمل';
 
   const data=buildWeekReportData();
   if (!data.rangeStart || !data.rangeEnd) {
@@ -3890,7 +4021,7 @@ async function showWeeklyReport(){
       return;
   }
   
-  if(rangeEl) rangeEl.textContent=`من ${data.rangeStart} إلى ${data.rangeEnd} — لا يشمل اليوم الحالي`;
+  if(rangeEl) rangeEl.textContent=(USER_SETTINGS.lang==='en')?`From ${data.rangeStart} to ${data.rangeEnd}`:`من ${data.rangeStart} إلى ${data.rangeEnd} — لا يشمل اليوم الحالي`;
 
   el.innerHTML=renderReportSummaryHtml(data);
 
@@ -4002,7 +4133,7 @@ function getDisplayDesc(task,iso){
 }
 
 function renderCard(task,isToday,jd){
-  const[id,arTime,cat,ico,name,,pts,,hw,isEx]=task;
+  const[id,arTimeRaw,cat,ico,name,,pts,,hw,isEx]=task; const arTime=(typeof formatTaskTimeDisplay==='function')?formatTaskTimeDisplay(arTimeRaw):arTimeRaw;
   const dispName=tn(name);
   const done=DONE[id];
   const isDone=done!==undefined&&done!==false;
@@ -6916,14 +7047,57 @@ function revealApp(){
 
 
 // ===== Public landing + Morgen-style login canvas =====
+
+// ===== Local credential accounts (device-local, free tier) =====
+let AUTH_MODE='signin'; // 'signin' | 'signup'
+const LS_ACCOUNTS='sc:localAccounts1';
+function loadLocalAccounts(){
+  try{
+    const raw=lsGet(LS_ACCOUNTS);
+    const arr=raw?JSON.parse(raw):[];
+    return Array.isArray(arr)?arr:[];
+  }catch(e){ return []; }
+}
+function saveLocalAccounts(list){
+  try{ lsSet(LS_ACCOUNTS, JSON.stringify(list||[])); }catch(e){}
+}
+function normalizeAuthUser(u){ return String(u||'').trim().toLowerCase(); }
+function findLocalAccount(username){
+  const key=normalizeAuthUser(username);
+  return loadLocalAccounts().find(a=>normalizeAuthUser(a.username)===key)||null;
+}
+function upsertLocalAccount(username, password, extra={}){
+  const list=loadLocalAccounts();
+  const key=normalizeAuthUser(username);
+  const idx=list.findIndex(a=>normalizeAuthUser(a.username)===key);
+  const row={username:String(username).trim(), password:String(password||''), has_onboarded:!!extra.has_onboarded, updatedAt:Date.now(), ...(idx>=0?list[idx]:{}), ...extra, username:String(username).trim(), password:String(password||'')};
+  if(idx>=0) list[idx]=row; else list.push(row);
+  saveLocalAccounts(list);
+  return row;
+}
+function setAuthMode(mode){
+  AUTH_MODE=mode==='signup'?'signup':'signin';
+  const label=document.getElementById('authModeLabel');
+  const toggle=document.getElementById('authModeToggle');
+  const btn=document.getElementById('authContinueBtn');
+  const pass=document.getElementById('authPasswordInput');
+  if(label) label.textContent=AUTH_MODE==='signup'?'Create account':'Sign in';
+  if(toggle) toggle.textContent=AUTH_MODE==='signup'?"Already have an account? Sign In":"Don't have an account? Sign Up";
+  if(btn) btn.textContent=AUTH_MODE==='signup'?'Create account':'Continue';
+  if(pass) pass.autocomplete=AUTH_MODE==='signup'?'new-password':'current-password';
+}
+
 function openAuthModal(){
   const lc=document.getElementById('loginCanvas');
   const lp=document.getElementById('landingPage');
   if(lp) lp.style.display='none';
   if(lc){
     lc.style.display='block';
+    setAuthMode('signin');
     const inp=document.getElementById('authUsernameInput');
+    const pw=document.getElementById('authPasswordInput');
     if(inp){ inp.value=''; setTimeout(()=>inp.focus(),80); }
+    if(pw) pw.value='';
   }
 }
 function closeAuthModal(){
@@ -6932,35 +7106,67 @@ function closeAuthModal(){
   const lp=document.getElementById('landingPage');
   if(lp && !lsGet('current_user')) lp.style.display='block';
 }
-async function completeLocalSignup(username){
+async function completeLocalSignup(username, password){
   const name=String(username||'').trim();
+  const pass=String(password||'');
   if(!name){
     showToast('Please enter your email or username',2200,'warn');
     return;
   }
-  lsSet('current_user', name);
-  closeAuthModal();
-  const lp=document.getElementById('landingPage');
-  if(lp) lp.style.display='none';
-  const lc=document.getElementById('loginCanvas');
-  if(lc) lc.style.display='none';
-
-  // Session gatekeeper: skip wizard if already onboarded
-  try{ await loadAll(); }catch(e){}
-  try{ syncOnboardedFlagFromState(); }catch(e){}
-  if(lsGet('has_onboarded')==='true' || userHasExistingWorkspace()){
-    lsSet('has_onboarded','true');
-    try{
-      renderTabs(); renderPanels(); switchDay(todayJD()); updateUI();
-      revealApp();
-    }catch(e){
-      try{ revealApp(); }catch(err){}
-    }
+  if(!pass || pass.length<4){
+    showToast('Password must be at least 4 characters',2600,'warn');
     return;
   }
 
-  OB_STEP=0;
-  OB_ACTIVE_DAY='Mon';
+  if(AUTH_MODE==='signup'){
+    if(findLocalAccount(name)){
+      showToast('Account already exists — switch to Sign In',2800,'warn');
+      setAuthMode('signin');
+      return;
+    }
+    upsertLocalAccount(name, pass, {has_onboarded:false});
+    lsSet('current_user', name);
+    closeAuthModal();
+    try{ document.getElementById('loginCanvas').style.display='none'; }catch(e){}
+    try{ await loadAll(); }catch(e){}
+    OB_STEP=0; OB_ACTIVE_DAY='Mon';
+    OB_ANSWERS={name:'',trackPrayers:null,messyTasks:'',workspaceName:'',weeklySchedule:{Sat:'',Sun:'',Mon:'',Tue:'',Wed:'',Thu:'',Fri:''}};
+    try{ document.getElementById('obWizard')?.classList.add('open'); }catch(e){}
+    try{ obShowStep(); }catch(e){ console.warn(e); }
+    return;
+  }
+
+  // Sign in
+  const acc=findLocalAccount(name);
+  if(!acc){
+    showToast('No account found — create one via Sign Up',2800,'warn');
+    setAuthMode('signup');
+    return;
+  }
+  if(String(acc.password||'')!==pass){
+    showToast('Incorrect password',2400,'warn');
+    return;
+  }
+
+  lsSet('current_user', name);
+  if(acc.has_onboarded) lsSet('has_onboarded','true');
+  closeAuthModal();
+  try{ document.getElementById('loginCanvas').style.display='none'; }catch(e){}
+  const lp=document.getElementById('landingPage'); if(lp) lp.style.display='none';
+
+  try{ await loadAll(); }catch(e){}
+  try{ syncOnboardedFlagFromState(); }catch(e){}
+  if(acc.has_onboarded || lsGet('has_onboarded')==='true' || userHasExistingWorkspace()){
+    lsSet('has_onboarded','true');
+    upsertLocalAccount(name, pass, {has_onboarded:true});
+    try{
+      renderTabs(); renderPanels(); switchDay(todayJD()); updateUI();
+      revealApp();
+    }catch(e){ try{ revealApp(); }catch(err){} }
+    return;
+  }
+
+  OB_STEP=0; OB_ACTIVE_DAY='Mon';
   OB_ANSWERS={name:'',trackPrayers:null,messyTasks:'',workspaceName:'',weeklySchedule:{Sat:'',Sun:'',Mon:'',Tue:'',Wed:'',Thu:'',Fri:''}};
   try{ document.getElementById('obWizard')?.classList.add('open'); }catch(e){}
   try{ obShowStep(); }catch(e){ console.warn(e); }
@@ -6972,10 +7178,16 @@ function wireLandingAuth(){
   });
   document.getElementById('authCancelBtn')?.addEventListener('click', closeAuthModal);
   document.getElementById('authContinueBtn')?.addEventListener('click', ()=>{
-    completeLocalSignup(document.getElementById('authUsernameInput')?.value);
+    completeLocalSignup(document.getElementById('authUsernameInput')?.value, document.getElementById('authPasswordInput')?.value);
+  });
+  document.getElementById('authModeToggle')?.addEventListener('click', ()=>{
+    setAuthMode(AUTH_MODE==='signup'?'signin':'signup');
   });
   document.getElementById('authUsernameInput')?.addEventListener('keydown', e=>{
-    if(e.key==='Enter') completeLocalSignup(e.target.value);
+    if(e.key==='Enter') document.getElementById('authPasswordInput')?.focus();
+  });
+  document.getElementById('authPasswordInput')?.addEventListener('keydown', e=>{
+    if(e.key==='Enter') completeLocalSignup(document.getElementById('authUsernameInput')?.value, e.target.value);
   });
   document.getElementById('loginGoogleBtn')?.addEventListener('click', async ()=>{
     // Reuse existing Firebase Google popup flow if available
