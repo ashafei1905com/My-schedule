@@ -1887,134 +1887,106 @@ async function saveUserSettings(){
 }
 
 // ===== Onboarding (Stage 1) =====
-// Shown exactly once, gated by computeIsNewOnboardingUser() near onAuthStateChanged
-// — a signed-in user whose USER_SCHEDULE is genuinely empty after the cloud merge,
-// and who is NOT Abdullah (his account is always pre-populated by
-// migrateAbdullahScheduleIfNeeded, so this condition structurally can never be true
-// for his uid). Guests are never shown this — they keep today's existing read-only
-// guest behavior against static SCHED, unchanged, since nothing asked for that to
-// change and forcing onboarding on an anonymous browser session would be a real
-// regression, not a feature.
-//
-// Deliberately narrow scope for Stage 1: collects trackPrayers (yes/no) and a
-// buildMode choice ("template" vs "custom") into USER_SETTINGS, and marks
-// onboardingComplete so this never shows again for the account. It does NOT build a
-// theme picker (Stage 2) or an actual custom-task builder (Stage 3) — buildMode is
-// stored now so Stage 3 can read it later, but choosing "custom" here does not yet
-// launch any task-building UI; it currently just seeds an empty (still-valid,
-// getEffectiveSched-fallback-safe) USER_SCHEDULE, identical in effect to "template"
-// until Stage 3 exists. This is an intentional, explicit scope boundary, not an
-// oversight — flagged in the finish handler below too.
-let OB_STEP=0;
-let OB_ANSWERS={name:'',trackPrayers:null,messyTasks:'',workspaceName:''};
-const OB_TOTAL_STEPS=4;
+let OB_STEP = 0;
+let OB_ANSWERS = { name: '', trackPrayers: null, messyTasks: '', workspaceName: '' };
+const OB_TOTAL_STEPS = 4;
 
-// Step definitions: each step is either type 'text' (free text input, Next enabled
-// once non-empty) or 'chips' (2-column selectable cards, Next enabled once one is
-// picked). Kept as data rather than a long if/else chain so obRenderStep/obCanAdvance/
-// obGetAnswerKey stay short and every step follows one consistent rendering path —
-// adding a future step (e.g. a Stage 2 theme-color chip step) means adding one entry
-// here, not touching the render/advance logic itself.
-const OB_STEPS=[
+const OB_STEPS = [
   {
-    key:'name',
-    type:'text',
-    title:'What should we call you?',
-    sub:'This name appears on your workspace and reports.',
-    placeholder:'Your name'
+    key: 'name',
+    type: 'text',
+    title: 'What should we call you?',
+    sub: 'This name appears on your workspace and reports.',
+    placeholder: 'Your name'
   },
   {
-    key:'trackPrayers',
-    type:'chips',
-    title:'Track prayer times?',
-    sub:'If yes, the five daily prayers are added with live times. You can change this later in Settings.',
-    chips:[
-      {value:true, label:'Yes, add them', desc:'Five prayers with real times on your daily timeline'},
-      {value:false, label:'No, normal schedule', desc:'No prayer tracking — enable later from Settings'}
+    key: 'trackPrayers',
+    type: 'chips',
+    title: 'Track prayer times?',
+    sub: 'If yes, the five daily prayers are added with live times. You can change this later in Settings.',
+    chips: [
+      { value: true, label: 'Yes, add them', desc: 'Five prayers with real times on your daily timeline' },
+      { value: false, label: 'No, normal schedule', desc: 'No prayer tracking — enable later from Settings' }
     ]
   },
   {
-    key:'messyTasks',
-    type:'textarea',
-    title:'What does a typical day look like?',
-    sub:'Type what you do every day or paste your messy task list here.',
-    placeholder:'e.g. wake up, gym, work on API, lunch, review PRs, walk, sleep...'
+    key: 'messyTasks',
+    type: 'textarea',
+    title: 'What does a typical day look like?',
+    sub: 'Type what you do every day or paste your messy task list here.',
+    placeholder: 'e.g. wake up, gym, work on API, lunch, review PRs, walk, sleep...'
   },
   {
-    key:'workspaceName',
-    type:'text',
-    title:'Name your workspace',
-    sub:'A short label for this schedule space. You can rename it anytime.',
-    placeholder:'e.g. My daily system'
+    key: 'workspaceName',
+    type: 'text',
+    title: 'Name your workspace',
+    sub: 'A short label for this schedule space. You can rename it anytime.',
+    placeholder: 'e.g. My daily system'
   }
 ];
 
-function obUpdateProgress(){
-  const fill=document.getElementById('obProgressFill');
-  if(fill) fill.style.width=`${Math.round(((OB_STEP+1)/OB_TOTAL_STEPS)*100)}%`;
-  const stepCount=document.getElementById('obStepCount');
-  if(stepCount) stepCount.textContent=`${OB_STEP+1} / ${OB_TOTAL_STEPS}`;
+function obUpdateProgress() {
+  const fill = document.getElementById('obProgressFill');
+  if (fill) fill.style.width = `${Math.round(((OB_STEP + 1) / OB_TOTAL_STEPS) * 100)}%`;
+  const stepCount = document.getElementById('obStepCount');
+  if (stepCount) stepCount.textContent = `${OB_STEP + 1} / ${OB_TOTAL_STEPS}`;
 }
 
-// Whether the CURRENT step has a valid answer yet — gates the Next/Finish button.
-// Kept separate from rendering so it can be re-checked on every input change without
-// re-rendering the whole step (see the 'input' listener wiring further down).
-function obCanAdvance(){
-  const step=OB_STEPS[OB_STEP];
-  if(!step) return false;
-  const val=OB_ANSWERS[step.key];
-  if(step.type==='text' || step.type==='textarea') return typeof val==='string' && val.trim().length>0;
-  if(step.type==='chips') return val!==null && val!==undefined;
+function obCanAdvance() {
+  const step = OB_STEPS[OB_STEP];
+  if (!step) return false;
+  const val = OB_ANSWERS[step.key];
+  if (step.type === 'text' || step.type === 'textarea') return typeof val === 'string' && val.trim().length > 0;
+  if (step.type === 'chips') return val !== null && val !== undefined;
   return false;
 }
 
-function obRenderStep(){
-  const step=OB_STEPS[OB_STEP];
-  if(!step) return;
+function obRenderStep() {
+  const step = OB_STEPS[OB_STEP];
+  if (!step) return;
   obUpdateProgress();
 
-  const titleEl=document.getElementById('obTitle');
-  const subEl=document.getElementById('obSub');
-  const bodyEl=document.getElementById('obStepBody');
-  if(!titleEl||!subEl||!bodyEl) return;
-  // No default emojis in step headers
-  titleEl.textContent=step.title;
-  subEl.textContent=step.sub;
-  bodyEl.innerHTML='';
+  const titleEl = document.getElementById('obTitle');
+  const subEl = document.getElementById('obSub');
+  const bodyEl = document.getElementById('obStepBody');
+  if (!titleEl || !subEl || !bodyEl) return;
 
-  if(step.type==='text'){
-    const input=document.createElement('input');
-    input.type='text';
-    input.id='obActiveTextInput';
-    input.className='ob-textinput';
-    input.placeholder=step.placeholder||'';
-    input.value=OB_ANSWERS[step.key]||'';
-    input.oninput=()=>{ OB_ANSWERS[step.key]=input.value; obUpdateNavButtons(); };
+  titleEl.textContent = step.title;
+  subEl.textContent = step.sub;
+  bodyEl.innerHTML = '';
+
+  if (step.type === 'text') {
+    const input = document.createElement('input');
+    input.type = 'text';
+    input.id = 'obActiveTextInput';
+    input.className = 'ob-textinput';
+    input.placeholder = step.placeholder || '';
+    input.value = OB_ANSWERS[step.key] || '';
+    input.oninput = () => { OB_ANSWERS[step.key] = input.value; obUpdateNavButtons(); };
     bodyEl.appendChild(input);
-    setTimeout(()=>input.focus(),80);
-  }else if(step.type==='textarea'){
-    const ta=document.createElement('textarea');
-    ta.id='obActiveTextInput';
-    ta.className='ob-textinput';
-    ta.rows=7;
-    ta.style.minHeight='140px';
-    ta.style.resize='vertical';
-    ta.style.lineHeight='1.5';
-    ta.placeholder=step.placeholder||'';
-    ta.value=OB_ANSWERS[step.key]||'';
-    ta.oninput=()=>{ OB_ANSWERS[step.key]=ta.value; obUpdateNavButtons(); };
+    setTimeout(() => input.focus(), 80);
+  } else if (step.type === 'textarea') {
+    const ta = document.createElement('textarea');
+    ta.id = 'obActiveTextInput';
+    ta.className = 'ob-textinput';
+    ta.rows = 7;
+    ta.style.minHeight = '140px';
+    ta.style.resize = 'vertical';
+    ta.style.lineHeight = '1.5';
+    ta.placeholder = step.placeholder || '';
+    ta.value = OB_ANSWERS[step.key] || '';
+    ta.oninput = () => { OB_ANSWERS[step.key] = ta.value; obUpdateNavButtons(); };
     bodyEl.appendChild(ta);
-    setTimeout(()=>ta.focus(),80);
-  }else if(step.type==='chips'){
-    const wrap=document.createElement('div');
-    wrap.className='ob-chips';
-    step.chips.forEach(chip=>{
-      const card=document.createElement('div');
-      const isSel=OB_ANSWERS[step.key]===chip.value;
-      card.className='ob-chip'+(isSel?' sel':'');
-      // No icons/emojis on chips
-      card.innerHTML=`<div class="ob-chip-label">${chip.label}</div><div class="ob-chip-desc">${chip.desc||''}</div>`;
-      card.onclick=()=>{ OB_ANSWERS[step.key]=chip.value; obRenderStep(); };
+    setTimeout(() => ta.focus(), 80);
+  } else if (step.type === 'chips') {
+    const wrap = document.createElement('div');
+    wrap.className = 'ob-chips';
+    step.chips.forEach(chip => {
+      const card = document.createElement('div');
+      const isSel = OB_ANSWERS[step.key] === chip.value;
+      card.className = 'ob-chip' + (isSel ? ' sel' : '');
+      card.innerHTML = `<div class="ob-chip-label">${chip.label}</div><div class="ob-chip-desc">${chip.desc || ''}</div>`;
+      card.onclick = () => { OB_ANSWERS[step.key] = chip.value; obRenderStep(); };
       wrap.appendChild(card);
     });
     bodyEl.appendChild(wrap);
@@ -2023,196 +1995,181 @@ function obRenderStep(){
   obUpdateNavButtons();
 }
 
-function obUpdateNavButtons(){
-  const backBtn=document.getElementById('btn-onboard-back');
-  const nextBtn=document.getElementById('btn-onboard-next');
-  if(backBtn) backBtn.disabled=OB_STEP===0;
-  if(!nextBtn) return;
-  const isLast=OB_STEP===OB_TOTAL_STEPS-1;
-  nextBtn.textContent=isLast?'Finish':'Next';
-  nextBtn.className='ob-navbtn '+(isLast?'ob-navbtn-finish':'ob-navbtn-next');
-  nextBtn.disabled=!obCanAdvance();
+function obUpdateNavButtons() {
+  const backBtn = document.getElementById('btn-onboard-back');
+  const nextBtn = document.getElementById('btn-onboard-next');
+  if (backBtn) backBtn.disabled = OB_STEP === 0;
+  if (!nextBtn) return;
+  const isLast = OB_STEP === OB_TOTAL_STEPS - 1;
+  nextBtn.textContent = isLast ? 'Finish' : 'Next';
+  nextBtn.className = 'ob-navbtn ' + (isLast ? 'ob-navbtn-finish' : 'ob-navbtn-next');
+  nextBtn.disabled = !obCanAdvance();
 }
 
-function obShowStep(){
-  const wizard=document.getElementById('obWizard');
-  if(wizard) wizard.classList.add('open');
+function obShowStep() {
+  const wizard = document.getElementById('obWizard');
+  if (wizard) wizard.classList.add('open');
   obRenderStep();
 }
 
-function obHandleNext(){
-  if(!obCanAdvance()) return;
-  if(OB_STEP>=OB_TOTAL_STEPS-1){ obFinish(); return; }
+function obHandleNext() {
+  if (!obCanAdvance()) return;
+  if (OB_STEP >= OB_TOTAL_STEPS - 1) { obFinish(); return; }
   OB_STEP++;
   obRenderStep();
 }
 
-function obHandleBack(){
-  if(OB_STEP<=0) return;
+function obHandleBack() {
+  if (OB_STEP <= 0) return;
   OB_STEP--;
   obRenderStep();
 }
 
-// Finalizes onboarding: persists trackPrayers + buildMode + the chosen workspace
-// name into USER_SETTINGS (trackPrayers is the SAME field getAllTasks/getReqTasks
-// already gate buildPTasks() on — nothing new to wire there, Stage 0.5's plumbing
-// already reads this), seeds an empty USER_SCHEDULE so getEffectiveSched's
-// fallback-to-static-SCHED path is never hit for a new account (a genuinely new
-// user should never silently see Abdullah's personal schedule — they see whatever
-// getAllTasks produces from an empty per-day ts:[] until Stage 3 lets them actually
-// add tasks), and marks onboardingComplete so PENDING_ONBOARDING-driven display
-// never fires again for this account.
-//
-// buildMode:'custom' does NOT yet launch a task-building UI — same explicit Stage 1
-// scope boundary as before, just carried into the redesigned wizard: the choice is
-// recorded for Stage 3 to read later, but both buildMode values currently produce
-// the identical empty-schedule outcome.
-async function handleBuildScheduleFromText(messyText, opts={}){
-  const textIn=String(messyText||'').trim();
-  const today=opts.today || (typeof TODAY!=='undefined'?TODAY:new Date().toISOString().slice(0,10));
-  const lang=opts.lang || (USER_SETTINGS?.lang==='ar'?'ar':'en');
+async function handleBuildScheduleFromText(messyText, opts = {}) {
+  const textIn = String(messyText || '').trim();
+  const today = opts.today || (typeof TODAY !== 'undefined' ? TODAY : new Date().toISOString().slice(0, 10));
+  const lang = opts.lang || (USER_SETTINGS?.lang === 'ar' ? 'ar' : 'en');
 
-  try{
-    if(typeof AI_WORKER_URL==='string' && AI_WORKER_URL){
-      const res=await fetch(AI_WORKER_URL.replace(/\/$/,'')+'/api/build-schedule',{
-        method:'POST',
-        headers:{'Content-Type':'application/json'},
-        body:JSON.stringify({messyText:textIn, today, lang})
+  try {
+    if (typeof AI_WORKER_URL === 'string' && AI_WORKER_URL) {
+      const res = await fetch(AI_WORKER_URL.replace(/\/$/, '') + '/api/build-schedule', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ messyText: textIn, today, lang })
       });
-      if(res.ok){
-        const data=await res.json();
-        const raw=data.text || data;
-        const parsed=typeof raw==='string'?JSON.parse(raw):raw;
-        if(parsed && Array.isArray(parsed.blocks)){
+      if (res.ok) {
+        const data = await res.json();
+        const raw = data.text || data;
+        const parsed = typeof raw === 'string' ? JSON.parse(raw) : raw;
+        if (parsed && Array.isArray(parsed.blocks)) {
           return applyBuiltBlocksToSchedule(parsed.blocks, today);
         }
       }
     }
-  }catch(e){
+  } catch (e) {
     console.warn('build-schedule worker failed, using local parser', e);
   }
 
-  const parts=textIn
+  const parts = textIn
     .split(/\n|,|•|\u2022|;/)
-    .map(s=>s.replace(/^[-*\d\.\)\s]+/,'').trim())
+    .map(s => s.replace(/^[-*\d\.\)\s]+/, '').trim())
     .filter(Boolean)
-    .slice(0,12);
+    .slice(0, 12);
 
-  const blocks=[];
-  let cursor=8*60;
-  for(const p of parts){
-    const dur=90;
-    const start=cursor;
-    const end=Math.min(start+dur, 22*60);
-    const h1=String(Math.floor(start/60)).padStart(2,'0');
-    const m1=String(start%60).padStart(2,'0');
-    const h2=String(Math.floor(end/60)).padStart(2,'0');
-    const m2=String(end%60).padStart(2,'0');
-    blocks.push({start:`${h1}:${m1}`, end:`${h2}:${m2}`, task:p, emoji:'', category:'Deep Work'});
-    cursor=end+15;
-    if(cursor>=22*60) break;
+  const blocks = [];
+  let cursor = 8 * 60;
+  for (const p of parts) {
+    const dur = 90;
+    const start = cursor;
+    const end = Math.min(start + dur, 22 * 60);
+    const h1 = String(Math.floor(start / 60)).padStart(2, '0');
+    const m1 = String(start % 60).padStart(2, '0');
+    const h2 = String(Math.floor(end / 60)).padStart(2, '0');
+    const m2 = String(end % 60).padStart(2, '0');
+    blocks.push({ start: `${h1}:${m1}`, end: `${h2}:${m2}`, task: p, emoji: '', category: 'Deep Work' });
+    cursor = end + 15;
+    if (cursor >= 22 * 60) break;
   }
   return applyBuiltBlocksToSchedule(blocks, today);
 }
 
-function applyBuiltBlocksToSchedule(blocks, todayIso){
-  if(!USER_SCHEDULE || !Object.keys(USER_SCHEDULE).length){
-    USER_SCHEDULE={};
-    for(let jd=0; jd<7; jd++){
-      USER_SCHEDULE[jd]={n:(typeof DSHORT!=='undefined'?DSHORT[jd]:['Sun','Mon','Tue','Wed','Thu','Fri','Sat'][jd]), wk:'8:00 ص', bd:'11:00 م', gm:null, ts:[]};
+function applyBuiltBlocksToSchedule(blocks, todayIso) {
+  if (!USER_SCHEDULE || !Object.keys(USER_SCHEDULE).length) {
+    USER_SCHEDULE = {};
+    for (let jd = 0; jd < 7; jd++) {
+      USER_SCHEDULE[jd] = { n: (typeof DSHORT !== 'undefined' ? DSHORT[jd] : ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'][jd]), wk: '8:00 ص', bd: '11:00 م', gm: null, ts: [] };
     }
   }
-  const jd=(typeof getJDfromISO==='function')?getJDfromISO(todayIso):(new Date(todayIso+'T12:00:00').getDay());
-  if(!USER_SCHEDULE[jd]) USER_SCHEDULE[jd]={n:'',wk:'8:00 ص',bd:'11:00 م',gm:null,ts:[]};
+  const jd = (typeof getJDfromISO === 'function') ? getJDfromISO(todayIso) : (new Date(todayIso + 'T12:00:00').getDay());
+  if (!USER_SCHEDULE[jd]) USER_SCHEDULE[jd] = { n: '', wk: '8:00 ص', bd: '11:00 م', gm: null, ts: [] };
 
-  const toArDisplay=(hhmm)=>{
-    const [h0,m0]=String(hhmm).split(':').map(Number);
-    let h=h0, ap='ص';
-    if(h>=12){ ap='م'; if(h>12) h-=12; }
-    if(h===0) h=12;
-    return `${h}:${String(m0).padStart(2,'0')} ${ap}`;
+  const toArDisplay = (hhmm) => {
+    const [h0, m0] = String(hhmm).split(':').map(Number);
+    let h = h0, ap = 'ص';
+    if (h >= 12) { ap = 'م'; if (h > 12) h -= 12; }
+    if (h === 0) h = 12;
+    return `${h}:${String(m0).padStart(2, '0')} ${ap}`;
   };
 
-  const ts=[];
-  (blocks||[]).forEach((b,i)=>{
-    const name=String(b.task||b.activity||'Task').trim();
-    if(!name) return;
-    const start=b.start||'09:00';
-    const id=`ob-${Date.now()}-${i}`;
+  const ts = [];
+  (blocks || []).forEach((b, i) => {
+    const name = String(b.task || b.activity || 'Task').trim();
+    if (!name) return;
+    const start = b.start || '09:00';
+    const id = `ob-${Date.now()}-${i}`;
     ts.push([
       id,
       toArDisplay(start),
       'prog',
       '📌',
       name,
-      `${b.category||'Focus'} · ${start}–${b.end||''}`,
+      `${b.category || 'Focus'} · ${start}–${b.end || ''}`,
       5,
-      null,null,false,
+      null, null, false,
       start
     ]);
   });
-  USER_SCHEDULE[jd].ts=ts;
+  USER_SCHEDULE[jd].ts = ts;
   return USER_SCHEDULE;
 }
 
-async function obFinish(){
-  // FIXED: never reference obIsEn — always read language from USER_SETTINGS
-  const en=(USER_SETTINGS && USER_SETTINGS.lang==='en');
+async function obFinish() {
+  const en = (USER_SETTINGS && USER_SETTINGS.lang === 'en');
 
-  USER_SETTINGS={
+  USER_SETTINGS = {
     ...USER_SETTINGS,
     lang: USER_SETTINGS.lang || 'en',
     trackPrayers: !!OB_ANSWERS.trackPrayers,
-    displayNameChosen: (OB_ANSWERS.name||'').trim(),
-    workspaceName: (OB_ANSWERS.workspaceName||'').trim(),
+    displayNameChosen: (OB_ANSWERS.name || '').trim(),
+    workspaceName: (OB_ANSWERS.workspaceName || '').trim(),
     onboardingComplete: true
   };
 
-  const emptySchedule={};
-  for(let jd=0; jd<7; jd++){
-    emptySchedule[jd]={
-      n:(typeof DSHORT!=='undefined'?DSHORT[jd]:['Sun','Mon','Tue','Wed','Thu','Fri','Sat'][jd]),
-      wk:'8:00 ص',
-      bd:'11:00 م',
-      gm:null,
-      ts:[]
+  const emptySchedule = {};
+  for (let jd = 0; jd < 7; jd++) {
+    emptySchedule[jd] = {
+      n: (typeof DSHORT !== 'undefined' ? DSHORT[jd] : ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'][jd]),
+      wk: '8:00 ص',
+      bd: '11:00 م',
+      gm: null,
+      ts: []
     };
   }
-  USER_SCHEDULE=emptySchedule;
+  USER_SCHEDULE = emptySchedule;
 
-  const messy=(OB_ANSWERS.messyTasks||'').trim();
-  if(messy){
-    try{
+  const messy = (OB_ANSWERS.messyTasks || '').trim();
+  if (messy) {
+    try {
       await handleBuildScheduleFromText(messy, {
-        today: (typeof TODAY!=='undefined'?TODAY:new Date().toISOString().slice(0,10)),
-        lang: en?'en':'ar'
+        today: (typeof TODAY !== 'undefined' ? TODAY : new Date().toISOString().slice(0, 10)),
+        lang: en ? 'en' : 'ar'
       });
-    }catch(e){
+    } catch (e) {
       console.warn('schedule build from onboarding text failed', e);
     }
   }
 
-  try{
+  try {
     await saveUserSettings();
     await saveUserSchedule();
-  }catch(e){
+  } catch (e) {
     console.warn('onboarding save failed', e);
-    showToast(en?'Could not save settings — try again':'تعذر حفظ الإعدادات — حاول مرة أخرى',3500,'warn');
+    showToast(en ? 'Could not save settings — try again' : 'تعذر حفظ الإعدادات — حاول مرة أخرى', 3500, 'warn');
   }
 
-  lsSet('has_onboarded','true');
+  lsSet('has_onboarded', 'true');
 
-  const wizard=document.getElementById('obWizard');
-  if(wizard) wizard.classList.remove('open');
+  const wizard = document.getElementById('obWizard');
+  if (wizard) wizard.classList.remove('open');
 
-  try{
+  try {
     renderTabs();
     renderPanels();
-    switchDay(typeof todayJD==='function'?todayJD():new Date().getDay());
+    switchDay(typeof todayJD === 'function' ? todayJD() : new Date().getDay());
     updateUI();
     revealApp();
-    showToast(en?'Your schedule is ready':'جدولك جاهز',2400);
-  }catch(e){
+    showToast(en ? 'Your schedule is ready' : 'جدولك جاهز', 2400);
+  } catch (e) {
     console.warn('post-onboarding re-render failed', e);
   }
 }
