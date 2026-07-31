@@ -1949,7 +1949,7 @@ const OB_STEPS=[
   }
 ];
 
-function obUpdateProgressfunction obUpdateProgress(){
+function obUpdateProgress(){
   const fill=document.getElementById('obProgressFill');
   if(fill) fill.style.width=`${Math.round(((OB_STEP+1)/OB_TOTAL_STEPS)*100)}%`;
   const stepCount=document.getElementById('obStepCount');
@@ -2217,7 +2217,7 @@ async function obFinish(){
   }
 }
 
-function buildPTasksfunction buildPTasks(jd){
+function buildPTasks(jd){
   const k=DKEYS ? DKEYS[jd] : ['sun','mon','tue','wed','thu','fri','sat'][jd];
   return Object.entries(PMETA)
     .filter(([pk])=>pk!=='Sunrise')
