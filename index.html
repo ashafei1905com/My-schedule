@@ -1018,9 +1018,89 @@ body.theme-matrix .tctime{
   </div>
 </div>
 
-<div id="ld" style="display:flex;align-items:center;justify-content:center;height:100vh;flex-direction:column;gap:16px">
-  <div style="width:40px;height:40px;border:3px solid #1e2d45;border-top-color:#3b82f6;border-radius:50%;animation:spin .8s linear infinite"></div>
-  <span style="color:#64748b;font-family:Cairo,sans-serif;font-size:.9rem">Loading Your Schedule...</span>
+<style>
+#ld{display:flex;align-items:center;justify-content:center;height:100vh;flex-direction:column;gap:16px;background:var(--bg-main,var(--bg,#0a0e1a));color:var(--text-main,var(--tx,#f1f5f9))}
+#ld .ld-spinner{width:40px;height:40px;border:3px solid rgba(255,255,255,.08);border-top-color:var(--accent-color,var(--ac,#3b82f6));border-radius:50%;animation:spin .8s linear infinite}
+#ld .ld-label{color:var(--so,var(--text-muted,#64748b));font-family:Cairo,sans-serif;font-size:.9rem}
+@media (max-width:768px){
+  #sbar{
+    flex-direction:column!important;
+    align-items:stretch!important;
+    gap:0.75rem!important;
+    padding:0.75rem!important;
+    height:auto!important;
+    min-height:0!important;
+  }
+  #sbar .sbar-stats{
+    display:flex!important;
+    justify-content:space-between!important;
+    width:100%!important;
+    border-bottom:1px solid rgba(255,255,255,0.05);
+    padding-bottom:0.5rem;
+    flex:none!important;
+  }
+  #sbar .sbar-auth{
+    display:flex!important;
+    flex-direction:row!important;
+    justify-content:space-between!important;
+    align-items:center!important;
+    width:100%!important;
+    align-items:flex-start!important;
+  }
+  #sbar .sbar-auth #authBtn{
+    width:100%;
+    justify-content:space-between!important;
+  }
+  .profile-wrap{align-items:flex-end;width:auto}
+}
+</style>
+<script>
+(function(){
+  try{
+    var currentUser=localStorage.getItem('current_user');
+    var activeThemeClass='';
+    var themeId=null;
+    // Primary source: global stats blob used by the app
+    try{
+      var statsRaw=localStorage.getItem('sc:stats2');
+      if(statsRaw){
+        var stats=JSON.parse(statsRaw);
+        if(stats&&stats.activeMythicTheme) themeId=stats.activeMythicTheme;
+      }
+    }catch(e){}
+    if(!themeId&&currentUser){
+      try{
+        var accounts=JSON.parse(localStorage.getItem('sc:localAccounts1')||'[]');
+        var userAcc=accounts.find(function(a){return a&&(a.username===currentUser||String(a.username||'').toLowerCase()===String(currentUser).toLowerCase());});
+        if(userAcc&&userAcc.stats&&userAcc.stats.activeMythicTheme) themeId=userAcc.stats.activeMythicTheme;
+        else if(userAcc&&userAcc.activeMythicTheme) themeId=userAcc.activeMythicTheme;
+      }catch(e){}
+    }
+    if(!themeId){
+      try{
+        var settings=JSON.parse(localStorage.getItem('sc:userSettings1')||'{}');
+        if(settings&&settings.activeMythicTheme) themeId=settings.activeMythicTheme;
+        else if(settings&&settings.theme) themeId=settings.theme;
+      }catch(e){}
+    }
+    if(themeId==='gold') themeId='chrono';
+    if(themeId==='nebula'||themeId==='cyberpunk'||themeId==='matrix'||themeId==='chrono'){
+      activeThemeClass='theme-'+themeId;
+    }
+    if(activeThemeClass){
+      document.documentElement.classList.add(activeThemeClass);
+      document.addEventListener('DOMContentLoaded',function(){
+        document.body.classList.add(activeThemeClass);
+        var ld=document.getElementById('ld');
+        if(ld) ld.classList.add(activeThemeClass);
+      });
+    }
+  }catch(e){}
+})();
+</script>
+<div id="ld">
+  <div class="ld-spinner"></div>
+  <span class="ld-label">Loading Your Schedule...</span>
 </div>
 
 <main id="app" style="display:none">
@@ -4551,7 +4631,11 @@ function buildWeekReportData(){
     }).join('');
 
     const r1=n=>Math.round(n*10)/10;
-    const macroLine=dayMacroTarget.k>0?`<div style="margin-top:8px;padding:6px 10px;background:rgba(16,185,129,.06);border:1px solid rgba(16,185,129,.2);border-radius:8px;font-size:.68rem;color:var(--so);display:flex;flex-wrap:wrap;gap:10px"><span>🍽️ ${r1(dayMacroConsumed.k)}/${r1(dayMacroTarget.k)} سعرة</span><span>بروتين ${r1(dayMacroConsumed.p)}/${r1(dayMacroTarget.p)}جم</span><span>كارب ${r1(dayMacroConsumed.c)}/${r1(dayMacroTarget.c)}جم</span><span>دهون ${r1(dayMacroConsumed.f)}/${r1(dayMacroTarget.f)}جم</span></div>`:'';
+    const enRep=(USER_SETTINGS&&USER_SETTINGS.lang)==='en';
+    const macroLine=dayMacroTarget.k>0?`<div style="margin-top:8px;padding:6px 10px;background:rgba(16,185,129,.06);border:1px solid rgba(16,185,129,.2);border-radius:8px;font-size:.68rem;color:var(--so);display:flex;flex-wrap:wrap;gap:10px;direction:${enRep?'ltr':'rtl'}">${enRep
+      ?`<span>🍽️ ${r1(dayMacroConsumed.k)}/${r1(dayMacroTarget.k)} kcal</span><span>P ${r1(dayMacroConsumed.p)}/${r1(dayMacroTarget.p)}g</span><span>C ${r1(dayMacroConsumed.c)}/${r1(dayMacroTarget.c)}g</span><span>F ${r1(dayMacroConsumed.f)}/${r1(dayMacroTarget.f)}g</span>`
+      :`<span>🍽️ ${r1(dayMacroConsumed.k)}/${r1(dayMacroTarget.k)} سعرة</span><span>بروتين ${r1(dayMacroConsumed.p)}/${r1(dayMacroTarget.p)}جم</span><span>كارب ${r1(dayMacroConsumed.c)}/${r1(dayMacroTarget.c)}جم</span><span>دهون ${r1(dayMacroConsumed.f)}/${r1(dayMacroTarget.f)}جم</span>`
+    }</div>`:'';
 
     dayBlocks.push(`<div class="report-day">
       <div class="report-day-title">${dayName} — ${iso} — <span style="color:var(--ye)">${pts}⭐</span> <span style="color:var(--mu);font-size:.7rem">(${done}/${tasks.length} مهمة${missed>0?` · ${missed} مفقود`:''}${qada>0?` · ${qada} قضاء`:''})</span></div>
@@ -4846,7 +4930,7 @@ function renderCard(task,isToday,jd){
   // description as a compact badge — makes the card itself carry the real intake,
   // not just the day-level totals.
   const loggedMacro=(historyData[SELECTED_DATE||TODAY]||{}).foodLog?.[id]?.macro;
-  const loggedBadge=loggedMacro?`<div class="hwtag" style="background:rgba(16,185,129,.12);border-color:rgba(16,185,129,.3);color:#34d399">🍽️ ${Math.round(loggedMacro.k)} سعرة · ب${Math.round(loggedMacro.p)} · ك${Math.round(loggedMacro.c)} · د${Math.round(loggedMacro.f)} · أ${Math.round(loggedMacro.b||0)}</div>`:'';
+  const loggedBadge=loggedMacro?`<div class="hwtag" style="background:rgba(16,185,129,.12);border-color:rgba(16,185,129,.3);color:#34d399;display:inline-flex;align-items:center;gap:4px">🍽️ ${formatMacroString(loggedMacro.k,loggedMacro.p,loggedMacro.c,loggedMacro.f,loggedMacro.b||0)}</div>`:'';
 
   return`<div class="tc${isDone?' done':''}${isEx?' excx':''}${isDeleted?' excx':''}" data-c="${cat}" id="c-${id}" ${isDeleted?'style="opacity:.5"':''}>
     <div class="tctime">${arTime}</div><div class="tcico">${ico}</div>
@@ -6257,9 +6341,25 @@ let FL_ACTIVE_TASK=null;
 let FL_CLARIFY_ROUNDS=0;
 const FL_MAX_CLARIFY_ROUNDS=1;
 
+function formatMacroString(kcal,p,c,f,fib){
+  const isAr=(USER_SETTINGS&&USER_SETTINGS.lang)==='ar';
+  const k=Math.round(Number(kcal)||0);
+  const pv=Math.round(Number(p)||0);
+  const cv=Math.round(Number(c)||0);
+  const fv=Math.round(Number(f)||0);
+  const bv=Math.round(Number(fib)||0);
+  if(isAr){
+    return `<div style="display:inline-flex;direction:rtl;gap:4px;align-items:center;flex-wrap:wrap">
+      <span>${k} سعرة</span><span>·</span><span>ب ${pv}</span><span>·</span><span>ك ${cv}</span><span>·</span><span>د ${fv}</span><span>·</span><span>أ ${bv}</span>
+    </div>`;
+  }
+  return `<div style="display:inline-flex;direction:ltr;gap:4px;align-items:center;flex-wrap:wrap">
+    <span>${k} kcal</span><span>·</span><span>P ${pv}g</span><span>·</span><span>C ${cv}g</span><span>·</span><span>F ${fv}g</span><span>·</span><span>Fib ${bv}g</span>
+  </div>`;
+}
 function fmtMacroShort(m){
-  const r1=n=>Math.round(n*10)/10;
-  return `${r1(m.k)} سعرة · ب${r1(m.p)} · ك${r1(m.c)} · د${r1(m.f)} · أ${r1(m.b||0)}`;
+  if(!m) return '';
+  return formatMacroString(m.k,m.p,m.c,m.f,m.b||0);
 }
 
 function openFoodLogModal(task,existingEntry,prefillText){
