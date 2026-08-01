@@ -30,7 +30,7 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;700;900&display=swap" rel="stylesheet">
 <style>
-:root{--bg:#0a0e1a;--c:#111827;--c2:#1a2235;--br:#1e2d45;--ac:#3b82f6;--gr:#10b981;--or:#f59e0b;--rd:#ef4444;--pu:#8b5cf6;--ye:#fbbf24;--cy:#06b6d4;--pk:#ec4899;--tx:#f1f5f9;--mu:#64748b;--so:#94a3b8}
+:root{--bg:#0a0e1a;--c:#111827;--c2:#1a2235;--br:#1e2d45;--ac:#3b82f6;--accent-color:#3b82f6;--text-on-accent:#ffffff;--gr:#10b981;--or:#f59e0b;--rd:#ef4444;--pu:#8b5cf6;--ye:#fbbf24;--cy:#06b6d4;--pk:#ec4899;--tx:#f1f5f9;--mu:#64748b;--so:#94a3b8}
 *{margin:0;padding:0;box-sizing:border-box}
 body{font-family:'Cairo',sans-serif;background:var(--bg);color:var(--tx)}
 html[dir="rtl"] body{direction:rtl}
@@ -90,12 +90,12 @@ html[dir="ltr"] .tc[data-c="sunrise"]{border-left:3px solid var(--or)}
 .card-ontime{animation:ontimeGlow 1s ease}
 .card-late{animation:lateGlow 1s ease}
 .card-qada{animation:qadaGlow 1s ease}
-.current-task-highlight{outline:2px solid var(--ac);box-shadow:0 0 0 4px rgba(59,130,246,.25),0 8px 28px rgba(59,130,246,.2);transition:outline .3s,box-shadow .3s}
+.current-task-highlight{outline:2px solid var(--accent-color,var(--ac));box-shadow:0 0 0 4px color-mix(in srgb,var(--accent-color,var(--ac)) 25%,transparent),0 8px 28px color-mix(in srgb,var(--accent-color,var(--ac)) 20%,transparent);transition:outline .3s,box-shadow .3s}
 .bar-gold{animation:barGold .9s ease}
 .st{display:flex;flex-direction:column;align-items:center;gap:1px}
 .sv{font-size:1.5rem;font-weight:900;line-height:1}
 .sl{font-size:.6rem;color:var(--so);font-weight:700}
-#sv1{color:var(--or)}#sv2{color:var(--ye)}#sv3{color:var(--pu)}
+#sv1{color:var(--accent-color,var(--or))}#sv2{color:var(--accent-color,var(--ye))}#sv3{color:var(--accent-color,var(--pu))}
 .pw{padding:10px 16px 0}
 .pb{background:var(--c);border:1px solid var(--br);border-radius:10px;padding:10px 14px}
 .ph{display:flex;justify-content:space-between;font-size:.77rem;color:var(--so);margin-bottom:6px}
@@ -120,7 +120,7 @@ html[dir="ltr"] .tc[data-c="sunrise"]{border-left:3px solid var(--or)}
 .tabs{display:flex;gap:6px;width:max-content}
 .tab{flex-shrink:0;padding:8px 13px;background:var(--c);border:1px solid var(--br);border-radius:8px;cursor:pointer;font-family:'Cairo',sans-serif;font-size:.82rem;font-weight:700;color:var(--so);transition:all .2s;display:flex;flex-direction:column;align-items:center;gap:2px}
 .tab:hover{border-color:var(--ac);color:var(--tx)}
-.tab.act{background:#2563eb;border-color:#2563eb;color:#fff}
+.tab.act{background:var(--accent-color,var(--ac));background-color:var(--accent-color,var(--ac));border-color:var(--accent-color,var(--ac));color:var(--text-on-accent,#fff)}
 .tab.tod:not(.act){border-color:var(--gr);color:var(--gr)}
 .gdot{width:5px;height:5px;border-radius:50%;background:var(--or)}
 .tab.act .gdot{background:rgba(255,255,255,.7)}
@@ -167,7 +167,7 @@ html[dir="ltr"] .tc[data-c="sunrise"]{border-left:3px solid var(--or)}
 .tcdesc{font-size:.73rem;color:var(--so);line-height:1.5}
 .hwtag{display:inline-block;margin-top:4px;padding:2px 7px;background:rgba(239,68,68,.15);border:1px solid rgba(239,68,68,.3);border-radius:4px;font-size:.62rem;color:#ef4444;font-weight:700}
 .excbadge{display:inline-flex;align-items:center;gap:3px;padding:3px 8px;background:rgba(6,182,212,.1);border:1px solid rgba(6,182,212,.3);border-radius:6px;font-size:.67rem;color:var(--cy);font-weight:700;flex-shrink:0}
-.altbtn{margin-top:5px;padding:5px 10px;background:rgba(59,130,246,.18);border:1px solid rgba(59,130,246,.5);border-radius:6px;font-size:.68rem;font-weight:800;color:#60a5fa;cursor:pointer;display:inline-flex;align-items:center;gap:4px;font-family:'Cairo',sans-serif;transition:all .2s}
+.altbtn{margin-top:5px;padding:5px 10px;background:color-mix(in srgb,var(--accent-color,var(--ac)) 18%,transparent);border:1px solid color-mix(in srgb,var(--accent-color,var(--ac)) 50%,transparent);border-radius:8px;color:var(--tx);cursor:pointer;font-family:inherit;font-weight:700;font-size:.8rem}
 .altbtn:hover{background:rgba(59,130,246,.3)}
 .altbtn:disabled{opacity:.5;cursor:not-allowed}
 .cbtn{flex-shrink:0;padding:6px 10px;background:rgba(16,185,129,.1);border:1px solid rgba(16,185,129,.4);border-radius:8px;cursor:pointer;font-family:'Cairo',sans-serif;font-size:.73rem;font-weight:700;color:var(--gr);transition:all .2s;display:flex;flex-direction:column;align-items:center;gap:1px}
@@ -188,15 +188,15 @@ html[dir="ltr"] .tc[data-c="sunrise"]{border-left:3px solid var(--or)}
 
 /* Top bar action buttons — visually distinct per function */
 .topbtn{padding:9px 16px;border-radius:10px;font-family:'Cairo',sans-serif;font-size:.78rem;font-weight:800;cursor:pointer;display:inline-flex;align-items:center;gap:6px;transition:all .2s;border:none}
-.topbtn-report{background:var(--ac);background-color:var(--ac);color:#fff;box-shadow:0 2px 10px color-mix(in srgb,var(--ac) 40%,transparent)}
-.topbtn-report:hover{box-shadow:0 4px 16px rgba(37,99,235,.5);transform:translateY(-1px)}
+.topbtn-report{background:var(--accent-color,var(--ac));background-color:var(--accent-color,var(--ac));color:var(--text-on-accent,#fff);box-shadow:0 2px 10px color-mix(in srgb,var(--accent-color,var(--ac)) 40%,transparent)}
+.topbtn-report:hover{box-shadow:0 4px 16px color-mix(in srgb,var(--accent-color,var(--ac)) 55%,transparent);transform:translateY(-1px);filter:brightness(1.06)}
 .topbtn-report:disabled{opacity:.4;cursor:not-allowed;transform:none;box-shadow:none}
-.topbtn-history{background:linear-gradient(135deg,#7c3aed,#6d28d9);color:#fff;box-shadow:0 2px 10px rgba(124,58,237,.35)}
-.topbtn-history:hover{box-shadow:0 4px 16px rgba(124,58,237,.5);transform:translateY(-1px)}
+.topbtn-history{background:var(--accent-color,var(--ac));background-color:var(--accent-color,var(--ac));color:var(--text-on-accent,#fff);box-shadow:0 2px 10px color-mix(in srgb,var(--accent-color,var(--ac)) 35%,transparent)}
+.topbtn-history:hover{box-shadow:0 4px 16px color-mix(in srgb,var(--accent-color,var(--ac)) 50%,transparent);transform:translateY(-1px);filter:brightness(1.06)}
 .topbtn-signout{background:rgba(239,68,68,.12);border:1.5px solid rgba(239,68,68,.5);color:#f87171}
 .topbtn-signout:hover{background:rgba(239,68,68,.22)}
-.topbtn-signin{background:linear-gradient(135deg,#10b981,#059669);color:#fff;box-shadow:0 2px 10px rgba(16,185,129,.35)}
-.topbtn-signin:hover{box-shadow:0 4px 16px rgba(16,185,129,.5);transform:translateY(-1px)}
+.topbtn-signin{background:var(--accent-color,var(--ac));background-color:var(--accent-color,var(--ac));color:var(--text-on-accent,#fff);box-shadow:0 2px 10px color-mix(in srgb,var(--accent-color,var(--ac)) 35%,transparent)}
+.topbtn-signin:hover{box-shadow:0 4px 16px color-mix(in srgb,var(--accent-color,var(--ac)) 50%,transparent);transform:translateY(-1px);filter:brightness(1.06)}
 .profile-wrap{position:relative}
 .profile-btn{background:transparent;border:none;color:var(--tx);font-family:'Cairo',sans-serif;font-size:.85rem;font-weight:800;cursor:pointer;padding:6px 10px;border-radius:8px;display:inline-flex;align-items:center;gap:6px}
 .profile-btn:hover{background:rgba(255,255,255,.06)}
@@ -357,7 +357,7 @@ html[dir="ltr"] .tc[data-c="sunrise"]{border-left:3px solid var(--or)}
 @keyframes aiPopIn{0%{opacity:0;transform:scale(.85) translateY(30px)}100%{opacity:1;transform:scale(1) translateY(0)}}
 @keyframes aiFullIn{0%{opacity:0;transform:scale(.96)}100%{opacity:1;transform:scale(1)}}
 @keyframes fabPop{0%{transform:scale(0);opacity:0}70%{transform:scale(1.15)}100%{transform:scale(1);opacity:1}}
-#aiFab{position:fixed;bottom:22px;left:22px;width:58px;height:58px;border-radius:50%;background:linear-gradient(135deg,#8b5cf6,#6d28d9);display:flex;align-items:center;justify-content:center;font-size:1.6rem;cursor:pointer;z-index:9998;box-shadow:0 4px 20px rgba(139,92,246,.5);border:none;transition:transform .2s;animation:fabPop .4s ease}
+#aiFab{position:fixed;bottom:22px;left:22px;width:58px;height:58px;border-radius:50%;background:var(--accent-color,var(--ac));display:flex;align-items:center;justify-content:center;font-size:1.6rem;cursor:pointer;z-index:9998;box-shadow:0 4px 20px rgba(139,92,246,.5);border:none;transition:transform .2s;animation:fabPop .4s ease}
 #aiFab:hover{transform:scale(1.08)}
 #aiFab:active{transform:scale(.94)}
 #aiFab.hidden{display:none}
@@ -473,6 +473,7 @@ body.theme-cyberpunk .tc{
 .lp-check{width:18px;height:18px;border-radius:50%;border:2px solid #334155;flex-shrink:0;margin-top:2px;position:relative;background:transparent}
 .lp-check[data-check="1"]{animation:lpCheck1 10s ease-in-out infinite}
 .lp-check[data-check="2"]{animation:lpCheck2 10s ease-in-out infinite}
+.lp-check.done,.lp-check[data-check]{/* animated via keyframes */}
 @keyframes lpDeepIn{0%,4%{opacity:0;transform:translateY(14px) scale(.96)}12%,100%{opacity:1;transform:translateY(0) scale(1)}}
 @keyframes lpBuf1{0%,18%{opacity:0;transform:translateY(12px)}28%,100%{opacity:1;transform:translateY(0)}}
 @keyframes lpGymIn{0%,35%{opacity:0;transform:translate(48px,-28px) scale(.9)}42%,100%{opacity:1;transform:translate(0,0) scale(1)}}
@@ -516,6 +517,7 @@ body.theme-cyberpunk .tc{
 .xp-track-label{display:flex;justify-content:space-between;font-size:.72rem;font-weight:800;color:var(--so);margin-bottom:6px}
 .xp-track{height:10px;border-radius:999px;background:var(--br);overflow:hidden;border:1px solid rgba(255,255,255,.06)}
 .xp-track-fill{height:100%;border-radius:999px;background:linear-gradient(90deg,#8b5cf6,#fbbf24);transition:width .4s ease}
+10%{opacity:1}18%{top:12%;left:55%}38%{top:22%;left:28%}55%{top:28%;left:30%;opacity:1}70%,100%{opacity:0}}
 @keyframes matrixRain{0%{background-position:0 0,0 0}100%{background-position:0 120px,40px 80px}}
 body.theme-matrix,body.theme-matrix #app,body.theme-matrix #sbar{
   background-color:#030712!important;
@@ -595,7 +597,8 @@ body.theme-chrono .tcname,.theme-chrono .dhn{letter-spacing:.02em}
       <label for="authUsernameInput" style="font-size:.78rem;font-weight:800;color:#94a3b8;margin-bottom:8px;display:block">Enter your email or username</label>
       <input id="authUsernameInput" type="text" placeholder="you@example.com" autocomplete="username" style="width:100%;box-sizing:border-box;font-family:inherit;font-size:.95rem;font-weight:700;padding:14px 16px;border-radius:12px;border:1px solid #2a3548;background:#0f1522;color:#f1f5f9;margin-bottom:12px" />
       <label for="authPasswordInput" style="font-size:.78rem;font-weight:800;color:#94a3b8;margin-bottom:8px;display:block">Password</label>
-      <input id="authPasswordInput" type="password" placeholder="••••••••" autocomplete="current-password" style="width:100%;box-sizing:border-box;font-family:inherit;font-size:.95rem;font-weight:700;padding:14px 16px;border-radius:12px;border:1px solid #2a3548;background:#0f1522;color:#f1f5f9;margin-bottom:14px" />
+      <input id="authPasswordInput" type="password" placeholder="••••••••" autocomplete="current-password" style="width:100%;box-sizing:border-box;font-family:inherit;font-size:.95rem;font-weight:700;padding:14px 16px;border-radius:12px;border:1px solid #2a3548;background:#0f1522;color:#f1f5f9;margin-bottom:10px" />
+      <div id="authFormError" style="display:none;margin:0 0 12px;padding:10px 12px;border-radius:10px;background:rgba(239,68,68,.12);border:1px solid rgba(239,68,68,.45);color:#f87171;font-size:.78rem;font-weight:700;line-height:1.4"></div>
       <button type="button" id="authContinueBtn" style="width:100%;font-family:inherit;font-weight:900;font-size:.95rem;padding:14px 18px;border-radius:12px;border:none;background:#6d5efc;color:#fff;cursor:pointer;margin-bottom:10px">Continue</button>
       <button type="button" class="auth-toggle" id="authModeToggle">Don't have an account? Sign Up</button>
       <button type="button" id="authCancelBtn" style="background:transparent;border:none;color:#64748b;font-family:inherit;font-weight:700;font-size:.82rem;cursor:pointer;padding:8px;display:block;width:100%">Back to home</button>
@@ -1926,7 +1929,7 @@ const I18N={
     show_tracking:'إظهار النقاط والاستريك والتغذية', track_prayers:'تتبع مواعيد الصلاة',
     sec_notif:'التذكيرات', sec_notif_desc:'تفعيل أو إيقاف إشعارات المهام.',
     sec_reports:'التقارير', sec_reports_desc:'سجل التقارير الأسبوعية السابقة.',
-    report_history:'🗂️ سجل التقارير', weekly_report:'📊 تقرير الأسبوع',
+    report_history:'🗂️ سجل التقارير', weekly_report:'التقرير الأسبوعي',
     sec_appearance:'المظهر', sec_appearance_desc:'أيقونة التطبيق وألوان الجدول.',
     icon_hint:'بعد الاختيار، احذف التطبيق من الشاشة الرئيسية وأضفه من جديد لتحديث الأيقونة.',
     sec_language:'اللغة', sec_language_desc:'واجهة التطبيق.',
@@ -1939,7 +1942,7 @@ const I18N={
     notif_on:'🔔 مفعّلة', notif_off:'🔕 التذكيرات',
     day_sun:'الأحد', day_mon:'الاثنين', day_tue:'الثلاثاء', day_wed:'الأربعاء',
     day_thu:'الخميس', day_fri:'الجمعة', day_sat:'السبت',
-    today:'اليوم', prev_day:'← يوم سابق', next_day:'يوم تالٍ →',
+    today:'اليوم', prev_day:'→ السابق', next_day:'التالي ←',
     tasks_label:'مهمة', pts_today:'نقطة اليوم', nutrition:'🍽️ التغذية اليومية',
     protein:'بروتين', carbs:'كارب', fats:'دهون', fiber:'ألياف', kcal:'سعرة',
     rest_day:'يوم راحة', save_theme:'حفظ المظهر ✅', reset_theme:'افتراضي',
@@ -1959,7 +1962,7 @@ const I18N={
     show_tracking:'Show points, streak, and nutrition', track_prayers:'Track prayer times',
     sec_notif:'Reminders', sec_notif_desc:'Enable or disable task notifications.',
     sec_reports:'Reports', sec_reports_desc:'Past weekly reports.',
-    report_history:'🗂️ Report history', weekly_report:'📊 Weekly report',
+    report_history:'🗂️ Report history', weekly_report:'Weekly report',
     sec_appearance:'Appearance', sec_appearance_desc:'App icon and schedule colors.',
     icon_hint:'After choosing, remove the app from the home screen and add it again to refresh the icon.',
     sec_language:'Language', sec_language_desc:'App interface language.',
@@ -2105,6 +2108,11 @@ function applyI18n(){
   const hist=document.getElementById('hist-label');
   if(prev) prev.textContent=t('prev_day');
   if(next) next.textContent=t('next_day');
+  try{ renderTabs(); }catch(e){}
+  try{
+    const rb=document.getElementById('btn-report');
+    if(rb) rb.textContent=t('weekly_report');
+  }catch(e){}
   if(hist && SELECTED_DATE===TODAY) hist.textContent=t('today');
   document.querySelectorAll('.macrotitle').forEach(el=>{ el.textContent=t('nutrition'); });
   const aiTitle=document.querySelector('.ai-title');
@@ -2146,6 +2154,17 @@ function matchThemePresetId(accent,card,bg){
   return hit?hit.id:'custom';
 }
 function applyThemeColors(accent,card,bg,presetId){
+  try{
+    const a=accent||'#3b82f6';
+    document.documentElement.style.setProperty('--ac', a);
+    document.documentElement.style.setProperty('--accent-color', a);
+    // readable text on accent (simple luminance)
+    const hex=String(a).replace('#','');
+    const full=hex.length===3?hex.split('').map(c=>c+c).join(''):hex;
+    const r=parseInt(full.slice(0,2),16)||0,g=parseInt(full.slice(2,4),16)||0,b=parseInt(full.slice(4,6),16)||0;
+    const lum=(0.299*r+0.587*g+0.114*b)/255;
+    document.documentElement.style.setProperty('--text-on-accent', lum>0.62?'#0b1220':'#ffffff');
+  }catch(e){}
   const aEl=document.getElementById('themeAccent');
   const cEl=document.getElementById('themeCard');
   const bEl=document.getElementById('themeBg');
@@ -7184,21 +7203,35 @@ function closeAuthModal(){
   const lp=document.getElementById('landingPage');
   if(lp && !lsGet('current_user')) lp.style.display='block';
 }
+function showAuthError(msg){
+  const el=document.getElementById('authFormError');
+  if(el){ el.style.display=msg?'block':'none'; el.textContent=msg||''; }
+  if(msg) showToast(msg,3200,'warn');
+}
+function isStrongPassword(pass){
+  // min 8, upper, lower, digit, special
+  return /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&#^()_\-+=\[\]{}:;.,"'\\|<>\/~`]).{8,}$/.test(String(pass||''));
+}
 async function completeLocalSignup(username, password){
   const name=String(username||'').trim();
   const pass=String(password||'');
+  showAuthError('');
   if(!name){
-    showToast('Please enter your email or username',2200,'warn');
+    showAuthError('Please enter your email or username');
     return;
   }
-  if(!pass || pass.length<4){
-    showToast('Password must be at least 4 characters',2600,'warn');
+  if(!pass){
+    showAuthError('Please enter your password');
     return;
   }
 
   if(AUTH_MODE==='signup'){
+    if(!isStrongPassword(pass)){
+      showAuthError('Password must be at least 8 characters long and include uppercase, lowercase, numbers, and symbols.');
+      return;
+    }
     if(findLocalAccount(name)){
-      showToast('Account already exists — switch to Sign In',2800,'warn');
+      showAuthError('Account already exists — switch to Sign In');
       setAuthMode('signin');
       return;
     }
@@ -7214,15 +7247,14 @@ async function completeLocalSignup(username, password){
     return;
   }
 
-  // Sign in
+  // Sign in — strict credential check against local accounts profile array
   const acc=findLocalAccount(name);
   if(!acc){
-    showToast('No account found — create one via Sign Up',2800,'warn');
-    setAuthMode('signup');
+    showAuthError('No account found for that username. Create one via Sign Up.');
     return;
   }
   if(String(acc.password||'')!==pass){
-    showToast('Incorrect password',2400,'warn');
+    showAuthError('Incorrect password. Please try again.');
     return;
   }
 
@@ -7260,6 +7292,7 @@ function wireLandingAuth(){
   });
   document.getElementById('authModeToggle')?.addEventListener('click', ()=>{
     setAuthMode(AUTH_MODE==='signup'?'signin':'signup');
+    try{ showAuthError(''); }catch(e){}
   });
   document.getElementById('authUsernameInput')?.addEventListener('keydown', e=>{
     if(e.key==='Enter') document.getElementById('authPasswordInput')?.focus();
