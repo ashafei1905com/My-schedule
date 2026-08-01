@@ -19,6 +19,9 @@
 <meta name="apple-mobile-web-app-capable" content="yes" />
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
 <meta name="apple-mobile-web-app-title" content="Your Schedule" />
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@500;700;900&display=swap" rel="stylesheet">
 <meta name="theme-color" content="#0a0e1a" />
 <!-- Apple-specific home-screen icon link (separate from the generic favicon above —
      iOS ignores rel="icon" for the home-screen icon and requires rel="apple-touch-icon"
@@ -421,113 +424,195 @@ html[dir="ltr"] .tc[data-c="sunrise"]{border-left:3px solid var(--or)}
 @keyframes cyberPulse{0%,100%{box-shadow:0 0 0 0 rgba(236,72,153,0),0 0 12px rgba(34,211,238,.15)}50%{box-shadow:0 0 0 2px rgba(236,72,153,.35),0 0 22px rgba(34,211,238,.45)}}
 @keyframes rankPop{0%{opacity:0;transform:translateY(18px) scale(.94)}100%{opacity:1;transform:translateY(0) scale(1)}}
 @keyframes rebirthGlow{0%,100%{box-shadow:0 0 0 0 rgba(139,92,246,.2)}50%{box-shadow:0 0 24px 4px rgba(139,92,246,.55)}}
-body.theme-nebula,body.theme-nebula #app,body.theme-nebula #sbar{
-  background:linear-gradient(125deg,#0a0e1a,#1a1040,#0c1a3a,#1b0b2e,#0a0e1a)!important;
-  background-size:300% 300%!important;
-  animation:nebulaShift 18s ease infinite;
+
+/* ===== Production Mythic Themes ===== */
+@keyframes nebulaMesh{
+  0%{background-position:0% 40%,100% 60%,50% 0%}
+  50%{background-position:100% 60%,0% 30%,80% 100%}
+  100%{background-position:0% 40%,100% 60%,50% 0%}
+}
+@keyframes cyberPulseGlow{
+  0%,100%{box-shadow:0 0 8px var(--accent-color),inset 0 0 8px rgba(0,0,0,.55)}
+  50%{box-shadow:0 0 18px var(--accent-color),0 0 28px rgba(34,211,238,.35),inset 0 0 10px rgba(0,0,0,.45)}
+}
+@keyframes cyberScan{
+  0%{background-position:0% -40%}
+  100%{background-position:0% 140%}
+}
+@keyframes goldShimmer{
+  0%{filter:brightness(1)}
+  50%{filter:brightness(1.12)}
+  100%{filter:brightness(1)}
+}
+@keyframes goldSpark{
+  0%{opacity:0;transform:translate(0,0) scale(.4)}
+  30%{opacity:1;transform:translate(var(--gx,8px),var(--gy,-10px)) scale(1)}
+  100%{opacity:0;transform:translate(calc(var(--gx,8px)*1.8),calc(var(--gy,-10px)*2.2)) scale(.2)}
+}
+
+/* --- Cosmic Nebula --- */
+body.theme-nebula{
+  --nebula-a:#1a1040;--nebula-b:#0c1a3a;--nebula-c:#2b0b3a;
+  background:
+    radial-gradient(ellipse 80% 60% at 20% 30%,rgba(139,92,246,.45),transparent 55%),
+    radial-gradient(ellipse 70% 50% at 80% 20%,rgba(59,130,246,.35),transparent 50%),
+    radial-gradient(ellipse 60% 70% at 50% 90%,rgba(236,72,153,.28),transparent 55%),
+    linear-gradient(125deg,#070b18,#120a28,#0a1228,#1a0a22,#070b18)!important;
+  background-size:200% 200%,200% 200%,200% 200%,300% 300%!important;
+  animation:nebulaMesh 22s ease-in-out infinite;
+}
+body.theme-nebula #app,
+body.theme-nebula #panels,
+body.theme-nebula .pan{background:transparent!important}
+body.theme-nebula #sbar,
+body.theme-nebula .header,
+body.theme-nebula #topNav,
+body.theme-nebula .pw .pb,
+body.theme-nebula .macrobox,
+body.theme-nebula .dh,
+body.theme-nebula .tc,
+body.theme-nebula #aiPanel{
+  background:rgba(255,255,255,0.03)!important;
+  backdrop-filter:blur(12px)!important;-webkit-backdrop-filter:blur(12px)!important;
+  border-color:rgba(255,255,255,0.08)!important;
+}
+body.theme-nebula #sbar{
+  border-bottom:1px solid rgba(255,255,255,0.08)!important;
+  box-shadow:0 8px 32px rgba(0,0,0,.25);
+}
+body.theme-nebula #aiFab{
+  background:rgba(255,255,255,0.06)!important;
+  backdrop-filter:blur(12px)!important;-webkit-backdrop-filter:blur(12px)!important;
+  border:1px solid rgba(255,255,255,0.12)!important;
+  box-shadow:0 8px 28px rgba(91,33,182,.35)!important;
+}
+body.theme-nebula .tab.act{
+  background:rgba(167,139,250,.35)!important;
+  border-color:rgba(255,255,255,.2)!important;
+}
+
+/* --- Cyberpunk Pulse --- */
+body.theme-cyberpunk{
+  --ac:#ff00aa;--accent-color:#ff00aa;--text-on-accent:#ffffff;--cy:#22d3ee;
+  background:#05060a!important;
+  background-image:
+    linear-gradient(rgba(34,211,238,.04) 1px,transparent 1px),
+    linear-gradient(90deg,rgba(255,0,170,.04) 1px,transparent 1px)!important;
+  background-size:32px 32px!important;
+}
+body.theme-cyberpunk #app{background:transparent!important}
+body.theme-cyberpunk #sbar,
+body.theme-cyberpunk .altbtn,
+body.theme-cyberpunk .topbtn-report,
+body.theme-cyberpunk .tab.act,
+body.theme-cyberpunk .tc,
+body.theme-cyberpunk .dh,
+body.theme-cyberpunk .pb{
+  box-shadow:0 0 10px var(--accent-color), inset 0 0 8px rgba(0,0,0,0.5)!important;
 }
 body.theme-cyberpunk .tc{
-  animation:cyberPulse 2.8s ease-in-out infinite;
   border-color:rgba(34,211,238,.45)!important;
+  animation:cyberPulseGlow 2.6s ease-in-out infinite;
+  background:rgba(8,10,18,.92)!important;
 }
-.prestige-badge{display:inline-flex;align-items:center;gap:4px;padding:2px 8px;border-radius:999px;background:linear-gradient(135deg,rgba(251,191,36,.2),rgba(245,158,11,.12));border:1px solid rgba(251,191,36,.45);color:#fbbf24;font-size:.68rem;font-weight:900;margin-inline-start:6px;vertical-align:middle}
-.rank-chip{display:block;font-size:.62rem;font-weight:800;color:#a78bfa;margin-top:2px;text-align:end}
-#rankUpModal{position:fixed;inset:0;z-index:10100;display:none;align-items:center;justify-content:center;background:rgba(0,0,0,.62);padding:16px}
-#rankUpModal.open{display:flex}
-#rankUpModal .rank-box{max-width:420px;width:100%;background:linear-gradient(160deg,#151b2b,#1a1040);border:1px solid rgba(167,139,250,.45);border-radius:18px;padding:28px 22px;text-align:center;animation:rankPop .35s ease;box-shadow:0 20px 60px rgba(0,0,0,.55)}
-#rankUpModal h3{font-size:1.25rem;font-weight:900;margin:0 0 8px}
-#rankUpModal p{color:var(--so);font-size:.9rem;line-height:1.5;margin:0 0 18px}
-.rebirth-btn{width:100%;margin-top:12px;padding:12px 16px;border-radius:12px;border:1px solid rgba(139,92,246,.55);background:linear-gradient(135deg,rgba(139,92,246,.25),rgba(59,130,246,.18));color:#e9d5ff;font-family:inherit;font-weight:900;font-size:.88rem;cursor:pointer;animation:rebirthGlow 2.4s ease-in-out infinite}
-.rebirth-btn[hidden]{display:none!important}
-.mythic-card{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:12px 14px;border:1px solid var(--br);border-radius:12px;background:var(--c);margin-bottom:10px}
-.mythic-card h4{margin:0;font-size:.88rem;font-weight:900}
-.mythic-card p{margin:4px 0 0;font-size:.72rem;color:var(--so)}
-.mythic-card button{font-family:inherit;font-weight:800;font-size:.75rem;padding:8px 12px;border-radius:10px;border:1px solid var(--br);background:var(--c2);color:var(--tx);cursor:pointer;white-space:nowrap}
-.mythic-card button:disabled{opacity:.45;cursor:not-allowed}
-.mythic-card.active{border-color:var(--ac);box-shadow:0 0 0 1px color-mix(in srgb,var(--ac) 40%,transparent)}
+body.theme-cyberpunk #sbar{
+  background:rgba(5,6,10,.92)!important;
+  border-bottom:1px solid rgba(255,0,170,.35)!important;
+}
+body.theme-cyberpunk .tab.act{
+  background:linear-gradient(135deg,rgba(255,0,170,.35),rgba(34,211,238,.25))!important;
+  border-color:#ff00aa!important;
+  color:#fff!important;
+}
+body.theme-cyberpunk #aiFab{
+  background:
+    linear-gradient(180deg,transparent 0%,rgba(34,211,238,.55) 50%,transparent 100%),
+    #120018!important;
+  background-size:100% 220%,auto!important;
+  animation:cyberScan 1.8s linear infinite, fabPop .4s ease!important;
+  border:1px solid #ff00aa!important;
+  box-shadow:0 0 16px #ff00aa,0 0 28px rgba(34,211,238,.4)!important;
+  color:#fff;
+}
 
-/* login canvas must fully cover app chrome — no dashboard bleed-through */
-#loginCanvas{
-  position:fixed!important;inset:0!important;z-index:99999!important;
-  background-color:#0b0f19!important;background:#0b0f19!important;
-  color:#f1f5f9;isolation:isolate;
+/* --- Deep Space Matrix --- */
+body.theme-matrix{
+  background-color:#020805!important;
+  background-image:
+    linear-gradient(rgba(16,185,129,.09) 1px,transparent 1px),
+    linear-gradient(90deg,rgba(16,185,129,.09) 1px,transparent 1px)!important;
+  background-size:26px 26px!important;
+  animation:matrixRain 9s linear infinite;
 }
-#loginCanvas{overflow-y:auto!important;-webkit-overflow-scrolling:touch}
-.login-canvas-form{padding-bottom:4rem!important}
-.login-preview{position:relative;width:min(420px,92%);z-index:2}
-.lp-kicker{font-size:.72rem;font-weight:800;color:#64748b;margin-bottom:14px;letter-spacing:.06em;text-transform:uppercase}
-.lp-track{position:relative;padding:8px 0 8px 18px;min-height:300px}
-.lp-line{position:absolute;left:6px;top:12px;bottom:24px;width:2px;background:linear-gradient(to bottom,rgba(59,130,246,.7),rgba(16,185,129,.5),rgba(148,163,184,.15));border-radius:2px}
-.lp-card{position:relative;display:flex;align-items:flex-start;gap:10px;margin-bottom:12px;padding:12px 14px;border-radius:14px;background:rgba(21,27,43,.92);border:1px solid #2a3548;box-shadow:0 8px 24px rgba(0,0,0,.35);opacity:0;transform:translateY(12px) scale(.96);animation-fill-mode:both;animation-timing-function:cubic-bezier(.22,.9,.28,1)}
-.lp-card::before{content:'';position:absolute;left:-16px;top:18px;width:10px;height:10px;border-radius:50%;background:#0b0f19;border:2px solid #3b82f6;z-index:2}
-.lp-card-body{flex:1;min-width:0}
-.lp-title{font-weight:900;font-size:.9rem;color:#f1f5f9;line-height:1.25}
-.lp-time{font-size:.72rem;font-weight:700;color:#94a3b8;margin-top:3px}
-.lp-buffer{border-color:rgba(16,185,129,.4);background:rgba(16,185,129,.08)}
-.lp-buffer::before{border-color:#34d399}
-.lp-buffer .lp-title{color:#6ee7b7;font-size:.82rem}
-.lp-deep{animation:lpDeepIn 10s ease-in-out infinite}
-.lp-buffer-1{animation:lpBuf1 10s ease-in-out infinite}
-.lp-gym{animation:lpGymIn 10s ease-in-out infinite}
-.lp-buffer-2{animation:lpBuf2 10s ease-in-out infinite}
-.lp-check{width:18px;height:18px;border-radius:50%;border:2px solid #334155;flex-shrink:0;margin-top:2px;position:relative;background:transparent}
-.lp-check[data-check="1"]{animation:lpCheck1 10s ease-in-out infinite}
-.lp-check[data-check="2"]{animation:lpCheck2 10s ease-in-out infinite}
-@keyframes lpDeepIn{0%,4%{opacity:0;transform:translateY(14px) scale(.96)}12%,100%{opacity:1;transform:translateY(0) scale(1)}}
-@keyframes lpBuf1{0%,18%{opacity:0;transform:translateY(12px)}28%,100%{opacity:1;transform:translateY(0)}}
-@keyframes lpGymIn{0%,35%{opacity:0;transform:translate(48px,-28px) scale(.9)}42%,100%{opacity:1;transform:translate(0,0) scale(1)}}
-@keyframes lpBuf2{0%,55%{opacity:0;transform:translateY(14px)}65%,100%{opacity:1;transform:translateY(0)}}
-@keyframes lpCheck1{0%,72%{border-color:#334155;background:transparent}78%,100%{border-color:#10b981;background:#10b981;box-shadow:0 0 12px rgba(16,185,129,.55)}}
-@keyframes lpCheck2{0%,78%{border-color:#334155;background:transparent}84%,100%{border-color:#10b981;background:#10b981;box-shadow:0 0 12px rgba(16,185,129,.55)}}
-.lp-cursor{position:absolute;width:16px;height:16px;border-radius:50%;border:2px solid #fff;background:rgba(96,165,250,.4);box-shadow:0 0 14px rgba(96,165,250,.55);z-index:5;opacity:0;animation:lpCursor 10s ease-in-out infinite;pointer-events:none}
-.lp-cursor::after{content:'';position:absolute;left:10px;top:10px;width:10px;height:14px;background:linear-gradient(135deg,#fff,#94a3b8);clip-path:polygon(0 0,100% 65%,55% 65%,80% 100%,60% 100%,35% 68%,0 85%);opacity:.9}
-@keyframes lpCursor{0%,32%{opacity:0;top:38%;left:78%}36%{opacity:1;top:42%;left:62%}42%{opacity:1;top:52%;left:28%}48%,100%{opacity:0;top:54%;left:26%}}
-.lp-badge{position:absolute;right:0;top:8px;padding:6px 10px;border-radius:999px;background:rgba(16,185,129,.15);border:1px solid rgba(16,185,129,.45);color:#6ee7b7;font-size:.68rem;font-weight:900;opacity:0;transform:translateY(8px);animation:lpBadge 10s ease-in-out infinite;white-space:nowrap}
-@keyframes lpBadge{0%,80%{opacity:0;transform:translateY(10px)}88%,100%{opacity:1;transform:translateY(0)}}
-.lp-particles{position:absolute;inset:0;pointer-events:none;overflow:hidden}
-.lp-particles i{position:absolute;width:5px;height:5px;border-radius:50%;background:#34d399;opacity:0;animation:lpSpark 10s ease-in-out infinite}
-.lp-particles i:nth-child(1){left:30%;top:20%;animation-delay:0s}
-.lp-particles i:nth-child(2){left:42%;top:18%;background:#60a5fa}
-.lp-particles i:nth-child(3){left:55%;top:22%;background:#fbbf24}
-.lp-particles i:nth-child(4){left:35%;top:28%;background:#a78bfa}
-.lp-particles i:nth-child(5){left:48%;top:16%;background:#f472b6}
-@keyframes lpSpark{0%,78%{opacity:0;transform:translate(0,0) scale(.4)}82%{opacity:1;transform:translate(0,-6px) scale(1)}95%,100%{opacity:0;transform:translate(var(--dx,12px),-28px) scale(.2)}}
-.lp-caption{margin-top:18px;color:#94a3b8;font-size:.82rem;font-weight:700;text-align:center;line-height:1.45}
-/* Report theme cohesion */
-.report-box{background:var(--c2)!important;border-color:var(--br)!important;color:var(--tx)}
-.report-stat,.report-day,.macrobox,.report-grade{background:var(--c)!important;border-color:var(--br)!important;color:var(--tx)}
-.report-stat-val{color:var(--ac)!important}
-.report-stat-lbl,.report-range,.macroval,.macrolbl{color:var(--so)!important}
-.macrofx{background:var(--ac)!important}
-.macrofx-p{background:var(--ac)!important}
-.macrofx-c{background:color-mix(in srgb,var(--ac) 70%,#fbbf24)!important}
-.macrofx-f{background:color-mix(in srgb,var(--ac) 55%,#f472b6)!important}
-.macrofx-b{background:color-mix(in srgb,var(--ac) 50%,#34d399)!important}
-.report-grade{border-color:color-mix(in srgb,var(--ac) 40%,var(--br))!important;background:color-mix(in srgb,var(--ac) 10%,var(--c))!important}
+body.theme-matrix #sbar,
+body.theme-matrix #aiFab{
+  background:rgba(2,8,5,.85)!important;
+  border-color:rgba(16,185,129,.35)!important;
+  box-shadow:0 0 18px rgba(16,185,129,.2)!important;
+}
+body.theme-matrix .tc{
+  border-color:rgba(16,185,129,.4)!important;
+  box-shadow:0 0 14px rgba(16,185,129,.15)!important;
+}
 
-#loginCanvas[style*="display: block"],#loginCanvas[style*="display:block"]{
-  display:block!important;
+/* --- Golden Chrono Luxury (.theme-chrono / .theme-gold) --- */
+body.theme-chrono,
+body.theme-gold{
+  --ac:#c9a227;--accent-color:#c9a227;--text-on-accent:#1a1208;
+  font-family:'Playfair Display',Georgia,'Times New Roman',serif!important;
+  background:linear-gradient(165deg,#140f08,#1a1208 40%,#0c0905)!important;
 }
-#obWizard{z-index:100060;}
+body.theme-chrono *,
+body.theme-gold *{font-family:inherit}
+body.theme-chrono #sbar,
+body.theme-gold #sbar{
+  background:linear-gradient(180deg,#1c140a,#120d08)!important;
+  border-bottom:1px solid rgba(201,162,39,.45)!important;
+  box-shadow:0 8px 28px rgba(0,0,0,.4);
+}
+body.theme-chrono .tc,
+body.theme-gold .tc,
+body.theme-chrono .dh,
+body.theme-gold .dh,
+body.theme-chrono .report-box,
+body.theme-gold .report-box,
+body.theme-chrono .topbtn-report,
+body.theme-gold .topbtn-report,
+body.theme-chrono .pb,
+body.theme-gold .pb{
+  border:1px solid #bf953f!important;
+  box-shadow:
+    0 0 0 1px rgba(252,246,186,.25),
+    inset 0 0 0 1px rgba(179,135,40,.35),
+    0 8px 24px rgba(0,0,0,.35)!important;
+  background:linear-gradient(160deg,rgba(28,20,10,.95),rgba(18,12,6,.98))!important;
+  animation:goldShimmer 6s ease-in-out infinite;
+}
+body.theme-chrono .tab.act,
+body.theme-gold .tab.act{
+  background:linear-gradient(135deg,#bf953f,#fcf6ba,#b38728)!important;
+  color:#1a1208!important;
+  border-color:#fcf6ba!important;
+}
+body.theme-chrono #aiFab,
+body.theme-gold #aiFab{
+  background:linear-gradient(145deg,#bf953f,#fbf5b7,#b38728)!important;
+  color:#1a1208!important;
+  border:1px solid #fcf6ba!important;
+  box-shadow:0 0 20px rgba(201,162,39,.45)!important;
+}
+body.theme-chrono .cbtn.done,
+body.theme-gold .cbtn.done,
+body.theme-chrono .tc.done::before,
+body.theme-gold .tc.done::before{
+  border-color:#fcf6ba!important;
+  background:linear-gradient(135deg,#bf953f,#fbf5b7)!important;
+  color:#1a1208!important;
+  box-shadow:0 0 12px rgba(251,191,36,.55)!important;
+}
+body.theme-chrono .floatpts,
+body.theme-gold .floatpts{color:#fcf6ba!important;text-shadow:0 0 12px rgba(251,191,36,.6)}
 
-.topbtn-report{background:var(--ac)!important;background-color:var(--ac)!important;color:#fff;box-shadow:0 2px 10px color-mix(in srgb,var(--ac) 40%,transparent)}
-.topbtn-report:hover{box-shadow:0 4px 16px color-mix(in srgb,var(--ac) 55%,transparent);transform:translateY(-1px);filter:brightness(1.08)}
-.xp-track-wrap{margin:10px 0 14px}
-.xp-track-label{display:flex;justify-content:space-between;font-size:.72rem;font-weight:800;color:var(--so);margin-bottom:6px}
-.xp-track{height:10px;border-radius:999px;background:var(--br);overflow:hidden;border:1px solid rgba(255,255,255,.06)}
-.xp-track-fill{height:100%;border-radius:999px;background:linear-gradient(90deg,#8b5cf6,#fbbf24);transition:width .4s ease}
-@keyframes matrixRain{0%{background-position:0 0,0 0}100%{background-position:0 120px,40px 80px}}
-body.theme-matrix,body.theme-matrix #app,body.theme-matrix #sbar{
-  background-color:#030712!important;
-  background-image:linear-gradient(rgba(16,185,129,.07) 1px,transparent 1px),linear-gradient(90deg,rgba(16,185,129,.07) 1px,transparent 1px)!important;
-  background-size:28px 28px!important;
-  animation:matrixRain 8s linear infinite;
-}
-body.theme-matrix .tc{border-color:rgba(16,185,129,.35)!important;box-shadow:0 0 12px rgba(16,185,129,.12)}
-body.theme-chrono{font-family:Georgia,'Times New Roman',serif}
-body.theme-chrono #app,body.theme-chrono #sbar{background:linear-gradient(160deg,#1a1208,#0f0a05)!important}
-body.theme-chrono .tc{border-color:rgba(251,191,36,.4)!important;box-shadow:0 0 0 1px rgba(251,191,36,.15),inset 0 0 20px rgba(251,191,36,.04)}
-body.theme-chrono .tcname,.theme-chrono .dhn{letter-spacing:.02em}
 .auth-toggle{background:none;border:none;color:#94a3b8;font-family:inherit;font-weight:700;font-size:.8rem;cursor:pointer;text-decoration:underline;padding:8px 0;margin-top:4px}
 .auth-mode-label{font-size:.72rem;font-weight:800;color:#64748b;margin-bottom:10px;text-transform:uppercase;letter-spacing:.04em}
 .report-grade{margin:0 0 18px;padding:16px 18px;border-radius:14px;border:1px solid var(--br);background:linear-gradient(135deg,rgba(59,130,246,.12),rgba(139,92,246,.1))}
@@ -1295,6 +1380,7 @@ function awardTaskPoints(basePts, opts={}){
   try{ updatePrestigeUI(); }catch(e){}
   if(opts.x!=null && opts.y!=null) floatPts(opts.x,opts.y,awarded);
   try{ playPremiumCompleteSound(); }catch(e){}
+  try{ if(opts&&opts.x!=null) spawnGoldSparks(opts.x,opts.y); }catch(e){}
   return awarded;
 }
 async function doRebirth(){
@@ -1315,11 +1401,24 @@ async function doRebirth(){
   try{ updatePrestigeUI(); updateAuthUI(fbAuth?.currentUser||null); updateUI(); }catch(e){}
 }
 function applyMythicThemeClass(themeId){
-  document.body.classList.remove('theme-nebula','theme-cyberpunk','theme-matrix','theme-chrono');
+  document.body.classList.remove('theme-nebula','theme-cyberpunk','theme-matrix','theme-chrono','theme-gold');
   if(themeId==='nebula') document.body.classList.add('theme-nebula');
   if(themeId==='cyberpunk') document.body.classList.add('theme-cyberpunk');
   if(themeId==='matrix') document.body.classList.add('theme-matrix');
-  if(themeId==='chrono') document.body.classList.add('theme-chrono');
+  if(themeId==='chrono' || themeId==='gold') document.body.classList.add('theme-chrono','theme-gold');
+}
+function spawnGoldSparks(x,y){
+  if(!document.body.classList.contains('theme-chrono') && !document.body.classList.contains('theme-gold')) return;
+  try{
+    for(let i=0;i<12;i++){
+      const el=document.createElement('span');
+      const gx=(Math.random()*40-20)+'px';
+      const gy=(-8-Math.random()*28)+'px';
+      el.style.cssText=`position:fixed;left:${x||window.innerWidth/2}px;top:${y||window.innerHeight/2}px;width:6px;height:6px;border-radius:50%;background:radial-gradient(circle,#fff8dc,#bf953f);pointer-events:none;z-index:10150;--gx:${gx};--gy:${gy};animation:goldSpark .7s ease-out forwards`;
+      document.body.appendChild(el);
+      setTimeout(()=>el.remove(),750);
+    }
+  }catch(e){}
 }
 function playPremiumCompleteSound(){
   if(!(STATS.unlockedThemes||[]).includes('audio')) return;
@@ -1408,16 +1507,16 @@ function updatePrestigeUI(){
     const unlocked=new Set(STATS.unlockedThemes||[]);
     const active=STATS.activeMythicTheme;
     const themes=en?[
-      {id:'nebula',name:'Cosmic Nebula',cost:1,desc:'Slow-moving nebula gradient across the dashboard'},
-      {id:'cyberpunk',name:'Cyberpunk Pulse',cost:2,desc:'Neon pulse glow on timeline task cards'},
-      {id:'matrix',name:'Deep Space Matrix',cost:1,desc:'Grid matrix field with glowing rain drift'},
-      {id:'chrono',name:'Golden Chrono Luxury',cost:2,desc:'Luxury serif typography and gold borders'},
+      {id:'nebula',name:'Cosmic Nebula',cost:1,desc:'Living mesh nebula across the full dashboard with glass navigation'},
+      {id:'cyberpunk',name:'Cyberpunk Pulse',cost:2,desc:'Neon terminal glow, magenta/cyan accents, laser FAB scanlines'},
+      {id:'matrix',name:'Deep Space Matrix',cost:1,desc:'Digital rain grid field with emerald signal cards'},
+      {id:'chrono',name:'Golden Chrono Luxury',cost:2,desc:'Editorial serif type, brushed-gold borders, gold-leaf completion sparks'},
       {id:'audio',name:'Premium Complete Audio',cost:1,desc:'Exclusive level-up sound on task check-off',kind:'audio'}
     ]:[
-      {id:'nebula',name:'سديم كوني',cost:1,desc:'تدرج سديمي بطيء الحركة عبر لوحة التحكم'},
-      {id:'cyberpunk',name:'نبض سايبربانك',cost:2,desc:'توهج نيون نابض على بطاقات الجدول'},
-      {id:'matrix',name:'مصفوفة الفضاء العميق',cost:1,desc:'شبكة ديناميكية مع جسيمات متساقطة متوهجة'},
-      {id:'chrono',name:'فخامة الزمن الذهبي',cost:2,desc:'خطوط فاخرة وحدود ذهبية بأناقة الساعة'},
+      {id:'nebula',name:'🌌 سديم السوبرنوفا المتحرك',cost:1,desc:'شبكة سديم متحركة فاخرة عبر لوحة التحكم مع شريط تنقل زجاجي'},
+      {id:'cyberpunk',name:'⚡ نبض النيون السيبراني',cost:2,desc:'طرفية داكنة، توهج ماجنتا/سماوي، ومسح ليزري على زر المساعد'},
+      {id:'matrix',name:'🟢 مصفوفة كود الفضاء الرقمي',cost:1,desc:'شبكة رقمية متوهجة مع بطاقات بإشارة زمردية'},
+      {id:'chrono',name:'👑 فخامة الكرونو الذهبي',cost:2,desc:'خطوط تحريرية فاخرة، حدود ذهبية، وشرارات ذهبية عند الإنجاز'},
       {id:'audio',name:'صوت الإكمال المميز',cost:1,desc:'مؤثر صوتي حصري عند إنجاز المهام',kind:'audio'}
     ];
     panel.innerHTML=themes.map(th=>{
@@ -1425,7 +1524,7 @@ function updatePrestigeUI(){
       const isOn=active===th.id;
       let label;
       if(own){
-        label=isOn?(en?'Active':'مفعّل'):(en?'Activate':'تفعيل');
+        label=isOn?(en?'Active':'مفعّل حالياً'):(en?'Activate':'تفعيل المظهر');
       }else{
         label=en
           ?`Unlock (${th.cost} token${th.cost>1?'s':''})`
