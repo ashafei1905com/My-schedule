@@ -75,7 +75,7 @@ html[dir="ltr"] .tc[data-c="sunrise"]{border-left:3px solid var(--or)}
 @keyframes lateGlow{0%{box-shadow:0 0 0 rgba(245,158,11,0);border-color:var(--br)}40%{box-shadow:0 0 18px 3px rgba(245,158,11,.55);border-color:var(--or)}100%{box-shadow:0 0 0 rgba(245,158,11,0)}}
 @keyframes qadaGlow{0%{box-shadow:0 0 0 rgba(148,163,184,0)}40%{box-shadow:0 0 14px 2px rgba(148,163,184,.4)}100%{box-shadow:0 0 0 rgba(148,163,184,0)}}
 @keyframes barGold{0%{filter:brightness(1)}50%{filter:brightness(1.6) saturate(1.4)}100%{filter:brightness(1)}}
-#sbar{position:sticky;top:0;z-index:100;background:rgba(10,14,26,.96);backdrop-filter:blur(12px);border-bottom:1px solid var(--br);padding:12px 16px;display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;min-height:64px}
+#sbar{position:sticky;top:0;z-index:100;background-color:var(--bg-main);border-bottom:1px solid rgba(255,255,255,0.05);color:var(--text-main);backdrop-filter:blur(12px);padding:12px 16px;display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;min-height:64px}
 #sbar .sbar-stats{display:flex;gap:14px;align-items:center;flex:1;justify-content:center}
 #sbar .sbar-auth{display:flex;flex-direction:column;align-items:flex-end;gap:6px;flex-shrink:0}
 @media (min-width:900px){
@@ -107,7 +107,7 @@ html[dir="ltr"] .tc[data-c="sunrise"]{border-left:3px solid var(--or)}
 .macrobox{background:var(--c);border:1px solid var(--br);border-radius:10px;padding:10px 14px}
 .macrohead{display:flex;justify-content:space-between;align-items:center;margin-bottom:8px}
 .macrotitle{font-size:.77rem;font-weight:800;color:var(--so)}
-.macrokcal{font-size:.8rem;font-weight:900;color:var(--ye)}
+.macrokcal{font-size:.8rem;font-weight:900;border:1px solid var(--accent-color);color:var(--accent-color);background:transparent;padding:2px 8px;border-radius:6px}
 .macrorow{display:flex;align-items:center;gap:8px;margin-bottom:5px}
 .macrorow:last-child{margin-bottom:0}
 .macrolbl{font-size:.65rem;color:var(--mu);font-weight:700;width:34px;flex-shrink:0}
@@ -422,7 +422,7 @@ html[dir="ltr"] .tc[data-c="sunrise"]{border-left:3px solid var(--or)}
 /* ===== Prestige / Mythic themes ===== */
 @keyframes nebulaShift{0%{background-position:0% 50%}50%{background-position:100% 50%}100%{background-position:0% 50%}}
 @keyframes cyberPulse{0%,100%{box-shadow:0 0 0 0 rgba(236,72,153,0),0 0 12px rgba(34,211,238,.15)}50%{box-shadow:0 0 0 2px rgba(236,72,153,.35),0 0 22px rgba(34,211,238,.45)}}
-@keyframes rankPop{0%{opacity:0;transform:translateY(18px) scale(.94)}100%{opacity:1;transform:translateY(0) scale(1)}}
+@keyframes rankPop{0%{opacity:0;transform:translateY(18px) scale(.94)}
 
 /* ===== Level Up modal (fixed overlay — never in page flow) ===== */
 #rankUpModal,
@@ -540,11 +540,12 @@ html[dir="ltr"] .tc[data-c="sunrise"]{border-left:3px solid var(--or)}
   align-items:center!important;
   justify-content:space-between!important;
   gap:12px!important;
-  padding:14px 16px!important;
-  border:1px solid var(--br)!important;
-  border-radius:12px!important;
-  background:var(--c)!important;
-  margin-bottom:0.85rem!important;
+  background:#111726;
+  border:1px solid rgba(255,255,255,0.05);
+  padding:1.25rem;
+  border-radius:12px;
+  margin-bottom:1rem;
+  transition:all 0.3s ease;
 }
 .mythic-card h4{
   margin:0 0 6px!important;
@@ -558,6 +559,25 @@ html[dir="ltr"] .tc[data-c="sunrise"]{border-left:3px solid var(--or)}
   font-size:.72rem!important;
   color:var(--so,#94a3b8)!important;
   line-height:1.45!important;
+}
+.mythic-card button,
+.mythic-card .theme-btn{
+  background:transparent;
+  border:1px solid var(--accent-color);
+  color:var(--accent-color);
+  padding:0.5rem 1rem;
+  border-radius:6px;
+  font-weight:600;
+  cursor:pointer;
+  font-family:inherit;
+  transition:all 0.2s ease;
+}
+.mythic-card.active button,
+.mythic-card button[data-active="true"]{
+  background:var(--accent-color);
+  color:#ffffff;
+  border-color:var(--accent-color);
+  box-shadow:0 0 12px color-mix(in srgb,var(--accent-color) 45%,transparent);
 }
 .rebirth-btn{margin-top:0.5rem!important;margin-bottom:0.5rem!important}
 @keyframes rebirthGlow{0%,100%{box-shadow:0 0 0 0 rgba(139,92,246,.2)}50%{box-shadow:0 0 24px 4px rgba(139,92,246,.55)}}
@@ -1773,7 +1793,7 @@ function updatePrestigeUI(){
           ?`Unlock (${th.cost} token${th.cost>1?'s':''})`
           :`فتح قفل (${th.cost} رمز)`;
       }
-      return `<div class="mythic-card${isOn?' active':''}"><div><h4>${th.name}</h4><p>${th.desc}</p></div><button type="button" data-mythic="${th.id}" data-cost="${th.cost}">${label}</button></div>`;
+      return `<div class="mythic-card${isOn?' active':''}"><div><h4>${th.name}</h4><p>${th.desc}</p></div><button type="button" class="theme-btn" data-mythic="${th.id}" data-cost="${th.cost}"${isOn?' data-active="true"':''}>${label}</button></div>`;
     }).join('');
   }
   applyMythicThemeClass(STATS.activeMythicTheme||null);
@@ -4718,9 +4738,10 @@ function renderPanel(jd){
   const tasks=getAllTasks(jd);
   const addTaskBtn='';
   const en=(USER_SETTINGS.lang==='en');
-  const dhm=en
+  let dhm=en
     ?`Fajr ${fmt24(PRYT.Fajr||FALLBK.Fajr)} · Sunrise ${fmt24(PRYT.Sunrise||FALLBK.Sunrise)} ← Wake ${d.wk} · Sleep ${d.bd}`
     :`فجر ${fmt24(PRYT.Fajr||FALLBK.Fajr)} · شروق ${fmt24(PRYT.Sunrise||FALLBK.Sunrise)} ← صحيان ${d.wk} · نوم ${d.bd}`;
+  if(en){dhm=dhm.replace(/ص/g,'AM').replace(/م/g,'PM');}
   return`<div class="pan" id="pan-${k}">
     <div class="dh"><div><div class="dhn">${dayLabel(jd)}</div><div class="dhm">${dhm}</div></div>${gbLabel}</div>
     <div class="prow">${pills.join('')}</div>
