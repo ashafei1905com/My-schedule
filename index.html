@@ -423,26 +423,167 @@ html[dir="ltr"] .tc[data-c="sunrise"]{border-left:3px solid var(--or)}
 @keyframes nebulaShift{0%{background-position:0% 50%}50%{background-position:100% 50%}100%{background-position:0% 50%}}
 @keyframes cyberPulse{0%,100%{box-shadow:0 0 0 0 rgba(236,72,153,0),0 0 12px rgba(34,211,238,.15)}50%{box-shadow:0 0 0 2px rgba(236,72,153,.35),0 0 22px rgba(34,211,238,.45)}}
 @keyframes rankPop{0%{opacity:0;transform:translateY(18px) scale(.94)}100%{opacity:1;transform:translateY(0) scale(1)}}
+
+/* ===== Level Up modal (fixed overlay — never in page flow) ===== */
+#rankUpModal,
+#levelUpModal,
+.level-up-overlay{
+  position:fixed!important;
+  top:0!important;left:0!important;
+  width:100%!important;height:100%!important;
+  background:rgba(11,15,25,0.85)!important;
+  backdrop-filter:blur(8px)!important;-webkit-backdrop-filter:blur(8px)!important;
+  z-index:100000!important;
+  display:none;
+  align-items:center;
+  justify-content:center;
+  padding:1.25rem;
+  box-sizing:border-box;
+}
+#rankUpModal.open,
+#levelUpModal.open,
+.level-up-overlay.open{
+  display:flex!important;
+}
+#rankUpModal .rank-box,
+.level-up-overlay .rank-box{
+  background:var(--c2,var(--c,#111827))!important;
+  border:1px solid var(--accent-color,var(--ac,#3b82f6))!important;
+  padding:2.5rem!important;
+  border-radius:16px!important;
+  text-align:center!important;
+  max-width:450px!important;
+  width:100%!important;
+  box-shadow:0 24px 80px rgba(0,0,0,.55),0 0 0 1px rgba(255,255,255,.04)!important;
+  animation:rankPop .35s ease!important;
+  margin:0 auto!important;
+}
+.rank-up-kicker{
+  font-size:1.65rem!important;
+  font-weight:900!important;
+  margin:0 0 0.75rem!important;
+  letter-spacing:0.04em!important;
+  color:#fbbf24!important;
+  text-shadow:0 0 24px rgba(251,191,36,.45)!important;
+  line-height:1.2!important;
+}
+#rankUpModal .rank-box h3,
+#rankUpTitle{
+  margin:0 0 0.75rem!important;
+  font-size:1.15rem!important;
+  font-weight:900!important;
+  color:var(--tx,#f1f5f9)!important;
+  line-height:1.35!important;
+}
+#rankUpModal .rank-box p,
+#rankUpBody{
+  margin:0 0 1.5rem!important;
+  color:var(--so,#94a3b8)!important;
+  font-size:.9rem!important;
+  line-height:1.55!important;
+}
+.rank-up-btn{
+  width:100%!important;
+  margin:0!important;
+  padding:14px 18px!important;
+  border:none!important;
+  border-radius:12px!important;
+  font-family:inherit!important;
+  font-weight:900!important;
+  font-size:.95rem!important;
+  cursor:pointer!important;
+  background:var(--accent-color,var(--ac,#3b82f6))!important;
+  color:var(--text-on-accent,#fff)!important;
+  box-shadow:0 8px 24px color-mix(in srgb,var(--accent-color,var(--ac)) 35%,transparent)!important;
+}
+.rank-up-btn:hover{filter:brightness(1.08)}
+
+/* Prestige hub spacing — Appearance tab */
+#prestigePanel,
+#mythicThemesPanel{
+  margin-top:1.25rem!important;
+}
+#mythicThemesTitle,
+#prestigeHubTitle{
+  margin-bottom:0.5rem!important;
+  letter-spacing:0.03em!important;
+}
+#mythicThemesDesc,
+#prestigeStatsLine{
+  margin-bottom:1rem!important;
+  color:var(--so,var(--text-muted,#94a3b8))!important;
+  line-height:1.5!important;
+  letter-spacing:0.02em!important;
+}
+.xp-track-wrap{
+  margin:0 0 1.25rem!important;
+}
+.xp-track-label{
+  display:flex!important;
+  justify-content:space-between!important;
+  gap:12px!important;
+  font-size:.72rem!important;
+  font-weight:800!important;
+  color:var(--so,#94a3b8)!important;
+  margin-bottom:0.55rem!important;
+  letter-spacing:0.03em!important;
+}
+.xp-track{
+  height:10px!important;
+  border-radius:999px!important;
+  background:var(--br)!important;
+  overflow:hidden!important;
+  margin-bottom:1rem!important;
+}
+.mythic-card{
+  display:flex!important;
+  align-items:center!important;
+  justify-content:space-between!important;
+  gap:12px!important;
+  padding:14px 16px!important;
+  border:1px solid var(--br)!important;
+  border-radius:12px!important;
+  background:var(--c)!important;
+  margin-bottom:0.85rem!important;
+}
+.mythic-card h4{
+  margin:0 0 6px!important;
+  font-size:.88rem!important;
+  font-weight:900!important;
+  letter-spacing:0.02em!important;
+  color:var(--tx)!important;
+}
+.mythic-card p{
+  margin:0!important;
+  font-size:.72rem!important;
+  color:var(--so,#94a3b8)!important;
+  line-height:1.45!important;
+}
+.rebirth-btn{margin-top:0.5rem!important;margin-bottom:0.5rem!important}
 @keyframes rebirthGlow{0%,100%{box-shadow:0 0 0 0 rgba(139,92,246,.2)}50%{box-shadow:0 0 24px 4px rgba(139,92,246,.55)}}
 
-/* ===== Production Mythic Themes ===== */
-@keyframes nebulaMesh{
-  0%{background-position:0% 40%,100% 60%,50% 0%}
-  50%{background-position:100% 60%,0% 30%,80% 100%}
-  100%{background-position:0% 40%,100% 60%,50% 0%}
+
+/* ===== Production Mythic Themes (CD-grade token cores) ===== */
+@keyframes nebulaSupernova{
+  0%{background-position:0% 50%}
+  50%{background-position:100% 50%}
+  100%{background-position:0% 50%}
 }
 @keyframes cyberPulseGlow{
-  0%,100%{box-shadow:0 0 8px var(--accent-color),inset 0 0 8px rgba(0,0,0,.55)}
-  50%{box-shadow:0 0 18px var(--accent-color),0 0 28px rgba(34,211,238,.35),inset 0 0 10px rgba(0,0,0,.45)}
+  0%,100%{box-shadow:0 0 10px var(--accent-color),inset 0 0 8px rgba(0,0,0,.5)}
+  50%{box-shadow:0 0 18px var(--accent-color),0 0 28px var(--accent-glow,rgba(255,0,170,.45)),inset 0 0 10px rgba(0,0,0,.45)}
 }
 @keyframes cyberScan{
   0%{background-position:0% -40%}
   100%{background-position:0% 140%}
 }
+@keyframes matrixRain{
+  0%{background-position:0 0,0 0}
+  100%{background-position:0 120px,40px 80px}
+}
 @keyframes goldShimmer{
-  0%{filter:brightness(1)}
+  0%,100%{filter:brightness(1)}
   50%{filter:brightness(1.12)}
-  100%{filter:brightness(1)}
 }
 @keyframes goldSpark{
   0%{opacity:0;transform:translate(0,0) scale(.4)}
@@ -450,168 +591,260 @@ html[dir="ltr"] .tc[data-c="sunrise"]{border-left:3px solid var(--or)}
   100%{opacity:0;transform:translate(calc(var(--gx,8px)*1.8),calc(var(--gy,-10px)*2.2)) scale(.2)}
 }
 
-/* --- Cosmic Nebula --- */
+/* 1) SUPERNOVA NEBULA CORE */
 body.theme-nebula{
-  --nebula-a:#1a1040;--nebula-b:#0c1a3a;--nebula-c:#2b0b3a;
-  background:
-    radial-gradient(ellipse 80% 60% at 20% 30%,rgba(139,92,246,.45),transparent 55%),
-    radial-gradient(ellipse 70% 50% at 80% 20%,rgba(59,130,246,.35),transparent 50%),
-    radial-gradient(ellipse 60% 70% at 50% 90%,rgba(236,72,153,.28),transparent 55%),
-    linear-gradient(125deg,#070b18,#120a28,#0a1228,#1a0a22,#070b18)!important;
-  background-size:200% 200%,200% 200%,200% 200%,300% 300%!important;
-  animation:nebulaMesh 22s ease-in-out infinite;
+  --bg-main:#030206;
+  --bg-card:rgba(255,255,255,0.03);
+  --accent-color:#7c3aed;
+  --ac:#7c3aed;
+  --accent-glow:rgba(124,58,237,0.4);
+  --text-main:#f8fafc;
+  --text-muted:#94a3b8;
+  --tx:#f8fafc;
+  --so:#94a3b8;
+  --c:rgba(255,255,255,0.03);
+  --c2:rgba(255,255,255,0.05);
+  --br:rgba(255,255,255,0.08);
+  --bg:#030206;
+  --text-on-accent:#ffffff;
+  background:linear-gradient(-45deg,#030206,#12092e,#051a2e,#0c0d14)!important;
+  background-size:400% 400%!important;
+  animation:nebulaSupernova 15s ease infinite;
+  color:var(--text-main)!important;
 }
 body.theme-nebula #app,
 body.theme-nebula #panels,
 body.theme-nebula .pan{background:transparent!important}
 body.theme-nebula #sbar,
-body.theme-nebula .header,
 body.theme-nebula #topNav,
+body.theme-nebula .header,
 body.theme-nebula .pw .pb,
 body.theme-nebula .macrobox,
 body.theme-nebula .dh,
 body.theme-nebula .tc,
-body.theme-nebula #aiPanel{
-  background:rgba(255,255,255,0.03)!important;
+body.theme-nebula #aiPanel,
+body.theme-nebula .tab,
+body.theme-nebula .report-box{
+  background:rgba(255,255,255,0.02)!important;
   backdrop-filter:blur(12px)!important;-webkit-backdrop-filter:blur(12px)!important;
   border-color:rgba(255,255,255,0.08)!important;
 }
 body.theme-nebula #sbar{
   border-bottom:1px solid rgba(255,255,255,0.08)!important;
-  box-shadow:0 8px 32px rgba(0,0,0,.25);
+  box-shadow:0 8px 32px rgba(0,0,0,.35);
 }
 body.theme-nebula #aiFab{
-  background:rgba(255,255,255,0.06)!important;
+  background:rgba(255,255,255,0.04)!important;
   backdrop-filter:blur(12px)!important;-webkit-backdrop-filter:blur(12px)!important;
-  border:1px solid rgba(255,255,255,0.12)!important;
-  box-shadow:0 8px 28px rgba(91,33,182,.35)!important;
+  border:1px solid rgba(255,255,255,0.1)!important;
+  box-shadow:0 0 24px var(--accent-glow)!important;
+  color:var(--text-main)!important;
 }
 body.theme-nebula .tab.act{
-  background:rgba(167,139,250,.35)!important;
-  border-color:rgba(255,255,255,.2)!important;
+  background:rgba(124,58,237,0.35)!important;
+  border-color:rgba(255,255,255,0.14)!important;
+  color:#fff!important;
+}
+body.theme-nebula .topbtn-report,
+body.theme-nebula .topbtn-history{
+  background:var(--accent-color)!important;
+  box-shadow:0 0 18px var(--accent-glow)!important;
 }
 
-/* --- Cyberpunk Pulse --- */
+/* 2) CYBERPUNK PULSE CORE */
 body.theme-cyberpunk{
-  --ac:#ff00aa;--accent-color:#ff00aa;--text-on-accent:#ffffff;--cy:#22d3ee;
-  background:#05060a!important;
+  --bg-main:#050508;
+  --bg-card:#0b0b12;
+  --accent-color:#ff00aa;
+  --ac:#ff00aa;
+  --accent-glow:rgba(255,0,170,0.5);
+  --text-main:#00ffff;
+  --text-muted:#64748b;
+  --tx:#00ffff;
+  --so:#64748b;
+  --c:#0b0b12;
+  --c2:#101018;
+  --br:rgba(255,0,170,0.45);
+  --bg:#050508;
+  --text-on-accent:#ffffff;
+  background:#050508!important;
   background-image:
-    linear-gradient(rgba(34,211,238,.04) 1px,transparent 1px),
-    linear-gradient(90deg,rgba(255,0,170,.04) 1px,transparent 1px)!important;
+    linear-gradient(rgba(0,255,255,.04) 1px,transparent 1px),
+    linear-gradient(90deg,rgba(255,0,170,.05) 1px,transparent 1px)!important;
   background-size:32px 32px!important;
+  color:var(--text-main)!important;
 }
 body.theme-cyberpunk #app{background:transparent!important}
 body.theme-cyberpunk #sbar,
 body.theme-cyberpunk .altbtn,
 body.theme-cyberpunk .topbtn-report,
+body.theme-cyberpunk .topbtn-history,
 body.theme-cyberpunk .tab.act,
 body.theme-cyberpunk .tc,
 body.theme-cyberpunk .dh,
-body.theme-cyberpunk .pb{
+body.theme-cyberpunk .pb,
+body.theme-cyberpunk .tabs .tab{
   box-shadow:0 0 10px var(--accent-color), inset 0 0 8px rgba(0,0,0,0.5)!important;
+  border-color:var(--accent-color)!important;
 }
-body.theme-cyberpunk .tc{
-  border-color:rgba(34,211,238,.45)!important;
+body.theme-cyberpunk .tc,
+body.theme-cyberpunk .dh,
+body.theme-cyberpunk .pb{
+  background:var(--bg-card)!important;
   animation:cyberPulseGlow 2.6s ease-in-out infinite;
-  background:rgba(8,10,18,.92)!important;
 }
 body.theme-cyberpunk #sbar{
-  background:rgba(5,6,10,.92)!important;
-  border-bottom:1px solid rgba(255,0,170,.35)!important;
+  background:rgba(5,5,8,.94)!important;
+  border-bottom:1px solid var(--accent-color)!important;
 }
 body.theme-cyberpunk .tab.act{
-  background:linear-gradient(135deg,rgba(255,0,170,.35),rgba(34,211,238,.25))!important;
-  border-color:#ff00aa!important;
+  background:linear-gradient(135deg,rgba(255,0,170,.4),rgba(0,255,255,.2))!important;
   color:#fff!important;
 }
 body.theme-cyberpunk #aiFab{
   background:
-    linear-gradient(180deg,transparent 0%,rgba(34,211,238,.55) 50%,transparent 100%),
+    linear-gradient(180deg,transparent 0%,rgba(0,255,255,.55) 48%,transparent 100%),
     #120018!important;
   background-size:100% 220%,auto!important;
-  animation:cyberScan 1.8s linear infinite, fabPop .4s ease!important;
-  border:1px solid #ff00aa!important;
-  box-shadow:0 0 16px #ff00aa,0 0 28px rgba(34,211,238,.4)!important;
-  color:#fff;
+  animation:cyberScan 1.8s linear infinite!important;
+  border:1px solid var(--accent-color)!important;
+  box-shadow:0 0 16px var(--accent-color),0 0 28px rgba(0,255,255,.35)!important;
+  color:#fff!important;
 }
 
-/* --- Deep Space Matrix --- */
-body.theme-matrix{
-  background-color:#020805!important;
-  background-image:
-    linear-gradient(rgba(16,185,129,.09) 1px,transparent 1px),
-    linear-gradient(90deg,rgba(16,185,129,.09) 1px,transparent 1px)!important;
-  background-size:26px 26px!important;
-  animation:matrixRain 9s linear infinite;
+/* 3) GOLDEN CHRONO LUXURY CORE */
+body.theme-gold,
+body.theme-chrono{
+  --bg-main:#0a0907;
+  --bg-card:#12100c;
+  --accent-color:#bf953f;
+  --ac:#bf953f;
+  --accent-glow:rgba(191,149,63,0.3);
+  --text-main:#fcf6ba;
+  --text-muted:#a1a1aa;
+  --tx:#fcf6ba;
+  --so:#a1a1aa;
+  --c:#12100c;
+  --c2:#18140e;
+  --br:#bf953f;
+  --bg:#0a0907;
+  --text-on-accent:#1a1208;
+  font-family:'Playfair Display',Georgia,serif!important;
+  background:var(--bg-main)!important;
+  color:var(--text-main)!important;
 }
-body.theme-matrix #sbar,
-body.theme-matrix #aiFab{
-  background:rgba(2,8,5,.85)!important;
-  border-color:rgba(16,185,129,.35)!important;
-  box-shadow:0 0 18px rgba(16,185,129,.2)!important;
+body.theme-gold *,
+body.theme-chrono *{font-family:inherit}
+body.theme-gold #sbar,
+body.theme-chrono #sbar{
+  background:linear-gradient(180deg,#12100c,#0a0907)!important;
+  border-bottom:1px solid #bf953f!important;
+  box-shadow:0 8px 28px rgba(0,0,0,.45);
 }
-body.theme-matrix .tc{
-  border-color:rgba(16,185,129,.4)!important;
-  box-shadow:0 0 14px rgba(16,185,129,.15)!important;
-}
-
-/* --- Golden Chrono Luxury (.theme-chrono / .theme-gold) --- */
-body.theme-chrono,
-body.theme-gold{
-  --ac:#c9a227;--accent-color:#c9a227;--text-on-accent:#1a1208;
-  font-family:'Playfair Display',Georgia,'Times New Roman',serif!important;
-  background:linear-gradient(165deg,#140f08,#1a1208 40%,#0c0905)!important;
-}
-body.theme-chrono *,
-body.theme-gold *{font-family:inherit}
-body.theme-chrono #sbar,
-body.theme-gold #sbar{
-  background:linear-gradient(180deg,#1c140a,#120d08)!important;
-  border-bottom:1px solid rgba(201,162,39,.45)!important;
-  box-shadow:0 8px 28px rgba(0,0,0,.4);
-}
-body.theme-chrono .tc,
 body.theme-gold .tc,
-body.theme-chrono .dh,
+body.theme-chrono .tc,
 body.theme-gold .dh,
-body.theme-chrono .report-box,
-body.theme-gold .report-box,
-body.theme-chrono .topbtn-report,
-body.theme-gold .topbtn-report,
+body.theme-chrono .dh,
+body.theme-gold .pb,
 body.theme-chrono .pb,
-body.theme-gold .pb{
+body.theme-gold .report-box,
+body.theme-chrono .report-box,
+body.theme-gold .topbtn-report,
+body.theme-chrono .topbtn-report{
   border:1px solid #bf953f!important;
-  box-shadow:
-    0 0 0 1px rgba(252,246,186,.25),
-    inset 0 0 0 1px rgba(179,135,40,.35),
-    0 8px 24px rgba(0,0,0,.35)!important;
-  background:linear-gradient(160deg,rgba(28,20,10,.95),rgba(18,12,6,.98))!important;
+  background:var(--bg-card)!important;
+  box-shadow:0 0 0 1px rgba(252,246,186,.12),0 8px 24px rgba(0,0,0,.35)!important;
   animation:goldShimmer 6s ease-in-out infinite;
 }
-body.theme-chrono .tab.act,
-body.theme-gold .tab.act{
+body.theme-gold .tab.act,
+body.theme-chrono .tab.act{
   background:linear-gradient(135deg,#bf953f,#fcf6ba,#b38728)!important;
   color:#1a1208!important;
   border-color:#fcf6ba!important;
 }
-body.theme-chrono #aiFab,
-body.theme-gold #aiFab{
+body.theme-gold #aiFab,
+body.theme-chrono #aiFab{
   background:linear-gradient(145deg,#bf953f,#fbf5b7,#b38728)!important;
   color:#1a1208!important;
   border:1px solid #fcf6ba!important;
-  box-shadow:0 0 20px rgba(201,162,39,.45)!important;
+  box-shadow:0 0 20px var(--accent-glow)!important;
 }
-body.theme-chrono .cbtn.done,
 body.theme-gold .cbtn.done,
-body.theme-chrono .tc.done::before,
-body.theme-gold .tc.done::before{
+body.theme-chrono .cbtn.done,
+body.theme-gold .tc.done::before,
+body.theme-chrono .tc.done::before{
   border-color:#fcf6ba!important;
   background:linear-gradient(135deg,#bf953f,#fbf5b7)!important;
   color:#1a1208!important;
   box-shadow:0 0 12px rgba(251,191,36,.55)!important;
 }
-body.theme-chrono .floatpts,
-body.theme-gold .floatpts{color:#fcf6ba!important;text-shadow:0 0 12px rgba(251,191,36,.6)}
+body.theme-gold .floatpts,
+body.theme-chrono .floatpts{
+  color:#fcf6ba!important;
+  text-shadow:0 0 12px rgba(251,191,36,.55);
+}
+
+/* 4) DEEP SPACE MATRIX CORE */
+body.theme-matrix{
+  --bg-main:#000000;
+  --bg-card:rgba(10,25,10,0.8);
+  --accent-color:#00ff00;
+  --ac:#00ff00;
+  --accent-glow:rgba(0,255,0,0.4);
+  --text-main:#00ff00;
+  --text-muted:#33a633;
+  --tx:#00ff00;
+  --so:#33a633;
+  --c:rgba(10,25,10,0.8);
+  --c2:rgba(8,20,8,0.9);
+  --br:rgba(0,255,0,0.35);
+  --bg:#000000;
+  --text-on-accent:#001a00;
+  background-color:#000!important;
+  background-image:
+    linear-gradient(rgba(0,255,0,.08) 1px,transparent 1px),
+    linear-gradient(90deg,rgba(0,255,0,.08) 1px,transparent 1px)!important;
+  background-size:26px 26px!important;
+  animation:matrixRain 9s linear infinite;
+  color:var(--text-main)!important;
+  font-family:ui-monospace,SFMono-Regular,Menlo,Monaco,Consolas,'Liberation Mono','Courier New',monospace!important;
+}
+body.theme-matrix *,
+body.theme-matrix #sbar,
+body.theme-matrix .tab,
+body.theme-matrix .tc,
+body.theme-matrix .cbtn{
+  font-family:inherit!important;
+}
+body.theme-matrix #sbar,
+body.theme-matrix #aiFab{
+  background:rgba(0,0,0,.88)!important;
+  border-color:rgba(0,255,0,.4)!important;
+  box-shadow:0 0 18px var(--accent-glow)!important;
+  color:var(--text-main)!important;
+}
+body.theme-matrix .tc,
+body.theme-matrix .dh,
+body.theme-matrix .pb,
+body.theme-matrix .tab{
+  background:var(--bg-card)!important;
+  border:1px solid rgba(0,255,0,.4)!important;
+  box-shadow:0 0 12px rgba(0,255,0,.15)!important;
+  color:var(--text-main)!important;
+}
+body.theme-matrix .tab.act{
+  background:rgba(0,255,0,.15)!important;
+  border-color:#00ff00!important;
+  color:#00ff00!important;
+  box-shadow:0 0 14px var(--accent-glow)!important;
+}
+body.theme-matrix .tcname,
+body.theme-matrix .dhn,
+body.theme-matrix .tctime{
+  color:var(--text-main)!important;
+}
+
+
 
 .auth-toggle{background:none;border:none;color:#94a3b8;font-family:inherit;font-weight:700;font-size:.8rem;cursor:pointer;text-decoration:underline;padding:8px 0;margin-top:4px}
 .auth-mode-label{font-size:.72rem;font-weight:800;color:#64748b;margin-bottom:10px;text-transform:uppercase;letter-spacing:.04em}
@@ -743,16 +976,16 @@ body.theme-gold .floatpts{color:#fcf6ba!important;text-shadow:0 0 12px rgba(251,
 </style>
 
 
-<div id="rankUpModal">
-  <div class="rank-box">
-    <div style="font-size:2rem;margin-bottom:8px">LEVEL UP</div>
+<div id="rankUpModal" class="level-up-overlay" aria-hidden="true">
+  <div class="rank-box" role="dialog" aria-modal="true" aria-labelledby="rankUpTitle">
+    <div class="rank-up-kicker">🎉 LEVEL UP!</div>
     <h3 id="rankUpTitle">New rank unlocked</h3>
     <p id="rankUpBody">You unlocked a premium profile theme color in settings.</p>
-    <button type="button" id="rankUpClose" class="fl-submit-btn" style="margin:0;width:100%">Awesome</button>
+    <button type="button" id="rankUpClose" class="rank-up-btn">Awesome</button>
   </div>
 </div>
 
-<div id="ld"<div id="ld" style="display:flex;align-items:center;justify-content:center;height:100vh;flex-direction:column;gap:16px">
+<div id="ld" style="display:flex;align-items:center;justify-content:center;height:100vh;flex-direction:column;gap:16px">
   <div style="width:40px;height:40px;border:3px solid #1e2d45;border-top-color:#3b82f6;border-radius:50%;animation:spin .8s linear infinite"></div>
   <span style="color:#64748b;font-family:Cairo,sans-serif;font-size:.9rem">Loading Your Schedule...</span>
 </div>
@@ -1360,7 +1593,10 @@ function showRankUpModal(rank){
   const body=document.getElementById('rankUpBody');
   if(title) title.textContent=`LEVEL UP! NEW RANK UNLOCKED: ${rank.icon} ${rank.title}`;
   if(body) body.textContent=`You've unlocked a premium profile theme color in settings! Lifetime XP is climbing — keep checking off tasks.`;
-  if(modal) modal.classList.add('open');
+  if(modal){
+    modal.classList.add('open');
+    modal.setAttribute('aria-hidden','false');
+  }
   fireConfetti();
 }
 function ensureRankTracking(){
@@ -7515,7 +7751,7 @@ function showLandingIfNeeded(){
 }
 
 document.addEventListener('click',e=>{
-  if(e.target && e.target.id==='rankUpClose'){ document.getElementById('rankUpModal')?.classList.remove('open'); return; }
+  if(e.target && e.target.id==='rankUpClose'){ const m=document.getElementById('rankUpModal'); if(m){ m.classList.remove('open'); m.setAttribute('aria-hidden','true'); } return; }
   if(e.target && e.target.id==='btnRebirth'){ doRebirth(); return; }
   const myth=e.target && e.target.closest && e.target.closest('[data-mythic]');
   if(myth){ unlockMythicTheme(myth.getAttribute('data-mythic'), parseInt(myth.getAttribute('data-cost'),10)||1); return; }
