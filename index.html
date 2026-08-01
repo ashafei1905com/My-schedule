@@ -98,7 +98,9 @@ html[dir="ltr"] .tc[data-c="sunrise"]{border-left:3px solid var(--or)}
 .st{display:flex;flex-direction:column;align-items:center;gap:1px}
 .sv{font-size:1.5rem;font-weight:900;line-height:1}
 .sl{font-size:.6rem;color:var(--so);font-weight:700}
-#sv1{color:var(--accent-color,var(--or))}#sv2{color:var(--accent-color,var(--ye))}#sv3{color:var(--accent-color,var(--pu))}
+#sv1,#sv2,#sv3{color:var(--accent-color)!important}
+.st .sv{color:var(--accent-color)}
+.st .sl{color:var(--text-main,var(--so))}
 .pw{padding:10px 16px 0}
 .pb{background:var(--c);border:1px solid var(--br);border-radius:10px;padding:10px 14px}
 .ph{display:flex;justify-content:space-between;font-size:.77rem;color:var(--so);margin-bottom:6px}
@@ -140,7 +142,9 @@ html[dir="ltr"] .tc[data-c="sunrise"]{border-left:3px solid var(--or)}
 .prow::-webkit-scrollbar{display:none}
 .ppill{flex-shrink:0;padding:6px 10px;background:var(--c);border:2px solid var(--br);border-radius:8px;text-align:center;min-width:60px;transition:all .2s}
 .ppill.done{border-color:var(--gr);background:rgba(16,185,129,.1)}
-.ppill.sunrise-pill{border-color:var(--or);background:rgba(245,158,11,.06)}
+.ppill.sunrise-pill{border-color:var(--accent-color);background:color-mix(in srgb,var(--accent-glow,var(--accent-color)) 18%,transparent)}
+.ppill.sunrise-pill .pnam,
+.ppill.sunrise-pill .ptim{color:var(--accent-color)!important}
 .pnam{font-size:.6rem;color:var(--so);font-weight:700}
 .ptim{font-size:.72rem;font-weight:700}
 .tl{position:relative;padding-right:20px}
@@ -1101,15 +1105,15 @@ body.theme-matrix .tctime{
           <div class="desc" id="mythicThemesTitle" style="margin-top:20px;font-weight:900">Mythic Themes</div>
           <p class="desc" id="mythicThemesDesc" style="margin-top:4px">Unlock with Rebirth Tokens from the Prestige loop.</p>
           <div id="mythicThemesPanel" style="margin-top:10px"></div>
-          <div id="themeColorCustomizer" style="display:none;margin-top:14px;padding:1rem;background:#111726;border:1px solid rgba(255,255,255,0.05);border-radius:12px">
-            <div class="desc" style="font-weight:800;margin-bottom:10px" id="themeCustomizerTitle">Live Accent Override</div>
-            <div class="theme-custom-row" style="display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:8px">
-              <label id="labelAccentCore" for="mythicAccentPick">Primary Accent Core Color</label>
-              <input type="color" id="mythicAccentPick" value="#7c3aed" style="width:42px;height:32px;border:none;background:transparent;cursor:pointer">
+          <div id="themeColorCustomizer" style="display:none;margin-top:14px;padding:1.1rem 1.25rem;background:#111726;border:1px solid rgba(255,255,255,0.05);border-radius:12px">
+            <div class="desc" style="font-weight:800;margin-bottom:12px;letter-spacing:0.02em" id="themeCustomizerTitle">Live Accent Override</div>
+            <div class="theme-custom-row" style="display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:10px">
+              <label id="labelAccentCore" for="primaryColorPicker">Primary Accent Core Color</label>
+              <input type="color" id="primaryColorPicker" value="#7c3aed" style="width:44px;height:34px;border:none;background:transparent;cursor:pointer">
             </div>
-            <div class="theme-custom-row" style="display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:12px">
-              <label id="labelGlowCore" for="mythicGlowPick">Glow Shadow Highlight Color</label>
-              <input type="color" id="mythicGlowPick" value="#a78bfa" style="width:42px;height:32px;border:none;background:transparent;cursor:pointer">
+            <div class="theme-custom-row" style="display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:14px">
+              <label id="labelGlowCore" for="glowColorPicker">Glow / Background Highlight Color</label>
+              <input type="color" id="glowColorPicker" value="#a78bfa" style="width:44px;height:34px;border:none;background:transparent;cursor:pointer">
             </div>
             <button type="button" id="btnResetMythicColors" class="theme-btn" style="width:100%">↺ Reset Theme Default</button>
           </div>
@@ -1716,8 +1720,8 @@ function applyMythicColorOverrides(themeId){
     const lum=(0.299*r+0.587*g+0.114*b)/255;
     root.style.setProperty('--text-on-accent', lum>0.62?'#0b1220':'#ffffff');
   }catch(e){}
-  const ap=document.getElementById('mythicAccentPick');
-  const gp=document.getElementById('mythicGlowPick');
+  const ap=document.getElementById('primaryColorPicker')||document.getElementById('mythicAccentPick');
+  const gp=document.getElementById('glowColorPicker')||document.getElementById('mythicGlowPick');
   if(ap) ap.value=accent;
   if(gp) gp.value=(custom.glow||defs.glow);
 }
@@ -1732,8 +1736,8 @@ function updateThemeColorCustomizerVisibility(themeId){
   const lg=document.getElementById('labelGlowCore');
   const rb=document.getElementById('btnResetMythicColors');
   if(title) title.textContent=en?'Live Accent Override':'تعديل اللون المباشر';
-  if(la) la.textContent=en?'Primary Accent Core Color':'لون التمييز الأساسي';
-  if(lg) lg.textContent=en?'Glow Shadow Highlight Color':'لون توهج الظل';
+  if(la) la.textContent=en?'Primary Accent Core Color':'اللون الأساسي للمظهر';
+  if(lg) lg.textContent=en?'Glow / Background Highlight Color':'لون التوهج الخلفي';
   if(rb) rb.textContent=en?'↺ Reset Theme Default':'↺ إعادة ضبط المظهر الافتراضي';
 }
 function spawnGoldSparks(x, y, colorVar = '--accent-color') {
@@ -1872,7 +1876,8 @@ function updatePrestigeUI(){
       const isOn=active===th.id;
       let label;
       if(own){
-        label=isOn?(en?'Active':'مفعّل حالياً'):(en?'Activate':'تفعيل المظهر');
+        if(en){ label=isOn?'Active':'Activate Theme'; }
+        else{ label=isOn?'مفعّل حالياً':'تفعيل المظهر'; }
       }else{
         label=en
           ?`Unlock (${th.cost} token${th.cost>1?'s':''})`
@@ -2579,8 +2584,8 @@ function applyTheme(){
   if(STATS&&STATS.activeMythicTheme) applyMythicColorOverrides(STATS.activeMythicTheme);
 }
 function wireMythicColorCustomizer(){
-  const ap=document.getElementById('mythicAccentPick');
-  const gp=document.getElementById('mythicGlowPick');
+  const ap=document.getElementById('primaryColorPicker')||document.getElementById('mythicAccentPick');
+  const gp=document.getElementById('glowColorPicker')||document.getElementById('mythicGlowPick');
   const saveOverride=async()=>{
     const themeId=STATS.activeMythicTheme;
     if(!themeId||themeId==='audio') return;
@@ -3218,15 +3223,14 @@ function buildPTasks(jd){
     .filter(([pk])=>!(jd===5&&pk==='Dhuhr'))
     .map(([pk,pm])=>{
       const t24=PRYT[pk]||FALLBK[pk];
-      let desc=pk==='Fajr'?`${fmt24(t24)} · ارجع نام بعدها ✓`:`وقت الصلاة: ${fmt24(t24)}`;
+      const timeStr=fmt24(t24);
+      let desc;
       if(en){
-        desc=desc
-          .replace(/وقت الصلاة/g,'Prayer Time')
-          .replace(/ارجع نام بعدها/g,'Rest\/Sleep after')
-          .replace(/ص/g,'AM')
-          .replace(/م/g,'PM');
+        desc=pk==='Fajr'?`${timeStr} · Rest/Sleep after ✓`:`Prayer Time: ${timeStr}`;
+      }else{
+        desc=pk==='Fajr'?`${timeStr} · ارجع نام بعدها ✓`:`وقت الصلاة: ${timeStr}`;
       }
-      return[`pr-${k}-${pk}`,fmt24(t24),'prayer',pm.ic,pm.ar,desc,pm.pts,null,null,false,t24];
+      return[`pr-${k}-${pk}`,timeStr,'prayer',pm.ic,pm.ar,desc,pm.pts,null,null,false,t24];
     });
 }
 function sortKey(t){const base=toMin(t[10]||t[1]);return t[2]==='sleep'?base+1440:base;}
@@ -4835,7 +4839,7 @@ function renderPanel(jd){
   const prayerOrder=['Fajr','Dhuhr','Asr','Maghrib','Isha'];
   for(const pk of prayerOrder){
     if(pk==='Dhuhr'){
-      pills.push(`<div class="ppill sunrise-pill"><div class="pnam" style="color:var(--or)">${tn('الشروق')} ☀️</div><div class="ptim" style="color:var(--or)">${fmt24(PRYT.Sunrise||FALLBK.Sunrise)}</div></div>`);
+      pills.push(`<div class="ppill sunrise-pill"><div class="pnam">${tn('الشروق')} ☀️</div><div class="ptim">${fmt24(PRYT.Sunrise||FALLBK.Sunrise)}</div></div>`);
     }
     if(pk==='Dhuhr'&&jd===5){
       if(jumahTask){const pid=jumahTask[0];const dn=!!DONE[pid];pills.push(`<div class="ppill${dn?' done':''}" id="pp-${pid}"><div class="pnam">${jumahTask[4]}</div><div class="ptim">${fmt24(jumahTask[1])}</div></div>`);}
