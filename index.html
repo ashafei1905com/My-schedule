@@ -204,9 +204,12 @@ html[dir="ltr"] .tc[data-c="sunrise"]{border-left:3px solid var(--or)}
 .topbtn-signout:hover{background:rgba(239,68,68,.22)}
 .topbtn-signin{background:var(--accent-color,var(--ac));background-color:var(--accent-color,var(--ac));color:var(--text-on-accent,#fff);box-shadow:0 2px 10px color-mix(in srgb,var(--accent-color,var(--ac)) 35%,transparent)}
 .topbtn-signin:hover{box-shadow:0 4px 16px color-mix(in srgb,var(--accent-color,var(--ac)) 50%,transparent);transform:translateY(-1px);filter:brightness(1.06)}
-.profile-wrap{position:relative}
+.profile-wrap{position:relative;display:flex;flex-direction:column;align-items:flex-end;gap:2px}
 .profile-btn{background:transparent;border:none;color:var(--tx);font-family:'Cairo',sans-serif;font-size:.85rem;font-weight:800;cursor:pointer;padding:6px 10px;border-radius:8px;display:inline-flex;align-items:center;gap:6px}
 .profile-btn:hover{background:rgba(255,255,255,.06)}
+.rank-chip{display:flex;flex-direction:column;align-items:flex-end;gap:1px;line-height:1.2;text-align:right}
+.rank-chip .rank-prefix{font-size:.62rem;font-weight:600;color:var(--so,var(--text-muted,#94a3b8));letter-spacing:0.02em}
+.rank-chip .rank-title{font-size:.78rem;font-weight:800;color:var(--accent-color,var(--tx))}
 .profile-menu{position:absolute;top:100%;left:0;margin-top:6px;min-width:220px;background:var(--c2);border:1px solid var(--br);border-radius:12px;box-shadow:0 12px 40px rgba(0,0,0,.55);z-index:200;display:none;overflow:hidden}
 .profile-menu.open{display:block}
 .profile-menu button{width:100%;text-align:right;padding:12px 16px;background:transparent;border:none;color:var(--tx);font-family:'Cairo',sans-serif;font-size:.85rem;font-weight:700;cursor:pointer;display:flex;align-items:center;gap:10px}
@@ -426,10 +429,7 @@ html[dir="ltr"] .tc[data-c="sunrise"]{border-left:3px solid var(--or)}
 /* ===== Prestige / Mythic themes ===== */
 @keyframes nebulaShift{0%{background-position:0% 50%}50%{background-position:100% 50%}100%{background-position:0% 50%}}
 @keyframes cyberPulse{0%,100%{box-shadow:0 0 0 0 rgba(236,72,153,0),0 0 12px rgba(34,211,238,.15)}50%{box-shadow:0 0 0 2px rgba(236,72,153,.35),0 0 22px rgba(34,211,238,.45)}}
-@keyframes rankPop{
-  0%{opacity:0;transform:translateY(18px) scale(.94)}
-  100%{opacity:1;transform:translateY(0) scale(1)}
-}
+@keyframes rankPop{0%{opacity:0;transform:translateY(18px) scale(.94)}100%{opacity:1;transform:translateY(0) scale(1)}}
 
 /* ===== Level Up modal (fixed overlay — never in page flow) ===== */
 #rankUpModal,
@@ -1618,7 +1618,8 @@ function getRankMeta(xp){
 function formatRankLabel(rank){
   const en=(USER_SETTINGS&&USER_SETTINGS.lang)==='en';
   const name=en?(rank.title):(rank.titleAr||rank.title);
-  return en?`Your Rank: ${rank.icon} ${name}`:`رتبتك الحالية: ${rank.icon} ${name}`;
+  const prefix=en?'Your Rank:':'رتبتك الحالية:';
+  return `<span class="rank-prefix">${prefix}</span><span class="rank-title">${rank.icon} ${name}</span>`;
 }
 function getPrestigeMultiplier(){
   const p=Math.max(0,Number(STATS.prestige_level)||0);
@@ -1671,7 +1672,6 @@ function awardTaskPoints(basePts, opts={}){
   }
   try{ updatePrestigeUI(); }catch(e){}
   if(opts.x!=null && opts.y!=null) floatPts(opts.x,opts.y,awarded);
-  try{ playPremiumCompleteSound(); }catch(e){}
   try{ if(opts&&opts.x!=null) spawnGoldSparks(opts.x,opts.y); }catch(e){}
   return awarded;
 }
@@ -1681,12 +1681,12 @@ async function doRebirth(){
   if(rank.key!=='timelord' && (STATS.lifetime_xp||0)<3500){
     showToast(en
       ?'Reach Time Lord (3500+ Lifetime XP) to unlock prestige upgrade'
-      :'للوصول لترقية الهيبة تحتاج 3500+ من نقاط الخبرة الدائمة (رتبة سيد الزمن)',3200,'warn');
+      :'للوصول لترقية الامتياز تحتاج 3500+ من نقاط الخبرة الدائمة (رتبة سيد الزمن)',3200,'warn');
     return;
   }
   const ok=window.confirm(en
     ?'Upgrade prestige rank? Lifetime XP resets to 0, your points multiplier increases permanently, and you earn 1 Mythic Prestige Token.'
-    :'ترقية رتبة الهيبة والتصفير؟ سيتم تصفير نقاط الخبرة الدائمة، ويزداد مضاعف النقاط بشكل دائم، وتحصل على رمز امتياز أسطوري واحد.');
+    :'ترقية رتبة الامتياز والتصفير؟ سيتم تصفير نقاط الخبرة الدائمة، ويزداد مضاعف النقاط بشكل دائم، وتحصل على رمز امتياز واحد.');
   if(!ok) return;
   STATS.lifetime_xp=0;
   STATS.prestige_level=(STATS.prestige_level||0)+1;
@@ -1696,7 +1696,7 @@ async function doRebirth(){
   fireConfetti();
   showToast(en
     ?`Prestige upgrade complete — Rank ${STATS.prestige_level} · Token +1 · +${Math.round(STATS.prestige_level*10)}% points`
-    :`اكتملت ترقية الهيبة — الرتبة ${STATS.prestige_level} · رمز +1 · +${Math.round(STATS.prestige_level*10)}٪ نقاط`,4200);
+    :`اكتملت ترقية الامتياز — الرتبة ${STATS.prestige_level} · رمز +1 · +${Math.round(STATS.prestige_level*10)}٪ نقاط`,4200);
   try{ updatePrestigeUI(); updateAuthUI(fbAuth?.currentUser||null); updateUI(); }catch(e){}
 }
 const MYTHIC_THEME_DEFAULTS={
@@ -1788,26 +1788,6 @@ function spawnGoldSparks(x, y, colorVar = '--accent-color') {
     requestAnimationFrame(tick);
   }catch(e){}
 }
-let _premiumAudioCtx = null;
-function playPremiumCompleteChime() {
-  if(!(USER_SETTINGS&&USER_SETTINGS.premium_audio) && !(STATS.unlockedThemes||[]).includes('audio')) return;
-  try{
-    if (!_premiumAudioCtx) { _premiumAudioCtx = new (window.AudioContext || window.webkitAudioContext)(); }
-    if (_premiumAudioCtx.state === 'suspended') { _premiumAudioCtx.resume(); }
-    const ctx = _premiumAudioCtx; const now = ctx.currentTime;
-    const notes = [ { freq: 587.33, start: 0.00, dur: 0.14 }, { freq: 739.99, start: 0.08, dur: 0.14 }, { freq: 987.77, start: 0.16, dur: 0.28 } ];
-    const master = ctx.createGain(); master.gain.value = 0.35; master.connect(ctx.destination);
-    notes.forEach(({ freq, start, dur }) => {
-        const osc = ctx.createOscillator(); const gain = ctx.createGain(); osc.type = 'triangle'; osc.frequency.setValueAtTime(freq, now + start);
-        gain.gain.setValueAtTime(0, now + start); gain.gain.linearRampToValueAtTime(0.8, now + start + 0.015); gain.gain.exponentialRampToValueAtTime(0.001, now + start + dur);
-        osc.connect(gain); gain.connect(master); osc.start(now + start); osc.stop(now + start + dur + 0.02);
-    });
-    const shimmer = ctx.createOscillator(); const shimmerGain = ctx.createGain(); shimmer.type = 'sine'; shimmer.frequency.setValueAtTime(1975.5, now + 0.16);
-    shimmerGain.gain.setValueAtTime(0, now + 0.16); shimmerGain.gain.linearRampToValueAtTime(0.15, now + 0.18); shimmerGain.gain.exponentialRampToValueAtTime(0.001, now + 0.5);
-    shimmer.connect(shimmerGain); shimmerGain.connect(master); shimmer.start(now + 0.16); shimmer.stop(now + 0.55);
-  }catch(e){}
-}
-function playPremiumCompleteSound(){ playPremiumCompleteChime(); }
 function showMythicUnlockModal(themeId){
   const en=(USER_SETTINGS&&USER_SETTINGS.lang)==='en';
   const modal=document.getElementById('rankUpModal');
@@ -1815,45 +1795,27 @@ function showMythicUnlockModal(themeId){
   const body=document.getElementById('rankUpBody');
   const kicker=modal&&modal.querySelector('.rank-up-kicker');
   if(kicker) kicker.textContent=en?'🎉 UNLOCKED':'🎉 تم الفتح';
-  if(themeId==='audio'){
-    if(title) title.textContent=en?'Premium Complete Audio':'صوت الإكمال المميز';
-    if(body) body.textContent=en
-      ?'Success! Premium complete chimes will play when you check off tasks.'
-      :'ممتاز! سيُشغَّل صوت الإكمال المميز عند إنجاز المهام.';
-  }else{
-    if(title) title.textContent=en?'Mythic Theme Unlocked':'تم فتح مظهر أسطوري';
-    if(body) body.textContent=en
-      ?'🎉 Success! This Mythic theme is now unlocked. You can now activate it anytime from the Appearance settings tab!'
-      :'🎉 ممتاز! تم فتح هذا المظهر الأسطوري بنجاح. يمكنك الآن تفعيله في أي وقت من علامة تبويب المظهر داخل الإعدادات!';
-  }
+  if(title) title.textContent=en?'Rare Theme Unlocked':'تم فتح مظهر نادر';
+  if(body) body.textContent=en
+    ?'🎉 Success! This theme is now unlocked. You can now activate it anytime from the Appearance settings tab!'
+    :'🎉 ممتاز! تم فتح هذا المظهر بنجاح. يمكنك الآن تفعيله في أي وقت من علامة تبويب المظهر داخل الإعدادات!';
   if(modal){ modal.classList.add('open'); modal.setAttribute('aria-hidden','false'); }
 }
 async function unlockMythicTheme(themeId, cost){
   const en=(USER_SETTINGS&&USER_SETTINGS.lang)==='en';
   const unlocked=new Set(STATS.unlockedThemes||[]);
-  // Already owned: Prestige Center shows Owned; activation happens in Appearance
+  // Shop is unlock-only — never activate from Perfection Center
   if(unlocked.has(themeId)){
-    if(themeId==='audio'){
-      USER_SETTINGS.premium_audio=true;
-      try{ await saveUserSettings(); }catch(e){}
-      showToast(en?'Premium audio enabled':'تم تفعيل الصوت المميز',1800);
-      return;
-    }
-    showToast(en?'Already unlocked — activate it in Appearance':'مفتوح بالفعل — فعّله من المظهر',2200);
+    showToast(en?'Unlocked — activate it in Appearance':'تم الفتح — فعّله من المظهر',2200);
     return;
   }
   if((STATS.rebirth_tokens||0)<cost){
-    showToast(en?`Need ${cost} Rebirth Token${cost>1?'s':''}`:`تحتاج إلى ${cost} من رموز الامتياز الأسطورية`,2800,'warn');
+    showToast(en?`Need ${cost} Rebirth Token${cost>1?'s':''}`:`تحتاج إلى ${cost} من رموز الامتياز`,2800,'warn');
     return;
   }
   STATS.rebirth_tokens-=cost;
   unlocked.add(themeId);
   STATS.unlockedThemes=[...unlocked];
-  if(themeId==='audio'){
-    USER_SETTINGS.premium_audio=true;
-    try{ await saveUserSettings(); }catch(e){}
-  }
-  // Do NOT auto-activate visual themes — user activates from Appearance
   try{ await saveAll(); }catch(e){}
   updatePrestigeUI();
   renderAppearanceMythicActivator();
@@ -1864,14 +1826,12 @@ function getMythicThemeCatalog(en){
     {id:'nebula',name:'Cosmic Nebula',cost:1,desc:'Living mesh nebula across the full dashboard with glass navigation and soft depth'},
     {id:'cyberpunk',name:'Cyberpunk Pulse',cost:2,desc:'Neon terminal atmosphere, laser FAB scanlines, and high-contrast signal edges'},
     {id:'matrix',name:'Deep Space Matrix',cost:1,desc:'Digital rain grid field with signal-card geometry and code-field motion'},
-    {id:'chrono',name:'Golden Chrono Luxury',cost:2,desc:'Editorial serif type, refined borders, and completion star-spark effects'},
-    {id:'audio',name:'Premium Complete Audio',cost:1,desc:'Exclusive multi-note chime synthesizer on task check-off',kind:'audio'}
+    {id:'chrono',name:'Golden Chrono Luxury',cost:2,desc:'Editorial serif type, refined borders, and completion star-spark effects'}
   ]:[
     {id:'nebula',name:'🌌 سديم السوبرنوفا المتحرك',cost:1,desc:'شبكة سديم متحركة فاخرة عبر لوحة التحكم مع شريط تنقل زجاجي وعمق ناعم'},
     {id:'cyberpunk',name:'⚡ نبض النيون السيبراني',cost:2,desc:'طرفية داكنة، مسح ليزري على زر المساعد، وحواف إشارة عالية التباين'},
     {id:'matrix',name:'🟢 مصفوفة كود الفضاء الرقمي',cost:1,desc:'شبكة رقمية متوهجة مع هندسة بطاقات الإشارة وحركة حقل الكود'},
-    {id:'chrono',name:'👑 فخامة الكرونو الذهبي',cost:2,desc:'خطوط تحريرية فاخرة، حدود رفيعة، وشرارات نجمية عند الإنجاز'},
-    {id:'audio',name:'صوت الإكمال المميز',cost:1,desc:'مؤثر صوتي مركب متعدد النغمات عند إنجاز المهام',kind:'audio'}
+    {id:'chrono',name:'👑 فخامة الكرونو الذهبي',cost:2,desc:'خطوط تحريرية فاخرة، حدود رفيعة، وشرارات نجمية عند الإنجاز'}
   ];
 }
 function updatePrestigeUI(){
@@ -1881,23 +1841,23 @@ function updatePrestigeUI(){
   const xp=STATS.lifetime_xp||0;
 
   const navP=document.getElementById('navPrestigeBtn');
-  if(navP) navP.textContent=en?'Prestige Center':'مركز الامتياز والهيبة';
+  if(navP) navP.textContent=en?'Perfection Center':'مركز الامتياز';
   const pcTitle=document.getElementById('prestigeCenterTitle');
   const pcDesc=document.getElementById('prestigeCenterDesc');
-  if(pcTitle) pcTitle.textContent=en?'Prestige Center':'مركز الامتياز والهيبة';
+  if(pcTitle) pcTitle.textContent=en?'Perfection Center':'مركز الامتياز';
   if(pcDesc) pcDesc.textContent=en
-    ?'Lifetime XP, rebirth tokens, and Mythic rewards.'
-    :'الخبرة الدائمة، رموز الامتياز، والمكافآت الأسطورية.';
+    ?'Lifetime XP, rebirth tokens, and rare theme rewards.'
+    :'الخبرة الدائمة، رموز الامتياز، ومكافآت المظاهر النادرة.';
 
   const mythicTitle=document.getElementById('mythicThemesTitle');
   const mythicDesc=document.getElementById('mythicThemesDesc');
-  if(mythicTitle) mythicTitle.textContent=en?'Mythic Themes Shop':'متجر المظاهر الأسطورية';
+  if(mythicTitle) mythicTitle.textContent=en?'Rare Themes Shop':'متجر المظاهر النادرة';
   if(mythicDesc) mythicDesc.textContent=en
     ?'Spend Rebirth Tokens to unlock rewards.'
     :'أنفق رموز الامتياز لفتح المكافآت.';
 
   const hubTitle=document.getElementById('prestigeHubTitle');
-  if(hubTitle) hubTitle.textContent=en?'Prestige Hub':'نظام الهيبة والامتياز الزمني';
+  if(hubTitle) hubTitle.textContent=en?'Progress Hub':'نظام الامتياز الزمني';
   const xpLabel=document.getElementById('xpTrackLabel');
   if(xpLabel) xpLabel.textContent=en?'Lifetime XP Tracker':'متتبع نقاط الخبرة الدائمة';
 
@@ -1906,7 +1866,7 @@ function updatePrestigeUI(){
     const rankName=en?rank.title:(rank.titleAr||rank.title);
     line.textContent=en
       ?`Lifetime XP: ${xp} · ${rank.icon} ${rankName} · Prestige ${STATS.prestige_level||0} · Tokens ${STATS.rebirth_tokens||0} · Multiplier x${getPrestigeMultiplier().toFixed(2)}`
-      :`خبرة دائمة: ${xp} · ${rank.icon} ${rankName} · هيبة ${STATS.prestige_level||0} · رموز الامتياز ${STATS.rebirth_tokens||0} · مضاعف x${getPrestigeMultiplier().toFixed(2)}`;
+      :`خبرة دائمة: ${xp} · ${rank.icon} ${rankName} · امتياز ${STATS.prestige_level||0} · رموز الامتياز ${STATS.rebirth_tokens||0} · مضاعف x${getPrestigeMultiplier().toFixed(2)}`;
   }
   const xpText=document.getElementById('xpTrackText');
   const xpFill=document.getElementById('xpTrackFill');
@@ -1916,24 +1876,19 @@ function updatePrestigeUI(){
   if(btn){
     const can=xp>=3500;
     btn.hidden=!can;
-    btn.textContent=en?'🌌 Trigger Galactic Rebirth':'🌌 ترقية رتبة الهيبة والتصفير';
+    btn.textContent=en?'🌌 Trigger Galactic Rebirth':'🌌 ترقية رتبة الامتياز والتصفير';
   }
-  // Shop: full catalog in Prestige Center only
+  // Unlock shop only — unlocked cards show "Unlocked", no activate action here
   const panel=document.getElementById('mythicThemesPanel');
   if(panel){
     const unlocked=new Set(STATS.unlockedThemes||[]);
     const themes=getMythicThemeCatalog(en);
     panel.innerHTML=themes.map(th=>{
       const own=unlocked.has(th.id);
-      let label;
-      if(own){
-        label=en?(th.id==='audio'?'Owned · Enabled':'Owned'):(th.id==='audio'?'مملوك · مفعّل':'مملوك');
-      }else{
-        label=en
-          ?`Unlock (${th.cost} token${th.cost>1?'s':''})`
-          :`فتح قفل (${th.cost} رمز)`;
-      }
-      return `<div class="mythic-card${own?' owned':''}"><div><h4>${th.name}</h4><p>${th.desc}</p></div><button type="button" class="theme-btn" data-mythic="${th.id}" data-cost="${th.cost}">${label}</button></div>`;
+      const label=own
+        ?(en?'Unlocked':'تم الفتح')
+        :(en?`Unlock (${th.cost} token${th.cost>1?'s':''})`:`فتح قفل (${th.cost} رمز)`);
+      return `<div class="mythic-card${own?' owned':''}"><div><h4>${th.name}</h4><p>${th.desc}</p></div><button type="button" class="theme-btn" data-mythic="${th.id}" data-cost="${th.cost}"${own?' disabled':''}>${label}</button></div>`;
     }).join('');
   }
   renderAppearanceMythicActivator();
@@ -1944,17 +1899,17 @@ function renderAppearanceMythicActivator(){
   const en=(USER_SETTINGS&&USER_SETTINGS.lang)==='en';
   const title=document.getElementById('unlockedMythicTitle');
   const desc=document.getElementById('unlockedMythicDesc');
-  if(title) title.textContent=en?'Unlocked Mythic Themes':'المظاهر الأسطورية المفتوحة';
+  if(title) title.textContent=en?'Unlocked Rare Themes':'المظاهر النادرة المفتوحة';
   if(desc) desc.textContent=en
-    ?'Activate themes you unlocked in Prestige Center.'
+    ?'Activate themes you unlocked in Perfection Center.'
     :'فعّل المظاهر التي فتحتها من مركز الامتياز.';
   const panel=document.getElementById('appearanceMythicPanel');
   if(!panel) return;
   const unlocked=new Set(STATS.unlockedThemes||[]);
   const active=STATS.activeMythicTheme;
-  const themes=getMythicThemeCatalog(en).filter(th=>th.id!=='audio'&&unlocked.has(th.id));
+  const themes=getMythicThemeCatalog(en).filter(th=>unlocked.has(th.id));
   if(!themes.length){
-    panel.innerHTML=`<p class="desc">${en?'No Mythic themes unlocked yet. Earn tokens in Prestige Center.':'لا توجد مظاهر أسطورية مفتوحة بعد. اجمع الرموز من مركز الامتياز.'}</p>`;
+    panel.innerHTML=`<p class="desc">${en?'No rare themes unlocked yet. Earn tokens in Perfection Center.':'لا توجد مظاهر نادرة مفتوحة بعد. اجمع الرموز من مركز الامتياز.'}</p>`;
     return;
   }
   panel.innerHTML=themes.map(th=>{
@@ -2662,7 +2617,7 @@ function wireMythicColorCustomizer(){
   const gp=document.getElementById('glowColorPicker')||document.getElementById('mythicGlowPick');
   const saveOverride=async()=>{
     const themeId=STATS.activeMythicTheme;
-    if(!themeId||themeId==='audio') return;
+    if(!themeId) return;
     if(!USER_SETTINGS.mythicColorOverrides) USER_SETTINGS.mythicColorOverrides={};
     USER_SETTINGS.mythicColorOverrides[themeId]={
       accent:ap?ap.value:(MYTHIC_THEME_DEFAULTS[themeId]||{}).accent,
@@ -5172,6 +5127,7 @@ function updateAuthUI(user){
       <div class="profile-wrap">
         <button type="button" class="profile-btn" id="profileBtn">${display}${pBadge} ▾</button>
         <span class="rank-chip">${formatRankLabel(rank)}</span>
+
         <div class="profile-menu" id="profileMenu">
           <button type="button" id="pm-settings">${t('profile_settings')}</button>
           <div class="pm-sep"></div>
@@ -7536,7 +7492,7 @@ document.body.addEventListener('click',async e=>{
   }
   if(tgt.id==='btnResetMythicColors'){
     const themeId=STATS.activeMythicTheme;
-    if(!themeId||themeId==='audio') return;
+    if(!themeId) return;
     if(USER_SETTINGS.mythicColorOverrides) delete USER_SETTINGS.mythicColorOverrides[themeId];
     applyMythicColorOverrides(themeId);
     try{ await saveUserSettings(); }catch(e){}
