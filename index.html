@@ -473,7 +473,6 @@ body.theme-cyberpunk .tc{
 .lp-check{width:18px;height:18px;border-radius:50%;border:2px solid #334155;flex-shrink:0;margin-top:2px;position:relative;background:transparent}
 .lp-check[data-check="1"]{animation:lpCheck1 10s ease-in-out infinite}
 .lp-check[data-check="2"]{animation:lpCheck2 10s ease-in-out infinite}
-.lp-check.done,.lp-check[data-check]{/* animated via keyframes */}
 @keyframes lpDeepIn{0%,4%{opacity:0;transform:translateY(14px) scale(.96)}12%,100%{opacity:1;transform:translateY(0) scale(1)}}
 @keyframes lpBuf1{0%,18%{opacity:0;transform:translateY(12px)}28%,100%{opacity:1;transform:translateY(0)}}
 @keyframes lpGymIn{0%,35%{opacity:0;transform:translate(48px,-28px) scale(.9)}42%,100%{opacity:1;transform:translate(0,0) scale(1)}}
@@ -517,7 +516,6 @@ body.theme-cyberpunk .tc{
 .xp-track-label{display:flex;justify-content:space-between;font-size:.72rem;font-weight:800;color:var(--so);margin-bottom:6px}
 .xp-track{height:10px;border-radius:999px;background:var(--br);overflow:hidden;border:1px solid rgba(255,255,255,.06)}
 .xp-track-fill{height:100%;border-radius:999px;background:linear-gradient(90deg,#8b5cf6,#fbbf24);transition:width .4s ease}
-10%{opacity:1}18%{top:12%;left:55%}38%{top:22%;left:28%}55%{top:28%;left:30%;opacity:1}70%,100%{opacity:0}}
 @keyframes matrixRain{0%{background-position:0 0,0 0}100%{background-position:0 120px,40px 80px}}
 body.theme-matrix,body.theme-matrix #app,body.theme-matrix #sbar{
   background-color:#030712!important;
@@ -761,14 +759,14 @@ body.theme-chrono .tcname,.theme-chrono .dhn{letter-spacing:.02em}
             </div>
           </div>
           
-          <div class="desc" style="margin-top:20px;font-weight:900">Mythic Themes</div>
-          <p class="desc" style="margin-top:4px">Unlock with Rebirth Tokens from the Prestige loop.</p>
+          <div class="desc" id="mythicThemesTitle" style="margin-top:20px;font-weight:900">Mythic Themes</div>
+          <p class="desc" id="mythicThemesDesc" style="margin-top:4px">Unlock with Rebirth Tokens from the Prestige loop.</p>
           <div id="mythicThemesPanel" style="margin-top:10px"></div>
           <div id="prestigePanel" style="margin-top:16px">
-            <div class="desc" style="font-weight:900">Prestige Hub</div>
+            <div class="desc" id="prestigeHubTitle" style="font-weight:900">Prestige Hub</div>
             <p class="desc" id="prestigeStatsLine" style="margin-top:4px">Lifetime XP · Rank · Tokens</p>
             <div class="xp-track-wrap">
-              <div class="xp-track-label"><span>Lifetime XP Tracker</span><span id="xpTrackText">0 / 3500 XP</span></div>
+              <div class="xp-track-label"><span id="xpTrackLabel">Lifetime XP Tracker</span><span id="xpTrackText">0 / 3500 XP</span></div>
               <div class="xp-track"><div class="xp-track-fill" id="xpTrackFill" style="width:0%"></div></div>
             </div>
             <button type="button" id="btnRebirth" class="rebirth-btn" hidden>Trigger Galactic Rebirth</button>
@@ -1337,18 +1335,22 @@ function playPremiumCompleteSound(){
   }catch(e){}
 }
 async function unlockMythicTheme(themeId, cost){
+  const en=(USER_SETTINGS&&USER_SETTINGS.lang)==='en';
   const unlocked=new Set(STATS.unlockedThemes||[]);
   if(unlocked.has(themeId)){
-    if(themeId==='audio'){ showToast('Premium audio already unlocked',1800); return; }
+    if(themeId==='audio'){
+      showToast(en?'Premium audio already unlocked':'الصوت المميز مفتوح بالفعل',1800);
+      return;
+    }
     STATS.activeMythicTheme=themeId;
     applyMythicThemeClass(themeId);
     try{ await saveAll(); }catch(e){}
     updatePrestigeUI();
-    showToast('Theme activated',1800);
+    showToast(en?'Theme activated':'تم تفعيل المظهر',1800);
     return;
   }
   if((STATS.rebirth_tokens||0)<cost){
-    showToast(`Need ${cost} Rebirth Token${cost>1?'s':''}`,2800,'warn');
+    showToast(en?`Need ${cost} Rebirth Token${cost>1?'s':''}`:`تحتاج إلى ${cost} من رموز إعادة الولادة`,2800,'warn');
     return;
   }
   STATS.rebirth_tokens-=cost;
@@ -1360,41 +1362,75 @@ async function unlockMythicTheme(themeId, cost){
   }
   try{ await saveAll(); }catch(e){}
   updatePrestigeUI();
-  showToast(themeId==='audio'?'Premium complete audio unlocked':'Mythic theme unlocked',2200);
+  showToast(
+    themeId==='audio'
+      ?(en?'Premium complete audio unlocked':'تم فتح صوت الإكمال المميز')
+      :(en?'Mythic theme unlocked':'تم فتح المظهر الأسطوري'),
+    2200
+  );
 }
 function updatePrestigeUI(){
   ensureRankTracking();
+  const en=(USER_SETTINGS&&USER_SETTINGS.lang)==='en';
   const rank=getRankMeta(STATS.lifetime_xp||0);
   const xp=STATS.lifetime_xp||0;
+
+  const mythicTitle=document.getElementById('mythicThemesTitle');
+  const mythicDesc=document.getElementById('mythicThemesDesc');
+  if(mythicTitle) mythicTitle.textContent=en?'Mythic Themes':'المظاهر الأسطورية';
+  if(mythicDesc) mythicDesc.textContent=en
+    ?'Unlock with Rebirth Tokens from the Prestige loop.'
+    :'افتح القفل باستخدام رموز إعادة الولادة من نظام الهيبة.';
+
+  const hubTitle=document.getElementById('prestigeHubTitle');
+  if(hubTitle) hubTitle.textContent=en?'Prestige Hub':'مركز الهيبة';
+  const xpLabel=document.getElementById('xpTrackLabel');
+  if(xpLabel) xpLabel.textContent=en?'Lifetime XP Tracker':'متتبع نقاط الخبرة الدائمة';
+
   const line=document.getElementById('prestigeStatsLine');
   if(line){
-    line.textContent=`Lifetime XP: ${xp} · ${rank.icon} ${rank.title} · Prestige ${STATS.prestige_level||0} · Tokens ${STATS.rebirth_tokens||0} · Multiplier x${getPrestigeMultiplier().toFixed(2)}`;
+    line.textContent=en
+      ?`Lifetime XP: ${xp} · ${rank.icon} ${rank.title} · Prestige ${STATS.prestige_level||0} · Tokens ${STATS.rebirth_tokens||0} · Multiplier x${getPrestigeMultiplier().toFixed(2)}`
+      :`خبرة دائمة: ${xp} · ${rank.icon} ${rank.title} · هيبة ${STATS.prestige_level||0} · رموز ${STATS.rebirth_tokens||0} · مضاعف x${getPrestigeMultiplier().toFixed(2)}`;
   }
   const xpText=document.getElementById('xpTrackText');
   const xpFill=document.getElementById('xpTrackFill');
-  if(xpText) xpText.textContent=`${Math.min(xp,3500)} / 3500 XP`;
+  if(xpText) xpText.textContent=en?`${Math.min(xp,3500)} / 3500 XP`:`${Math.min(xp,3500)} / 3500 نقطة`;
   if(xpFill) xpFill.style.width=`${Math.min(100, Math.round((xp/3500)*100))}%`;
   const btn=document.getElementById('btnRebirth');
   if(btn){
     const can=xp>=3500;
     btn.hidden=!can;
-    btn.textContent='Trigger Galactic Rebirth';
+    btn.textContent=en?'Trigger Galactic Rebirth':'تفعيل إعادة الولادة المجرّية';
   }
   const panel=document.getElementById('mythicThemesPanel');
   if(panel){
     const unlocked=new Set(STATS.unlockedThemes||[]);
     const active=STATS.activeMythicTheme;
-    const themes=[
+    const themes=en?[
       {id:'nebula',name:'Cosmic Nebula',cost:1,desc:'Slow-moving nebula gradient across the dashboard'},
       {id:'cyberpunk',name:'Cyberpunk Pulse',cost:2,desc:'Neon pulse glow on timeline task cards'},
       {id:'matrix',name:'Deep Space Matrix',cost:1,desc:'Grid matrix field with glowing rain drift'},
       {id:'chrono',name:'Golden Chrono Luxury',cost:2,desc:'Luxury serif typography and gold borders'},
       {id:'audio',name:'Premium Complete Audio',cost:1,desc:'Exclusive level-up sound on task check-off',kind:'audio'}
+    ]:[
+      {id:'nebula',name:'سديم كوني',cost:1,desc:'تدرج سديمي بطيء الحركة عبر لوحة التحكم'},
+      {id:'cyberpunk',name:'نبض سايبربانك',cost:2,desc:'توهج نيون نابض على بطاقات الجدول'},
+      {id:'matrix',name:'مصفوفة الفضاء العميق',cost:1,desc:'شبكة ديناميكية مع جسيمات متساقطة متوهجة'},
+      {id:'chrono',name:'فخامة الزمن الذهبي',cost:2,desc:'خطوط فاخرة وحدود ذهبية بأناقة الساعة'},
+      {id:'audio',name:'صوت الإكمال المميز',cost:1,desc:'مؤثر صوتي حصري عند إنجاز المهام',kind:'audio'}
     ];
     panel.innerHTML=themes.map(th=>{
       const own=unlocked.has(th.id);
       const isOn=active===th.id;
-      const label=own?(isOn?'Active':'Activate'):`Unlock (${th.cost} token${th.cost>1?'s':''})`;
+      let label;
+      if(own){
+        label=isOn?(en?'Active':'مفعّل'):(en?'Activate':'تفعيل');
+      }else{
+        label=en
+          ?`Unlock (${th.cost} token${th.cost>1?'s':''})`
+          :`فتح قفل (${th.cost} رمز)`;
+      }
       return `<div class="mythic-card${isOn?' active':''}"><div><h4>${th.name}</h4><p>${th.desc}</p></div><button type="button" data-mythic="${th.id}" data-cost="${th.cost}">${label}</button></div>`;
     }).join('');
   }
@@ -4546,6 +4582,8 @@ function closeSettingsScreen(){
   document.getElementById('settingsScreen')?.classList.remove('open');
 }
 function setAppLang(lang){
+  // prestige/mythic shop strings follow USER_SETTINGS.lang via updatePrestigeUI
+
   USER_SETTINGS.lang=lang==='en'?'en':'ar';
   document.documentElement.lang=USER_SETTINGS.lang;
   document.documentElement.dir=USER_SETTINGS.lang==='en'?'ltr':'rtl';
