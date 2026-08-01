@@ -326,7 +326,7 @@ html[dir="ltr"] .tc[data-c="sunrise"]{border-left:3px solid var(--or)}
 /* Weekly Report / History Modal */
 .report-overlay{position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(10,14,26,.95);display:none;align-items:flex-start;justify-content:center;z-index:10001;padding:40px 20px;overflow-y:auto}
 .report-overlay.open{display:flex}
-.report-box{background:var(--c2);border:2px solid var(--br);border-radius:20px;padding:24px 24px;width:100%;max-width:650px;margin:auto;box-shadow:0 10px 40px rgba(0,0,0,0.8)}
+.report-box{background:var(--c2);border:2px solid var(--br);border-radius:20px;padding:24px 24px;width:100%;max-width:650px;margin:auto;box-shadow:0 10px 40px rgba(0,0,0,0.8);color:var(--tx)}
 .report-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:24px;padding-bottom:12px;border-bottom:2px solid var(--br)}
 .report-title{font-size:1.4rem;font-weight:900;color:var(--ye)}
 .report-range{font-size:.72rem;color:var(--mu);font-weight:700;margin-top:2px}
@@ -452,6 +452,59 @@ body.theme-cyberpunk .tc{
   background-color:#0b0f19!important;background:#0b0f19!important;
   color:#f1f5f9;isolation:isolate;
 }
+#loginCanvas{overflow-y:auto!important;-webkit-overflow-scrolling:touch}
+.login-canvas-form{padding-bottom:4rem!important}
+.login-preview{position:relative;width:min(420px,92%);z-index:2}
+.lp-kicker{font-size:.72rem;font-weight:800;color:#64748b;margin-bottom:14px;letter-spacing:.06em;text-transform:uppercase}
+.lp-track{position:relative;padding:8px 0 8px 18px;min-height:300px}
+.lp-line{position:absolute;left:6px;top:12px;bottom:24px;width:2px;background:linear-gradient(to bottom,rgba(59,130,246,.7),rgba(16,185,129,.5),rgba(148,163,184,.15));border-radius:2px}
+.lp-card{position:relative;display:flex;align-items:flex-start;gap:10px;margin-bottom:12px;padding:12px 14px;border-radius:14px;background:rgba(21,27,43,.92);border:1px solid #2a3548;box-shadow:0 8px 24px rgba(0,0,0,.35);opacity:0;transform:translateY(12px) scale(.96);animation-fill-mode:both;animation-timing-function:cubic-bezier(.22,.9,.28,1)}
+.lp-card::before{content:'';position:absolute;left:-16px;top:18px;width:10px;height:10px;border-radius:50%;background:#0b0f19;border:2px solid #3b82f6;z-index:2}
+.lp-card-body{flex:1;min-width:0}
+.lp-title{font-weight:900;font-size:.9rem;color:#f1f5f9;line-height:1.25}
+.lp-time{font-size:.72rem;font-weight:700;color:#94a3b8;margin-top:3px}
+.lp-buffer{border-color:rgba(16,185,129,.4);background:rgba(16,185,129,.08)}
+.lp-buffer::before{border-color:#34d399}
+.lp-buffer .lp-title{color:#6ee7b7;font-size:.82rem}
+.lp-deep{animation:lpDeepIn 10s ease-in-out infinite}
+.lp-buffer-1{animation:lpBuf1 10s ease-in-out infinite}
+.lp-gym{animation:lpGymIn 10s ease-in-out infinite}
+.lp-buffer-2{animation:lpBuf2 10s ease-in-out infinite}
+.lp-check{width:18px;height:18px;border-radius:50%;border:2px solid #334155;flex-shrink:0;margin-top:2px;position:relative;background:transparent}
+.lp-check[data-check="1"]{animation:lpCheck1 10s ease-in-out infinite}
+.lp-check[data-check="2"]{animation:lpCheck2 10s ease-in-out infinite}
+@keyframes lpDeepIn{0%,4%{opacity:0;transform:translateY(14px) scale(.96)}12%,100%{opacity:1;transform:translateY(0) scale(1)}}
+@keyframes lpBuf1{0%,18%{opacity:0;transform:translateY(12px)}28%,100%{opacity:1;transform:translateY(0)}}
+@keyframes lpGymIn{0%,35%{opacity:0;transform:translate(48px,-28px) scale(.9)}42%,100%{opacity:1;transform:translate(0,0) scale(1)}}
+@keyframes lpBuf2{0%,55%{opacity:0;transform:translateY(14px)}65%,100%{opacity:1;transform:translateY(0)}}
+@keyframes lpCheck1{0%,72%{border-color:#334155;background:transparent}78%,100%{border-color:#10b981;background:#10b981;box-shadow:0 0 12px rgba(16,185,129,.55)}}
+@keyframes lpCheck2{0%,78%{border-color:#334155;background:transparent}84%,100%{border-color:#10b981;background:#10b981;box-shadow:0 0 12px rgba(16,185,129,.55)}}
+.lp-cursor{position:absolute;width:16px;height:16px;border-radius:50%;border:2px solid #fff;background:rgba(96,165,250,.4);box-shadow:0 0 14px rgba(96,165,250,.55);z-index:5;opacity:0;animation:lpCursor 10s ease-in-out infinite;pointer-events:none}
+.lp-cursor::after{content:'';position:absolute;left:10px;top:10px;width:10px;height:14px;background:linear-gradient(135deg,#fff,#94a3b8);clip-path:polygon(0 0,100% 65%,55% 65%,80% 100%,60% 100%,35% 68%,0 85%);opacity:.9}
+@keyframes lpCursor{0%,32%{opacity:0;top:38%;left:78%}36%{opacity:1;top:42%;left:62%}42%{opacity:1;top:52%;left:28%}48%,100%{opacity:0;top:54%;left:26%}}
+.lp-badge{position:absolute;right:0;top:8px;padding:6px 10px;border-radius:999px;background:rgba(16,185,129,.15);border:1px solid rgba(16,185,129,.45);color:#6ee7b7;font-size:.68rem;font-weight:900;opacity:0;transform:translateY(8px);animation:lpBadge 10s ease-in-out infinite;white-space:nowrap}
+@keyframes lpBadge{0%,80%{opacity:0;transform:translateY(10px)}88%,100%{opacity:1;transform:translateY(0)}}
+.lp-particles{position:absolute;inset:0;pointer-events:none;overflow:hidden}
+.lp-particles i{position:absolute;width:5px;height:5px;border-radius:50%;background:#34d399;opacity:0;animation:lpSpark 10s ease-in-out infinite}
+.lp-particles i:nth-child(1){left:30%;top:20%;animation-delay:0s}
+.lp-particles i:nth-child(2){left:42%;top:18%;background:#60a5fa}
+.lp-particles i:nth-child(3){left:55%;top:22%;background:#fbbf24}
+.lp-particles i:nth-child(4){left:35%;top:28%;background:#a78bfa}
+.lp-particles i:nth-child(5){left:48%;top:16%;background:#f472b6}
+@keyframes lpSpark{0%,78%{opacity:0;transform:translate(0,0) scale(.4)}82%{opacity:1;transform:translate(0,-6px) scale(1)}95%,100%{opacity:0;transform:translate(var(--dx,12px),-28px) scale(.2)}}
+.lp-caption{margin-top:18px;color:#94a3b8;font-size:.82rem;font-weight:700;text-align:center;line-height:1.45}
+/* Report theme cohesion */
+.report-box{background:var(--c2)!important;border-color:var(--br)!important;color:var(--tx)}
+.report-stat,.report-day,.macrobox,.report-grade{background:var(--c)!important;border-color:var(--br)!important;color:var(--tx)}
+.report-stat-val{color:var(--ac)!important}
+.report-stat-lbl,.report-range,.macroval,.macrolbl{color:var(--so)!important}
+.macrofx{background:var(--ac)!important}
+.macrofx-p{background:var(--ac)!important}
+.macrofx-c{background:color-mix(in srgb,var(--ac) 70%,#fbbf24)!important}
+.macrofx-f{background:color-mix(in srgb,var(--ac) 55%,#f472b6)!important}
+.macrofx-b{background:color-mix(in srgb,var(--ac) 50%,#34d399)!important}
+.report-grade{border-color:color-mix(in srgb,var(--ac) 40%,var(--br))!important;background:color-mix(in srgb,var(--ac) 10%,var(--c))!important}
+
 #loginCanvas[style*="display: block"],#loginCanvas[style*="display:block"]{
   display:block!important;
 }
@@ -463,14 +516,6 @@ body.theme-cyberpunk .tc{
 .xp-track-label{display:flex;justify-content:space-between;font-size:.72rem;font-weight:800;color:var(--so);margin-bottom:6px}
 .xp-track{height:10px;border-radius:999px;background:var(--br);overflow:hidden;border:1px solid rgba(255,255,255,.06)}
 .xp-track-fill{height:100%;border-radius:999px;background:linear-gradient(90deg,#8b5cf6,#fbbf24);transition:width .4s ease}
-.login-preview{position:relative;width:min(420px,90%);min-height:320px}
-.login-preview-slot{height:64px;border-radius:14px;border:1px dashed rgba(148,163,184,.35);background:rgba(21,27,43,.55);margin-bottom:12px;position:relative;overflow:hidden}
-.login-preview-card{position:absolute;left:18px;top:10px;padding:10px 14px;border-radius:12px;background:#151b2b;border:1px solid #3b82f6;box-shadow:0 0 0 3px rgba(59,130,246,.15);font-weight:800;font-size:.85rem;white-space:nowrap;transform:translate(40px,-80px) scale(.92);opacity:0;animation:previewDrag 5.5s ease-in-out infinite}
-.login-preview-buffer{padding:10px 14px;border-radius:12px;background:rgba(16,185,129,.1);border:1px solid rgba(16,185,129,.35);color:#34d399;font-weight:800;font-size:.8rem;opacity:0;transform:translateY(8px);animation:previewBuffer 5.5s ease-in-out infinite}
-.login-preview-cursor{position:absolute;width:18px;height:18px;border-radius:50%;border:2px solid #fff;background:rgba(96,165,250,.35);left:70%;top:0;animation:previewCursor 5.5s ease-in-out infinite;z-index:3;pointer-events:none;box-shadow:0 0 12px rgba(96,165,250,.5)}
-@keyframes previewDrag{0%,8%{opacity:0;transform:translate(60px,-90px) scale(.9)}18%{opacity:1;transform:translate(40px,-40px) scale(.95)}38%,55%{opacity:1;transform:translate(0,0) scale(1)}70%,100%{opacity:.95;transform:translate(0,0) scale(1)}}
-@keyframes previewBuffer{0%,45%{opacity:0;transform:translateY(10px)}58%,100%{opacity:1;transform:translateY(0)}}
-@keyframes previewCursor{0%{top:5%;left:72%;opacity:0}10%{opacity:1}18%{top:12%;left:55%}38%{top:22%;left:28%}55%{top:28%;left:30%;opacity:1}70%,100%{opacity:0}}
 @keyframes matrixRain{0%{background-position:0 0,0 0}100%{background-position:0 120px,40px 80px}}
 body.theme-matrix,body.theme-matrix #app,body.theme-matrix #sbar{
   background-color:#030712!important;
@@ -532,9 +577,9 @@ body.theme-chrono .tcname,.theme-chrono .dhn{letter-spacing:.02em}
 </div>
 
 <!-- Morgen-style full-canvas login (replaces old modal popup) -->
-<div id="loginCanvas" style="display:none;position:fixed;inset:0;z-index:99999;background-color:#0b0f19;background:#0b0f19;color:#f1f5f9;font-family:'Cairo',sans-serif;isolation:isolate">
-  <div style="display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.1fr);height:100%;min-height:100vh">
-    <div style="display:flex;flex-direction:column;justify-content:center;padding:clamp(28px,6vw,64px);max-width:520px;width:100%;margin:0 auto;box-sizing:border-box">
+<div id="loginCanvas" style="display:none;position:fixed;inset:0;z-index:99999;background-color:#0b0f19;background:#0b0f19;color:#f1f5f9;font-family:'Cairo',sans-serif;isolation:isolate;overflow-y:auto;-webkit-overflow-scrolling:touch">
+  <div class="login-canvas-grid" style="display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.1fr);min-height:100%;min-height:100vh">
+    <div class="login-canvas-form" style="display:flex;flex-direction:column;justify-content:center;padding:clamp(28px,6vw,64px);padding-bottom:4rem;max-width:520px;width:100%;margin:0 auto;box-sizing:border-box">
       <div style="font-weight:900;font-size:.95rem;margin-bottom:28px;letter-spacing:.02em">Your Schedule</div>
       <h1 style="font-size:clamp(1.55rem,3.2vw,2.15rem);font-weight:900;line-height:1.25;margin:0 0 28px">Take back control of your time with all your schedules in one place.</h1>
       <button type="button" id="loginGoogleBtn" style="width:100%;display:flex;align-items:center;justify-content:center;gap:10px;font-family:inherit;font-weight:800;font-size:.95rem;padding:14px 18px;border-radius:12px;border:1px solid #2a3548;background:#151b2b;color:#f1f5f9;cursor:pointer;margin-bottom:18px">
@@ -559,14 +604,41 @@ body.theme-chrono .tcname,.theme-chrono .dhn{letter-spacing:.02em}
     <div style="display:none;background:radial-gradient(ellipse at 30% 20%,#1a2744 0%,#0b0f19 55%),linear-gradient(160deg,#0b0f19,#121826);border-left:1px solid #1e2d45;position:relative;overflow:hidden" id="loginCanvasArt">
       <div style="position:absolute;inset:0;opacity:.55;background-image:linear-gradient(#1e2d45 1px,transparent 1px),linear-gradient(90deg,#1e2d45 1px,transparent 1px);background-size:48px 48px"></div>
       <div style="position:relative;z-index:1;height:100%;display:flex;align-items:center;justify-content:center;padding:40px">
-        <div class="login-preview">
-          <div style="font-size:.72rem;font-weight:800;color:#64748b;margin-bottom:12px;letter-spacing:.04em;text-transform:uppercase">Live preview</div>
-          <div class="login-preview-slot">
-            <div class="login-preview-cursor" aria-hidden="true"></div>
-            <div class="login-preview-card">Gym Workout (4:00 PM)</div>
+        <div class="login-preview" aria-hidden="true">
+          <div class="lp-kicker">Day in the life · Power user</div>
+          <div class="lp-track">
+            <div class="lp-line"></div>
+            <div class="lp-card lp-deep">
+              <span class="lp-check" data-check="1"></span>
+              <div class="lp-card-body">
+                <div class="lp-title">Deep Work: Coding</div>
+                <div class="lp-time">08:00 AM – 10:00 AM</div>
+              </div>
+            </div>
+            <div class="lp-card lp-buffer lp-buffer-1">
+              <div class="lp-card-body">
+                <div class="lp-title">Rest Buffer</div>
+                <div class="lp-time">15 mins</div>
+              </div>
+            </div>
+            <div class="lp-card lp-gym">
+              <span class="lp-check" data-check="2"></span>
+              <div class="lp-card-body">
+                <div class="lp-title">Gym Session</div>
+                <div class="lp-time">04:00 PM – 05:00 PM</div>
+              </div>
+            </div>
+            <div class="lp-card lp-buffer lp-buffer-2">
+              <div class="lp-card-body">
+                <div class="lp-title">Rest Buffer</div>
+                <div class="lp-time">15 mins</div>
+              </div>
+            </div>
+            <div class="lp-cursor"></div>
+            <div class="lp-particles" id="lpParticles"><i style="--dx:-18px"></i><i style="--dx:10px"></i><i style="--dx:22px"></i><i style="--dx:-8px"></i><i style="--dx:14px"></i></div>
+            <div class="lp-badge">Points +150 | Streak Up!</div>
           </div>
-          <div class="login-preview-buffer">Rest Buffer (15 mins)</div>
-          <div style="margin-top:22px;color:#94a3b8;font-size:.85rem;font-weight:700;text-align:center">Block time. Protect focus. Ship the day.</div>
+          <div class="lp-caption">AI-Powered Scheduling. Smart Rest Buffers. Gamified Productivity Loops.</div>
         </div>
       </div>
     </div>
@@ -3978,21 +4050,27 @@ function renderReportSummaryHtml(data){
     </div>`;
   }
   const pct=data.pct||0;
-  let grade, gradeTitle, gradeMsg;
+  let gradeLine, gradeMsg;
   if(pct>=100){
-    grade='A+'; gradeTitle=en?'Flawless Execution':'تنفيذ مثالي';
+    gradeLine=en?'🏅 Grade: A+ (Flawless Execution)':'🏅 التقدير: امتياز مع مرتبة الشرف (تنفيذ مثالي)';
     gradeMsg=en?'Elite week. You executed every block — protect this standard.':'أسبوع نخبة. نفّذت كل المهام — حافظ على هذا المستوى.';
   }else if(pct>=85){
-    grade='A'; gradeTitle=en?'Focus Master':'سيد التركيز';
+    gradeLine=en?'🟢 Grade: A (Focus Master)':'🟢 التقدير: امتياز (سيد التركيز)';
     gradeMsg=en?'High performance. Tighten the last gaps and you are in elite range.':'أداء عالٍ. سد الفجوات الصغيرة واقترب من المستوى النخبوي.';
+  }else if(pct>=75){
+    gradeLine=en?'🟡 Grade: B (Consistency Builder)':'🟡 التقدير: جيد جداً (بناء الاستمرارية)';
+    gradeMsg=en?'Strong consistency. Protect deep-work blocks and keep buffers sacred.':'استمرارية قوية. احمِ أوقات التركيز العميق وحافظ على فترات الراحة.';
+  }else if(pct>=65){
+    gradeLine=en?'🔵 Grade: C (Passing Balance)':'🔵 التقدير: جيد (توازن مقبول)';
+    gradeMsg=en?'Passing balance. Reduce context switching and lock three daily anchors.':'توازن مقبول. قلل تبديل المهام وثبّت ثلاث ركائز يومية.';
   }else if(pct>=50){
-    grade='B/C'; gradeTitle=en?'Passing Balance':'توازن مقبول';
-    gradeMsg=en?'Solid base. Optimize deep-work blocks and cut context switching.':'أساس جيد. حسّن فترات التركيز وقلل تبديل المهام.';
+    gradeLine=en?'🟠 Grade: D (Needs Review)':'🟠 التقدير: مقبول (يحتاج مراجعة)';
+    gradeMsg=en?'Needs review. Cut low-value tasks and rebuild one reliable morning block.':'يحتاج مراجعة. احذف المهام ضعيفة القيمة وابنِ كتلة صباحية ثابتة.';
   }else{
-    grade='F'; gradeTitle=en?'Time Recovery Mode':'وضع استعادة الوقت';
-    gradeMsg=en?'Clear the slate. Pick 3 non-negotiables tomorrow and rebuild momentum.':'ابدأ من جديد. اختر 3 مهام غير قابلة للتأجيل غداً وابنِ الزخم.';
+    gradeLine=en?'🔴 Grade: F (Time Recovery Mode)':'🔴 التقدير: ساقط (وضع استعادة الوقت)';
+    gradeMsg=en?"Next week is a completely fresh slate. Let's rebuild your daily routine loops step-by-step!":'الأسبوع القادم صفحة جديدة تماماً. هيا نعيد بناء حلقات روتينك اليومي خطوة بخطوة!';
   }
-  const gradeHtml=`<div class="report-grade"><h4>${en?'School Performance Grade':'بطاقة الأداء المدرسية'}: ${grade} — ${gradeTitle}</h4><p>${gradeMsg}</p></div>`;
+  const gradeHtml=`<div class="report-grade"><h4>${gradeLine}</h4><p>${gradeMsg}</p></div>`;
   return `
     ${gradeHtml}
     <div class="report-summary">
