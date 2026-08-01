@@ -1384,12 +1384,17 @@ function awardTaskPoints(basePts, opts={}){
   return awarded;
 }
 async function doRebirth(){
+  const en=(USER_SETTINGS&&USER_SETTINGS.lang)==='en';
   const rank=getRankMeta(STATS.lifetime_xp||0);
   if(rank.key!=='timelord' && (STATS.lifetime_xp||0)<3500){
-    showToast('Reach Time Lord (3500+ Lifetime XP) to Rebirth',3200,'warn');
+    showToast(en
+      ?'Reach Time Lord (3500+ Lifetime XP) to unlock prestige upgrade'
+      :'للوصول لترقية الهيبة تحتاج 3500+ من نقاط الخبرة الدائمة (رتبة سيد الزمن)',3200,'warn');
     return;
   }
-  const ok=window.confirm('Are you ready to Rebirth? Your Lifetime XP will reset to 0, but you will permanently increase your score multiplier and earn 1 Rebirth Token!');
+  const ok=window.confirm(en
+    ?'Upgrade prestige rank? Lifetime XP resets to 0, your points multiplier increases permanently, and you earn 1 Mythic Prestige Token.'
+    :'ترقية رتبة الهيبة والتصفير؟ سيتم تصفير نقاط الخبرة الدائمة، ويزداد مضاعف النقاط بشكل دائم، وتحصل على رمز امتياز أسطوري واحد.');
   if(!ok) return;
   STATS.lifetime_xp=0;
   STATS.prestige_level=(STATS.prestige_level||0)+1;
@@ -1397,7 +1402,9 @@ async function doRebirth(){
   STATS.lastRankKey='chaos';
   try{ await saveAll(); }catch(e){ console.warn(e); }
   fireConfetti();
-  showToast(`Rebirth complete — Prestige ${STATS.prestige_level} · Token +1 · +${Math.round(STATS.prestige_level*10)}% points`,4200);
+  showToast(en
+    ?`Prestige upgrade complete — Rank ${STATS.prestige_level} · Token +1 · +${Math.round(STATS.prestige_level*10)}% points`
+    :`اكتملت ترقية الهيبة — الرتبة ${STATS.prestige_level} · رمز +1 · +${Math.round(STATS.prestige_level*10)}٪ نقاط`,4200);
   try{ updatePrestigeUI(); updateAuthUI(fbAuth?.currentUser||null); updateUI(); }catch(e){}
 }
 function applyMythicThemeClass(themeId){
@@ -1449,7 +1456,7 @@ async function unlockMythicTheme(themeId, cost){
     return;
   }
   if((STATS.rebirth_tokens||0)<cost){
-    showToast(en?`Need ${cost} Rebirth Token${cost>1?'s':''}`:`تحتاج إلى ${cost} من رموز إعادة الولادة`,2800,'warn');
+    showToast(en?`Need ${cost} Rebirth Token${cost>1?'s':''}`:`تحتاج إلى ${cost} من رموز الامتياز الأسطورية`,2800,'warn');
     return;
   }
   STATS.rebirth_tokens-=cost;
@@ -1479,10 +1486,10 @@ function updatePrestigeUI(){
   if(mythicTitle) mythicTitle.textContent=en?'Mythic Themes':'المظاهر الأسطورية';
   if(mythicDesc) mythicDesc.textContent=en
     ?'Unlock with Rebirth Tokens from the Prestige loop.'
-    :'افتح القفل باستخدام رموز إعادة الولادة من نظام الهيبة.';
+    :'افتح القفل باستخدام رموز الامتياز من نظام الهيبة الزمني.';
 
   const hubTitle=document.getElementById('prestigeHubTitle');
-  if(hubTitle) hubTitle.textContent=en?'Prestige Hub':'مركز الهيبة';
+  if(hubTitle) hubTitle.textContent=en?'Prestige Hub':'نظام الهيبة والامتياز الزمني';
   const xpLabel=document.getElementById('xpTrackLabel');
   if(xpLabel) xpLabel.textContent=en?'Lifetime XP Tracker':'متتبع نقاط الخبرة الدائمة';
 
@@ -1490,7 +1497,7 @@ function updatePrestigeUI(){
   if(line){
     line.textContent=en
       ?`Lifetime XP: ${xp} · ${rank.icon} ${rank.title} · Prestige ${STATS.prestige_level||0} · Tokens ${STATS.rebirth_tokens||0} · Multiplier x${getPrestigeMultiplier().toFixed(2)}`
-      :`خبرة دائمة: ${xp} · ${rank.icon} ${rank.title} · هيبة ${STATS.prestige_level||0} · رموز ${STATS.rebirth_tokens||0} · مضاعف x${getPrestigeMultiplier().toFixed(2)}`;
+      :`خبرة دائمة: ${xp} · ${rank.icon} ${rank.title} · هيبة ${STATS.prestige_level||0} · رموز الامتياز ${STATS.rebirth_tokens||0} · مضاعف x${getPrestigeMultiplier().toFixed(2)}`;
   }
   const xpText=document.getElementById('xpTrackText');
   const xpFill=document.getElementById('xpTrackFill');
@@ -1500,7 +1507,7 @@ function updatePrestigeUI(){
   if(btn){
     const can=xp>=3500;
     btn.hidden=!can;
-    btn.textContent=en?'Trigger Galactic Rebirth':'تفعيل إعادة الولادة المجرّية';
+    btn.textContent=en?'Trigger Galactic Rebirth':'🌌 ترقية رتبة الهيبة والتصفير';
   }
   const panel=document.getElementById('mythicThemesPanel');
   if(panel){
