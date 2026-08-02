@@ -67,20 +67,34 @@ html[dir="ltr"] .tc[data-c="sunrise"]{border-left:3px solid var(--or)}
   /* Mobile: section list first; open section becomes full-screen */
   #settingsScreen.mobile-sec-open .set-nav{display:none!important}
   #settingsScreen.mobile-sec-open .set-content{padding-top:8px}
-  #settingsScreen .set-mobile-back{
-    display:none;align-items:center;justify-content:flex-start;gap:10px;margin:0 0 14px;padding:12px 14px;
-    background:var(--c,rgba(255,255,255,.04));border:1px solid var(--br);border-radius:10px;color:var(--tx);
-    font-family:inherit;font-weight:800;font-size:.85rem;cursor:pointer;width:100%;
-    box-shadow:0 1px 0 rgba(255,255,255,.03);
-  }
-  #settingsScreen .set-mobile-back:hover{
-    background:color-mix(in srgb,var(--accent-color,var(--ac,#3b82f6)) 12%,var(--c,transparent));
-    border-color:var(--accent-color,var(--ac,#3b82f6));
-  }
-  #settingsScreen.mobile-sec-open .set-mobile-back{display:flex}
   #settingsScreen:not(.mobile-sec-open) .set-section{display:none!important}
   #settingsScreen:not(.mobile-sec-open) .set-nav{display:flex}
   #settingsScreen.mobile-sec-open .set-section.act{display:block!important}
+  #settingsScreen.mobile-sec-open .set-mobile-back{display:flex!important}
+}
+/* Back is mobile-only — always hidden on desktop */
+#settingsScreen .set-mobile-back{
+  display:none!important;
+  align-items:center;justify-content:flex-start;gap:10px;margin:0 0 14px;padding:12px 16px;
+  background:rgba(255,255,255,.04);border:1px solid var(--br,#1e2d45);border-radius:12px;
+  color:var(--tx,#f1f5f9);font-family:inherit;font-weight:800;font-size:.88rem;cursor:pointer;width:100%;
+  box-sizing:border-box;transition:background .15s,border-color .15s;
+}
+#settingsScreen .set-mobile-back:hover{
+  background:color-mix(in srgb,var(--accent-color,var(--ac,#3b82f6)) 14%,transparent);
+  border-color:var(--accent-color,var(--ac,#3b82f6));
+}
+@media (max-width:700px){
+  #settingsScreen.mobile-sec-open .set-mobile-back{display:flex!important}
+}
+/* Public marketing pages must never inherit app RTL */
+#landingPage,#loginCanvas{
+  direction:ltr!important;
+  unicode-bidi:isolate;
+  text-align:left;
+}
+#landingPage *,#loginCanvas *{
+  unicode-bidi:isolate;
 }
 .modal-box{
   background:var(--c2,var(--c,#111827))!important;
@@ -450,7 +464,7 @@ html[dir="ltr"] .tc[data-c="sunrise"]{border-left:3px solid var(--or)}
 
 /* ===== Prestige / Mythic themes ===== */
 @keyframes nebulaShift{0%{background-position:0% 50%}50%{background-position:100% 50%}100%{background-position:0% 50%}}
-@keyframes cyberPulse{0%,100%{box-shadow:0 0 0 0 rgba(236,72,153,0),0 0 12px rgba(34,211,238,.45)}50%{box-shadow:0 0 0 2px rgba(236,72,153,.35),0 0 22px rgba(34,211,238,.45)}}
+@keyframes cyberPulse{0%,100%{box-shadow:0 0 0 0 rgba(236,72,153,0),0 0 12px rgba(34,211,238,.15)}50%{box-shadow:0 0 0 2px rgba(236,72,153,.35),0 0 22px rgba(34,211,238,.45)}}
 @keyframes rankPop{0%{opacity:0;transform:translateY(18px) scale(.94)}100%{opacity:1;transform:translateY(0) scale(1)}}
 
 /* ===== Level Up modal (fixed overlay — never in page flow) ===== */
@@ -1043,11 +1057,11 @@ body.theme-matrix .tctime{
       <button type="button" id="authCancelBtn" style="background:transparent;border:none;color:#64748b;font-family:inherit;font-weight:700;font-size:.82rem;cursor:pointer;padding:8px;display:block;width:100%">Back to home</button>
       <p style="margin-top:18px;color:#475569;font-size:.72rem;line-height:1.5">By continuing you agree to use this free local workspace on this device.</p>
     </div>
-    <div style="display:none;background:radial-gradient(ellipse at 30% 20%,#1a2744 0%,#0b0f19 55%),linear-gradient(160deg,#0b0f19,#121826);border-left:1px solid #1e2d45;position:relative;overflow:hidden" id="loginCanvasArt">
-      <div style="position:absolute;inset:0;opacity:.55;background-image:linear-gradient(#1e2d45 1px,transparent 1px),linear-gradient(90deg,#1e2d45 1px,transparent 1px);background-size:48px 48px"></div>
-      <div style="position:relative;z-index:1;height:100%;display:flex;align-items:center;justify-content:center;padding:40px">
-        <div class="login-preview" aria-hidden="true">
-          <div class="lp-kicker">Day in the life · Power user</div>
+    <div id="loginCanvasArt" dir="ltr" style="direction:ltr;background:radial-gradient(ellipse at 30% 20%,#1a2744 0%,#0b0f19 55%),linear-gradient(160deg,#0b0f19,#121826);border-left:1px solid #1e2d45;position:relative;overflow:hidden">
+      <div style="position:absolute;inset:0;opacity:.45;background-image:linear-gradient(#1e2d45 1px,transparent 1px),linear-gradient(90deg,#1e2d45 1px,transparent 1px);background-size:48px 48px;pointer-events:none"></div>
+      <div style="position:relative;z-index:1;height:100%;min-height:100vh;display:flex;align-items:center;justify-content:center;padding:40px;direction:ltr">
+        <div class="login-preview" aria-hidden="true" dir="ltr" style="direction:ltr;text-align:left">
+          <div class="lp-kicker">DAY IN THE LIFE · POWER USER</div>
           <div class="lp-track">
             <div class="lp-line"></div>
             <div class="lp-card lp-deep">
@@ -1058,6 +1072,7 @@ body.theme-matrix .tctime{
               </div>
             </div>
             <div class="lp-card lp-buffer lp-buffer-1">
+              <span class="lp-check" style="opacity:0"></span>
               <div class="lp-card-body">
                 <div class="lp-title">Rest Buffer</div>
                 <div class="lp-time">15 mins</div>
@@ -1070,15 +1085,8 @@ body.theme-matrix .tctime{
                 <div class="lp-time">04:00 PM – 05:00 PM</div>
               </div>
             </div>
-            <div class="lp-card lp-buffer lp-buffer-2">
-              <div class="lp-card-body">
-                <div class="lp-title">Rest Buffer</div>
-                <div class="lp-time">15 mins</div>
-              </div>
-            </div>
             <div class="lp-cursor"></div>
             <div class="lp-badge">Points +150 | Streak Up!</div>
-            <div class="lp-particles" id="lpParticles"><i style="--dx:-18px"></i><i style="--dx:10px"></i><i style="--dx:22px"></i><i style="--dx:-8px"></i><i style="--dx:14px"></i></div>
           </div>
           <div class="lp-caption">AI-Powered Scheduling. Smart Rest Buffers. Gamified Productivity Loops.</div>
         </div>
@@ -1149,9 +1157,11 @@ body.theme-matrix .tctime{
   try{
     var settings={};
     try{ settings=JSON.parse(localStorage.getItem('sc:userSettings1')||'{}')||{}; }catch(e){}
+    // Do NOT set documentElement.dir here — that RTL-reorders the public landing
+    // and login pages (periods jump to the front of English sentences).
+    // Dir is applied only when the signed-in app shell is revealed.
     var lang=(settings.lang==='en')?'en':'ar';
-    document.documentElement.lang=lang;
-    document.documentElement.dir=(lang==='en')?'ltr':'rtl';
+    try{ document.documentElement.dataset.prefLang=lang; }catch(e){}
 
     var themeId=null;
     try{
@@ -2529,15 +2539,23 @@ function openScheduleTaskEditor(jd,existingTask,opts){
   ST_ACTIVE_TASK_ID=existingTask?existingTask[0]:null;
   ST_SELECTED_COLOR=(existingTask&&existingTask[10])||OB_TASK_COLORS[0];
   ST_SELECTED_ICON=(existingTask&&existingTask[3])||'✨';
-  const en=(USER_SETTINGS.lang==='en');
+  const en=(USER_SETTINGS&&USER_SETTINGS.lang)==='en';
 
   const titleEl=document.getElementById('stTitle');
   if(titleEl) titleEl.textContent=existingTask?(en?'Edit task':'تعديل المهمة'):(en?'Add task':'إضافة مهمة');
   const box=document.querySelector('#schedTaskModal .modal-box');
-  if(box) box.style.textAlign=en?'left':'right';
+  if(box){
+    box.style.textAlign=en?'left':'right';
+    box.style.direction=en?'ltr':'rtl';
+  }
 
-  // Labels
-  const setLbl=(id,enT,arT)=>{const el=document.getElementById(id); if(el) el.textContent=en?enT:arT;};
+  // Labels — always set from lang (never leave static Arabic residue)
+  const setLbl=(id,enT,arT)=>{
+    const el=document.getElementById(id);
+    if(!el) return;
+    el.textContent=en?enT:arT;
+    el.style.direction=en?'ltr':'rtl';
+  };
   setLbl('stNameLbl','Task name','اسم المهمة');
   setLbl('stTimeLbl','Start time','وقت البداية');
   setLbl('stEndTimeLbl','End time','وقت النهاية');
@@ -2548,12 +2566,15 @@ function openScheduleTaskEditor(jd,existingTask,opts){
   setLbl('stColorLbl','Color','اللون');
   setLbl('stNotifyLbl','🔔 Notify me about this task','🔔 ذكّرني بهذه المهمة');
   setLbl('stFoodLogLbl','🍽️ Log food for this task?','🍽️ تسجيل أكل لهذه المهمة؟');
-
   const nameEl=document.getElementById('stName');
   const timeEl=document.getElementById('stTime');
   const endEl=document.getElementById('stEndTime');
   const descEl=document.getElementById('stDesc');
   const ptsEl=document.getElementById('stPts');
+  // Force visibility of restored fields
+  if(endEl) endEl.style.display='';
+  const notifyRow=document.getElementById('stNotify');
+  if(notifyRow&&notifyRow.parentElement) notifyRow.parentElement.style.display='flex';
   if(nameEl){
     nameEl.value=existingTask?existingTask[4]:'';
     nameEl.placeholder=en?'e.g. reading, study, walk':'مثلاً: قراءة، مذاكرة، مشي';
@@ -2566,6 +2587,14 @@ function openScheduleTaskEditor(jd,existingTask,opts){
     descEl.style.textAlign=en?'left':'right';
   }
   if(ptsEl){
+    // Translate intensity options to match current lang
+    ptsEl.innerHTML=en
+      ?`<option value="5">Low Intensity / Break (5 pts)</option>
+         <option value="15">Medium / Routine Task (15 pts)</option>
+         <option value="30">High Focus / Deep Work (30 pts)</option>`
+      :`<option value="5">شدة منخفضة / استراحة (5 نقاط)</option>
+         <option value="15">متوسطة / مهمة روتينية (15 نقطة)</option>
+         <option value="30">تركيز عالي / عمل عميق (30 نقطة)</option>`;
     const raw=existingTask?(existingTask[6]||5):5;
     const clamped=Math.min(parseInt(raw,10)||5,30);
     const bucket=clamped>=30?30:(clamped>=15?15:5);
@@ -2594,6 +2623,7 @@ function openScheduleTaskEditor(jd,existingTask,opts){
   // Days chips
   const daysRow=document.getElementById('stDaysRow');
   if(daysRow){
+    if(daysRow.parentElement) daysRow.parentElement.style.display='';
     const labels=en?['Sun','Mon','Tue','Wed','Thu','Fri','Sat']:['أحد','إثن','ثلا','أرب','خمي','جمع','سبت'];
     // Which days already have this task id
     let selected=new Set([jd]);
@@ -4665,8 +4695,16 @@ function getPrayerLocationOptions(en){
 }
 
 function startPrayerFlow(id,name,basePts,x,y,late){
-  const parts=id.split('-');
-  const pk=parts[2]||'';
+  const parts=String(id||'').split('-');
+  // Prefer explicit PMETA key from id (e.g. pr-sun-Maghrib → Maghrib, pr-Maghrib → Maghrib)
+  let pk=parts[2]||parts[parts.length-1]||'';
+  // Also try matching any segment against PMETA keys (robust to id format drift)
+  if(!PMETA[pk]){
+    const hit=parts.find(p=>Object.keys(PMETA).some(k=>k.toLowerCase()===String(p).toLowerCase()));
+    if(hit) pk=hit;
+  }
+  const pkMatch=Object.keys(PMETA).find(k=>k.toLowerCase()===String(pk).toLowerCase());
+  if(pkMatch) pk=pkMatch;
   activePrayer={id,name,pk,basePts:parseInt(basePts,10),bonus:0,x,y,step:0,log:[],late:!!late};
   showPrayerStep();
 }
@@ -4676,8 +4714,8 @@ function showPrayerStep(){
   const hasSunnah=!!PMETA[pk]?.sunnah;
   const totalSteps=hasSunnah?4:3;
   if(step>=totalSteps){finishPrayerFlow();return;}
-  const en=(USER_SETTINGS.lang==='en');
-  const dispName=tn(name)||name;
+  const en=(USER_SETTINGS&&USER_SETTINGS.lang)==='en';
+  const dispName=en?(tn(name)||name):(name||tn(name)||'');
 
   const modal=document.getElementById('prayerModal');
   if(modal){
@@ -4699,7 +4737,10 @@ function showPrayerStep(){
     if(subEl) subEl.textContent=en?'Choose the place of prayer':'اختر مكان الصلاة';
     renderOpts(getPrayerLocationOptions(en),'location');
   }else if(step===1){
-    if(qEl) qEl.textContent=en?`How did you pray ${dispName}?`:`كيف أديت صلاة ${name}؟`;
+    // Prefer English canonical name from pk when lang=en (card name is often Arabic)
+    const prayerNameEn={Fajr:'Fajr',Sunrise:'Sunrise',Dhuhr:'Dhuhr',Asr:'Asr',Maghrib:'Maghrib',Isha:'Isha'}[pk]||dispName||pk;
+    const prayerNameAr=PMETA[pk]?.ar||name||pk;
+    if(qEl) qEl.textContent=en?`How did you pray ${prayerNameEn}?`:`كيف أديت صلاة ${prayerNameAr}؟`;
     if(subEl) subEl.textContent=en?'Choose how you prayed':'اختر طريقة الأداء';
     renderOpts(en
       ?[{label:'In congregation 👥',pts:4,gold:true},{label:'Alone 🧍',pts:2,gold:false}]
@@ -4711,17 +4752,24 @@ function showPrayerStep(){
       ?[{label:'Yes ✅',pts:3,gold:true},{label:'No ❌',pts:1,gold:false}]
       :[{label:'نعم ✅',pts:3,gold:true},{label:'لا ❌',pts:1,gold:false}],'dhikr');
   }else if(step===3){
+    // Hard-coded English sunnah phrases — NEVER interpolate PMETA[pk].sunnah (Arabic) when en
     const SUNNAH_EN={
       Fajr:'Fajr sunnah (2 rakah before)',
       Dhuhr:'Dhuhr sunnah (4 before + 2 after)',
       Maghrib:'Maghrib sunnah (2 rakah after)',
       Isha:'Isha sunnah (2 rakah after)'
     };
+    const SUNNAH_AR={
+      Fajr:'سنة الفجر (ركعتان قبل)',
+      Dhuhr:'سنة الظهر (٤ قبل + ٢ بعد)',
+      Maghrib:'سنة المغرب (ركعتان بعد)',
+      Isha:'سنة العشاء (ركعتان بعد)'
+    };
     const sunnahText=en
-      ?(SUNNAH_EN[pk]||`Sunnah of ${dispName}`)
-      :(PMETA[pk]?.sunnah||`سنة ${name}`);
+      ?(SUNNAH_EN[pk]||`the regular sunnah of ${dispName||pk}`)
+      :(SUNNAH_AR[pk]||PMETA[pk]?.sunnah||`سنة ${name||pk}`);
     if(qEl) qEl.textContent=en?`Did you pray ${sunnahText}?`:`هل صليت ${sunnahText}؟`;
-    if(subEl) subEl.textContent=en?'The regular sunnah prayers':'السنة الراتبة';
+    if(subEl) subEl.textContent=en?'The regular sunnah':'السنة الراتبة';
     renderOpts(en
       ?[{label:'Yes ✅',pts:3,gold:true},{label:'No ❌',pts:1,gold:false}]
       :[{label:'نعم ✅',pts:3,gold:true},{label:'لا ❌',pts:1,gold:false}],'sunnah');
@@ -5765,8 +5813,14 @@ function aiParsePrayerDetailLog(low,wantsMax){
 // confirm each remaining step, per Abdullah's explicit choice for this behavior.
 function aiOpenPrayerFlowPrefilled(task,iso,parsedLog){
   const id=task[0];
-  const parts=id.split('-');
-  const pk=parts[2]||'';
+  const parts=String(id||'').split('-');
+  let pk=parts[2]||parts[parts.length-1]||'';
+  if(!PMETA[pk]){
+    const hit=parts.find(p=>Object.keys(PMETA).some(k=>k.toLowerCase()===String(p).toLowerCase()));
+    if(hit) pk=hit;
+  }
+  const pkMatch=Object.keys(PMETA).find(k=>k.toLowerCase()===String(pk).toLowerCase());
+  if(pkMatch) pk=pkMatch;
   const pts=task[6];
   let bonus=0;
   for(const l of parsedLog) bonus+=l.pts;
@@ -8153,12 +8207,16 @@ function revealApp(){
   updateNetworkBadge();
   try{ applyTheme(); }catch(e){}
   try{
-    if(USER_SETTINGS.lang==='en'){
-      document.documentElement.lang='en';
-      document.documentElement.dir='ltr';
-      document.body.style.direction='ltr';
-      applyI18n();
-    }
+    const en=(USER_SETTINGS&&USER_SETTINGS.lang)==='en';
+    document.documentElement.lang=en?'en':'ar';
+    document.documentElement.dir=en?'ltr':'rtl';
+    document.body.style.direction=en?'ltr':'rtl';
+    // Keep public shells LTR even if app is Arabic
+    const lp=document.getElementById('landingPage');
+    const lc=document.getElementById('loginCanvas');
+    if(lp){ lp.setAttribute('dir','ltr'); lp.style.direction='ltr'; }
+    if(lc){ lc.setAttribute('dir','ltr'); lc.style.direction='ltr'; }
+    applyI18n();
   }catch(e){}
   // After the schedule paints, jump to the task for "right now" — once only.
   if(!window.__didInitialScroll){
