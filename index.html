@@ -60,10 +60,27 @@ html[dir="ltr"] .tc[data-c="sunrise"]{border-left:3px solid var(--or)}
 .modal-box::-webkit-scrollbar-thumb{background:rgba(100,116,139,.4);border-radius:8px}
 .modal-box::-webkit-scrollbar-thumb:hover{background:rgba(148,163,184,.55)}
 @media (max-width:700px){
-  .set-body{flex-direction:column}
+  .set-body{flex-direction:column;position:relative}
   .set-nav{width:100%;border-left:none;border-bottom:1px solid var(--br);padding:10px;display:flex;flex-wrap:wrap;gap:6px;max-height:none}
   .set-nav button{width:auto;flex:1 1 auto;text-align:center;padding:10px 12px;margin:0}
-  .set-content{padding:16px 14px}
+  .set-content{padding:16px 14px;flex:1;overflow-y:auto}
+  /* Mobile: section list first; open section becomes full-screen */
+  #settingsScreen.mobile-sec-open .set-nav{display:none!important}
+  #settingsScreen.mobile-sec-open .set-content{padding-top:8px}
+  #settingsScreen .set-mobile-back{
+    display:none;align-items:center;gap:8px;margin:0 0 12px;padding:10px 12px;
+    background:transparent;border:1px solid var(--br);border-radius:10px;color:var(--tx);
+    font-family:inherit;font-weight:800;font-size:.85rem;cursor:pointer;width:100%;
+  }
+  #settingsScreen.mobile-sec-open .set-mobile-back{display:flex}
+  #settingsScreen:not(.mobile-sec-open) .set-section{display:none!important}
+  #settingsScreen:not(.mobile-sec-open) .set-nav{display:flex}
+  #settingsScreen.mobile-sec-open .set-section.act{display:block!important}
+}
+.modal-box{
+  background:var(--c2,var(--c,#111827))!important;
+  border:1px solid var(--accent-color,var(--br))!important;
+  color:var(--text-main,var(--tx,#f1f5f9))!important;
 }
 @keyframes spin{to{transform:rotate(360deg)}}
 @keyframes up{0%{opacity:1;transform:translateY(0) scale(1)}100%{opacity:0;transform:translateY(-40px) scale(1.3)}}
@@ -541,6 +558,14 @@ html[dir="ltr"] .tc[data-c="sunrise"]{border-left:3px solid var(--or)}
   background:var(--br)!important;
   overflow:hidden!important;
   margin-bottom:1rem!important;
+}
+.xp-track-fill{
+  height:100%!important;
+  width:0%;
+  border-radius:999px!important;
+  background:linear-gradient(90deg,var(--accent-color,var(--ac,#3b82f6)),var(--gr,#10b981))!important;
+  transition:width .45s ease!important;
+  min-width:0!important;
 }
 .mythic-card{
   display:flex!important;
@@ -1057,50 +1082,71 @@ body.theme-matrix .tctime{
 <script>
 (function(){
   try{
-    var currentUser=localStorage.getItem('current_user');
-    var activeThemeClass='';
+    var settings={};
+    try{ settings=JSON.parse(localStorage.getItem('sc:userSettings1')||'{}')||{}; }catch(e){}
+    var lang=(settings.lang==='en')?'en':'ar';
+    document.documentElement.lang=lang;
+    document.documentElement.dir=(lang==='en')?'ltr':'rtl';
+
     var themeId=null;
-    // Primary source: global stats blob used by the app
     try{
-      var statsRaw=localStorage.getItem('sc:stats2');
-      if(statsRaw){
-        var stats=JSON.parse(statsRaw);
-        if(stats&&stats.activeMythicTheme) themeId=stats.activeMythicTheme;
-      }
+      var stats=JSON.parse(localStorage.getItem('sc:stats2')||'null');
+      if(stats&&stats.activeMythicTheme) themeId=stats.activeMythicTheme;
     }catch(e){}
-    if(!themeId&&currentUser){
-      try{
-        var accounts=JSON.parse(localStorage.getItem('sc:localAccounts1')||'[]');
-        var userAcc=accounts.find(function(a){return a&&(a.username===currentUser||String(a.username||'').toLowerCase()===String(currentUser).toLowerCase());});
-        if(userAcc&&userAcc.stats&&userAcc.stats.activeMythicTheme) themeId=userAcc.stats.activeMythicTheme;
-        else if(userAcc&&userAcc.activeMythicTheme) themeId=userAcc.activeMythicTheme;
-      }catch(e){}
-    }
     if(!themeId){
-      try{
-        var settings=JSON.parse(localStorage.getItem('sc:userSettings1')||'{}');
-        if(settings&&settings.activeMythicTheme) themeId=settings.activeMythicTheme;
-        else if(settings&&settings.theme) themeId=settings.theme;
-      }catch(e){}
+      var currentUser=localStorage.getItem('current_user');
+      if(currentUser){
+        try{
+          var accounts=JSON.parse(localStorage.getItem('sc:localAccounts1')||'[]');
+          var userAcc=accounts.find(function(a){return a&&(a.username===currentUser||String(a.username||'').toLowerCase()===String(currentUser).toLowerCase());});
+          if(userAcc&&userAcc.stats&&userAcc.stats.activeMythicTheme) themeId=userAcc.stats.activeMythicTheme;
+          else if(userAcc&&userAcc.activeMythicTheme) themeId=userAcc.activeMythicTheme;
+        }catch(e){}
+      }
     }
     if(themeId==='gold') themeId='chrono';
+    var activeThemeClass='';
     if(themeId==='nebula'||themeId==='cyberpunk'||themeId==='matrix'||themeId==='chrono'){
       activeThemeClass='theme-'+themeId;
-    }
-    if(activeThemeClass){
       document.documentElement.classList.add(activeThemeClass);
-      document.addEventListener('DOMContentLoaded',function(){
-        document.body.classList.add(activeThemeClass);
-        var ld=document.getElementById('ld');
-        if(ld) ld.classList.add(activeThemeClass);
-      });
     }
+
+    // Apply palette colors immediately (custom + defaults) so spinner matches workspace
+    var root=document.documentElement.style;
+    var accent=settings.themeAccent||settings.mythicColorOverrides&&themeId&&settings.mythicColorOverrides[themeId]&&settings.mythicColorOverrides[themeId].accent;
+    var card=settings.themeCard;
+    var bg=settings.themeBg;
+    if(settings.mythicColorOverrides&&themeId&&settings.mythicColorOverrides[themeId]){
+      var ov=settings.mythicColorOverrides[themeId];
+      if(ov.accent) accent=ov.accent;
+      if(ov.glow) root.setProperty('--accent-glow', ov.glow);
+    }
+    // Mythic theme defaults when no custom override
+    var MYTHIC_DEF={nebula:{accent:'#7c3aed',bg:'#030206'},cyberpunk:{accent:'#ff00aa',bg:'#050508'},matrix:{accent:'#00ff66',bg:'#000000'},chrono:{accent:'#d4af37',bg:'#0a0907'}};
+    if(themeId&&MYTHIC_DEF[themeId]){
+      if(!accent) accent=MYTHIC_DEF[themeId].accent;
+      if(!bg) bg=MYTHIC_DEF[themeId].bg;
+    }
+    if(accent){ root.setProperty('--accent-color',accent); root.setProperty('--ac',accent); }
+    if(card) root.setProperty('--c',card);
+    if(bg){ root.setProperty('--bg',bg); root.setProperty('--bg-main',bg); }
+
+    document.addEventListener('DOMContentLoaded',function(){
+      if(activeThemeClass) document.body.classList.add(activeThemeClass);
+      var ld=document.getElementById('ld');
+      if(ld){
+        if(activeThemeClass) ld.classList.add(activeThemeClass);
+        if(bg) ld.style.background=bg;
+        var label=ld.querySelector('.ld-label');
+        if(label) label.textContent=lang==='en'?'Loading Your Schedule...':'جاري تحميل جدولك...';
+      }
+    });
   }catch(e){}
 })();
 </script>
 <div id="ld">
-  <div class="ld-spinner"></div>
-  <span class="ld-label">Loading Your Schedule...</span>
+  <div class="ld-spinner" id="ldSpinner"></div>
+  <span class="ld-label" id="ldText">Loading Your Schedule...</span>
 </div>
 
 <main id="app" style="display:none">
@@ -1133,6 +1179,7 @@ body.theme-matrix .tctime{
         <button type="button" data-setsec="account" data-i18n="nav_account">الحساب</button>
       </div>
       <div class="set-content">
+        <button type="button" class="set-mobile-back" id="setMobileBack">← Back</button>
         <div class="set-section act" id="setsec-general">
           <h3 data-i18n="sec_general">عام</h3>
           <p class="desc" data-i18n="sec_general_desc">إدارة مهامك اليومية من هنا.</p>
@@ -1160,6 +1207,17 @@ body.theme-matrix .tctime{
           <p class="desc" data-i18n="sec_notif_desc">تفعيل أو إيقاف إشعارات المهام.</p>
           <div class="set-actions">
             <button type="button" id="btn-notif-toggle" class="topbtn" style="background:rgba(100,116,139,.15);border:1px solid var(--br);color:var(--tx)">🔕 التذكيرات</button>
+          </div>
+          <p class="desc" style="margin-top:16px;font-weight:800" id="taskNotifListTitle">Per-task notifications</p>
+          <div id="taskNotifList" style="margin-top:8px;display:flex;flex-direction:column;gap:8px"></div>
+          <p class="desc" style="margin-top:18px;font-weight:800" id="prayerLocTitle">Prayer locations</p>
+          <p class="desc" id="prayerLocDesc">Mosque is fixed at max points. Add your own places below (points capped at Mosque).</p>
+          <div id="prayerLocList" style="margin-top:8px"></div>
+          <div style="display:flex;gap:8px;margin-top:10px;flex-wrap:wrap;align-items:center">
+            <input id="prayerLocName" type="text" placeholder="Name" style="flex:1;min-width:100px;padding:8px 10px;border-radius:8px;border:1px solid var(--br);background:var(--c);color:var(--tx);font-family:inherit">
+            <input id="prayerLocIcon" type="text" placeholder="📍" maxlength="4" style="width:48px;padding:8px;border-radius:8px;border:1px solid var(--br);background:var(--c);color:var(--tx);text-align:center">
+            <input id="prayerLocPts" type="number" min="1" max="5" value="2" style="width:64px;padding:8px;border-radius:8px;border:1px solid var(--br);background:var(--c);color:var(--tx)">
+            <button type="button" id="prayerLocAddBtn" class="altbtn">Add</button>
           </div>
         </div>
         <div class="set-section" id="setsec-reports">
@@ -3568,26 +3626,33 @@ function aiGetActiveSession(){
 // history list shows something meaningful instead of just a timestamp.
 function aiSessionTitle(s){
   if(s.title) return s.title;
+  const en=(USER_SETTINGS&&USER_SETTINGS.lang)==='en';
   const firstUser=s.messages.find(m=>m.role==='user');
-  if(!firstUser) return'محادثة جديدة';
+  if(!firstUser) return en?'New chat':'محادثة جديدة';
   const t=firstUser.text.trim();
   return t.length>40?t.slice(0,40)+'…':t;
 }
 
 function aiFormatSessionMeta(s){
-  const d=new Date(s.lastMsgAt);
-  const datePart=d.toLocaleDateString('ar-EG',{day:'numeric',month:'short'});
-  const timePart=d.toLocaleTimeString('ar-EG',{hour:'2-digit',minute:'2-digit'});
-  return`${s.messages.length} رسالة · ${datePart} ${timePart}`;
+  const en=(USER_SETTINGS&&USER_SETTINGS.lang)==='en';
+  const locale=en?'en-US':'ar-EG';
+  const d=new Date(s.lastMsgAt||s.startedAt||Date.now());
+  const datePart=d.toLocaleDateString(locale,{day:'numeric',month:'short'});
+  const timePart=d.toLocaleTimeString(locale,{hour:'2-digit',minute:'2-digit'});
+  const n=s.messages?s.messages.length:0;
+  return en?`${n} msg · ${datePart} ${timePart}`:`${n} رسالة · ${datePart} ${timePart}`;
 }
 
-// Auto-starts a new session if the active one has been idle for 3+ hours. Called every
-// time the panel is opened — this is what makes reopening the app after a long gap
-// begin a fresh chat automatically, while still keeping the old one in history.
+// Only roll a NEW session when the active one has real messages AND has been
+// idle 3+ hours. Empty sessions are never replaced (prevents "New chat" spam).
 function aiMaybeAutoNewSession(){
   const active=AI_SESSIONS.find(x=>x.id===AI_ACTIVE_SESSION_ID);
-  if(!active || active.messages.length===0) return; // nothing to roll over from
-  if(Date.now()-active.lastMsgAt>AI_SESSION_IDLE_MS){
+  if(!active) return;
+  if(!active.messages || active.messages.length===0) return;
+  if(Date.now()-(active.lastMsgAt||active.startedAt||0)>AI_SESSION_IDLE_MS){
+    // Reuse an existing empty session at the front if present
+    const empty=AI_SESSIONS.find(s=>s!==active && (!s.messages||s.messages.length===0));
+    if(empty){ AI_ACTIVE_SESSION_ID=empty.id; return; }
     aiCreateSession();
   }
 }
@@ -4230,13 +4295,27 @@ async function requestNotifPermission(){
 // Kept as a pure function with identical timing math to the old scheduleTodayNotifications
 // so the actual reminder behavior (WHEN each fires) is unchanged — only WHERE it fires
 // from has moved server-side.
+function getTaskNotifConfig(taskId){
+  const raw=(USER_SETTINGS&&USER_SETTINGS.taskNotif&&USER_SETTINGS.taskNotif[taskId]);
+  // Legacy boolean → expanded object
+  if(raw===false) return {enabled:false,leadEnabled:false,leadMin:15,startEnabled:false,endLeadEnabled:false,endLeadMin:30};
+  if(raw===true||raw==null) return {enabled:true,leadEnabled:false,leadMin:15,startEnabled:true,endLeadEnabled:true,endLeadMin:30};
+  return {
+    enabled:raw.enabled!==false,
+    leadEnabled:!!raw.leadEnabled,
+    leadMin:Math.max(1,parseInt(raw.leadMin,10)||15),
+    startEnabled:raw.startEnabled!==false,
+    endLeadEnabled:raw.endLeadEnabled!==false,
+    endLeadMin:Math.max(1,parseInt(raw.endLeadMin,10)||30)
+  };
+}
 function buildTodayReminderPayload(){
   const jd=todayJD();
   const tasks=getAllTasks(jd,TODAY);
   const reminders=[];
 
   const minToHHMM=m=>{
-    m=((m%1440)+1440)%1440; // clamp/wrap within a 24h day
+    m=((m%1440)+1440)%1440;
     const h=Math.floor(m/60),mm=m%60;
     return `${String(h).padStart(2,'0')}:${String(mm).padStart(2,'0')}`;
   };
@@ -4244,25 +4323,75 @@ function buildTodayReminderPayload(){
   for(const t of tasks){
     if(t._deleted) continue;
     if(t[2]==='free') continue;
-    const isEx=t[9];
-    if(isEx) continue;
+    if(t[9]) continue;
     const id=t[0];
     if(DONE[id]!==undefined && DONE[id]!==false) continue;
+    const cfg=getTaskNotifConfig(id);
+    if(!cfg.enabled) continue;
     const startMin=toMin(t[10]||t[1]);
 
-    // 'lead' (30-min-before) reminder removed per explicit instruction. Only 'start'
-    // (at task time) and 'ending' (30 min before task's effective end) remain.
-    reminders.push({taskId:id,taskName:t[4],type:'start',date:TODAY,time:minToHHMM(startMin)});
-
-    if(t[2]!=='sleep'){
+    if(cfg.leadEnabled){
+      const leadAt=startMin-cfg.leadMin;
+      if(leadAt>=0) reminders.push({taskId:id,taskName:t[4],type:'lead',date:TODAY,time:minToHHMM(leadAt)});
+    }
+    if(cfg.startEnabled){
+      reminders.push({taskId:id,taskName:t[4],type:'start',date:TODAY,time:minToHHMM(startMin)});
+    }
+    if(cfg.endLeadEnabled && t[2]!=='sleep'){
       const endMin=notifTaskEndMin(t);
-      const endLeadMin=endMin-NOTIF_END_LEAD_MIN;
-      if(endLeadMin>startMin){ // skip nonsensical "ending soon" before the task even starts
+      const endLeadMin=endMin-cfg.endLeadMin;
+      if(endLeadMin>startMin){
         reminders.push({taskId:id,taskName:t[4],type:'ending',date:TODAY,time:minToHHMM(endLeadMin)});
       }
     }
   }
   return reminders;
+}
+function renderTaskNotifList(){
+  const list=document.getElementById('taskNotifList');
+  if(!list) return;
+  const en=(USER_SETTINGS&&USER_SETTINGS.lang)==='en';
+  const title=document.getElementById('taskNotifListTitle');
+  if(title) title.textContent=en?'Per-task notifications':'تذكيرات لكل مهمة';
+  const jd=todayJD();
+  const tasks=getAllTasks(jd,TODAY).filter(t=>t&&!t._deleted&&t[2]!=='free');
+  if(!tasks.length){
+    list.innerHTML=`<p class="desc">${en?'No tasks today.':'لا مهام اليوم.'}</p>`;
+    return;
+  }
+  if(!USER_SETTINGS.taskNotif) USER_SETTINGS.taskNotif={};
+  list.innerHTML=tasks.map(t=>{
+    const id=t[0];
+    const cfg=getTaskNotifConfig(id);
+    const open=list.querySelector(`[data-notif-expand="${id}"]`)?.open;
+    return `<div class="mythic-card" style="flex-direction:column;align-items:stretch;padding:12px" data-notif-row="${id}">
+      <div style="display:flex;justify-content:space-between;align-items:center;gap:10px">
+        <div style="font-weight:800;font-size:.85rem">${(t[3]||'')} ${tn(t[4])||t[4]}</div>
+        <label style="display:flex;align-items:center;gap:6px;font-size:.75rem;cursor:pointer">
+          <input type="checkbox" data-notif-enabled="${id}" ${cfg.enabled?'checked':''}>
+          ${en?'On':'تشغيل'}
+        </label>
+      </div>
+      <button type="button" class="altbtn" style="margin-top:8px;align-self:flex-start" data-notif-toggle-detail="${id}">${en?'Details ▾':'التفاصيل ▾'}</button>
+      <div data-notif-detail="${id}" style="display:none;margin-top:10px;padding-top:10px;border-top:1px solid var(--br);font-size:.75rem">
+        <label style="display:flex;align-items:center;gap:8px;margin-bottom:8px"><input type="checkbox" data-notif-lead="${id}" ${cfg.leadEnabled?'checked':''}> ${en?'Notify before start':'قبل البداية'}
+          <input type="number" min="1" max="180" value="${cfg.leadMin}" data-notif-lead-min="${id}" style="width:56px;padding:4px;border-radius:6px;border:1px solid var(--br);background:var(--c);color:var(--tx)"> ${en?'min':'د'}</label>
+        <label style="display:flex;align-items:center;gap:8px;margin-bottom:8px"><input type="checkbox" data-notif-start="${id}" ${cfg.startEnabled?'checked':''}> ${en?'Notify at start':'عند البداية'}</label>
+        <label style="display:flex;align-items:center;gap:8px"><input type="checkbox" data-notif-end="${id}" ${cfg.endLeadEnabled?'checked':''}> ${en?'Notify before end':'قبل النهاية'}
+          <input type="number" min="1" max="180" value="${cfg.endLeadMin}" data-notif-end-min="${id}" style="width:56px;padding:4px;border-radius:6px;border:1px solid var(--br);background:var(--c);color:var(--tx)"> ${en?'min':'د'}</label>
+      </div>
+    </div>`;
+  }).join('');
+}
+function renderPrayerLocList(){
+  const list=document.getElementById('prayerLocList');
+  if(!list) return;
+  const en=(USER_SETTINGS&&USER_SETTINGS.lang)==='en';
+  const locs=USER_SETTINGS.prayerLocations||[];
+  list.innerHTML=locs.map((loc,i)=>`<div style="display:flex;justify-content:space-between;align-items:center;padding:8px 10px;border:1px solid var(--br);border-radius:8px;margin-bottom:6px">
+    <span>${loc.icon||'📍'} ${loc.name} · ${loc.pts}⭐</span>
+    <button type="button" class="altbtn" data-prayer-loc-del="${i}">${en?'Remove':'حذف'}</button>
+  </div>`).join('')||`<p class="desc">${en?'No custom locations yet.':'لا أماكن مخصصة بعد.'}</p>`;
 }
 
 const NOTIF_LEAD_MIN=30;
@@ -4360,6 +4489,22 @@ async function syncPushSchedule(){
 // ===== Prayer Modal =====
 let activePrayer=null;
 
+const MOSQUE_MAX_PTS=5;
+function getPrayerLocationOptions(en){
+  // Mosque is fixed max; Gym removed from defaults; custom locations from settings.
+  const base=en
+    ?[{label:'Mosque 🕌',pts:MOSQUE_MAX_PTS,gold:true},{label:'Home 🏠',pts:3,gold:false},{label:'Other 📍',pts:1,gold:false}]
+    :[{label:'المسجد 🕌',pts:MOSQUE_MAX_PTS,gold:true},{label:'البيت 🏠',pts:3,gold:false},{label:'أخرى 📍',pts:1,gold:false}];
+  const custom=(USER_SETTINGS&&USER_SETTINGS.prayerLocations)||[];
+  for(const loc of custom){
+    if(!loc||!loc.name) continue;
+    const pts=Math.min(MOSQUE_MAX_PTS, Math.max(1, parseInt(loc.pts,10)||1));
+    const icon=loc.icon||'📍';
+    base.push({label:`${loc.name} ${icon}`,pts,gold:pts>=MOSQUE_MAX_PTS});
+  }
+  return base;
+}
+
 function startPrayerFlow(id,name,basePts,x,y,late){
   const parts=id.split('-');
   const pk=parts[2]||'';
@@ -4393,9 +4538,7 @@ function showPrayerStep(){
   if(step===0){
     if(qEl) qEl.textContent=en?'Where did you pray?':'أين صليت؟';
     if(subEl) subEl.textContent=en?'Choose the place of prayer':'اختر مكان الصلاة';
-    renderOpts(en
-      ?[{label:'Mosque 🕌',pts:5,gold:true},{label:'Home 🏠',pts:3,gold:false},{label:'Gym 🏋️',pts:2,gold:false},{label:'Other 📍',pts:1,gold:false}]
-      :[{label:'المسجد 🕌',pts:5,gold:true},{label:'البيت 🏠',pts:3,gold:false},{label:'الجيم 🏋️',pts:2,gold:false},{label:'أخرى 📍',pts:1,gold:false}],'location');
+    renderOpts(getPrayerLocationOptions(en),'location');
   }else if(step===1){
     if(qEl) qEl.textContent=en?`How did you pray ${dispName}?`:`كيف أديت صلاة ${name}؟`;
     if(subEl) subEl.textContent=en?'Choose how you prayed':'اختر طريقة الأداء';
@@ -4895,7 +5038,7 @@ function renderCard(task,isToday,jd){
       act=`<div class="cbtn exp">${t('not_yet')}</div>`;
     }else if(state==='QADA'){
       const half=Math.floor(pts/2);
-      act=`<button class="cbtn qada" data-action="qada" data-id="${id}" data-pts="${pts}">${en?'Makeup (50%)':'قضاء (50%)'}<span class="ptslbl">+${half}⭐</span></button>`;
+      act=`<button class="cbtn qada" data-action="qada" data-id="${id}" data-pts="${pts}">${en?'Make-up (50%)':'قضاء (50%)'}<span class="ptslbl">+${half}⭐</span></button>`;
     }else if(state==='EXPIRED' && !isFoodLoggable){
       act=isSnack?`<div class="excbadge">🍎 ${en?'Missed — no penalty':'فات وقته — مفيش خصم'}</div>`:`<div class="cbtn exp">${t('expired')}</div>`;
     }else if(isFoodLoggable){
@@ -5003,15 +5146,17 @@ function switchDay(jd){
   document.querySelectorAll('.tab').forEach(t=>{if(parseInt(t.dataset.jd,10)===jd)t.classList.add('act');else t.classList.remove('act');});
   document.querySelectorAll('.pan').forEach(p=>p.classList.remove('act'));
   const p=document.getElementById(`pan-${DKEYS[jd]}`);if(p)p.classList.add('act');
-  if(jd===todayJD() && SELECTED_DATE===TODAY){
-    setTimeout(()=>{ try{ scrollToCurrentTask(); }catch(e){} },80);
-  }
+  // Never auto-scroll on routine day switches / post-completion re-renders.
+  // Initial scroll is gated exclusively by revealApp() + __didInitialScroll.
 }
 
 // Smooth-scroll the schedule to the task that matches "right now" (Kuwait time):
 // prefer the block covering the current minute; if already done, jump to the next
 // incomplete task; otherwise the most recent pending task.
 function scrollToCurrentTask(){
+  // Hard gate: only the initial app open may scroll. Completions re-render
+  // via renderPanels/switchDay/updateUI and must NOT yank the viewport.
+  if(window.__didInitialScroll) return;
   if(SELECTED_DATE!==TODAY) return;
   if(document.getElementById('settingsScreen')?.classList.contains('open')) return;
   const jd=todayJD();
@@ -5299,27 +5444,35 @@ function aiResolveTime(phrase){
 // anything with a definite article, a category prefix, or extra words mixed in.
 function aiNormalize(s){
   if(!s) return'';
-  return s
-    .replace(/[\u064B-\u0652]/g,'')          // strip Arabic diacritics
-    .replace(/[—\-–,،.:؛;!؟?()]/g,' ')       // punctuation/dashes -> space
+  return String(s)
+    .replace(/[\u064B-\u0652]/g,'')
+    .replace(/[—\-–,،.:؛;!؟?()]/g,' ')
     .split(/\s+/)
     .filter(Boolean)
-    .map(w=>w.replace(/^ال/,''))              // drop leading "ال" per word
+    .map(w=>w.replace(/^ال/,''))
     .join(' ')
     .trim()
     .toLowerCase();
 }
 
-// Fuzzy-matches a spoken task description against every task across the whole week
-// (base SCHED tasks + already-added custom tasks). Scores by normalized token
-// overlap instead of raw substring checks, so partial/definite-article/reordered
-// phrasing ("الجيم", "gym today", "جيم لور بودي") all resolve correctly instead of
-// requiring the exact on-screen string.
+function aiTaskSearchBlob(task){
+  // Combine Arabic name + English translation + description for cross-language match
+  const ar=String(task[4]||'');
+  const enName=(typeof TASK_EN!=='undefined'&&TASK_EN[ar])?TASK_EN[ar]:'';
+  const desc=String(task[5]||'');
+  return aiNormalize([ar,enName,desc].filter(Boolean).join(' '));
+}
+
 function aiFindTask(phrase,preferIso){
   const p=aiNormalize(phrase);
   if(!p) return null;
-  const pTokens=new Set(p.split(' ').filter(w=>w.length>=2));
-  if(!pTokens.size) return null;
+  let pTokens=[...new Set(p.split(' ').filter(w=>w.length>=2))];
+  // Also accept single meaningful tokens of length 2+ (e.g. "gym")
+  if(!pTokens.length){
+    pTokens=p.split(' ').filter(Boolean);
+  }
+  if(!pTokens.length) return null;
+  const pSet=new Set(pTokens);
 
   const candidates=[];
   for(let jd=0;jd<7;jd++){
@@ -5333,27 +5486,27 @@ function aiFindTask(phrase,preferIso){
 
   let best=null,bestScore=0;
   for(const c of candidates){
-    const name=aiNormalize(c.task[4]);
-    if(!name) continue;
-    const nameTokens=name.split(' ').filter(w=>w.length>=2);
+    const blob=aiTaskSearchBlob(c.task);
+    if(!blob) continue;
+    const nameTokens=blob.split(' ').filter(w=>w.length>=2);
     if(!nameTokens.length) continue;
     let overlap=0;
-    for(const tok of nameTokens) if(pTokens.has(tok)) overlap++;
+    for(const tok of nameTokens) if(pSet.has(tok)) overlap++;
+    // Also count reverse: phrase tokens contained as substrings of name tokens
+    if(overlap===0){
+      for(const pt of pSet){
+        if(nameTokens.some(nt=>nt.includes(pt)||pt.includes(nt))) overlap+=0.6;
+      }
+    }
     if(overlap===0) continue;
-    // Score = fraction of the TASK NAME's own words that were mentioned — a short,
-    // specific task name ("جيم") fully covered by the phrase scores higher than a
-    // long task name partially covered by a stray shared word.
-    let score=overlap/nameTokens.length;
-    // Slight boost for matching today's/the currently-viewed date's task when the
-    // phrase itself didn't specify a day, so "امسح الجيم" today prefers today's gym
-    // entry over some other day's, all else equal.
+    let score=overlap/Math.max(nameTokens.length,1);
+    // Boost full-phrase containment either direction
+    const nameOnly=aiNormalize(c.task[4]||'');
+    if(nameOnly&&(p.includes(nameOnly)||nameOnly.includes(p))) score=Math.max(score,0.85);
     if(preferIso && c.iso===preferIso) score+=0.05;
     if(score>bestScore){bestScore=score;best=c;}
   }
-  // Confidence floor: a single generic shared word against a long task name (e.g.
-  // one word overlapping out of 5+) is too weak to commit to silently — better to
-  // report "not found" and let the caller ask for a clearer phrase than guess wrong.
-  const AI_MATCH_MIN_SCORE=0.28;
+  const AI_MATCH_MIN_SCORE=0.22;
   return bestScore>=AI_MATCH_MIN_SCORE?best:null;
 }
 
@@ -7607,11 +7760,65 @@ document.body.addEventListener('click',async e=>{
   }
   if(tgt.id==='setLangAr'){ setAppLang('ar'); return; }
   if(tgt.id==='setLangEn'){ setAppLang('en'); return; }
+  if(tgt.id==='setMobileBack'){
+    document.getElementById('settingsScreen')?.classList.remove('mobile-sec-open');
+    return;
+  }
+  if(tgt.id==='prayerLocAddBtn'){
+    const name=(document.getElementById('prayerLocName')?.value||'').trim();
+    const icon=(document.getElementById('prayerLocIcon')?.value||'📍').trim()||'📍';
+    let pts=parseInt(document.getElementById('prayerLocPts')?.value,10)||1;
+    pts=Math.min(MOSQUE_MAX_PTS, Math.max(1, pts));
+    if(!name){ showToast((USER_SETTINGS.lang==='en')?'Enter a location name':'أدخل اسم المكان',2000,'warn'); return; }
+    if(!USER_SETTINGS.prayerLocations) USER_SETTINGS.prayerLocations=[];
+    USER_SETTINGS.prayerLocations.push({name,icon,pts});
+    try{ await saveUserSettings(); }catch(e){}
+    renderPrayerLocList();
+    const nm=document.getElementById('prayerLocName'); if(nm) nm.value='';
+    return;
+  }
+  const delLoc=closest('[data-prayer-loc-del]');
+  if(delLoc){
+    const idx=parseInt(delLoc.getAttribute('data-prayer-loc-del'),10);
+    if(USER_SETTINGS.prayerLocations) USER_SETTINGS.prayerLocations.splice(idx,1);
+    try{ await saveUserSettings(); }catch(e){}
+    renderPrayerLocList();
+    return;
+  }
+  const notifDetail=closest('[data-notif-toggle-detail]');
+  if(notifDetail){
+    const id=notifDetail.getAttribute('data-notif-toggle-detail');
+    const panel=document.querySelector(`[data-notif-detail="${id}"]`);
+    if(panel) panel.style.display=panel.style.display==='none'?'block':'none';
+    return;
+  }
+  if(tgt.matches && (tgt.matches('[data-notif-enabled]')||tgt.matches('[data-notif-lead]')||tgt.matches('[data-notif-start]')||tgt.matches('[data-notif-end]')||tgt.matches('[data-notif-lead-min]')||tgt.matches('[data-notif-end-min]'))){
+    const id=tgt.getAttribute('data-notif-enabled')||tgt.getAttribute('data-notif-lead')||tgt.getAttribute('data-notif-start')||tgt.getAttribute('data-notif-end')||tgt.getAttribute('data-notif-lead-min')||tgt.getAttribute('data-notif-end-min');
+    if(!USER_SETTINGS.taskNotif) USER_SETTINGS.taskNotif={};
+    const cfg=getTaskNotifConfig(id);
+    if(tgt.hasAttribute('data-notif-enabled')) cfg.enabled=tgt.checked;
+    if(tgt.hasAttribute('data-notif-lead')) cfg.leadEnabled=tgt.checked;
+    if(tgt.hasAttribute('data-notif-start')) cfg.startEnabled=tgt.checked;
+    if(tgt.hasAttribute('data-notif-end')) cfg.endLeadEnabled=tgt.checked;
+    if(tgt.hasAttribute('data-notif-lead-min')) cfg.leadMin=Math.max(1,parseInt(tgt.value,10)||15);
+    if(tgt.hasAttribute('data-notif-end-min')) cfg.endLeadMin=Math.max(1,parseInt(tgt.value,10)||30);
+    USER_SETTINGS.taskNotif[id]=cfg;
+    try{ await saveUserSettings(); }catch(e){}
+    try{ if(typeof syncPushSchedule==='function') syncPushSchedule(); }catch(e){}
+    return;
+  }
   const setNavBtn=closest('[data-setsec]');
   if(setNavBtn){
     const sec=setNavBtn.getAttribute('data-setsec');
     document.querySelectorAll('#setNav button').forEach(b=>b.classList.toggle('act',b===setNavBtn));
     document.querySelectorAll('.set-section').forEach(s=>s.classList.toggle('act',s.id==='setsec-'+sec));
+    if(window.matchMedia && window.matchMedia('(max-width:700px)').matches){
+      document.getElementById('settingsScreen')?.classList.add('mobile-sec-open');
+      const back=document.getElementById('setMobileBack');
+      const en=(USER_SETTINGS&&USER_SETTINGS.lang)==='en';
+      if(back) back.textContent=en?'← Back to settings':'→ رجوع للإعدادات';
+    }
+    if(sec==='notifications'){ try{ renderTaskNotifList(); }catch(e){} }
     return;
   }
 
@@ -7725,6 +7932,21 @@ document.body.addEventListener('input',e=>{
     e.target.style.height='auto';
     e.target.style.height=Math.min(e.target.scrollHeight,90)+'px';
   }
+  const t=e.target;
+  if(t && (t.matches('[data-notif-enabled]')||t.matches('[data-notif-lead]')||t.matches('[data-notif-start]')||t.matches('[data-notif-end]')||t.matches('[data-notif-lead-min]')||t.matches('[data-notif-end-min]'))){
+    const id=t.getAttribute('data-notif-enabled')||t.getAttribute('data-notif-lead')||t.getAttribute('data-notif-start')||t.getAttribute('data-notif-end')||t.getAttribute('data-notif-lead-min')||t.getAttribute('data-notif-end-min');
+    if(!USER_SETTINGS.taskNotif) USER_SETTINGS.taskNotif={};
+    const cfg=getTaskNotifConfig(id);
+    if(t.hasAttribute('data-notif-enabled')) cfg.enabled=t.checked;
+    if(t.hasAttribute('data-notif-lead')) cfg.leadEnabled=t.checked;
+    if(t.hasAttribute('data-notif-start')) cfg.startEnabled=t.checked;
+    if(t.hasAttribute('data-notif-end')) cfg.endLeadEnabled=t.checked;
+    if(t.hasAttribute('data-notif-lead-min')) cfg.leadMin=Math.max(1,parseInt(t.value,10)||15);
+    if(t.hasAttribute('data-notif-end-min')) cfg.endLeadMin=Math.max(1,parseInt(t.value,10)||30);
+    USER_SETTINGS.taskNotif[id]=cfg;
+    try{ saveUserSettings(); }catch(err){}
+    try{ if(typeof syncPushSchedule==='function') syncPushSchedule(); }catch(err){}
+  }
 });
 document.body.addEventListener('keydown',async e=>{
   if(e.target && e.target.id==='aiInput' && e.key==='Enter' && !e.shiftKey){
@@ -7771,8 +7993,13 @@ function revealApp(){
       applyI18n();
     }
   }catch(e){}
-  // After the schedule paints, jump to the task for "right now".
-  setTimeout(()=>{ try{ scrollToCurrentTask(); }catch(e){} },200);
+  // After the schedule paints, jump to the task for "right now" — once only.
+  if(!window.__didInitialScroll){
+    setTimeout(()=>{
+      try{ scrollToCurrentTask(); }catch(e){}
+      window.__didInitialScroll=true;
+    },200);
+  }
 }
 
 
@@ -7864,8 +8091,21 @@ async function completeLocalSignup(username, password){
       return;
     }
     if(findLocalAccount(name)){
-      showAuthError('Account already exists — switch to Sign In');
-      setAuthMode('signin');
+      showAuthError('This account already exists. ');
+      const errEl=document.getElementById('authError');
+      if(errEl){
+        errEl.innerHTML='This account already exists. <a href="#" id="authSwitchToSignIn" style="color:var(--accent-color,#3b82f6);text-decoration:underline;font-weight:800">Would you like to sign in instead?</a>';
+        const link=document.getElementById('authSwitchToSignIn');
+        if(link){
+          link.onclick=(ev)=>{
+            ev.preventDefault();
+            setAuthMode('signin');
+            const inp=document.getElementById('authUsernameInput');
+            if(inp) inp.value=name;
+            showAuthError('');
+          };
+        }
+      }
       return;
     }
     upsertLocalAccount(name, pass, {has_onboarded:false});
