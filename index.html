@@ -465,7 +465,7 @@ html[dir="ltr"] .tc[data-c="sunrise"]{border-left:3px solid var(--or)}
 /* ===== Prestige / Mythic themes ===== */
 @keyframes nebulaShift{0%{background-position:0% 50%}50%{background-position:100% 50%}100%{background-position:0% 50%}}
 @keyframes cyberPulse{0%,100%{box-shadow:0 0 0 0 rgba(236,72,153,0),0 0 12px rgba(34,211,238,.15)}50%{box-shadow:0 0 0 2px rgba(236,72,153,.35),0 0 22px rgba(34,211,238,.45)}}
-@keyframes rankPop{0%{opacity:0;transform:translateY(18px) scale(.94)}100%{opacity:1;transform:translateY(0) scale(1)}}
+@keyframes rankPop{0%{opacity:0;transform:translateY(18px) scale(.94)}}
 
 /* ===== Level Up modal (fixed overlay — never in page flow) ===== */
 #rankUpModal,
@@ -989,44 +989,66 @@ body.theme-matrix .tctime{
 .lp-card.done .lp-check::after{content:'✓';color:#fff;font-weight:900}
 .lp-title{font-weight:900;font-size:.92rem}
 .lp-time{font-size:.72rem;color:#94a3b8;margin-top:2px}
-.lp-cursor{position:absolute;width:18px;height:18px;border-radius:50% 50% 50% 0;background:#f8fafc;box-shadow:0 0 0 2px #3b82f6,0 4px 12px rgba(0,0,0,.4);transform:rotate(-35deg);pointer-events:none;z-index:5;animation:lpCursor 7s ease-in-out infinite}
-.lp-badge{position:absolute;top:18px;right:18px;padding:8px 12px;border-radius:999px;background:rgba(251,191,36,.15);border:1px solid rgba(251,191,36,.45);color:#fbbf24;font-weight:900;font-size:.72rem;opacity:0;animation:lpBadge 7s ease-in-out infinite}
+.lp-cursor{position:absolute;width:18px;height:18px;border-radius:50% 50% 50% 0;background:#f8fafc;box-shadow:0 0 0 2px #3b82f6,0 4px 12px rgba(0,0,0,.4);transform:rotate(-35deg);pointer-events:none;z-index:5;animation:lpCursor 10s ease-in-out infinite}
+.lp-badge{position:absolute;top:12px;right:12px;padding:8px 12px;border-radius:999px;background:rgba(251,191,36,.15);border:1px solid rgba(251,191,36,.45);color:#fbbf24;font-weight:900;font-size:.72rem;opacity:0;animation:lpBadge 10s ease-in-out infinite;z-index:4}
+.lp-badge-2{top:48px;right:12px;background:rgba(16,185,129,.12);border-color:rgba(16,185,129,.45);color:#34d399;animation:lpBadge2 10s ease-in-out infinite}
+.lp-toast{position:absolute;bottom:8px;left:50%;transform:translateX(-50%);padding:10px 14px;border-radius:12px;background:#111827;border:2px solid #10b981;color:#10b981;font-weight:800;font-size:.72rem;white-space:nowrap;opacity:0;animation:lpToast 10s ease-in-out infinite;z-index:6;box-shadow:0 8px 24px rgba(0,0,0,.4)}
+.lp-card.lp-quran{border-color:rgba(251,191,36,.35)}
 .lp-caption{margin-top:18px;color:#64748b;font-size:.78rem;line-height:1.5;text-align:center}
 @keyframes lpCursor{
-  0%,8%{top:52px;left:calc(100% - 48px);opacity:0}
-  12%{opacity:1}
-  22%{top:52px;left:calc(100% - 48px)}
-  28%{top:58px;left:28px;transform:rotate(-35deg) scale(.9)}
-  32%{transform:rotate(-35deg) scale(1)}
-  40%{top:150px;left:calc(100% - 48px)}
-  48%{top:156px;left:28px}
-  55%,100%{top:156px;left:28px;opacity:0}
+  0%,6%{top:52px;left:calc(100% - 48px);opacity:0}
+  10%{opacity:1}
+  16%{top:52px;left:calc(100% - 48px)}
+  20%{top:58px;left:28px;transform:rotate(-35deg) scale(.9)}
+  24%{transform:rotate(-35deg) scale(1)}
+  32%{top:150px;left:calc(100% - 48px)}
+  38%{top:156px;left:28px}
+  48%{top:250px;left:calc(100% - 48px)}
+  54%{top:256px;left:28px}
+  62%,100%{top:256px;left:28px;opacity:0}
 }
 @keyframes lpBadge{
-  0%,30%{opacity:0;transform:translateY(8px)}
-  36%,48%{opacity:1;transform:translateY(0)}
-  58%,100%{opacity:0}
+  0%,22%{opacity:0;transform:translateY(8px)}
+  26%,38%{opacity:1;transform:translateY(0)}
+  44%,100%{opacity:0}
 }
-.login-preview .lp-deep{animation:lpDone1 7s ease-in-out infinite}
-.login-preview .lp-gym{animation:lpDone2 7s ease-in-out infinite}
+@keyframes lpBadge2{
+  0%,52%{opacity:0;transform:translateY(8px)}
+  56%,70%{opacity:1;transform:translateY(0)}
+  78%,100%{opacity:0}
+}
+@keyframes lpToast{
+  0%,24%{opacity:0;transform:translateX(-50%) translateY(12px)}
+  28%,40%{opacity:1;transform:translateX(-50%) translateY(0)}
+  48%,100%{opacity:0;transform:translateX(-50%) translateY(-6px)}
+}
+.login-preview .lp-deep{animation:lpDone1 10s ease-in-out infinite}
+.login-preview .lp-quran{animation:lpDoneQ 10s ease-in-out infinite}
+.login-preview .lp-gym{animation:lpDone2 10s ease-in-out infinite}
 @keyframes lpDone1{
-  0%,26%{border-color:rgba(59,130,246,.45)}
-  30%,100%{border-color:#10b981;box-shadow:0 0 0 1px rgba(16,185,129,.25),0 8px 24px rgba(0,0,0,.35)}
+  0%,20%{border-color:rgba(59,130,246,.45)}
+  24%,100%{border-color:#10b981;box-shadow:0 0 0 1px rgba(16,185,129,.25),0 8px 24px rgba(0,0,0,.35)}
+}
+@keyframes lpDoneQ{
+  0%,36%{border-color:rgba(251,191,36,.35)}
+  40%,100%{border-color:#10b981;box-shadow:0 0 0 1px rgba(16,185,129,.2),0 8px 24px rgba(0,0,0,.3)}
 }
 @keyframes lpDone2{
-  0%,48%{border-color:rgba(16,185,129,.4)}
-  52%,100%{border-color:#10b981}
+  0%,52%{border-color:rgba(16,185,129,.4)}
+  56%,100%{border-color:#10b981}
 }
-.login-preview .lp-deep .lp-check{animation:lpCheck1 7s ease-in-out infinite}
-.login-preview .lp-gym .lp-check{animation:lpCheck2 7s ease-in-out infinite}
-@keyframes lpCheck1{0%,26%{background:transparent;border-color:#334155} 30%,100%{background:#10b981;border-color:#10b981}}
-@keyframes lpCheck1mark{0%,26%{content:''} 30%,100%{content:'✓'}}
-@keyframes lpCheck2{0%,48%{background:transparent;border-color:#334155} 52%,100%{background:#10b981;border-color:#10b981}}
-.login-preview .lp-deep.done .lp-check::after,
-.login-preview .lp-deep .lp-check::after{animation:lpCheckShow1 7s ease-in-out infinite}
-.login-preview .lp-gym .lp-check::after{content:'';animation:lpCheckShow2 7s ease-in-out infinite}
-@keyframes lpCheckShow1{0%,26%{content:'';opacity:0} 30%,100%{content:'✓';opacity:1;color:#fff;font-weight:900}}
-@keyframes lpCheckShow2{0%,48%{content:'';opacity:0} 52%,100%{content:'✓';opacity:1;color:#fff;font-weight:900}}
+.login-preview .lp-deep .lp-check{animation:lpCheck1 10s ease-in-out infinite}
+.login-preview .lp-quran .lp-check{animation:lpCheckQ 10s ease-in-out infinite}
+.login-preview .lp-gym .lp-check{animation:lpCheck2 10s ease-in-out infinite}
+@keyframes lpCheck1{0%,20%{background:transparent;border-color:#334155} 24%,100%{background:#10b981;border-color:#10b981}}
+@keyframes lpCheckQ{0%,36%{background:transparent;border-color:#334155} 40%,100%{background:#10b981;border-color:#10b981}}
+@keyframes lpCheck2{0%,52%{background:transparent;border-color:#334155} 56%,100%{background:#10b981;border-color:#10b981}}
+.login-preview .lp-deep .lp-check::after{animation:lpCheckShow1 10s ease-in-out infinite}
+.login-preview .lp-quran .lp-check::after{content:'';animation:lpCheckShowQ 10s ease-in-out infinite}
+.login-preview .lp-gym .lp-check::after{content:'';animation:lpCheckShow2 10s ease-in-out infinite}
+@keyframes lpCheckShow1{0%,20%{content:'';opacity:0} 24%,100%{content:'✓';opacity:1;color:#fff;font-weight:900}}
+@keyframes lpCheckShowQ{0%,36%{content:'';opacity:0} 40%,100%{content:'✓';opacity:1;color:#fff;font-weight:900}}
+@keyframes lpCheckShow2{0%,52%{content:'';opacity:0} 56%,100%{content:'✓';opacity:1;color:#fff;font-weight:900}}
 @media (max-width:899px){
   .login-canvas-grid{grid-template-columns:1fr!important}
   #loginCanvasArt{display:none!important}
@@ -1078,6 +1100,13 @@ body.theme-matrix .tctime{
                 <div class="lp-time">15 mins</div>
               </div>
             </div>
+            <div class="lp-card lp-quran">
+              <span class="lp-check" data-check="3"></span>
+              <div class="lp-card-body">
+                <div class="lp-title">Daily Quran</div>
+                <div class="lp-time">12:30 PM · 15 min</div>
+              </div>
+            </div>
             <div class="lp-card lp-gym">
               <span class="lp-check" data-check="2"></span>
               <div class="lp-card-body">
@@ -1085,8 +1114,17 @@ body.theme-matrix .tctime{
                 <div class="lp-time">04:00 PM – 05:00 PM</div>
               </div>
             </div>
+            <div class="lp-card lp-buffer lp-buffer-2">
+              <span class="lp-check" style="opacity:0"></span>
+              <div class="lp-card-body">
+                <div class="lp-title">Post-workout meal</div>
+                <div class="lp-time">08:30 PM</div>
+              </div>
+            </div>
             <div class="lp-cursor"></div>
-            <div class="lp-badge">Points +150 | Streak Up!</div>
+            <div class="lp-badge">+30⭐ Deep work done</div>
+            <div class="lp-badge lp-badge-2">+50⭐ Gym · Streak 🔥</div>
+            <div class="lp-toast">✅ In the perfect window — well done</div>
           </div>
           <div class="lp-caption">AI-Powered Scheduling. Smart Rest Buffers. Gamified Productivity Loops.</div>
         </div>
@@ -2840,7 +2878,8 @@ function dayLabel(jd){
 const TASK_EN={
   'الفجر':'Fajr','الشروق':'Sunrise','الظهر':'Dhuhr','العصر':'Asr','المغرب':'Maghrib','العشاء':'Isha',
   'صلاة الجمعة':'Friday prayer','الفطار':'Breakfast','الغدا':'Lunch','العشا':'Dinner',
-  'الورد اليومي':'Daily Quran','تحضير درس الاثنين':'Prep Monday lesson','تحضير درس الأربعاء':'Prep Wednesday lesson',
+  'الورد اليومي':'Daily Quran','الورد القرآني':'Daily Quran','الورد':'Daily Quran','ورد يومي':'Daily Quran',
+  'تحضير درس الاثنين':'Prep Monday lesson','تحضير درس الأربعاء':'Prep Wednesday lesson',
   'تحضير البرمجة':'Programming prep','سيشن البرمجة':'Programming session','واجب البرمجة':'Programming homework',
   'درس القرآن':'Quran class','سناك منتصف النهار':'Midday snack','سناك ٢ (بعد الظهر)':'Afternoon snack',
   'سناك ٣ (مسائي خفيف)':'Evening snack','سناك قبل الجيم (السموثي الخارق)':'Pre-gym smoothie',
@@ -2854,6 +2893,13 @@ const TASK_EN={
   'نام على الوقت — النوم المنتظم ضروري للعضل والتخسيس':'Sleep on time — consistent sleep matters for muscle and fat loss',
   'ارجع نام بعدها ✓':'Go back to sleep after ✓',
   'متأخّر':'Late','فات الوقت':'Missed','تأكيد':'Confirm'
+};
+// Extra search aliases (phrase variants → canonical Arabic task name or English)
+const TASK_ALIASES={
+  'daily quran':'الورد اليومي','quran daily':'الورد اليومي','daily quran reading':'الورد اليومي',
+  'الورد القراني':'الورد اليومي','الورد القرآني':'الورد اليومي','ورد قرآني':'الورد اليومي',
+  'ورد قراني':'الورد اليومي','القرآن اليومي':'الورد اليومي','قراءة القرآن':'الورد اليومي',
+  'quran':'الورد اليومي','quran class':'درس القرآن','درس قران':'درس القرآن'
 };
 function tn(text){
   if(!text) return text;
@@ -3212,11 +3258,11 @@ const OB_STEPS=[
     ]
   },
   {
-    key:'weeklySchedule',
-    type:'weekdays',
-    title:'What does a typical day look like?',
-    sub:'Switch days and describe each one. Leave a day blank if it should stay empty.',
-    placeholder:'e.g. wake up, gym, deep work, lunch, review PRs, walk, sleep...'
+    key:'messyTasks',
+    type:'textarea',
+    title:'Tell me about your week — just like talking to a friend',
+    sub:'Describe what you usually do across the week in your own words. Example: “I wake up at 7, gym Mon/Wed evenings, deep work mornings, lunch around 1, Quran daily, sleep by 11. Fridays are lighter.” The assistant will build the schedule from this and ask only if something important is missing.',
+    placeholder:'e.g. Wake ~7, deep work 8–11, gym Mon & Wed at 5pm, post-workout meal after, daily Quran, lunch ~1, dinner ~8, sleep 11… Rest days have no gym…'
   },
   {
     key:'workspaceName',
@@ -3247,6 +3293,8 @@ function obCanAdvance(){
     const ws=OB_ANSWERS.weeklySchedule||{};
     return OB_WEEK_DAYS.some(d=>String(ws[d]||'').trim().length>0);
   }
+  // Free-form week description (messyTasks) needs real content
+  if(step.key==='messyTasks') return typeof val==='string' && val.trim().length>=8;
   return false;
 }
 
@@ -3508,31 +3556,66 @@ async function obFinish(){
   }
   USER_SCHEDULE=emptySchedule;
 
+  // Prefer free-form week description (messyTasks). Fall back to per-day weeklySchedule.
+  const messy=String(OB_ANSWERS.messyTasks||'').trim();
   const weekly=OB_ANSWERS.weeklySchedule||{};
-  for(const dayName of OB_WEEK_DAYS){
-    const raw=String(weekly[dayName]||'').trim();
-    if(!raw) continue;
-    const jd=OB_DAY_TO_JD[dayName];
+  const hasPerDay=OB_WEEK_DAYS.some(d=>String(weekly[d]||'').trim().length>0);
+
+  if(messy && !hasPerDay){
+    // Simple seed: split the description into task-like phrases and place them on weekdays.
+    // Full AI refinement can happen later in chat; this gets the user a usable starting board.
     try{
-      // Local parser path — force target weekday
-      const parts=raw.split(/\n|,|•|\u2022|;/).map(s=>s.replace(/^[-*\d\.\)\s]+/,'').trim()).filter(Boolean).slice(0,12);
-      const blocks=[];
-      let cursor=8*60;
-      for(const p of parts){
-        const dur=90;
-        const start=cursor;
-        const end=Math.min(start+dur, 22*60);
-        const h1=String(Math.floor(start/60)).padStart(2,'0');
-        const m1=String(start%60).padStart(2,'0');
-        const h2=String(Math.floor(end/60)).padStart(2,'0');
-        const m2=String(end%60).padStart(2,'0');
-        blocks.push({start:`${h1}:${m1}`, end:`${h2}:${m2}`, task:p, category:'Deep Work'});
-        cursor=end+15;
-        if(cursor>=22*60) break;
+      const parts=messy
+        .split(/\n|,|•|\u2022|;|\band\b|\bthen\b/i)
+        .map(s=>s.replace(/^[-*\d\.\)\s]+/,'').trim())
+        .filter(s=>s.length>=3)
+        .slice(0,10);
+      const targetDays=['Mon','Tue','Wed','Thu','Fri'];
+      for(const dayName of targetDays){
+        const jd=OB_DAY_TO_JD[dayName];
+        if(jd==null) continue;
+        const blocks=[];
+        let cursor=8*60;
+        for(const p of parts){
+          const dur=60;
+          const start=cursor;
+          const end=Math.min(start+dur, 21*60);
+          const h1=String(Math.floor(start/60)).padStart(2,'0');
+          const m1=String(start%60).padStart(2,'0');
+          const h2=String(Math.floor(end/60)).padStart(2,'0');
+          const m2=String(end%60).padStart(2,'0');
+          blocks.push({start:`${h1}:${m1}`, end:`${h2}:${m2}`, task:p.slice(0,60), category:'Deep Work'});
+          cursor=end+20;
+          if(cursor>=21*60) break;
+        }
+        if(blocks.length) applyBuiltBlocksToSchedule(blocks, (typeof TODAY!=='undefined'?TODAY:new Date().toISOString().slice(0,10)), jd);
       }
-      applyBuiltBlocksToSchedule(blocks, (typeof TODAY!=='undefined'?TODAY:new Date().toISOString().slice(0,10)), jd);
-    }catch(e){
-      console.warn('weekday schedule build failed', dayName, e);
+    }catch(e){ console.warn('messyTasks schedule seed failed', e); }
+  }else{
+    for(const dayName of OB_WEEK_DAYS){
+      const raw=String(weekly[dayName]||'').trim();
+      if(!raw) continue;
+      const jd=OB_DAY_TO_JD[dayName];
+      try{
+        const parts=raw.split(/\n|,|•|\u2022|;/).map(s=>s.replace(/^[-*\d\.\)\s]+/,'').trim()).filter(Boolean).slice(0,12);
+        const blocks=[];
+        let cursor=8*60;
+        for(const p of parts){
+          const dur=90;
+          const start=cursor;
+          const end=Math.min(start+dur, 22*60);
+          const h1=String(Math.floor(start/60)).padStart(2,'0');
+          const m1=String(start%60).padStart(2,'0');
+          const h2=String(Math.floor(end/60)).padStart(2,'0');
+          const m2=String(end%60).padStart(2,'0');
+          blocks.push({start:`${h1}:${m1}`, end:`${h2}:${m2}`, task:p, category:'Deep Work'});
+          cursor=end+15;
+          if(cursor>=22*60) break;
+        }
+        applyBuiltBlocksToSchedule(blocks, (typeof TODAY!=='undefined'?TODAY:new Date().toISOString().slice(0,10)), jd);
+      }catch(e){
+        console.warn('weekday schedule build failed', dayName, e);
+      }
     }
   }
 
@@ -4680,14 +4763,15 @@ let activePrayer=null;
 
 const MOSQUE_MAX_PTS=5;
 function getPrayerLocationOptions(en){
-  // Mosque is fixed max; Gym removed from defaults; custom locations from settings.
+  // Mosque is fixed max (uncustomizable). Home / Other / any custom = 2 pts by default.
+  // Gym is intentionally NOT in the default list — new users add it themselves in Settings.
   const base=en
-    ?[{label:'Mosque 🕌',pts:MOSQUE_MAX_PTS,gold:true},{label:'Home 🏠',pts:3,gold:false},{label:'Other 📍',pts:1,gold:false}]
-    :[{label:'المسجد 🕌',pts:MOSQUE_MAX_PTS,gold:true},{label:'البيت 🏠',pts:3,gold:false},{label:'أخرى 📍',pts:1,gold:false}];
+    ?[{label:'Mosque 🕌',pts:MOSQUE_MAX_PTS,gold:true},{label:'Home 🏠',pts:2,gold:false},{label:'Other 📍',pts:2,gold:false}]
+    :[{label:'المسجد 🕌',pts:MOSQUE_MAX_PTS,gold:true},{label:'البيت 🏠',pts:2,gold:false},{label:'أخرى 📍',pts:2,gold:false}];
   const custom=(USER_SETTINGS&&USER_SETTINGS.prayerLocations)||[];
   for(const loc of custom){
     if(!loc||!loc.name) continue;
-    const pts=Math.min(MOSQUE_MAX_PTS, Math.max(1, parseInt(loc.pts,10)||1));
+    const pts=Math.min(MOSQUE_MAX_PTS, Math.max(1, parseInt(loc.pts,10)||2));
     const icon=loc.icon||'📍';
     base.push({label:`${loc.name} ${icon}`,pts,gold:pts>=MOSQUE_MAX_PTS});
   }
@@ -5253,7 +5337,7 @@ function renderCard(task,isToday,jd){
       act=`<div class="cbtn exp">${t('not_yet')}</div>`;
     }else if(state==='QADA'){
       const half=Math.floor(pts/2);
-      act=`<button class="cbtn qada" data-action="qada" data-id="${id}" data-pts="${pts}">${en?'Make-up (50%)':'قضاء (50%)'}<span class="ptslbl">+${half}⭐</span></button>`;
+      act=`<button class="cbtn qada" data-action="qada" data-id="${id}" data-pts="${pts}">${en?'Make-up (Qada)':'قضاء'}<span class="ptslbl">+${half}⭐</span></button>`;
     }else if(state==='EXPIRED' && !isFoodLoggable){
       act=isSnack?`<div class="excbadge">🍎 ${en?'Missed — no penalty':'فات وقته — مفيش خصم'}</div>`:`<div class="cbtn exp">${t('expired')}</div>`;
     }else if(isFoodLoggable){
@@ -5279,10 +5363,11 @@ function renderCard(task,isToday,jd){
   // vanishing, per spec; moved tasks show where they came from; custom tasks are
   // flagged so it's clear they were added by you (or via the assistant), not SCHED.
   const isDeleted=!!task._deleted;
-  const movedBadge=task._movedFrom?`<div class="hwtag" style="background:rgba(59,130,246,.15);border-color:rgba(59,130,246,.3);color:#60a5fa">🔀 نُقلت من ${task._movedFrom}</div>`:'';
-  const customBadge=task._custom?`<div class="hwtag" style="background:rgba(139,92,246,.15);border-color:rgba(139,92,246,.3);color:#a78bfa">✨ مهمة مخصصة</div>`:'';
-  const deletedBadge=isDeleted?`<div class="hwtag">🗑️ محذوفة</div>`:'';
-  if(isDeleted) act=`<div class="cbtn exp" style="opacity:.6">🗑️ محذوفة</div>`;
+  const enBadge=(USER_SETTINGS&&USER_SETTINGS.lang)==='en';
+  const movedBadge=task._movedFrom?`<div class="hwtag" style="background:rgba(59,130,246,.15);border-color:rgba(59,130,246,.3);color:#60a5fa">🔀 ${enBadge?'Moved from':'نُقلت من'} ${task._movedFrom}</div>`:'';
+  const customBadge=task._custom?`<div class="hwtag" style="background:rgba(139,92,246,.15);border-color:rgba(139,92,246,.3);color:#a78bfa">✨ ${enBadge?'Custom task':'مهمة مخصصة'}</div>`:'';
+  const deletedBadge=isDeleted?`<div class="hwtag">🗑️ ${enBadge?'Deleted':'محذوفة'}</div>`:'';
+  if(isDeleted) act=`<div class="cbtn exp" style="opacity:.6">🗑️ ${enBadge?'Deleted':'محذوفة'}</div>`;
 
   // If a food entry was actually logged, show its computed macros under the
   // description as a compact badge — makes the card itself carry the real intake,
@@ -5371,7 +5456,9 @@ function switchDay(jd){
 function scrollToCurrentTask(){
   // Hard gate: only the initial app open may scroll. Completions re-render
   // via renderPanels/switchDay/updateUI and must NOT yank the viewport.
+  // Flag is set immediately so any concurrent/late call is blocked.
   if(window.__didInitialScroll) return;
+  window.__didInitialScroll=true;
   if(SELECTED_DATE!==TODAY) return;
   if(document.getElementById('settingsScreen')?.classList.contains('open')) return;
   const jd=todayJD();
@@ -5679,10 +5766,19 @@ function aiTaskSearchBlob(task){
 }
 
 function aiFindTask(phrase,preferIso){
-  const p=aiNormalize(phrase);
+  let p=aiNormalize(phrase);
   if(!p) return null;
+  // Resolve known aliases first (e.g. "daily quran" / "الورد القرآني" → الورد اليومي)
+  if(typeof TASK_ALIASES!=='undefined'){
+    for(const [alias,canonical] of Object.entries(TASK_ALIASES)){
+      const a=aiNormalize(alias);
+      if(a && (p===a || p.includes(a) || a.includes(p))){
+        p=aiNormalize(canonical+' '+p);
+        break;
+      }
+    }
+  }
   let pTokens=[...new Set(p.split(' ').filter(w=>w.length>=2))];
-  // Also accept single meaningful tokens of length 2+ (e.g. "gym")
   if(!pTokens.length){
     pTokens=p.split(' ').filter(Boolean);
   }
@@ -5707,7 +5803,7 @@ function aiFindTask(phrase,preferIso){
     if(!nameTokens.length) continue;
     let overlap=0;
     for(const tok of nameTokens) if(pSet.has(tok)) overlap++;
-    // Also count reverse: phrase tokens contained as substrings of name tokens
+    // Reverse / substring soft match
     if(overlap===0){
       for(const pt of pSet){
         if(nameTokens.some(nt=>nt.includes(pt)||pt.includes(nt))) overlap+=0.6;
@@ -5715,13 +5811,19 @@ function aiFindTask(phrase,preferIso){
     }
     if(overlap===0) continue;
     let score=overlap/Math.max(nameTokens.length,1);
-    // Boost full-phrase containment either direction
     const nameOnly=aiNormalize(c.task[4]||'');
-    if(nameOnly&&(p.includes(nameOnly)||nameOnly.includes(p))) score=Math.max(score,0.85);
+    const enOnly=aiNormalize((typeof TASK_EN!=='undefined'&&TASK_EN[c.task[4]])||'');
+    if(nameOnly&&(p.includes(nameOnly)||nameOnly.includes(p))) score=Math.max(score,0.9);
+    if(enOnly&&(p.includes(enOnly)||enOnly.includes(p))) score=Math.max(score,0.9);
+    // Strong boost when any significant token of the English name is present
+    if(enOnly){
+      const enToks=enOnly.split(' ').filter(w=>w.length>=3);
+      if(enToks.length && enToks.every(t=>p.includes(t))) score=Math.max(score,0.88);
+    }
     if(preferIso && c.iso===preferIso) score+=0.05;
     if(score>bestScore){bestScore=score;best=c;}
   }
-  const AI_MATCH_MIN_SCORE=0.22;
+  const AI_MATCH_MIN_SCORE=0.2;
   return bestScore>=AI_MATCH_MIN_SCORE?best:null;
 }
 
@@ -6800,8 +6902,12 @@ function openFoodLogModal(task,existingEntry,prefillText){
   }
 
   // Change the submit button label in edit mode so it's clear this replaces the old
-  // entry rather than adding a second one.
-  if(submitBtn) submitBtn.textContent=isEdit?'احسب واستبدل ✏️':'احسب واحفظ ✅';
+  // entry rather than adding a second one. Always respect lang.
+  if(submitBtn){
+    submitBtn.textContent=isEdit
+      ?(en?'Calculate & replace ✏️':'احسب واستبدل ✏️')
+      :(en?'Calculate & save ✅':'احسب واحفظ ✅');
+  }
 
   if(modal) modal.classList.add('open');
 }
@@ -7068,43 +7174,34 @@ async function flFinalizeLog(task,description,macro,verdict,showVerdictUI,itemsB
   try{ renderPanels();switchDay(getJDfromISO(SELECTED_DATE));updateUI(); }catch(err){ console.error('re-render failed:',err); }
 
   if(showVerdictUI){
+    const en=(USER_SETTINGS&&USER_SETTINGS.lang)==='en';
     document.getElementById('flChooseStep').style.display='none';
     document.getElementById('flLoadingStep').style.display='none';
     document.getElementById('flAskStep').style.display='none';
     const resStep=document.getElementById('flResultStep');
     resStep.style.display='block';
-    document.getElementById('flMacroResult').innerHTML=`<span><b>${Math.round(macro.k)}</b> سعرة</span><span>بروتين <b>${Math.round(macro.p)}</b>جم</span><span>كارب <b>${Math.round(macro.c)}</b>جم</span><span>دهون <b>${Math.round(macro.f)}</b>جم</span><span>ألياف <b>${Math.round(macro.b||0)}</b>جم</span>`;
-    // Per-item breakdown — this is the actual traceability fix: instead of one
-    // opaque total, show exactly which food-database entry each part of the meal
-    // matched to, its assumed serving size, and its individual macro contribution.
-    // A wrong match (wrong food, implausible serving size) becomes visible and
-    // catchable here instead of silently baked into an unexplained total. Rejected
-    // items (server-side validation failed) are shown too, explicitly marked as
-    // excluded, so a partial total is never mistaken for a complete one.
+    document.getElementById('flMacroResult').innerHTML=en
+      ?`<span><b>${Math.round(macro.k)}</b> kcal</span><span>Protein <b>${Math.round(macro.p)}</b>g</span><span>Carbs <b>${Math.round(macro.c)}</b>g</span><span>Fats <b>${Math.round(macro.f)}</b>g</span><span>Fiber <b>${Math.round(macro.b||0)}</b>g</span>`
+      :`<span><b>${Math.round(macro.k)}</b> سعرة</span><span>بروتين <b>${Math.round(macro.p)}</b>جم</span><span>كارب <b>${Math.round(macro.c)}</b>جم</span><span>دهون <b>${Math.round(macro.f)}</b>جم</span><span>ألياف <b>${Math.round(macro.b||0)}</b>جم</span>`;
     const breakdownEl=document.getElementById('flItemBreakdown');
     if(breakdownEl){
       if(Array.isArray(itemsBreakdown) && itemsBreakdown.length){
         breakdownEl.style.display='block';
-        breakdownEl.innerHTML=`<div style="font-size:.68rem;color:var(--mu);font-weight:700;margin-bottom:6px">تفاصيل كل عنصر اتحسب إزاي:</div>`+
+        const head=en?'How each item was calculated:':'تفاصيل كل عنصر اتحسب إزاي:';
+        breakdownEl.innerHTML=`<div style="font-size:.68rem;color:var(--mu);font-weight:700;margin-bottom:6px">${head}</div>`+
           itemsBreakdown.map(it=>{
             if(it.rejected){
-              return `<div style="font-size:.7rem;color:var(--rd);padding:4px 0;border-bottom:1px solid rgba(239,68,68,.15)">❌ "${(it.name||'').replace(/</g,'&lt;')}" — متتحسبش (القيم اللي رجعت مش منطقية)، مش داخلة في الإجمالي</div>`;
+              return en
+                ?`<div style="font-size:.7rem;color:var(--rd);padding:4px 0;border-bottom:1px solid rgba(239,68,68,.15)">❌ "${(it.name||'').replace(/</g,'&lt;')}" — excluded (implausible values), not in total</div>`
+                :`<div style="font-size:.7rem;color:var(--rd);padding:4px 0;border-bottom:1px solid rgba(239,68,68,.15)">❌ "${(it.name||'').replace(/</g,'&lt;')}" — متتحسبش (القيم اللي رجعت مش منطقية)، مش داخلة في الإجمالي</div>`;
             }
             const qtyLabel=it.qty!=null?`${Math.round(it.qty)}${it.unit||'g'}`:'';
-            const mainRow=`<div style="font-size:.7rem;color:var(--so);padding:4px 0;${Array.isArray(it.components)&&it.components.length?'':'border-bottom:1px solid rgba(255,255,255,.06)'}">✅ ${(it.name||'').replace(/</g,'&lt;')} ${qtyLabel?`(${qtyLabel})`:''} — <b style="color:var(--gr)">${it.kcal}</b> سعرة · ب${it.protein??'-'} · ك${it.carbs??'-'} · د${it.fat??'-'}</div>`;
-            // Composite-dish items (koshary, kabsa, etc.) carry a `components` array —
-            // the individually-matched USDA ingredients that summed to this item's
-            // total (see decomposeDish/usdaLookupFood in worker.js). Rendering these
-            // as an indented sub-list is what actually builds the trust this feature
-            // exists for: instead of one opaque "كشري (400g) — 625 سعرة" line, the
-            // user can see it's really Rice + Lentils + Macaroni + Tomato Sauce, each
-            // with its own real USDA-matched macro contribution — verifiable, not a
-            // black box. Absent/empty for ordinary single-item matches, so this adds
-            // nothing visually for the vast majority of logged foods.
+            const kcalWord=en?'kcal':'سعرة';
+            const mainRow=`<div style="font-size:.7rem;color:var(--so);padding:4px 0;${Array.isArray(it.components)&&it.components.length?'':'border-bottom:1px solid rgba(255,255,255,.06)'}">✅ ${(it.name||'').replace(/</g,'&lt;')} ${qtyLabel?`(${qtyLabel})`:''} — <b style="color:var(--gr)">${it.kcal}</b> ${kcalWord} · P${it.protein??'-'} · C${it.carbs??'-'} · F${it.fat??'-'}</div>`;
             if(!Array.isArray(it.components) || !it.components.length) return mainRow;
             const compRows=it.components.map(c=>{
               const cQty=c.qty!=null?`${Math.round(c.qty)}${c.unit||'g'}`:'';
-              return `<div style="font-size:.64rem;color:var(--mu);padding:3px 0 3px 14px;border-right:2px solid rgba(16,185,129,.25);margin-right:4px">↳ ${(c.name||'').replace(/</g,'&lt;')} ${cQty?`(${cQty})`:''} — ${c.kcal} سعرة · ب${c.protein??'-'} · ك${c.carbs??'-'} · د${c.fat??'-'}</div>`;
+              return `<div style="font-size:.64rem;color:var(--mu);padding:3px 0 3px 14px;border-right:2px solid rgba(16,185,129,.25);margin-right:4px">↳ ${(c.name||'').replace(/</g,'&lt;')} ${cQty?`(${cQty})`:''} — ${c.kcal} ${kcalWord} · P${c.protein??'-'} · C${c.carbs??'-'} · F${c.fat??'-'}</div>`;
             }).join('');
             return mainRow+`<div style="border-bottom:1px solid rgba(255,255,255,.06);padding-bottom:2px">${compRows}</div>`;
           }).join('');
@@ -7114,27 +7211,35 @@ async function flFinalizeLog(task,description,macro,verdict,showVerdictUI,itemsB
       }
     }
     const verdictEl=document.getElementById('flVerdict');
-    // verdict===null means the call genuinely failed (network/worker/rate-limit) —
-    // was previously indistinguishable from "" and just hid the box with zero
-    // explanation. Now shows an honest fallback so it's clear the macros ARE saved
-    // correctly, only the AI opinion on them didn't come through this time.
     if(verdict){
       verdictEl.style.display='block';
       verdictEl.textContent=verdict;
     }else if(verdict===null){
       verdictEl.style.display='block';
-      verdictEl.textContent='⚠️ القيم اتحفظت صح، بس مش قادر أجيبلك رأيي في الوجبة دلوقتي — السيرفر مردش. القيم فوق دي دقيقة وهي اللي هتتحسب.';
+      verdictEl.textContent=en
+        ?'⚠️ Macros were saved correctly, but the AI opinion is unavailable right now (server did not respond). The numbers above are accurate and will be counted.'
+        :'⚠️ القيم اتحفظت صح، بس مش قادر أجيبلك رأيي في الوجبة دلوقتي — السيرفر مردش. القيم فوق دي دقيقة وهي اللي هتتحسب.';
     }else{
       verdictEl.style.display='none';
     }
-    // Only offer to save as a quick-pick option if it isn't already saved for this
-    // exact meal slot (avoids duplicate save prompts for something already there).
     const mealKey=task[12];
     const alreadySaved=mealKey && (MEAL_OPTIONS[mealKey]||[]).some(o=>o.description.trim().toLowerCase()===description.trim().toLowerCase());
-    document.getElementById('flSaveOptRow').style.display=alreadySaved?'none':'flex';
+    const saveRow=document.getElementById('flSaveOptRow');
+    if(saveRow){
+      saveRow.style.display=alreadySaved?'none':'flex';
+      const saveLabel=saveRow.querySelector('span');
+      if(saveLabel) saveLabel.textContent=en?'Save as a quick option for next time?':'تحفظها كخيار سريع للمرة الجاية؟';
+      const yesBtn=document.getElementById('flSaveOptYes');
+      const noBtn=document.getElementById('flSaveOptNo');
+      if(yesBtn) yesBtn.textContent=en?'Yes ✅':'نعم ✅';
+      if(noBtn) noBtn.textContent=en?'No':'لا';
+    }
+    const doneBtn=document.getElementById('flDoneBtn');
+    if(doneBtn) doneBtn.textContent=en?'Done 👍':'تمام 👍';
   }else{
     closeFoodLogModal();
-    showToast(`🍽️ تم تسجيل "${description}" ✅`,2600);
+    const en=(USER_SETTINGS&&USER_SETTINGS.lang)==='en';
+    showToast(en?`🍽️ Logged "${description}" ✅`:`🍽️ تم تسجيل "${description}" ✅`,2600);
   }
 }
 
@@ -8111,21 +8216,23 @@ document.body.addEventListener('click',async e=>{
     const late=taskObj?isLateNonPrayer(taskObj):false;
     const awarded=awardTaskPoints(pts,{x:e.clientX,y:e.clientY});
     DONE[id]=awarded;
-    if(late){showToast('⏰ متأخر شوي بس تم — استمر كذا 💪',3000,'late');cardEffect(id,'late');}
-    else{showToast('✅ في الوقت المثالي، أحسنت',2200);cardEffect(id,'ontime');}
-    // checkStreak() and the re-render below must never be able to swallow the save.
-    // Previously, if checkStreak() (or anything after it) threw, saveAll() was never
-    // reached — the user saw the success animation but the completion was silently
-    // never persisted. That's what caused tasks to vanish from historyData while
-    // looking completed in the moment.
+    const enConfirm=(USER_SETTINGS&&USER_SETTINGS.lang)==='en';
+    if(late){showToast(enConfirm?'⏰ A bit late but done — keep going 💪':'⏰ متأخر شوي بس تم — استمر كذا 💪',3000,'late');cardEffect(id,'late');}
+    else{showToast(enConfirm?'✅ In the perfect window — well done':'✅ في الوقت المثالي، أحسنت',2200);cardEffect(id,'ontime');}
+    // Never auto-scroll after completing a task (only first app open may scroll).
+    window.__didInitialScroll=true;
+    const scrollYBefore=window.scrollY;
     try{ checkStreak(); }catch(err){ console.error('checkStreak failed, saving anyway:',err); }
     try{
       await saveAll();
     }catch(err){
       console.error('saveAll failed after confirm:',err);
-      showToast('⚠️ حصل خطأ أثناء الحفظ — جرب تاني أو أعد تحميل الصفحة',4000,'warn');
+      showToast(enConfirm?'⚠️ Save failed — try again or reload':'⚠️ حصل خطأ أثناء الحفظ — جرب تاني أو أعد تحميل الصفحة',4000,'warn');
     }
-    try{ renderPanels();switchDay(getJDfromISO(SELECTED_DATE));updateUI(); }catch(err){ console.error('re-render failed:',err); }
+    try{
+      renderPanels();switchDay(getJDfromISO(SELECTED_DATE));updateUI();
+      window.scrollTo(0,scrollYBefore);
+    }catch(err){ console.error('re-render failed:',err); }
     return;
   }
 
@@ -8144,7 +8251,9 @@ document.body.addEventListener('click',async e=>{
       showToast('⚠️ حصل خطأ أثناء الحفظ — جرب تاني أو أعد تحميل الصفحة',4000,'warn');
     }
     try{ renderPanels();switchDay(getJDfromISO(SELECTED_DATE));updateUI(); }catch(err){ console.error('re-render failed:',err); }
-    showToast('تم تسجيل القضاء — حاول تصلي بدري بكرة 🌙',3500,'qada');return;
+    showToast((USER_SETTINGS&&USER_SETTINGS.lang)==='en'
+      ?'Make-up (Qada) logged — try to pray on time tomorrow 🌙'
+      :'تم تسجيل القضاء — حاول تصلي بدري بكرة 🌙',3500,'qada');return;
   }
 });
 
@@ -8316,10 +8425,11 @@ async function completeLocalSignup(username, password){
       return;
     }
     if(findLocalAccount(name)){
-      showAuthError('This account already exists. ');
-      const errEl=document.getElementById('authError');
+      // Account already exists — show clear message + blue "Sign in" link
+      const errEl=document.getElementById('authFormError');
       if(errEl){
-        errEl.innerHTML='This account already exists. <a href="#" id="authSwitchToSignIn" style="color:var(--accent-color,#3b82f6);text-decoration:underline;font-weight:800">Would you like to sign in instead?</a>';
+        errEl.style.display='block';
+        errEl.innerHTML='This username is already taken. Would you like to <a href="#" id="authSwitchToSignIn" style="color:#60a5fa;text-decoration:underline;font-weight:800;cursor:pointer">sign in</a> instead?';
         const link=document.getElementById('authSwitchToSignIn');
         if(link){
           link.onclick=(ev)=>{
@@ -8328,8 +8438,11 @@ async function completeLocalSignup(username, password){
             const inp=document.getElementById('authUsernameInput');
             if(inp) inp.value=name;
             showAuthError('');
+            document.getElementById('authPasswordInput')?.focus();
           };
         }
+      }else{
+        showAuthError('This username is already taken. Switch to Sign in to continue.');
       }
       return;
     }
