@@ -68,9 +68,14 @@ html[dir="ltr"] .tc[data-c="sunrise"]{border-left:3px solid var(--or)}
   #settingsScreen.mobile-sec-open .set-nav{display:none!important}
   #settingsScreen.mobile-sec-open .set-content{padding-top:8px}
   #settingsScreen .set-mobile-back{
-    display:none;align-items:center;gap:8px;margin:0 0 12px;padding:10px 12px;
-    background:transparent;border:1px solid var(--br);border-radius:10px;color:var(--tx);
+    display:none;align-items:center;justify-content:flex-start;gap:10px;margin:0 0 14px;padding:12px 14px;
+    background:var(--c,rgba(255,255,255,.04));border:1px solid var(--br);border-radius:10px;color:var(--tx);
     font-family:inherit;font-weight:800;font-size:.85rem;cursor:pointer;width:100%;
+    box-shadow:0 1px 0 rgba(255,255,255,.03);
+  }
+  #settingsScreen .set-mobile-back:hover{
+    background:color-mix(in srgb,var(--accent-color,var(--ac,#3b82f6)) 12%,var(--c,transparent));
+    border-color:var(--accent-color,var(--ac,#3b82f6));
   }
   #settingsScreen.mobile-sec-open .set-mobile-back{display:flex}
   #settingsScreen:not(.mobile-sec-open) .set-section{display:none!important}
@@ -445,7 +450,7 @@ html[dir="ltr"] .tc[data-c="sunrise"]{border-left:3px solid var(--or)}
 
 /* ===== Prestige / Mythic themes ===== */
 @keyframes nebulaShift{0%{background-position:0% 50%}50%{background-position:100% 50%}100%{background-position:0% 50%}}
-@keyframes cyberPulse{0%,100%{box-shadow:0 0 0 0 rgba(236,72,153,0),0 0 12px rgba(34,211,238,.15)}50%{box-shadow:0 0 0 2px rgba(236,72,153,.35),0 0 22px rgba(34,211,238,.45)}}
+@keyframes cyberPulse{0%,100%{box-shadow:0 0 0 0 rgba(236,72,153,0),0 0 12px rgba(34,211,238,.45)}50%{box-shadow:0 0 0 2px rgba(236,72,153,.35),0 0 22px rgba(34,211,238,.45)}}
 @keyframes rankPop{0%{opacity:0;transform:translateY(18px) scale(.94)}100%{opacity:1;transform:translateY(0) scale(1)}}
 
 /* ===== Level Up modal (fixed overlay — never in page flow) ===== */
@@ -914,7 +919,7 @@ body.theme-matrix .tctime{
 <body>
 
 <!-- ===== PUBLIC LANDING + MORGEN-STYLE LOGIN CANVAS ===== -->
-<div id="landingPage" style="display:none;position:fixed;inset:0;z-index:10080;background:#0a0e1a;color:#f1f5f9;font-family:'Cairo',sans-serif;overflow-y:auto">
+<div id="landingPage" dir="ltr" lang="en" style="display:none;position:fixed;inset:0;z-index:10080;background:#0a0e1a;color:#f1f5f9;font-family:'Cairo',sans-serif;overflow-y:auto;direction:ltr;text-align:left">
   <nav style="position:sticky;top:0;z-index:10;display:flex;align-items:center;justify-content:space-between;gap:16px;padding:14px 28px;background:rgba(10,14,26,.92);backdrop-filter:blur(14px);border-bottom:1px solid #1e2d45">
     <div style="display:flex;align-items:center;gap:10px;font-weight:900;font-size:1.05rem">
       <span style="width:34px;height:34px;border-radius:10px;background:#111827;border:1px solid #1e2d45;display:flex;align-items:center;justify-content:center;font-size:.9rem;color:#60a5fa">YS</span>
@@ -953,7 +958,67 @@ body.theme-matrix .tctime{
 </div>
 
 <!-- Morgen-style full-canvas login (replaces old modal popup) -->
-<div id="loginCanvas" style="display:none;position:fixed;inset:0;z-index:99999;background-color:#0b0f19;background:#0b0f19;color:#f1f5f9;font-family:'Cairo',sans-serif;isolation:isolate;overflow-y:auto;-webkit-overflow-scrolling:touch">
+<style>
+.login-preview{width:min(420px,100%);color:#e2e8f0;font-family:'Cairo',sans-serif}
+.lp-kicker{font-size:.72rem;font-weight:800;color:#94a3b8;letter-spacing:.04em;margin-bottom:18px;text-transform:uppercase}
+.lp-track{position:relative;padding-left:22px;display:flex;flex-direction:column;gap:12px}
+.lp-line{position:absolute;left:7px;top:8px;bottom:8px;width:2px;background:linear-gradient(to bottom,#3b82f6,#64748b33)}
+.lp-card{position:relative;display:flex;align-items:center;gap:12px;padding:14px 16px;border-radius:14px;border:1px solid #1e2d45;background:#111827;box-shadow:0 8px 24px rgba(0,0,0,.35);transition:border-color .3s,box-shadow .3s,transform .3s}
+.lp-card::before{content:'';position:absolute;left:-19px;width:12px;height:12px;border-radius:50%;background:#0b0f19;border:2px solid #3b82f6}
+.lp-card.lp-deep{border-color:rgba(59,130,246,.45)}
+.lp-card.lp-gym{border-color:rgba(16,185,129,.4)}
+.lp-card.lp-buffer{opacity:.85;background:#0f1522}
+.lp-card.done{border-color:#10b981;box-shadow:0 0 0 1px rgba(16,185,129,.25),0 8px 24px rgba(0,0,0,.35)}
+.lp-card.done .lp-title{text-decoration:line-through;color:#94a3b8}
+.lp-check{width:22px;height:22px;border-radius:7px;border:2px solid #334155;flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:.7rem;color:transparent;transition:all .25s}
+.lp-card.done .lp-check{background:#10b981;border-color:#10b981;color:#fff}
+.lp-card.done .lp-check::after{content:'✓';color:#fff;font-weight:900}
+.lp-title{font-weight:900;font-size:.92rem}
+.lp-time{font-size:.72rem;color:#94a3b8;margin-top:2px}
+.lp-cursor{position:absolute;width:18px;height:18px;border-radius:50% 50% 50% 0;background:#f8fafc;box-shadow:0 0 0 2px #3b82f6,0 4px 12px rgba(0,0,0,.4);transform:rotate(-35deg);pointer-events:none;z-index:5;animation:lpCursor 7s ease-in-out infinite}
+.lp-badge{position:absolute;top:18px;right:18px;padding:8px 12px;border-radius:999px;background:rgba(251,191,36,.15);border:1px solid rgba(251,191,36,.45);color:#fbbf24;font-weight:900;font-size:.72rem;opacity:0;animation:lpBadge 7s ease-in-out infinite}
+.lp-caption{margin-top:18px;color:#64748b;font-size:.78rem;line-height:1.5;text-align:center}
+@keyframes lpCursor{
+  0%,8%{top:52px;left:calc(100% - 48px);opacity:0}
+  12%{opacity:1}
+  22%{top:52px;left:calc(100% - 48px)}
+  28%{top:58px;left:28px;transform:rotate(-35deg) scale(.9)}
+  32%{transform:rotate(-35deg) scale(1)}
+  40%{top:150px;left:calc(100% - 48px)}
+  48%{top:156px;left:28px}
+  55%,100%{top:156px;left:28px;opacity:0}
+}
+@keyframes lpBadge{
+  0%,30%{opacity:0;transform:translateY(8px)}
+  36%,48%{opacity:1;transform:translateY(0)}
+  58%,100%{opacity:0}
+}
+.login-preview .lp-deep{animation:lpDone1 7s ease-in-out infinite}
+.login-preview .lp-gym{animation:lpDone2 7s ease-in-out infinite}
+@keyframes lpDone1{
+  0%,26%{border-color:rgba(59,130,246,.45)}
+  30%,100%{border-color:#10b981;box-shadow:0 0 0 1px rgba(16,185,129,.25),0 8px 24px rgba(0,0,0,.35)}
+}
+@keyframes lpDone2{
+  0%,48%{border-color:rgba(16,185,129,.4)}
+  52%,100%{border-color:#10b981}
+}
+.login-preview .lp-deep .lp-check{animation:lpCheck1 7s ease-in-out infinite}
+.login-preview .lp-gym .lp-check{animation:lpCheck2 7s ease-in-out infinite}
+@keyframes lpCheck1{0%,26%{background:transparent;border-color:#334155} 30%,100%{background:#10b981;border-color:#10b981}}
+@keyframes lpCheck1mark{0%,26%{content:''} 30%,100%{content:'✓'}}
+@keyframes lpCheck2{0%,48%{background:transparent;border-color:#334155} 52%,100%{background:#10b981;border-color:#10b981}}
+.login-preview .lp-deep.done .lp-check::after,
+.login-preview .lp-deep .lp-check::after{animation:lpCheckShow1 7s ease-in-out infinite}
+.login-preview .lp-gym .lp-check::after{content:'';animation:lpCheckShow2 7s ease-in-out infinite}
+@keyframes lpCheckShow1{0%,26%{content:'';opacity:0} 30%,100%{content:'✓';opacity:1;color:#fff;font-weight:900}}
+@keyframes lpCheckShow2{0%,48%{content:'';opacity:0} 52%,100%{content:'✓';opacity:1;color:#fff;font-weight:900}}
+@media (max-width:899px){
+  .login-canvas-grid{grid-template-columns:1fr!important}
+  #loginCanvasArt{display:none!important}
+}
+</style>
+<div id="loginCanvas" dir="ltr" lang="en" style="display:none;position:fixed;inset:0;z-index:99999;background-color:#0b0f19;background:#0b0f19;color:#f1f5f9;font-family:'Cairo',sans-serif;isolation:isolate;overflow-y:auto;-webkit-overflow-scrolling:touch;direction:ltr">
   <div class="login-canvas-grid" style="display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.1fr);min-height:100%;min-height:100vh">
     <div class="login-canvas-form" style="display:flex;flex-direction:column;justify-content:center;padding:clamp(28px,6vw,64px);padding-bottom:4rem;max-width:520px;width:100%;margin:0 auto;box-sizing:border-box">
       <div style="font-weight:900;font-size:.95rem;margin-bottom:28px;letter-spacing:.02em">Your Schedule</div>
@@ -1012,8 +1077,8 @@ body.theme-matrix .tctime{
               </div>
             </div>
             <div class="lp-cursor"></div>
-            <div class="lp-particles" id="lpParticles"><i style="--dx:-18px"></i><i style="--dx:10px"></i><i style="--dx:22px"></i><i style="--dx:-8px"></i><i style="--dx:14px"></i></div>
             <div class="lp-badge">Points +150 | Streak Up!</div>
+            <div class="lp-particles" id="lpParticles"><i style="--dx:-18px"></i><i style="--dx:10px"></i><i style="--dx:22px"></i><i style="--dx:-8px"></i><i style="--dx:14px"></i></div>
           </div>
           <div class="lp-caption">AI-Powered Scheduling. Smart Rest Buffers. Gamified Productivity Loops.</div>
         </div>
@@ -1395,24 +1460,34 @@ body.theme-matrix .tctime{
      wizard's visual language. Only ever opened for signed-in users (the "+ إضافة
      مهمة" button that opens this is itself hidden for guests — see renderPanel). -->
 <div id="schedTaskModal" class="modal-overlay">
-  <div class="modal-box" style="max-width:420px;text-align:right">
-    <div class="modal-title" id="stTitle" style="text-align:center">إضافة مهمة</div>
+  <div class="modal-box" style="max-width:440px;text-align:right">
+    <div class="modal-title" id="stTitle" style="text-align:center">Add task</div>
     <div id="stError" style="display:none;margin-top:10px;padding:10px 12px;border-radius:10px;background:rgba(239,68,68,.15);border:1px solid rgba(239,68,68,.45);color:#f87171;font-size:.82rem;font-weight:700;text-align:center"></div>
     <div style="display:flex;flex-direction:column;gap:12px;margin-top:16px">
       <div>
-        <label style="font-size:.72rem;color:var(--so);font-weight:700;display:block;margin-bottom:6px">اسم المهمة</label>
-        <input id="stName" type="text" class="ob-textinput" style="text-align:right;font-size:.9rem;padding:12px 14px" placeholder="مثلاً: قراءة، مذاكرة، مشي">
+        <label id="stNameLbl" style="font-size:.72rem;color:var(--so);font-weight:700;display:block;margin-bottom:6px">Task name</label>
+        <input id="stName" type="text" class="ob-textinput" style="text-align:left;font-size:.9rem;padding:12px 14px" placeholder="e.g. reading, study, walk">
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+        <div>
+          <label id="stTimeLbl" style="font-size:.72rem;color:var(--so);font-weight:700;display:block;margin-bottom:6px">Start time</label>
+          <input id="stTime" type="time" class="ob-textinput" style="text-align:left;font-size:.9rem;padding:12px 14px;direction:ltr">
+        </div>
+        <div>
+          <label id="stEndTimeLbl" style="font-size:.72rem;color:var(--so);font-weight:700;display:block;margin-bottom:6px">End time</label>
+          <input id="stEndTime" type="time" class="ob-textinput" style="text-align:left;font-size:.9rem;padding:12px 14px;direction:ltr">
+        </div>
       </div>
       <div>
-        <label style="font-size:.72rem;color:var(--so);font-weight:700;display:block;margin-bottom:6px">الوقت</label>
-        <input id="stTime" type="time" class="ob-textinput" style="text-align:right;font-size:.9rem;padding:12px 14px">
+        <label id="stDescLbl" style="font-size:.72rem;color:var(--so);font-weight:700;display:block;margin-bottom:6px">Description (optional)</label>
+        <input id="stDesc" type="text" class="ob-textinput" style="text-align:left;font-size:.9rem;padding:12px 14px" placeholder="Extra details">
       </div>
       <div>
-        <label style="font-size:.72rem;color:var(--so);font-weight:700;display:block;margin-bottom:6px">وصف (اختياري)</label>
-        <input id="stDesc" type="text" class="ob-textinput" style="text-align:right;font-size:.9rem;padding:12px 14px" placeholder="تفاصيل إضافية">
+        <label id="stDaysLbl" style="font-size:.72rem;color:var(--so);font-weight:700;display:block;margin-bottom:8px">Days of week</label>
+        <div id="stDaysRow" style="display:flex;flex-wrap:wrap;gap:6px"></div>
       </div>
       <div>
-        <label style="font-size:.72rem;color:var(--so);font-weight:700;display:block;margin-bottom:6px">Task Difficulty / Intensity</label>
+        <label id="stPtsLbl" style="font-size:.72rem;color:var(--so);font-weight:700;display:block;margin-bottom:6px">Task Difficulty / Intensity</label>
         <select id="stPts" class="ob-textinput" style="font-size:.9rem;padding:12px 14px;cursor:pointer">
           <option value="5">Low Intensity / Break (5 pts)</option>
           <option value="15">Medium / Routine Task (15 pts)</option>
@@ -1420,21 +1495,25 @@ body.theme-matrix .tctime{
         </select>
       </div>
       <div>
-        <label style="font-size:.72rem;color:var(--so);font-weight:700;display:block;margin-bottom:8px" data-i18n="task_icon">أيقونة المهمة</label>
+        <label id="stIconLbl" style="font-size:.72rem;color:var(--so);font-weight:700;display:block;margin-bottom:8px">Task icon</label>
         <div id="stIconRow" class="task-icon-row"></div>
       </div>
       <div>
-        <label style="font-size:.72rem;color:var(--so);font-weight:700;display:block;margin-bottom:8px">اللون</label>
+        <label id="stColorLbl" style="font-size:.72rem;color:var(--so);font-weight:700;display:block;margin-bottom:8px">Color</label>
         <div id="stColorRow" style="display:flex;gap:8px;flex-wrap:wrap"></div>
       </div>
+      <div class="set-row" style="border:none;padding:8px 0">
+        <label for="stNotify" id="stNotifyLbl" style="font-size:.82rem;font-weight:700">🔔 Notify me about this task</label>
+        <input type="checkbox" id="stNotify" checked style="width:20px;height:20px;accent-color:var(--ac)">
+      </div>
       <div id="stFoodLogRow" class="set-row" style="border:none;padding:8px 0;display:none">
-        <label for="stFoodLog" style="font-size:.82rem;font-weight:700" data-i18n="food_log_opt">🍽️ Log food for this task?</label>
+        <label for="stFoodLog" id="stFoodLogLbl" style="font-size:.82rem;font-weight:700">🍽️ Log food for this task?</label>
         <input type="checkbox" id="stFoodLog" style="width:20px;height:20px;accent-color:var(--ac)">
       </div>
     </div>
     <div style="display:flex;gap:8px;margin-top:20px">
-      <button id="stSaveBtn" class="fl-submit-btn" type="button" style="margin-bottom:0">حفظ ✅</button>
-      <button id="stCancelBtn" class="modal-back-btn" type="button" style="margin-top:0;flex-shrink:0">إلغاء</button>
+      <button id="stSaveBtn" class="fl-submit-btn" type="button" style="margin-bottom:0">Save ✅</button>
+      <button id="stCancelBtn" class="modal-back-btn" type="button" style="margin-top:0;flex-shrink:0">Cancel</button>
     </div>
   </div>
 </div>
@@ -2371,20 +2450,35 @@ function scheduleEnsureDay(jd){
 // codebase exactly ([id,time,cat,ico,name,desc,pts,alts,hw,isEx,...]) so it renders
 // through the exact same renderCard path as SCHED-derived tasks — no special-casing
 // needed anywhere else.
-async function saveScheduleTask(jd,existingId,{time,name,desc,pts,color,foodLog}){
+async function saveScheduleTask(jd,existingId,{time,name,desc,pts,color,foodLog,endTime,days,notify}){
   pts=Math.min(parseInt(pts,10)||5,30); if(![5,15,30].includes(pts)) pts=pts>=30?30:(pts>=15?15:5);
-  scheduleEnsureDay(jd);
-  const ts=USER_SCHEDULE[jd].ts;
   const id=existingId||scheduleGenTaskId();
-  // foodLog: cat=food so renderCard opens the food-log modal; macros placeholder allows logging.
   const cat=foodLog?'food':'free';
   const ico=ST_SELECTED_ICON||(foodLog?'🍽️':'✨');
   const macros=foodLog?{p:0,c:0,f:0,b:0,k:0}:null;
   const mealKey=foodLog?('custom:'+id):null;
-  // Index 10 = color. Index 11 = macros. Index 12 = mealKey.
-  const tuple=[id,time,cat,ico,name,desc||'',pts||0,null,null,false,color||null,macros,mealKey];
-  const idx=ts.findIndex(t=>t[0]===id);
-  if(idx>=0) ts[idx]=tuple; else ts.push(tuple);
+  // Index 10 = color. Index 11 = macros. Index 12 = mealKey. Index 13 = endTime (HH:MM display).
+  const tuple=[id,time,cat,ico,name,desc||'',pts||0,null,null,false,color||null,macros,mealKey,endTime||null];
+  const dayList=(Array.isArray(days)&&days.length)?days:[jd];
+  for(const d of dayList){
+    scheduleEnsureDay(d);
+    const ts=USER_SCHEDULE[d].ts;
+    const idx=ts.findIndex(t=>t[0]===id);
+    if(idx>=0) ts[idx]=tuple; else ts.push(tuple);
+  }
+  // If editing and unselected some days, remove from those days
+  if(existingId){
+    for(let d=0;d<7;d++){
+      if(dayList.includes(d)) continue;
+      if(USER_SCHEDULE[d]?.ts){
+        USER_SCHEDULE[d].ts=USER_SCHEDULE[d].ts.filter(t=>t[0]!==id);
+      }
+    }
+  }
+  if(!USER_SETTINGS.taskNotif) USER_SETTINGS.taskNotif={};
+  const prev=getTaskNotifConfig(id);
+  USER_SETTINGS.taskNotif[id]={...prev,enabled:notify!==false};
+  try{ await saveUserSettings(); }catch(e){}
   await saveUserSchedule();
 }
 
@@ -2430,7 +2524,6 @@ function stUpdateFoodLogVisibility(){
 let ST_RETURN_TO_SETTINGS=false;
 function openScheduleTaskEditor(jd,existingTask,opts){
   opts=opts||{};
-  // Remember if Settings was open so save/cancel returns there instead of the schedule.
   ST_RETURN_TO_SETTINGS=!!opts.fromSettings || !!document.getElementById('settingsScreen')?.classList.contains('open');
   ST_ACTIVE_JD=jd;
   ST_ACTIVE_TASK_ID=existingTask?existingTask[0]:null;
@@ -2443,8 +2536,22 @@ function openScheduleTaskEditor(jd,existingTask,opts){
   const box=document.querySelector('#schedTaskModal .modal-box');
   if(box) box.style.textAlign=en?'left':'right';
 
+  // Labels
+  const setLbl=(id,enT,arT)=>{const el=document.getElementById(id); if(el) el.textContent=en?enT:arT;};
+  setLbl('stNameLbl','Task name','اسم المهمة');
+  setLbl('stTimeLbl','Start time','وقت البداية');
+  setLbl('stEndTimeLbl','End time','وقت النهاية');
+  setLbl('stDescLbl','Description (optional)','وصف (اختياري)');
+  setLbl('stDaysLbl','Days of week','أيام الأسبوع');
+  setLbl('stPtsLbl','Task Difficulty / Intensity','صعوبة / شدة المهمة');
+  setLbl('stIconLbl','Task icon','أيقونة المهمة');
+  setLbl('stColorLbl','Color','اللون');
+  setLbl('stNotifyLbl','🔔 Notify me about this task','🔔 ذكّرني بهذه المهمة');
+  setLbl('stFoodLogLbl','🍽️ Log food for this task?','🍽️ تسجيل أكل لهذه المهمة؟');
+
   const nameEl=document.getElementById('stName');
   const timeEl=document.getElementById('stTime');
+  const endEl=document.getElementById('stEndTime');
   const descEl=document.getElementById('stDesc');
   const ptsEl=document.getElementById('stPts');
   if(nameEl){
@@ -2461,18 +2568,58 @@ function openScheduleTaskEditor(jd,existingTask,opts){
   if(ptsEl){
     const raw=existingTask?(existingTask[6]||5):5;
     const clamped=Math.min(parseInt(raw,10)||5,30);
-    // snap to allowed intensity buckets
     const bucket=clamped>=30?30:(clamped>=15?15:5);
     ptsEl.value=String(bucket);
-    ptsEl.style.textAlign=en?'left':'right';
   }
-  if(timeEl){
-    const raw=existingTask?existingTask[1]:'';
+  const toTimeVal=raw=>{
     const mins=raw?toMin(raw):9*60;
     const h=Math.floor(mins/60),m=mins%60;
-    timeEl.value=`${String(h).padStart(2,'0')}:${String(m).padStart(2,'0')}`;
-    timeEl.style.textAlign=en?'left':'right';
+    return `${String(h).padStart(2,'0')}:${String(m).padStart(2,'0')}`;
+  };
+  if(timeEl){
+    timeEl.value=toTimeVal(existingTask?existingTask[1]:'');
     timeEl.style.direction='ltr';
+  }
+  if(endEl){
+    const endRaw=existingTask?(existingTask[13]||''):'';
+    if(endRaw) endEl.value=toTimeVal(endRaw);
+    else{
+      // default +60 min
+      const startM=existingTask?toMin(existingTask[1]):9*60;
+      const endM=(startM+60)%(24*60);
+      endEl.value=`${String(Math.floor(endM/60)).padStart(2,'0')}:${String(endM%60).padStart(2,'0')}`;
+    }
+    endEl.style.direction='ltr';
+  }
+  // Days chips
+  const daysRow=document.getElementById('stDaysRow');
+  if(daysRow){
+    const labels=en?['Sun','Mon','Tue','Wed','Thu','Fri','Sat']:['أحد','إثن','ثلا','أرب','خمي','جمع','سبت'];
+    // Which days already have this task id
+    let selected=new Set([jd]);
+    if(existingTask){
+      selected=new Set();
+      for(let d=0;d<7;d++){
+        if((USER_SCHEDULE[d]?.ts||[]).some(t=>t[0]===existingTask[0])) selected.add(d);
+      }
+      if(!selected.size) selected.add(jd);
+    }
+    daysRow.innerHTML=labels.map((lb,d)=>{
+      const on=selected.has(d);
+      return `<button type="button" class="altbtn st-day-chip${on?' on':''}" data-st-day="${d}" style="padding:6px 10px;font-size:.72rem;${on?'border-color:var(--accent-color);color:var(--accent-color)':''}">${lb}</button>`;
+    }).join('');
+    daysRow.onclick=e=>{
+      const b=e.target.closest('[data-st-day]');
+      if(!b) return;
+      b.classList.toggle('on');
+      if(b.classList.contains('on')){ b.style.borderColor='var(--accent-color)'; b.style.color='var(--accent-color)'; }
+      else{ b.style.borderColor=''; b.style.color=''; }
+    };
+  }
+  const notifyEl=document.getElementById('stNotify');
+  if(notifyEl){
+    const cfg=existingTask?getTaskNotifConfig(existingTask[0]):{enabled:true};
+    notifyEl.checked=cfg.enabled!==false;
   }
   const foodEl=document.getElementById('stFoodLog');
   if(foodEl) foodEl.checked=!!(existingTask&&(existingTask[2]==='food'||existingTask[2]==='snack'||existingTask.foodLog));
@@ -2507,11 +2654,17 @@ async function stHandleSave(){
     document.getElementById('stName')?.focus();
     return;
   }
+  const toDisplayTime=timeVal=>{
+    const [h24,m]=(timeVal||'09:00').split(':').map(Number);
+    const pm=h24>=12;
+    const h12=h24%12||12;
+    const en=(USER_SETTINGS.lang==='en');
+    return en?`${h12}:${String(m).padStart(2,'0')} ${pm?'PM':'AM'}`:`${h12}:${String(m).padStart(2,'0')} ${pm?'م':'ص'}`;
+  };
   const timeVal=document.getElementById('stTime')?.value||'09:00';
-  const [h24,m]=timeVal.split(':').map(Number);
-  const pm=h24>=12;
-  const h12=h24%12||12;
-  const displayTime=`${h12}:${String(m).padStart(2,'0')} ${pm?'م':'ص'}`;
+  const endVal=document.getElementById('stEndTime')?.value||'';
+  const displayTime=toDisplayTime(timeVal);
+  const displayEnd=endVal?toDisplayTime(endVal):null;
   const desc=(document.getElementById('stDesc')?.value||'').trim();
   let checkedPoints=Math.min(parseInt(document.getElementById('stPts')?.value,10)||5,30); if(![5,15,30].includes(checkedPoints)) checkedPoints=checkedPoints>=30?30:(checkedPoints>=15?15:5); const pts=checkedPoints;
 
@@ -2520,10 +2673,13 @@ async function stHandleSave(){
     return;
   }
 
+  const days=[...document.querySelectorAll('#stDaysRow .st-day-chip.on')].map(b=>parseInt(b.getAttribute('data-st-day'),10)).filter(n=>!isNaN(n));
+  if(!days.length) days.push(ST_ACTIVE_JD);
+  const notify=!!document.getElementById('stNotify')?.checked;
   const foodLog=!!document.getElementById('stFoodLog')?.checked;
   const returnToSettings=ST_RETURN_TO_SETTINGS;
   try{
-    await saveScheduleTask(ST_ACTIVE_JD,ST_ACTIVE_TASK_ID,{time:displayTime,name,desc,pts,color:ST_SELECTED_COLOR,foodLog});
+    await saveScheduleTask(ST_ACTIVE_JD,ST_ACTIVE_TASK_ID,{time:displayTime,name,desc,pts,color:ST_SELECTED_COLOR,foodLog,endTime:displayEnd,days,notify});
   }catch(e){
     console.error('saveScheduleTask failed',e);
     if(errEl){ errEl.textContent='⚠️ Save failed'; errEl.style.display='block'; }
@@ -4072,6 +4228,9 @@ function resetWeeklyPointsIfNewWeek(){
     }
     STATS.pts=0;
     STATS.lastPtsWeekStart=thisWeekStart;
+    // Persist immediately so a later cloud merge cannot resurrect the old total
+    // before saveAll() would have run.
+    try{ if(typeof saveAll==='function') saveAll(); }catch(e){}
   }
 }
 
@@ -4552,9 +4711,17 @@ function showPrayerStep(){
       ?[{label:'Yes ✅',pts:3,gold:true},{label:'No ❌',pts:1,gold:false}]
       :[{label:'نعم ✅',pts:3,gold:true},{label:'لا ❌',pts:1,gold:false}],'dhikr');
   }else if(step===3){
-    const sunnahText=PMETA[pk]?.sunnah||(en?`Sunnah of ${dispName}`:`سنة ${name}`);
+    const SUNNAH_EN={
+      Fajr:'Fajr sunnah (2 rakah before)',
+      Dhuhr:'Dhuhr sunnah (4 before + 2 after)',
+      Maghrib:'Maghrib sunnah (2 rakah after)',
+      Isha:'Isha sunnah (2 rakah after)'
+    };
+    const sunnahText=en
+      ?(SUNNAH_EN[pk]||`Sunnah of ${dispName}`)
+      :(PMETA[pk]?.sunnah||`سنة ${name}`);
     if(qEl) qEl.textContent=en?`Did you pray ${sunnahText}?`:`هل صليت ${sunnahText}؟`;
-    if(subEl) subEl.textContent=en?'The regular sunnah':'السنة الراتبة';
+    if(subEl) subEl.textContent=en?'The regular sunnah prayers':'السنة الراتبة';
     renderOpts(en
       ?[{label:'Yes ✅',pts:3,gold:true},{label:'No ❌',pts:1,gold:false}]
       :[{label:'نعم ✅',pts:3,gold:true},{label:'لا ❌',pts:1,gold:false}],'sunnah');
@@ -8384,8 +8551,21 @@ if (typeof onAuthStateChanged !== 'undefined' && typeof fbAuth !== 'undefined') 
             const cloudStats=d.stats;
             const localStats=STATS;
             const laterDate=(a,b)=>{if(!a)return b;if(!b)return a;return a>b?a:b;};
+            // Weekly points: if local already rolled into a newer week than cloud,
+            // local's pts (post-reset, often 0) is authoritative — never max-merge
+            // against a stale cloud total from the previous week.
+            const localWeek=localStats.lastPtsWeekStart||'';
+            const cloudWeek=cloudStats.lastPtsWeekStart||'';
+            let mergedPts;
+            if(localWeek && cloudWeek && localWeek>cloudWeek){
+              mergedPts=localStats.pts||0;
+            }else if(cloudWeek && localWeek && cloudWeek>localWeek){
+              mergedPts=cloudStats.pts||0;
+            }else{
+              mergedPts=Math.max(cloudStats.pts||0,localStats.pts||0);
+            }
             STATS={
-              pts:Math.max(cloudStats.pts||0,localStats.pts||0),
+              pts:mergedPts,
               cur:Math.max(cloudStats.cur||0,localStats.cur||0),
               best:Math.max(cloudStats.best||0,localStats.best||0),
               lc:laterDate(cloudStats.lc,localStats.lc),
