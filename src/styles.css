@@ -1,0 +1,142 @@
+@import "tailwindcss";
+
+@theme {
+  --font-sans: "Cairo", "Segoe UI", system-ui, sans-serif;
+  --font-display: "Cairo", "Segoe UI", system-ui, sans-serif;
+  --font-mono: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+
+  --color-bg: #070b14;
+  --color-bg-elevated: #0e1522;
+  --color-surface: #121a28;
+  --color-surface-2: #182233;
+  --color-fg: #e8eef6;
+  --color-fg-muted: #93a0b5;
+  --color-fg-subtle: #6b778c;
+  --color-border: #243044;
+  --color-border-strong: #33445c;
+  --color-accent: #8ba3c7;
+  --color-accent-fg: #070b14;
+  --color-primary: #d7e0ec;
+  --color-primary-fg: #070b14;
+  --color-ring: #8ba3c7;
+
+  --color-cat-prayer: #c9b27a;
+  --color-cat-food: #c48a5a;
+  --color-cat-gym: #c45c5c;
+  --color-cat-swim: #5aa8b8;
+  --color-cat-recovery: #5ea882;
+  --color-cat-quran: #c9b27a;
+  --color-cat-prog: #7a8fbf;
+  --color-cat-sleep: #7a6ea8;
+  --color-cat-free: #6b778c;
+  --color-cat-snack: #b87a8f;
+  --color-cat-sunrise: #c48a5a;
+
+  --color-success: #5ea882;
+  --color-warn: #c49a5a;
+  --color-danger: #c45c5c;
+
+  --radius-xs: 4px;
+  --radius-sm: 8px;
+  --radius-md: 12px;
+  --radius-lg: 16px;
+  --radius-xl: 24px;
+
+  --shadow-panel: 0 12px 40px rgba(0, 0, 0, 0.35);
+}
+
+@layer base {
+  html {
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    background: var(--color-bg);
+    color: var(--color-fg);
+    overflow-x: hidden;
+    max-width: 100%;
+    scrollbar-width: thin;
+    scrollbar-color: rgba(100, 116, 139, 0.35) transparent;
+  }
+
+  body {
+    min-height: 100dvh;
+    background: var(--color-bg);
+    color: var(--color-fg);
+    font-family: var(--font-sans);
+    overflow-x: hidden;
+    max-width: 100%;
+  }
+
+  button:not(:disabled),
+  [role="button"]:not(:disabled) {
+    cursor: pointer;
+  }
+
+  h1,
+  h2,
+  h3 {
+    text-wrap: balance;
+  }
+
+  p {
+    text-wrap: pretty;
+  }
+}
+
+@layer components {
+  .timeline {
+    position: relative;
+    padding-inline-start: 1.15rem;
+  }
+
+  .timeline::before {
+    content: "";
+    position: absolute;
+    inset-inline-start: 0.2rem;
+    top: 0.75rem;
+    bottom: 0.75rem;
+    width: 1px;
+    background: var(--color-border);
+  }
+
+  .timeline > li::before {
+    content: "";
+    position: absolute;
+    inset-inline-start: -1.05rem;
+    top: 1.35rem;
+    width: 8px;
+    height: 8px;
+    border-radius: 999px;
+    background: var(--color-surface-2);
+    border: 2px solid var(--color-border);
+    z-index: 1;
+  }
+
+  .task-card {
+    border-inline-start-width: 3px;
+  }
+
+  .current-task {
+    outline: 1px solid color-mix(in oklab, var(--color-accent) 55%, transparent);
+    box-shadow: 0 0 0 4px color-mix(in oklab, var(--color-accent) 12%, transparent);
+  }
+
+  .no-scrollbar {
+    scrollbar-width: none;
+    -ms-overflow-style: none;
+  }
+  .no-scrollbar::-webkit-scrollbar {
+    display: none;
+    width: 0;
+    height: 0;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}

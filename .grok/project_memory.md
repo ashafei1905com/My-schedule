@@ -1,0 +1,6 @@
+- Project is My-schedule PWA (https://github.com/ashafei1905com/My-schedule); working copy at artifacts/index.html [2026-08-01]
+- Applied theme cohesion: #sbar uses var(--bg-main), macrokcal accent border, English AM/PM dhm replace, luxury mythic-card CSS [2026-08-01]
+- Prestige upgrade: removed Save/Default theme buttons (palette auto-saves); added #themeColorCustomizer for mythic accent/glow overrides; production canvas star sparks + Web Audio chime; strict theme ID matching; English prayer desc scrub [2026-08-01]
+- Architectural split: Prestige Center (`#setsec-prestige` / `#prestigeCenterContainer`) owns shop + XP + rebirth; Appearance only activates unlocked mythics; rank chip uses formatRankLabel bilingual prefix; unlock modal routes user to Appearance; premium_audio flag; chrono report button text-main contrast [2026-08-01]
+- Prayer sunnah step fully English when lang=en (hard-coded SUNNAH_EN, never PMETA.sunnah); pk extraction hardened for id formats; Add-task labels + intensity options set explicitly in openScheduleTaskEditor by lang; End time + notify + food-log present [2026-08-02]
+- New users default lang=en (loadAll + brand-new session); ranks/rebirth/mythic colors remain in monolith Prestige Center; AI requires GEMINI_API_KEY; worker uses gemini-2.0-flash with key guard [2026-08-24]

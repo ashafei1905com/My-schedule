@@ -1,0 +1,38 @@
+{
+  "url": "http://127.0.0.1:8081/",
+  "viewports": {
+    "desktop": {
+      "width": 1280,
+      "height": 800,
+      "status": 200,
+      "title": "Smart Schedule",
+      "hasCanvas": false,
+      "bodyTextLen": 1697,
+      "bodyTextHash": "14a08fe58bead34122c9b2c5907f370e0e7ceeccf7983215f42dcf740ff6e685",
+      "bodyTextPrefix": "الجدول الذكي اليوم 0 النقاط 0 الاستريك 0 أفضل تسجيل الدخول سبت أ",
+      "horizontalOverflow": false,
+      "consoleErrors": [],
+      "pageErrors": [],
+      "screenshot": "/workspace/screenshots/app-builder-built.png"
+    },
+    "mobile": {
+      "width": 390,
+      "height": 844,
+      "status": 200,
+      "title": "Smart Schedule",
+      "hasCanvas": false,
+      "bodyTextLen": 1663,
+      "bodyTextHash": "f02605c3fb1d787a8cb048e1df3bf34c138cf0939f3f5f999cb22b3e75bfb030",
+      "bodyTextPrefix": "الجدول الذكي اليوم 0 0 0 سبت أحد اثنين ثلاثاء أربعاء خميس جمعة 2",
+      "horizontalOverflow": false,
+      "consoleErrors": [],
+      "pageErrors": [],
+      "screenshot": "/workspace/screenshots/app-builder-built-mobile.png"
+    }
+  },
+  "brandWarnings": [],
+  "authWarnings": [],
+  "verdictFile": "/workspace/screenshots/app-builder-built.json",
+  "divergesFromBaseline": false,
+  "baselineReasons": []
+}
