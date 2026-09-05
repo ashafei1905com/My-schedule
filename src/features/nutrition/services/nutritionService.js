@@ -1,5 +1,5 @@
 
-import { firestoreGetFood, firestoreSetFood } from '../../core/database/firestore.js';
+import { firestoreGetFood, firestoreSetFood } from '../../../core/database/firestore.js';
 
 export function normalizeFoodKey(raw) {
   // original logic...
@@ -23,16 +23,7 @@ export function usdaNormalizeForScore(s) {
     .filter(Boolean);
 }
 
-export export function usdaRelevanceScoreDetailed(query, description) {
-  const qTokens = new Set(usdaNormalizeForScore(query).filter(w => w.length >= 3));
-  const dTokens = new Set(usdaNormalizeForScore(description));
-  if (!qTokens.size) return { score: 0, overlap: 0 };
-  let overlap = 0;
-  for (const t of qTokens) if (dTokens.has(t)) overlap++;
-  return { score: overlap / qTokens.size, overlap };
-}
-
-export export function usdaRelevanceScoreDetailed(query, description) {
+export function usdaRelevanceScoreDetailed(query, description) {
   const qTokens = new Set(usdaNormalizeForScore(query).filter(w => w.length >= 3));
   const dTokens = new Set(usdaNormalizeForScore(description));
   if (!qTokens.size) return { score: 0, overlap: 0 };
