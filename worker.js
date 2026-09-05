@@ -131,10 +131,10 @@ export default {
       if (system) config.systemInstruction = system;
 
       // Add search grounding for general chat (handled in root POST)
-      config.tools = [{ googleSearch: {} }];
+      // config.tools = [{ googleSearch: {} }];
 
       const response = await ai.models.generateContent({
-        model: 'gemini-2.0-flash',
+        model: 'gemini-3.8-flash',
         contents: geminiContents,
         config
       });

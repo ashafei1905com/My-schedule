@@ -155,6 +155,7 @@ export function grokPwaPlugin() {
   let root = process.cwd();
   return {
     name: "app-builder:grok-pwa",
+    enforce: "pre",
     configResolved(config) {
       root = config.root;
     },

@@ -1,4 +1,5 @@
-import { createServerFn } from "@tanstack/react-start";
+const fs = require('fs');
+const content = `import { createServerFn } from "@tanstack/react-start";
 import type { Macros } from "@/features/nutrition/models/macros";
 import { GoogleGenAI } from "@google/genai";
 
@@ -20,7 +21,7 @@ export const estimateMacrosRemote = createServerFn({ method: "POST" })
       });
 
       const raw = response.text || "";
-      const jsonText = raw.replace(/\`\`\`json|\`\`\`/g, "").trim();
+      const jsonText = raw.replace(/\\\`\\\`\\\`json|\\\`\\\`\\\`/g, "").trim();
 
       const parsed = JSON.parse(jsonText) as {
         canonicalName?: string;
@@ -52,3 +53,6 @@ export const estimateMacrosRemote = createServerFn({ method: "POST" })
       return { ok: false as const, error: "parse" };
     }
   });
+`;
+
+fs.writeFileSync('src/features/nutrition/services/estimate-macros.ts', content);

@@ -126,6 +126,7 @@ app.use(express.raw({ type: '*/*', limit: '50mb' }));
 app.use('/api', async (req, res) => {
   await forwardToWorker(req, res);
 });
+
 app.post('/', async (req, res) => {
   await forwardToWorker(req, res);
 });

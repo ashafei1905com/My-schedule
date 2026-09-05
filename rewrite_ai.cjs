@@ -1,7 +1,8 @@
-import { createServerFn } from "@tanstack/react-start";
+const fs = require('fs');
+const content = `import { createServerFn } from "@tanstack/react-start";
 import { GoogleGenAI } from "@google/genai";
 
-const SYSTEM = `You are an expert executive assistant for a bilingual (Arabic/English) daily schedule app used in Kuwait (Asia/Kuwait, Saturday-start week).
+const SYSTEM = \`You are an expert executive assistant for a bilingual (Arabic/English) daily schedule app used in Kuwait (Asia/Kuwait, Saturday-start week).
 Scheduling rules you MUST follow:
 1. Protect 90–120 minute uninterrupted deep-work blocks in the user's peak hours.
 2. Never stack meetings or hard tasks back-to-back — insert 10–15 minute buffers.
@@ -10,22 +11,18 @@ Scheduling rules you MUST follow:
 5. If the user tracks prayers, never overlap a deep-work block with Dhuhr/Asr/Maghrib/Isha/Fajr; place a short prayer block at the given times.
 6. Gym days need a pre-training snack and a post-training meal.
 
-If the user asks you to help them build or rebuild their schedule from scratch, ACT AS AN ONBOARDING COACH:
-- Ask them targeted questions (e.g., wake up time, work hours, workout habits) to understand their routine.
-- Once you have enough info, propose a schedule and ask if they approve.
-
 When the user is chatting, reply in their language (Arabic if they wrote Arabic, else English). Be concise, specific, and never fluffy.
 When they ask you to build or edit a schedule, ALSO append a fenced JSON block:
-\`\`\`json
+\\\`\\\`\\\`json
 {"action":"upsert_tasks","days":{"1":[{"id":"mon-dw1","start":"08:00","end":"09:30","category":"prog","name":"Deep work I","nameAr":"شغل عميق ١","desc":"...","descAr":"...","pts":30,"notify":true}]}}
-\`\`\`
+\\\`\\\`\\\`
 Days keys are JS weekday numbers: 0 Sun … 6 Sat. Categories: prayer,food,gym,swim,recovery,quran,prog,sleep,free,snack,sunrise,work,admin.
 Only include days you are changing. Keep 4–12 tasks per day. Times are 24h HH:MM.
-If they only asked a question, do not emit JSON.`;
+If they only asked a question, do not emit JSON.\`;
 
-const FOOD_SYSTEM = `You estimate nutrition. Reply with ONLY compact JSON, no markdown:
+const FOOD_SYSTEM = \`You estimate nutrition. Reply with ONLY compact JSON, no markdown:
 {"canonicalName":"string","estimatedGrams":number,"macroPer100g":{"p":n,"c":n,"f":n,"b":n,"k":n}}
-p/c/f/b grams, k kcal, all per 100g. estimatedGrams is the portion you inferred. Be conservative. Arabic dishes (koshari, ful, ta'meya) are in-scope.`;
+p/c/f/b grams, k kcal, all per 100g. estimatedGrams is the portion you inferred. Be conservative. Arabic dishes (koshari, ful, ta'meya) are in-scope.\`;
 
 async function geminiChat(
   messages: { role: "system" | "user" | "assistant"; content: string }[],
@@ -42,7 +39,7 @@ async function geminiChat(
     
     for (const m of messages) {
       if (m.role === "system") {
-        systemInstruction += m.content + "\n";
+        systemInstruction += m.content + "\\n";
       } else {
         geminiContents.push({
           role: m.role === "assistant" ? "model" : "user",
@@ -61,7 +58,7 @@ async function geminiChat(
 
     return { ok: true, text: response.text || "" };
   } catch (err: any) {
-    return { ok: false, error: `Gemini API error ${err.message}` };
+    return { ok: false, error: \`Gemini API error \${err.message}\` };
   }
 }
 
@@ -71,7 +68,7 @@ export const askAssistant = createServerFn({ method: "POST" })
     const trimmed = data.messages.slice(-16);
     return geminiChat(
       [
-        { role: "system", content: SYSTEM + "\n\nCurrent board:\n" + data.context.slice(0, 6000) },
+        { role: "system", content: SYSTEM + "\\n\\nCurrent board:\\n" + data.context.slice(0, 6000) },
         ...trimmed,
       ],
       1400,
@@ -92,7 +89,7 @@ export const estimateFood = createServerFn({ method: "POST" })
     if (!result.ok) return result;
 
     try {
-      const raw = result.text.trim().replace(/^\`\`\`json\s*|\s*\`\`\`$/g, "");
+      const raw = result.text.trim().replace(/^\\\`\\\`\\\`json\\s*|\\s*\\\`\\\`\\\`$/g, "");
       const parsed = JSON.parse(raw) as {
         canonicalName: string;
         estimatedGrams: number;
@@ -113,3 +110,6 @@ export const estimateFood = createServerFn({ method: "POST" })
       return { ok: false as const, error: "Could not parse estimate" };
     }
   });
+`;
+
+fs.writeFileSync('src/lib/ai.ts', content);

@@ -31,6 +31,7 @@ function hasGlobbedMigrations(root: string): boolean {
 function pgliteBootstrapPlugin(): Plugin {
   return {
     name: "app-builder:pglite-bootstrap",
+    enforce: "pre",
     apply: "serve",
     async configureServer(server) {
       if (!hasGlobbedMigrations(server.config.root)) return;
@@ -62,6 +63,7 @@ function pgliteBootstrapPlugin(): Plugin {
 function authPopupPlugin(): Plugin {
   return {
     name: "app-builder:auth-popup",
+    enforce: "pre",
     apply: "serve",
     configureServer(server) {
       // Register immediately (not in a returned post-hook) so we run BEFORE
@@ -164,7 +166,6 @@ export default defineConfig(({ command, isPreview }) => ({
     // PWA head + ?install=1 tutorial page; runs before Start/Nitro.
     grokPwaPlugin(),
     tailwindcss(),
-    tanstackStart(),
     ...(command === "build" || isPreview
       ? [
           nitro({
@@ -176,6 +177,7 @@ export default defineConfig(({ command, isPreview }) => ({
           }),
         ]
       : []),
+    tanstackStart(),
     viteReact(),
   ],
 }));
