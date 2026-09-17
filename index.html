@@ -16,6 +16,7 @@
      entirely, which is why notifications kept reporting "مفعّلة بس مش PWA" even after
      doing everything right. -->
 <link rel="manifest" href="./manifest.json" />
+<meta name="mobile-web-app-capable" content="yes" />
 <meta name="apple-mobile-web-app-capable" content="yes" />
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
 <meta name="apple-mobile-web-app-title" content="Your Schedule" />
@@ -1880,9 +1881,11 @@ const _authRedirectReady=(function(){
 let _googleSignInPromise=null;
 function _isBenignAuthError(e){
   const code=e&&e.code;
+  const msg=String((e&&e.message)||e||'');
   return code==='auth/cancelled-popup-request'
     || code==='auth/popup-closed-by-user'
-    || code==='auth/user-cancelled';
+    || code==='auth/user-cancelled'
+    || /Cross-Origin-Opener-Policy/i.test(msg);
 }
 function _isInternalAuthAssert(e){
   const msg=String((e&&e.message)||e||'');
@@ -2091,8 +2094,7 @@ async function doGoogleSignIn(){
         const msg=String((e&&e.message)||'');
         const useRedirect =
           code==='auth/popup-blocked' ||
-          code==='auth/operation-not-supported-in-this-environment' ||
-          /Cross-Origin-Opener-Policy|window\.closed/i.test(msg);
+          code==='auth/operation-not-supported-in-this-environment';
         if(useRedirect && typeof signInWithRedirect!=='undefined' && _authStorageAvailable() && !_isSandboxedFrame()){
           try{
             showToast((USER_SETTINGS&&USER_SETTINGS.lang==='en')?'Redirecting to Google sign-in…':'جارٍ التحويل لتسجيل الدخول…',2500);
@@ -3878,6 +3880,9 @@ function obRenderStep(){
         }
         
         let content = msg.content;
+        if (content.startsWith('__KICKOFF__:')) {
+          content = content.replace('__KICKOFF__:', '').trim();
+        }
         const jsonMatch = content.match(/```json\s*(\{[\s\S]*?\})\s*```/);
         if (jsonMatch) {
           try {
@@ -3888,7 +3893,7 @@ function obRenderStep(){
                  preview += `- ${b.start} to ${b.end}: ${b.task} (${b.category})\n`;
                });
             }
-            preview += '\n*(If this looks right, click Next to build it!)*';
+            preview += '\n*(If this looks right, click Next below to review and lock it in!)*';
             content = content.replace(/```json\s*(\{[\s\S]*?\})\s*```/g, preview);
           } catch(e) {
             content = content.replace(/```json\s*(\{[\s\S]*?\})\s*```/g, '\n[Schedule Preview Created - Click Next to Accept]');
@@ -3900,22 +3905,21 @@ function obRenderStep(){
       chatContainer.scrollTop = chatContainer.scrollHeight;
     };
 
-    const systemPrompt = `You are an expert AI Scheduling Agent for a personal productivity app.
-Your goal is to help the user build their daily schedule.
+    const systemPrompt = `You are an expert AI Scheduling Assistant powered by Google Gemini.
+Your goal is to converse with the user and build their personalized weekly schedule.
 ${typeof IS_NEW_WORKSPACE_FLOW !== 'undefined' && IS_NEW_WORKSPACE_FLOW ? "Note: existing user creating a new workspace. Known facts:\n" + (typeof USER_MEMORY !== 'undefined' ? JSON.stringify(USER_MEMORY) : '[]') : ""}
 User notes: "${OB_ANSWERS.messyTasks || ''}"
 
-RULES:
-1. Reply in the SAME language the user writes in.
-2. If you do not have enough information about their day (e.g., wake up time, work hours, habits), DO NOT build the schedule yet. Instead, ask them targeted questions (e.g., "What time do you usually wake up?", "When do you work?") to understand their routine better. Make it conversational and easy for them to answer.
-3. Once you have enough information, propose a realistic schedule plan in plain language and ASK if it looks right. Do NOT output JSON yet.
-4. Protect 90–120 min deep-work blocks in peak morning hours when possible. Leave 10–15 min buffers between hard tasks. Put low-energy admin in the afternoon. Include lunch and a hard log-off.
-5. ONLY after the user clearly agrees (yes / looks good / agree / تمام / موافق / etc.), output ONE markdown JSON code block and nothing else after it:
+CONVERSATION INSTRUCTIONS:
+1. Reply in the EXACT same language the user speaks in (Arabic if Arabic, English if English). Be friendly, attentive, and concise.
+2. FIRST STAGE: Ask 2 or 3 quick, focused clarifying questions to understand their daily routine (e.g., wake-up and sleep times, work/study hours, prayer tracking, workout days, or breaks). Do NOT output schedule blocks or JSON yet.
+3. SECOND STAGE: Once they answer, propose a clear schedule outline in plain, conversational text. Group the day logically (morning focus, midday admin, evening rest/habits). Ask them: "How does this look? Would you like any adjustments?"
+4. ONLY after the user explicitly agrees or confirms (e.g. "yes", "looks good", "agree", "تمام", "موافق", "ممتاز"), output ONE markdown JSON code block at the end:
 \`\`\`json
-{"blocks":[{"start":"08:00","end":"09:30","task":"Deep work","emoji":"💻","category":"Deep Work"}],"pro_tip":"short tip"}
+{"blocks":[{"start":"08:00","end":"09:30","task":"Deep Work","emoji":"💻","category":"Deep Work"}],"pro_tip":"short pro tip"}
 \`\`\`
 Use 24-hour HH:MM. Categories: Deep Work | Routine/Admin | Meeting | Rest/Break | Food | Training | Study.
-If they want changes, discuss first — only re-emit JSON after a new explicit agreement.`;
+If the user asks for changes, discuss and adjust first — only re-emit JSON after they confirm the updated plan.`;
 
     chatSend.onclick = async () => {
       const text = chatInput.value.trim();
@@ -3933,7 +3937,10 @@ If they want changes, discuss first — only re-emit JSON after a new explicit a
           headers: {'Content-Type': 'application/json'},
           body: JSON.stringify({
             system: systemPrompt,
-            messages: OB_ANSWERS.chatHistory
+            messages: OB_ANSWERS.chatHistory.map(m => ({
+              role: m.role,
+              content: m.content.replace(/^__KICKOFF__:/, '')
+            }))
           })
         });
         if(res.ok) {
@@ -3967,10 +3974,47 @@ If they want changes, discuss first — only re-emit JSON after a new explicit a
 
     renderChat();
     
-    // Auto-trigger first AI response if history is empty
-    if (OB_ANSWERS.chatHistory.length === 0 && OB_ANSWERS.messyTasks) {
-       chatInput.value = "Here is my messy schedule: " + OB_ANSWERS.messyTasks + "\n\nPlease talk to me in my language, propose a schedule based on this, and ask me if it looks good BEFORE generating the JSON.";
-       chatSend.onclick();
+    // Auto-trigger friendly clarifying questions if history is empty
+    if (OB_ANSWERS.chatHistory.length === 0) {
+      const userNotes = String(OB_ANSWERS.messyTasks || '').trim();
+      const isAr = /[\u0600-\u06FF]/.test(userNotes) || (USER_SETTINGS?.lang === 'ar');
+      let prompt;
+      if (userNotes) {
+        prompt = `Here is how I described my week: "${userNotes}". Please warmly acknowledge what I shared in ${isAr ? 'Arabic' : 'my language'}, and ask me 2 or 3 quick, friendly clarifying questions (such as wake-up and sleep times, work/study hours, or specific habits) so we can create the ideal daily routine for me. Do NOT generate the JSON or task blocks yet.`;
+      } else {
+        prompt = `Hello! Please greet me warmly in ${isAr ? 'Arabic' : 'English'}, and ask me 2 or 3 quick questions about my daily routine and main priorities so we can build my schedule together. Do NOT generate the JSON or task blocks yet.`;
+      }
+      OB_ANSWERS.chatHistory.push({ role: 'user', content: '__KICKOFF__:' + (userNotes || (isAr ? 'مرحباً، أريد إنشاء جدول يومي جديد' : 'Hi, I want to build a new daily schedule')) });
+      renderChat();
+      chatInput.disabled = true;
+      chatSend.disabled = true;
+      
+      (async () => {
+        try {
+          const res = await fetch(typeof AI_WORKER_URL==='string'?AI_WORKER_URL:'/', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({
+              system: systemPrompt,
+              messages: [{ role: 'user', content: prompt }]
+            })
+          });
+          if (res.ok) {
+            const data = await res.json();
+            const reply = data.text || data.choices?.[0]?.message?.content || '';
+            OB_ANSWERS.chatHistory.push({ role: 'assistant', content: reply });
+          } else {
+            OB_ANSWERS.chatHistory.push({ role: 'assistant', content: isAr ? 'أهلاً بك! ما هي أوقات استيقاظك ونومك، وما هي أهم أوقات العمل أو الدراسة لديك؟' : 'Welcome! What time do you wake up and sleep, and what are your main work/study hours?' });
+          }
+        } catch(e) {
+          OB_ANSWERS.chatHistory.push({ role: 'assistant', content: isAr ? 'أهلاً بك! ما هي أوقات استيقاظك ونومك، وما هي أهم أوقات العمل أو الدراسة لديك؟' : 'Welcome! What time do you wake up and sleep, and what are your main work/study hours?' });
+        } finally {
+          chatInput.disabled = false;
+          chatSend.disabled = false;
+          renderChat();
+          chatInput.focus();
+        }
+      })();
     }
   }else if(step.type==='weekdays'){
     if(!OB_ANSWERS.weeklySchedule){
@@ -4061,6 +4105,7 @@ If they want changes, discuss first — only re-emit JSON after a new explicit a
         obUpdateNavButtons();
         accept.textContent='Accepted ✓ — Next';
         accept.style.opacity='0.9';
+        setTimeout(()=>obHandleNext(), 250);
       };
       const revise=document.createElement('button');
       revise.type='button';
@@ -4118,6 +4163,19 @@ function obShowStep(){
   const wizard=document.getElementById('obWizard');
   if(wizard) wizard.classList.add('open');
   obRenderStep();
+}
+
+function openOnboardingFromScratch(){
+  OB_STEP = 0;
+  OB_ANSWERS = {
+    name: (USER_SETTINGS?.displayNameChosen || lsGet('current_user') || '').replace(/@.*/,'').trim(),
+    trackPrayers: USER_SETTINGS?.trackPrayers !== false,
+    messyTasks: '',
+    workspaceName: (USER_SETTINGS?.workspaceName || 'My Workspace').trim(),
+    weeklySchedule: {Sat:'',Sun:'',Mon:'',Tue:'',Wed:'',Thu:'',Fri:''},
+    chatHistory: []
+  };
+  obShowStep();
 }
 
 function obHandleNext(){
@@ -6172,10 +6230,23 @@ function renderPanel(jd){
     ?`Fajr ${fmt24(PRYT.Fajr||FALLBK.Fajr)} · Sunrise ${fmt24(PRYT.Sunrise||FALLBK.Sunrise)} ← Wake ${d.wk} · Sleep ${d.bd}`
     :`فجر ${fmt24(PRYT.Fajr||FALLBK.Fajr)} · شروق ${fmt24(PRYT.Sunrise||FALLBK.Sunrise)} ← صحيان ${d.wk} · نوم ${d.bd}`;
   if(en){dhm=dhm.replace(/ص/g,'AM').replace(/م/g,'PM');}
+
+  const emptyStateHtml = (tasks.length === 0) ? `
+    <div style="padding:32px 20px;text-align:center;background:rgba(255,255,255,0.02);border:1px dashed var(--br);border-radius:14px;margin:16px 0;">
+      <div style="font-size:2rem;margin-bottom:10px">📅</div>
+      <div style="font-weight:700;font-size:1rem;color:var(--tx);margin-bottom:6px">${en ? 'No tasks scheduled for this day' : 'لا توجد مهام مجدولة لهذا اليوم'}</div>
+      <div style="font-size:0.84rem;color:var(--so);max-width:340px;margin:0 auto 18px;line-height:1.5">${en ? 'Add your daily routines or generate your personalized weekly schedule with the AI assistant.' : 'أضف روتينك اليومي أو ابنِ جدولك الأسبوعي المخصص بالكامل مع المساعد الذكي.'}</div>
+      <div style="display:flex;gap:10px;justify-content:center;flex-wrap:wrap">
+        <button type="button" class="ob-navbtn ob-navbtn-next" style="margin:0;padding:8px 16px;font-size:0.84rem;width:auto;cursor:pointer" onclick="openAddSchedTaskModal(${jd})">${en ? '+ Add Task' : '+ إضافة مهمة'}</button>
+        <button type="button" class="ob-navbtn ob-navbtn-next" style="margin:0;padding:8px 16px;font-size:0.84rem;width:auto;background:color-mix(in srgb, var(--ac) 20%, transparent);border-color:var(--ac);color:var(--tx);cursor:pointer" onclick="openOnboardingFromScratch()">${en ? '✨ Build Schedule with AI' : '✨ إنشاء جدول بالذكاء الاصطناعي'}</button>
+      </div>
+    </div>
+  ` : '';
+
   return`<div class="pan" id="pan-${k}">
     <div class="dh"><div><div class="dhn">${dayLabel(jd)}</div><div class="dhm">${dhm}</div></div>${gbLabel}</div>
     <div class="prow">${pills.join('')}</div>
-    <div class="tl">${tasks.map(t=>renderCard(t,isToday,jd)).join('')}</div>
+    <div class="tl">${tasks.map(t=>renderCard(t,isToday,jd)).join('')}${emptyStateHtml}</div>
     ${addTaskBtn}
   </div>`;
 }
@@ -9294,17 +9365,26 @@ function wireLandingAuth(){
     if(e.key==='Enter') completeLocalSignup(document.getElementById('authUsernameInput')?.value, e.target.value);
   });
   document.getElementById('loginGoogleBtn')?.addEventListener('click', async ()=>{
+    const ldEl=document.getElementById('ld');
+    const ldText=document.getElementById('ldText');
     try{
+      if(ldEl){
+        ldEl.style.display='flex';
+        if(ldText) ldText.textContent=(USER_SETTINGS?.lang==='en'?'Signing in…':'جارٍ تسجيل الدخول…');
+      }
       const res=await doGoogleSignIn();
       const u=(res&&res.user)||(typeof fbAuth!=='undefined'&&fbAuth.currentUser)||null;
       if(u){
         lsSet('current_user', u.email || u.displayName || u.uid);
         try{ closeAuthModal(); }catch(e){}
         try{ document.getElementById('loginCanvas').style.display='none'; }catch(e){}
-        // onAuthStateChanged is the source of truth for load/init.
-        try{ if(userHasExistingWorkspace()){ lsSet('has_onboarded','true'); revealApp(); } }catch(e){}
+        try{ document.getElementById('landingPage').style.display='none'; }catch(e){}
+        try{ initAppFlow(u); }catch(e){ console.warn('initAppFlow direct call',e); revealApp(); }
+      }else{
+        if(ldEl && !lsGet('current_user')) ldEl.style.display='none';
       }
     }catch(e){
+      if(ldEl && !lsGet('current_user')) ldEl.style.display='none';
       console.warn('Google sign-in failed', e);
       const code=e&&e.code;
       if(code==='auth/cancelled-popup-request' || code==='auth/popup-closed-by-user') return;
@@ -9323,16 +9403,22 @@ function wireLandingAuth(){
 
 function userHasExistingWorkspace(){
   try{
-    if(lsGet('has_onboarded')==='true' || lsGet('has_onboarded')===true) return true;
     if(USER_SETTINGS && USER_SETTINGS.onboardingComplete) return true;
     if(USER_SCHEDULE && Object.keys(USER_SCHEDULE).length>0){
-      // any day with tasks counts as an existing workspace
       for(const k of Object.keys(USER_SCHEDULE)){
         const day=USER_SCHEDULE[k];
         if(day && Array.isArray(day.ts) && day.ts.length>0) return true;
       }
-      // non-empty schedule object after migration also counts
-      return true;
+    }
+    if(USER_SCHEDULES && Object.keys(USER_SCHEDULES).length>0){
+      for(const wId of Object.keys(USER_SCHEDULES)){
+        const ws=USER_SCHEDULES[wId]?.sched;
+        if(ws){
+          for(const dk of Object.keys(ws)){
+            if(ws[dk]?.ts?.length>0) return true;
+          }
+        }
+      }
     }
   }catch(e){}
   return false;
@@ -9348,7 +9434,13 @@ function syncOnboardedFlagFromState(){
 
 function showLandingIfNeeded(){
   document.title='Your Schedule';
-  const hasUser=!!lsGet('current_user');
+  const hasFbUser = (typeof fbAuth!=='undefined' && !!fbAuth?.currentUser);
+  const cur = lsGet('current_user');
+  const hasUser = !!cur || hasFbUser;
+  if(hasFbUser && !cur){
+    const u = fbAuth.currentUser;
+    lsSet('current_user', u.email || u.displayName || u.uid);
+  }
   const lp=document.getElementById('landingPage');
   const lc=document.getElementById('loginCanvas');
   if(lc) lc.style.display='none';
@@ -9396,39 +9488,27 @@ document.addEventListener('DOMContentLoaded', ()=>{
 
 
 function initAppFlow(user){
+  if(user){
+    lsSet('current_user', user.email || user.displayName || user.uid);
+  }
   if(showLandingIfNeeded()) return;
   updateAuthUI(user);
-  // Failsafe timer removed per explicit instruction: it was forcing the app shell to
-  // reveal after 12s even if the real init chain (prayer times, punishment check,
-  // streak check, render) hadn't actually finished — producing a visible "empty
-  // screen, then the real data pops in a moment later" flash. The loading spinner now
-  // stays up for exactly as long as the real chain takes, however long that is; if
-  // something in the chain hangs, the .catch() below still reveals the app rather
-  // than leaving it stuck forever, so a genuinely broken step still doesn't strand
-  // the user on the spinner permanently.
+
+  try{
+    const lang=(USER_SETTINGS&&USER_SETTINGS.lang)==='ar'?'ar':'en';
+    USER_SETTINGS.lang=lang;
+    document.documentElement.lang=lang;
+    document.documentElement.dir=lang==='en'?'ltr':'rtl';
+    document.body.style.direction=lang==='en'?'ltr':'rtl';
+    applyI18n();
+  }catch(e){}
+
   fetchPrayers().then(async ()=>{
-    // Weekly points reset MUST run before punishment. Previously punishment ran
-    // first and deducted from last week's leftover STATS.pts, which the reset then
-    // discarded a moment later — so a Saturday-morning deduction for Friday's missed
-    // tasks was computed against the wrong balance and its visible effect vanished
-    // the instant the reset fired. Resetting first means punishment always deducts
-    // from the correct, already-current week's starting balance (0, right after
-    // reset), so Friday's missed-task penalty is the ONLY thing that can move it
-    // away from 0 on Saturday morning — not a leftover of last week's total.
     const ptsBefore=STATS.pts;
     resetWeeklyPointsIfNewWeek();
     if(STATS.pts!==ptsBefore){ try{ await saveAll(); }catch(e){ console.warn('weekly reset save failed',e); } }
   }).then(()=>applyPunishmentOnce()).then(async ()=>{
     checkStreak();
-    // Apply saved language (default English for new users) without toast.
-    try{
-      const lang=(USER_SETTINGS&&USER_SETTINGS.lang)==='ar'?'ar':'en';
-      USER_SETTINGS.lang=lang;
-      document.documentElement.lang=lang;
-      document.documentElement.dir=lang==='en'?'ltr':'rtl';
-      document.body.style.direction=lang==='en'?'ltr':'rtl';
-      applyI18n();
-    }catch(e){}
     renderTabs();renderPanels();switchDay(todayJD());updateUI();
     try{ updatePrestigeUI(); }catch(e){}
     revealApp();
@@ -9438,25 +9518,23 @@ function initAppFlow(user){
     if(NOTIF_ENABLED && typeof Notification!=='undefined' && Notification.permission==='granted'){
       try{ await syncPushSchedule(); }catch(e){ console.warn('startup push sync failed',e); }
     }
-    // Onboarding (Stage 1) — shown ONLY for a signed-in user whose USER_SCHEDULE was
-    // confirmed empty after the cloud merge (see onAuthStateChanged). Fires after
-    // revealApp() so the app shell/schedule view is fully rendered and ready
-    // underneath, exactly like the prayer modal already layers on top of a ready
-    // page rather than blocking the initial render. Guests never reach this branch
-    // (PENDING_ONBOARDING defaults false and is only ever set inside the signed-in
-    // cloud-merge code path), so existing guest access is completely unaffected.
-    // Secure launch router: existing workspaces never re-enter the wizard.
-    // has_onboarded may be missing on a fresh browser even for old Firebase accounts —
-    // sync it from cloud/local USER_SCHEDULE before deciding.
     try{ syncOnboardedFlagFromState(); }catch(e){}
     try{
       document.getElementById('loginCanvas')&& (document.getElementById('loginCanvas').style.display='none');
       document.getElementById('landingPage')&& (document.getElementById('landingPage').style.display='none');
     }catch(e){}
-    const needsOnboarding = PENDING_ONBOARDING && !userHasExistingWorkspace() && lsGet('has_onboarded')!=='true';
+    const hasExisting = userHasExistingWorkspace();
+    const needsOnboarding = (!hasExisting) && lsGet('has_onboarded')!=='true';
     if(needsOnboarding && (user || lsGet('current_user'))){
       OB_STEP=0;
-      OB_ANSWERS={name:'',trackPrayers:null,messyTasks:'',workspaceName:'',weeklySchedule:{Sat:'',Sun:'',Mon:'',Tue:'',Wed:'',Thu:'',Fri:''}};
+      OB_ANSWERS={
+        name:(user?.displayName||'').trim(),
+        trackPrayers:null,
+        messyTasks:'',
+        workspaceName:'',
+        weeklySchedule:{Sat:'',Sun:'',Mon:'',Tue:'',Wed:'',Thu:'',Fri:''},
+        chatHistory:[]
+      };
       obShowStep();
     }else{
       try{ document.getElementById('obWizard')?.classList.remove('open'); }catch(e){}
