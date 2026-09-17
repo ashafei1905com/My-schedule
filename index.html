@@ -1222,6 +1222,8 @@ body.theme-matrix .tctime{
         </div>
       </div>
     </div>
+  </div>
+</div>
 <style>
 @media (max-width:899px){
   #loginCanvas > div{grid-template-columns:1fr!important}
@@ -4162,6 +4164,9 @@ function obUpdateNavButtons(){
 function obShowStep(){
   const wizard=document.getElementById('obWizard');
   if(wizard) wizard.classList.add('open');
+  const ld=document.getElementById('ld'); if(ld) ld.style.display='none';
+  const lp=document.getElementById('landingPage'); if(lp) lp.style.display='none';
+  const lc=document.getElementById('loginCanvas'); if(lc) lc.style.display='none';
   obRenderStep();
 }
 
@@ -9165,6 +9170,21 @@ function revealApp(){
   const ldEl=document.getElementById('ld'); if(ldEl) ldEl.style.display='none';
   const appEl=document.getElementById('app'); if(appEl) appEl.style.display='block';
   const fabEl=document.getElementById('aiFab'); if(fabEl) fabEl.classList.remove('hidden');
+  const lp=document.getElementById('landingPage'); if(lp) lp.style.display='none';
+  const lc=document.getElementById('loginCanvas'); if(lc) lc.style.display='none';
+
+  // Ensure tabs and panels are rendered so #app is never an empty black container
+  try{
+    const tabrow=document.getElementById('tabrow');
+    const panels=document.getElementById('panels');
+    if(!tabrow || !tabrow.children.length || !panels || !panels.children.length){
+      renderTabs();
+      renderPanels();
+      switchDay(todayJD());
+      updateUI();
+    }
+  }catch(e){ console.warn('revealApp render check failed', e); }
+
   updateNetworkBadge();
   try{ applyTheme(); }catch(e){}
   try{
@@ -9173,8 +9193,6 @@ function revealApp(){
     document.documentElement.dir=en?'ltr':'rtl';
     document.body.style.direction=en?'ltr':'rtl';
     // Keep public shells LTR even if app is Arabic
-    const lp=document.getElementById('landingPage');
-    const lc=document.getElementById('loginCanvas');
     if(lp){ lp.setAttribute('dir','ltr'); lp.style.direction='ltr'; }
     if(lc){ lc.setAttribute('dir','ltr'); lc.style.direction='ltr'; }
     applyI18n();
@@ -9479,10 +9497,21 @@ document.addEventListener('click',e=>{
   }
 });
 
-document.addEventListener('DOMContentLoaded', ()=>{
+document.addEventListener('DOMContentLoaded', async ()=>{
   document.title='Your Schedule';
   wireLandingAuth();
-  showLandingIfNeeded();
+  const cur = lsGet('current_user');
+  if(cur){
+    try{
+      await loadAll();
+      initAppFlow({ email: cur, displayName: cur });
+    }catch(e){
+      console.warn('Initial loadAll error', e);
+      showLandingIfNeeded();
+    }
+  }else{
+    showLandingIfNeeded();
+  }
   try{ updatePrestigeUI(); applyMythicThemeClass(STATS.activeMythicTheme); }catch(e){}
 });
 
@@ -9503,26 +9532,23 @@ function initAppFlow(user){
     applyI18n();
   }catch(e){}
 
-  fetchPrayers().then(async ()=>{
-    const ptsBefore=STATS.pts;
-    resetWeeklyPointsIfNewWeek();
-    if(STATS.pts!==ptsBefore){ try{ await saveAll(); }catch(e){ console.warn('weekly reset save failed',e); } }
-  }).then(()=>applyPunishmentOnce()).then(async ()=>{
+  // 1. Render and reveal immediately so user never sees a black or hanging screen
+  try{
     checkStreak();
-    renderTabs();renderPanels();switchDay(todayJD());updateUI();
+    renderTabs();
+    renderPanels();
+    switchDay(todayJD());
+    updateUI();
     try{ updatePrestigeUI(); }catch(e){}
     revealApp();
-    if(PENALTY_FLASH_PENDING){flashPenalty();PENALTY_FLASH_PENDING=false;}
-    await loadNotifPref();
-    updateAuthUI(user);
-    if(NOTIF_ENABLED && typeof Notification!=='undefined' && Notification.permission==='granted'){
-      try{ await syncPushSchedule(); }catch(e){ console.warn('startup push sync failed',e); }
-    }
-    try{ syncOnboardedFlagFromState(); }catch(e){}
-    try{
-      document.getElementById('loginCanvas')&& (document.getElementById('loginCanvas').style.display='none');
-      document.getElementById('landingPage')&& (document.getElementById('landingPage').style.display='none');
-    }catch(e){}
+  }catch(e){
+    console.warn('Immediate render error in initAppFlow', e);
+    revealApp();
+  }
+
+  // 2. Check onboarding status immediately
+  try{
+    syncOnboardedFlagFromState();
     const hasExisting = userHasExistingWorkspace();
     const needsOnboarding = (!hasExisting) && lsGet('has_onboarded')!=='true';
     if(needsOnboarding && (user || lsGet('current_user'))){
@@ -9538,12 +9564,33 @@ function initAppFlow(user){
       obShowStep();
     }else{
       try{ document.getElementById('obWizard')?.classList.remove('open'); }catch(e){}
-      try{ renderTabs(); renderPanels(); switchDay(todayJD()); updateUI(); }catch(e){}
     }
-  }).catch(e=>{
-    console.warn('Init error bypass:',e);
-    revealApp();
-  });
+  }catch(e){ console.warn('Onboarding check error in initAppFlow', e); }
+
+  // 3. Background tasks (non-blocking)
+  (async ()=>{
+    try{
+      if(PENALTY_FLASH_PENDING){flashPenalty();PENALTY_FLASH_PENDING=false;}
+      await loadNotifPref();
+      updateAuthUI(user);
+      if(NOTIF_ENABLED && typeof Notification!=='undefined' && Notification.permission==='granted'){
+        try{ await syncPushSchedule(); }catch(e){ console.warn('startup push sync failed',e); }
+      }
+    }catch(e){}
+
+    try{
+      await fetchPrayers();
+      const ptsBefore=STATS.pts;
+      resetWeeklyPointsIfNewWeek();
+      if(STATS.pts!==ptsBefore){ try{ await saveAll(); }catch(e){ console.warn('weekly reset save failed',e); } }
+      await applyPunishmentOnce();
+      renderPanels();
+      switchDay(todayJD());
+      updateUI();
+    }catch(e){
+      console.warn('Background prayer/punishment sync', e);
+    }
+  })();
 }
 
 // Reverted to signInWithPopup (2026-07-24): signInWithRedirect was tried as a fix
@@ -9567,16 +9614,21 @@ if (typeof onAuthStateChanged !== 'undefined' && typeof fbAuth !== 'undefined') 
       // network being briefly unavailable), so a real one-off hiccup doesn't need a
       // manual refresh to recover, and the banner only shows when the load has
       // genuinely failed twice in a row, not on the first blip.
-      let ud;
+      let ud = null;
       try{
-        ud=await getDoc(doc(fbDb,'users',user.uid));
+        const fetchTimeout = new Promise((_, rej) => setTimeout(() => rej(new Error('Firestore timeout')), 3500));
+        ud = await Promise.race([getDoc(doc(fbDb,'users',user.uid)), fetchTimeout]);
       }catch(e0){
-        console.warn('cloud load failed, retrying once',e0);
-        await new Promise(r=>setTimeout(r,1200));
-        ud=await getDoc(doc(fbDb,'users',user.uid)); // let this one throw to the outer catch if it fails too
+        console.warn('cloud load failed or timed out, retrying once',e0);
+        try{
+          const retryTimeout = new Promise((_, rej) => setTimeout(() => rej(new Error('Firestore retry timeout')), 2500));
+          ud = await Promise.race([getDoc(doc(fbDb,'users',user.uid)), retryTimeout]);
+        }catch(e1){
+          console.warn('cloud retry also failed or timed out', e1);
+        }
       }
       try{
-        if(ud.exists()){
+        if(ud && ud.exists()){
           const d=ud.data();
           // STATS used to be a flat overwrite (STATS=d.stats), which is what actually
           // caused points/streak to reset to 0: if THIS tab/PWA still held a stale
@@ -9775,8 +9827,12 @@ if (typeof onAuthStateChanged !== 'undefined' && typeof fbAuth !== 'undefined') 
 setTimeout(()=>{
   const ldEl=document.getElementById('ld');
   if(ldEl && ldEl.style.display !== 'none'){
+    try{
+      const cur=lsGet('current_user');
+      if(cur) initAppFlow({ email: cur, displayName: cur });
+    }catch(e){}
     revealApp();
   }
-},8000);
+}, 2200);
 </script>
 </html>
