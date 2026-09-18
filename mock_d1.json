@@ -1,0 +1,43 @@
+{
+  "subscriptions": [
+    {
+      "user_uid": "test_user",
+      "endpoint": "https://example.com/push",
+      "p256dh": "dummy",
+      "auth": "dummy",
+      "created_at": 1789747822785
+    },
+    {
+      "user_uid": "user_123",
+      "endpoint": "https://fcm.googleapis.com/fcm/send/fake_token",
+      "p256dh": "BM123",
+      "auth": "auth123",
+      "created_at": 1789747922428
+    }
+  ],
+  "reminders": [
+    {
+      "id": 1,
+      "user_uid": "test_user",
+      "task_id": "task1",
+      "task_name": "Test Task",
+      "reminder_type": "start",
+      "fire_date": "2026-09-18",
+      "fire_time": "12:00",
+      "fired": 0,
+      "created_at": 1789747822785
+    },
+    {
+      "id": 2,
+      "user_uid": "user_123",
+      "task_id": "task_fajr",
+      "task_name": "صلاة الفجر",
+      "reminder_type": "start",
+      "fire_date": "2026-09-18",
+      "fire_time": "04:30",
+      "fired": 0,
+      "created_at": 1789747922428
+    }
+  ],
+  "idCounter": 3
+}

@@ -53,7 +53,7 @@ import { buildPushPayload } from '@block65/webcrypto-web-push';
 
 
 import { handleNutritionLookup } from './src/features/nutrition/controllers/nutritionController.js';
-import { handleSaveSubscription, dispatchDueReminders } from './src/features/notifications/controllers/notificationController.js';
+import { handleSaveSubscription, dispatchDueReminders, handleTestPush } from './src/features/notifications/controllers/notificationController.js';
 import { handleBuildSchedule } from './src/features/schedule/controllers/scheduleController.js';
 const ALLOWED_ORIGIN = '';
 // Switched from llama-3.3-70b-versatile to openai/gpt-oss-120b — still 100% free on
@@ -88,6 +88,10 @@ export default {
 
     if (url.pathname === '/api/save-subscription') {
       return handleSaveSubscription(request, env);
+    }
+
+    if (url.pathname === '/api/test-push' || url.pathname === '/api/send-test-push') {
+      return handleTestPush(request, env);
     }
 
     if (url.pathname === '/api/nutrition') {

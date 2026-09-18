@@ -1,6 +1,13 @@
-
 import { json } from '../../../core/utils/response.js';
 import { buildPushPayload } from '@block65/webcrypto-web-push';
+
+function corsHeaders(env) {
+  return {
+    'Access-Control-Allow-Origin': (env && env.ALLOWED_ORIGIN) || '*',
+    'Access-Control-Allow-Methods': 'POST, OPTIONS',
+    'Access-Control-Allow-Headers': 'Content-Type',
+  };
+}
 
 function kuwaitNowParts() {
   const parts = new Intl.DateTimeFormat('en-CA', {
@@ -14,11 +21,12 @@ function kuwaitNowParts() {
 }
 
 export async function handleSaveSubscription(request, env) {
-  if (request.method === 'OPTIONS') return new Response(null, { headers: corsHeaders() });
+  if (request.method === 'OPTIONS') return new Response(null, { headers: corsHeaders(env) });
   if (request.method !== 'POST') return json({ error: 'Method not allowed' }, 405);
 
+  const allowedOrigin = env?.ALLOWED_ORIGIN || '';
   const origin = request.headers.get('Origin') || '';
-  if (ALLOWED_ORIGIN && origin !== ALLOWED_ORIGIN) {
+  if (allowedOrigin && origin && origin !== allowedOrigin) {
     return json({ error: 'Origin not allowed' }, 403);
   }
 
@@ -29,7 +37,7 @@ export async function handleSaveSubscription(request, env) {
     return json({ error: 'Invalid JSON body' }, 400);
   }
 
-  const { uid, subscription, reminders } = body;
+  const { uid, subscription, reminders, weeklySchedule } = body;
   if (!uid || typeof uid !== 'string') return json({ error: 'uid required' }, 400);
   if (!subscription || !subscription.endpoint || !subscription.keys) {
     return json({ error: 'valid subscription required' }, 400);
@@ -48,24 +56,7 @@ export async function handleSaveSubscription(request, env) {
          user_uid=excluded.user_uid, p256dh=excluded.p256dh, auth=excluded.auth`
     ).bind(uid, subscription.endpoint, subscription.keys.p256dh, subscription.keys.auth, now).run();
 
-    // Replace today's PENDING reminders for this user. Previous version deleted ALL
-    // rows (fired or not) for the date, unconditionally, on every sync call. The app
-    // calls syncPushSchedule() on every load/re-render (see index.html), so a sync
-    // could race the cron job: cron reads a not-yet-fired row and starts sending the
-    // push -> before it marks fired=1, a resync deletes that row and inserts a FRESH
-    // fired=0 row for the exact same task/time -> the in-flight send still completes,
-    // and the new row is still eligible to fire again on the next cron tick. This was
-    // the actual mechanism behind the repeated "same reminder 4x in a row" bug, not a
-    // subscription-table duplication issue.
-    //
-    // Fix has two parts:
-    //   1. Only delete rows that have NOT fired yet (fired = 0) — an already-fired row
-    //      for today is left alone, so a resync can never resurrect a reminder that's
-    //      already been sent.
-    //   2. Insert with a dedup guard (INSERT ... WHERE NOT EXISTS) keyed on the same
-    //      tuple the sw.js notification tag itself collapses on (task_id + type),
-    //      scoped to the day — this makes even an overlapping/racing sync unable to
-    //      create two live rows for the same reminder, regardless of timing.
+    // Replace PENDING reminders for the incoming dates for this user.
     const dates = [...new Set(reminders.map(r => r.date))];
     for (const d of dates) {
       await env.DB.prepare(
@@ -90,12 +81,90 @@ export async function handleSaveSubscription(request, env) {
       await env.DB.batch(batch);
     }
 
+    // If a recurring template was provided, also save it so the server can generate reminders if dates ever lapse
+    if (weeklySchedule && env.DB.saveRecurringSchedule) {
+      await env.DB.saveRecurringSchedule(uid, weeklySchedule);
+    }
+
     return json({ ok: true, saved: reminders.length });
   } catch (e) {
     console.error('save-subscription failed', e);
     return json({ error: 'Database write failed: ' + e.message }, 500);
   }
 }
+
+export async function handleTestPush(request, env) {
+  if (request.method === 'OPTIONS') return new Response(null, { headers: corsHeaders(env) });
+  if (request.method !== 'POST') return json({ error: 'Method not allowed' }, 405);
+
+  let body;
+  try {
+    body = await request.json();
+  } catch {
+    return json({ error: 'Invalid JSON body' }, 400);
+  }
+
+  const { uid, subscription, title, message } = body;
+  let sub = subscription;
+  if ((!sub || !sub.endpoint || !sub.keys) && uid && env.DB) {
+    try {
+      const subRow = await env.DB.prepare(
+        `SELECT * FROM push_subscriptions WHERE user_uid = ? ORDER BY created_at DESC LIMIT 1`
+      ).bind(uid).first();
+      if (subRow) {
+        sub = { endpoint: subRow.endpoint, keys: { p256dh: subRow.p256dh, auth: subRow.auth } };
+      }
+    } catch (e) {
+      console.warn('test push sub lookup failed:', e);
+    }
+  }
+
+  if (!sub || !sub.endpoint || !sub.keys) {
+    return json({ error: 'Valid subscription required' }, 400);
+  }
+
+  const vapid = {
+    subject: env?.VAPID_SUBJECT || 'mailto:ashafei1905@gmail.com',
+    publicKey: env?.VAPID_PUBLIC_KEY,
+    privateKey: env?.VAPID_PRIVATE_KEY,
+  };
+
+  const payload = {
+    title: title || '🔔 تجربة الإشعارات بنجاح',
+    body: message || 'الإشعارات شغالة تمام وهتوصلك في مواعيد مهامك حتى لو التطبيق مقفول!',
+    tag: 'test-notification-' + Date.now()
+  };
+
+  try {
+    const { headers, method, body: pushBody } = await buildPushPayload(
+      {
+        data: payload,
+        options: {
+          ttl: 3600,
+          urgency: 'high',
+          topic: 'test'
+        }
+      },
+      subscription,
+      {
+        subject: vapid.subject,
+        publicKey: vapid.publicKey,
+        privateKey: vapid.privateKey
+      }
+    );
+
+    const pushRes = await fetch(subscription.endpoint, { method, headers, body: pushBody });
+    if (!pushRes.ok) {
+      const txt = await pushRes.text().catch(() => '');
+      return json({ error: `Push service returned ${pushRes.status}: ${txt}`, status: pushRes.status }, 400);
+    }
+    return json({ ok: true, message: 'Push notification sent successfully!' });
+  } catch (e) {
+    console.error('test-push failed', e);
+    return json({ error: 'Failed to send test push: ' + e.message }, 500);
+  }
+}
+
 export async function dispatchDueReminders(env) {
   const { date, time } = kuwaitNowParts();
   const [nowH, nowM] = time.split(':').map(Number);
@@ -126,15 +195,15 @@ export async function dispatchDueReminders(env) {
   }
 
   const vapid = {
-    subject: env.VAPID_SUBJECT || 'mailto:example@example.com',
-    publicKey: env.VAPID_PUBLIC_KEY,
-    privateKey: env.VAPID_PRIVATE_KEY,
+    subject: env?.VAPID_SUBJECT || 'mailto:ashafei1905@gmail.com',
+    publicKey: env?.VAPID_PUBLIC_KEY,
+    privateKey: env?.VAPID_PRIVATE_KEY,
   };
 
   const REMINDER_LABEL = {
-    lead: { title: '⏳ بعد 30 دقيقة', bodyFn: n => `${n} هتبدأ بعد نص ساعة` },
+    lead: { title: '⏳ اقترب الموعد', bodyFn: n => `${n} — هتبدأ قريب` },
     start: { title: '⏰ حان الوقت', bodyFn: n => `${n} — دلوقتي` },
-    ending: { title: '⌛ باقي ٣٠ دقيقة', bodyFn: n => `${n} — هتخلص وقتها قريب` }
+    ending: { title: '⌛ اقتربت النهاية', bodyFn: n => `${n} — هتخلص وقتها قريب` }
   };
 
   for (const uid of Object.keys(byUser)) {
@@ -168,9 +237,6 @@ export async function dispatchDueReminders(env) {
             data: payload,
             options: {
               ttl: 3600,
-              // Explicit high urgency, per the original request — this is the correct
-              // place for that header, unlike the earlier client-only setTimeout
-              // architecture where there was no push request to attach it to at all.
               urgency: 'high',
               topic: reminder.task_id
             }
@@ -190,14 +256,11 @@ export async function dispatchDueReminders(env) {
           // remove it so the cron doesn't keep retrying it every minute forever.
           await env.DB.prepare(`DELETE FROM push_subscriptions WHERE endpoint = ?`)
             .bind(subRow.endpoint).run();
+        } else if (pushRes.ok) {
+          console.log(`[Push] Successfully dispatched reminder '${reminder.task_name}' (${reminder.reminder_type}) to user ${uid}`);
         }
       } catch (e) {
         console.error('cron: push send failed for', reminder.task_id, e);
-        // Do NOT mark as fired on failure — leave it for potential retry next minute
-        // only if still within a reasonable window; simplest correct behavior here is
-        // to still mark fired to avoid a permanently-stuck row spamming retries for an
-        // endpoint that's failing for a non-transient reason. Marked fired below
-        // unconditionally, same as the success path, for that reason.
       }
 
       try {

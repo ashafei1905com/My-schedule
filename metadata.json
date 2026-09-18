@@ -1,0 +1,6 @@
+{
+  "name": "Chaos Coordinator AI",
+  "description": "Elite Personal Assistant, Sports Nutritionist, and Behavioral Habit Coach with intelligent schedule, Fajr circadian alignment, and personalized macro tracking.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

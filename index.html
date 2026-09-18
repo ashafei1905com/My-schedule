@@ -320,6 +320,9 @@ html[dir="ltr"] .tc[data-c="sunrise"]{border-left:3px solid var(--or)}
 .opt-pts{font-size:.72rem;direction:ltr;opacity:.9;white-space:nowrap}
 .modal-back-btn{margin-top:16px;padding:9px 18px;background:rgba(239,68,68,.12);border:2px solid rgba(239,68,68,.45);border-radius:10px;color:#ef4444;font-family:'Cairo',sans-serif;font-weight:800;font-size:.82rem;cursor:pointer;transition:all .2s}
 .modal-back-btn:hover{background:rgba(239,68,68,.22)}
+.fw-chip{transition:all .2s;font-family:inherit;}
+.fw-chip:hover{border-color:var(--ac);background:rgba(59,130,246,.08);}
+.fw-chip.fw-chip-sel{border-color:var(--ac)!important;background:rgba(59,130,246,.18)!important;color:var(--tx)!important;box-shadow:0 0 0 1px var(--ac);}
 
 /* ===== Onboarding Wizard (full-screen, Stage 1 redesign) =====
    Deliberately its own CSS namespace (ob-*) rather than reusing .modal-box, since
@@ -1373,6 +1376,7 @@ body.theme-matrix .tctime{
       <div class="set-nav" id="setNav">
         <button type="button" data-setsec="general" class="act" data-i18n="nav_general">عام</button>
         <button type="button" data-setsec="tracking" data-i18n="nav_tracking">التتبع</button>
+        <button type="button" data-setsec="fitness" id="navFitnessBtn">🏋️ اللياقة والماكروز</button>
         <button type="button" data-setsec="notifications" data-i18n="nav_notif">التذكيرات</button>
         <button type="button" data-setsec="reports" data-i18n="nav_reports">التقارير</button>
         <button type="button" data-setsec="appearance" data-i18n="nav_appearance">المظهر</button>
@@ -1391,7 +1395,7 @@ body.theme-matrix .tctime{
         </div>
         <div class="set-section" id="setsec-tracking">
           <h3 data-i18n="sec_tracking">التتبع</h3>
-          <p class="desc" data-i18n="sec_tracking_desc">أظهر أو أخفِ أنظمة النقاط والصلاة.</p>
+          <p class="desc" data-i18n="sec_tracking_desc">أظهر أو أخفِ أنظمة النقاط والصلاة واللياقة.</p>
           <div class="set-row">
             <label for="setShowTracking" data-i18n="show_tracking">إظهار النقاط والاستريك والتغذية</label>
             <input type="checkbox" id="setShowTracking">
@@ -1400,16 +1404,94 @@ body.theme-matrix .tctime{
             <label for="setTrackPrayers" data-i18n="track_prayers">تتبع مواعيد الصلاة</label>
             <input type="checkbox" id="setTrackPrayers">
           </div>
+          <div class="set-row">
+            <label for="setFitnessTrackingEnabled">تفعيل تتبع اللياقة والماكروز (Fitness Tracking)</label>
+            <input type="checkbox" id="setFitnessTrackingEnabled">
+          </div>
+          <button type="button" id="btnOpenFitnessWizardFromTracking" class="altbtn" style="margin-top:10px;width:100%">🧙‍♂️ فتح معالج اللياقة (Fitness Wizard)</button>
           <div class="set-actions" style="margin-top:16px">
             <button type="button" id="setSaveTrackingBtn" class="fl-submit-btn" style="margin:0" data-i18n="save">حفظ ✅</button>
           </div>
         </div>
+        <div class="set-section" id="setsec-fitness">
+          <h3>🏋️ أهداف اللياقة والماكروز / Fitness & Macros</h3>
+          <p class="desc">إدارة قياساتك، معدل الأيض (BMR/TDEE)، وأهداف السعرات والماكروز اليومية.</p>
+          <div class="set-row">
+            <label for="setFitnessTrackingEnabledSec">تفعيل تتبع اللياقة (Fitness Tracking Enabled)</label>
+            <input type="checkbox" id="setFitnessTrackingEnabledSec">
+          </div>
+          <div id="setFitnessConfigBlock" style="margin-top:14px;display:flex;flex-direction:column;gap:12px">
+            <div>
+              <label style="display:block;font-size:.78rem;font-weight:700;color:var(--so);margin-bottom:6px">1. Gender (النوع)</label>
+              <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+                <button type="button" class="fw-chip fw-chip-sel" data-val="male" id="setGenderMale" style="padding:10px;border-radius:10px;border:2px solid var(--ac);background:rgba(59,130,246,.15);color:var(--tx);font-weight:700;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:6px">👨 Male</button>
+                <button type="button" class="fw-chip" data-val="female" id="setGenderFemale" style="padding:10px;border-radius:10px;border:1px solid var(--br);background:var(--c);color:var(--so);font-weight:700;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:6px">👩 Female</button>
+              </div>
+            </div>
+            <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px">
+              <div>
+                <label for="setAge" style="display:block;font-size:.78rem;font-weight:700;color:var(--so);margin-bottom:6px">2. Age</label>
+                <input type="number" id="setAge" min="14" max="100" value="25" style="width:100%;padding:8px 10px;border-radius:8px;border:1px solid var(--br);background:var(--c);color:var(--tx);font-family:inherit;font-weight:700">
+              </div>
+              <div>
+                <label for="setWeight" style="display:block;font-size:.78rem;font-weight:700;color:var(--so);margin-bottom:6px">3. Weight (kg)</label>
+                <input type="number" id="setWeight" min="30" max="250" step="0.5" value="75" style="width:100%;padding:8px 10px;border-radius:8px;border:1px solid var(--br);background:var(--c);color:var(--tx);font-family:inherit;font-weight:700">
+              </div>
+              <div>
+                <label for="setHeight" style="display:block;font-size:.78rem;font-weight:700;color:var(--so);margin-bottom:6px">4. Height (cm)</label>
+                <input type="number" id="setHeight" min="100" max="250" value="175" style="width:100%;padding:8px 10px;border-radius:8px;border:1px solid var(--br);background:var(--c);color:var(--tx);font-family:inherit;font-weight:700">
+              </div>
+            </div>
+            <div>
+              <label for="setActivity" style="display:block;font-size:.78rem;font-weight:700;color:var(--so);margin-bottom:6px">5. Activity Level</label>
+              <select id="setActivity" style="width:100%;padding:8px 10px;border-radius:8px;border:1px solid var(--br);background:var(--c);color:var(--tx);font-family:inherit;font-weight:700">
+                <option value="1.2">Sedentary (desk job, minimal exercise)</option>
+                <option value="1.375">Lightly Active (training 1-3 days/wk)</option>
+                <option value="1.55" selected>Moderately Active (lifting 4-5 days/wk)</option>
+                <option value="1.725">Very Active (hard training 6-7 days/wk)</option>
+                <option value="1.9">Extremely Active (hard daily training + physical work)</option>
+              </select>
+            </div>
+            <div>
+              <label style="display:block;font-size:.78rem;font-weight:700;color:var(--so);margin-bottom:6px">6. Primary Goal</label>
+              <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px">
+                <button type="button" class="fw-chip" data-val="muscle" id="setGoalMuscle" style="padding:8px 6px;border-radius:8px;border:1px solid var(--br);background:var(--c);color:var(--so);font-size:.75rem;font-weight:700;cursor:pointer;text-align:center">💪 Build Muscle</button>
+                <button type="button" class="fw-chip fw-chip-sel" data-val="recomp" id="setGoalRecomp" style="padding:8px 6px;border-radius:8px;border:2px solid var(--ac);background:rgba(59,130,246,.15);color:var(--tx);font-size:.75rem;font-weight:700;cursor:pointer;text-align:center">⚡ Recomp</button>
+                <button type="button" class="fw-chip" data-val="fat_loss" id="setGoalFatLoss" style="padding:8px 6px;border-radius:8px;border:1px solid var(--br);background:var(--c);color:var(--so);font-size:.75rem;font-weight:700;cursor:pointer;text-align:center">🔥 Lose Fat</button>
+              </div>
+            </div>
+            <div>
+              <label for="setBodyFat" style="display:block;font-size:.78rem;font-weight:700;color:var(--so);margin-bottom:6px">Body Fat % (Optional)</label>
+              <input type="number" id="setBodyFat" min="4" max="50" step="0.5" placeholder="e.g. 15 (optional)" style="width:100%;padding:8px 10px;border-radius:8px;border:1px solid var(--br);background:var(--c);color:var(--tx);font-family:inherit;font-weight:700">
+            </div>
+            <div id="setFitnessPreviewCard" style="padding:12px;background:rgba(59,130,246,.08);border:1px solid rgba(59,130,246,.25);border-radius:10px;margin-top:6px">
+              <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">
+                <span style="font-size:.78rem;font-weight:800;color:var(--ac)">Personalized Scientific Targets</span>
+                <span id="setCalcKcal" style="font-size:.88rem;font-weight:900;color:var(--tx)">2133 kcal/day</span>
+              </div>
+              <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:6px;text-align:center;font-size:.7rem">
+                <div style="background:rgba(0,0,0,.2);padding:5px;border-radius:6px"><div style="color:var(--so);font-size:.62rem">Protein</div><div id="setCalcP" style="font-weight:900;color:#38bdf8">165g</div></div>
+                <div style="background:rgba(0,0,0,.2);padding:5px;border-radius:6px"><div style="color:var(--so);font-size:.62rem">Fats</div><div id="setCalcF" style="font-weight:900;color:#facc15">60g</div></div>
+                <div style="background:rgba(0,0,0,.2);padding:5px;border-radius:6px"><div style="color:var(--so);font-size:.62rem">Carbs</div><div id="setCalcC" style="font-weight:900;color:#34d399">233g</div></div>
+                <div style="background:rgba(0,0,0,.2);padding:5px;border-radius:6px"><div style="color:var(--so);font-size:.62rem">Fiber</div><div id="setCalcB" style="font-weight:900;color:#a78bfa">30g</div></div>
+              </div>
+              <div id="setCalcBmrTdee" style="margin-top:6px;font-size:.66rem;color:var(--mu);text-align:center">BMR: 1720 kcal · TDEE: 2666 kcal</div>
+            </div>
+            <div style="display:flex;gap:10px;margin-top:6px">
+              <button type="button" id="btnLaunchFitnessWizard" class="altbtn" style="flex:1">🧙‍♂️ Launch Wizard</button>
+              <button type="button" id="setSaveFitnessBtn" class="fl-submit-btn" style="flex:1;margin:0">Save Profile ✅</button>
+            </div>
+          </div>
+        </div>
         <div class="set-section" id="setsec-notifications">
           <h3 data-i18n="sec_notif">التذكيرات</h3>
-          <p class="desc" data-i18n="sec_notif_desc">تفعيل أو إيقاف إشعارات المهام.</p>
-          <div class="set-actions">
+          <p class="desc" data-i18n="sec_notif_desc">تفعيل أو إيقاف إشعارات المهام السحابية حتى لو التطبيق مقفول.</p>
+          <div class="set-actions" style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">
             <button type="button" id="btn-notif-toggle" class="topbtn" style="background:rgba(100,116,139,.15);border:1px solid var(--br);color:var(--tx)">🔕 التذكيرات</button>
+            <button type="button" id="btn-notif-test" class="altbtn" style="padding:8px 12px;font-size:0.85rem">🔔 تجربة الإشعار</button>
+            <button type="button" id="btn-notif-renew" class="altbtn" style="padding:8px 12px;font-size:0.85rem">🔄 تجديد وجدولة ١٤ يوم</button>
           </div>
+          <div id="notif-sync-badge" style="font-size:0.8rem;margin-top:8px;color:var(--so);font-weight:600"></div>
           <p class="desc" style="margin-top:16px;font-weight:800" id="taskNotifListTitle">Per-task notifications</p>
           <div id="taskNotifList" style="margin-top:8px;display:flex;flex-direction:column;gap:8px"></div>
           <p class="desc" style="margin-top:18px;font-weight:800" id="prayerLocTitle">Prayer locations</p>
@@ -1713,6 +1795,114 @@ body.theme-matrix .tctime{
   </div>
 </div>
 
+<!-- Fitness Onboarding Pop-up 1 -->
+<div id="fitnessPromptModal" class="modal-overlay" style="z-index:9995">
+  <div class="modal-box" style="max-width:440px;text-align:center">
+    <div style="font-size:2.8rem;margin-bottom:8px">🏋️‍♂️</div>
+    <div class="modal-title" style="font-size:1.25rem;font-weight:900;margin-bottom:6px">Do you like to track your fitness here?</div>
+    <div class="modal-sub" style="font-size:.85rem;color:var(--so);margin-bottom:22px;line-height:1.5">
+      هل تحب تتبع لياقتك البدنية وسعراتك الحرارية هنا؟<br>
+      <span style="font-size:.78rem;color:var(--mu)">We can calculate your exact scientific daily calories, macros, and metabolic rate, or you can use My Schedule as a pure productivity planner.</span>
+    </div>
+    <div style="display:flex;gap:12px">
+      <button type="button" id="btnFitnessPromptNo" class="modal-opt" style="flex:1;justify-content:center;font-weight:800;border-color:var(--br);color:var(--so);background:rgba(255,255,255,.04);text-align:center">
+        ✕ No / لا
+      </button>
+      <button type="button" id="btnFitnessPromptYes" class="fl-submit-btn" style="flex:1;margin:0;font-size:.95rem">
+        ✓ Yes / نعم
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- Fitness Wizard Pop-up 2 -->
+<div id="fitnessWizardModal" class="modal-overlay" style="z-index:9996">
+  <div class="modal-box" style="max-width:480px;text-align:left;direction:ltr">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
+      <div style="display:flex;align-items:center;gap:8px">
+        <span style="font-size:1.6rem">🏋️</span>
+        <div>
+          <div class="modal-title" style="margin:0;font-size:1.15rem;font-weight:900">Fitness Profile Wizard</div>
+          <div style="font-size:.72rem;color:var(--mu)">Scientific BMR, TDEE & Macro Calculations</div>
+        </div>
+      </div>
+      <button type="button" id="btnCloseFitnessWizard" style="background:none;border:none;color:var(--so);font-size:1.3rem;cursor:pointer">✕</button>
+    </div>
+    <div class="modal-sub" style="margin-bottom:14px;font-size:.78rem;color:var(--so)">
+      Enter your metrics to calculate personalized nutrition and training targets.
+    </div>
+
+    <form id="fitnessWizardForm" onsubmit="return false;" style="display:flex;flex-direction:column;gap:12px">
+      <div>
+        <label style="display:block;font-size:.78rem;font-weight:700;color:var(--so);margin-bottom:6px">1. Gender</label>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+          <button type="button" class="fw-chip fw-chip-sel" data-val="male" id="wizGenderMale" style="padding:10px;border-radius:10px;border:2px solid var(--ac);background:rgba(59,130,246,.15);color:var(--tx);font-weight:700;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:6px">👨 Male</button>
+          <button type="button" class="fw-chip" data-val="female" id="wizGenderFemale" style="padding:10px;border-radius:10px;border:1px solid var(--br);background:var(--c);color:var(--so);font-weight:700;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:6px">👩 Female</button>
+        </div>
+      </div>
+
+      <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px">
+        <div>
+          <label for="wizAge" style="display:block;font-size:.78rem;font-weight:700;color:var(--so);margin-bottom:6px">2. Age</label>
+          <input type="number" id="wizAge" min="14" max="100" value="25" required style="width:100%;padding:8px 10px;border-radius:8px;border:1px solid var(--br);background:var(--c);color:var(--tx);font-family:inherit;font-weight:700">
+        </div>
+        <div>
+          <label for="wizWeight" style="display:block;font-size:.78rem;font-weight:700;color:var(--so);margin-bottom:6px">3. Weight (kg)</label>
+          <input type="number" id="wizWeight" min="30" max="250" step="0.5" value="75" required style="width:100%;padding:8px 10px;border-radius:8px;border:1px solid var(--br);background:var(--c);color:var(--tx);font-family:inherit;font-weight:700">
+        </div>
+        <div>
+          <label for="wizHeight" style="display:block;font-size:.78rem;font-weight:700;color:var(--so);margin-bottom:6px">4. Height (cm)</label>
+          <input type="number" id="wizHeight" min="100" max="250" value="175" required style="width:100%;padding:8px 10px;border-radius:8px;border:1px solid var(--br);background:var(--c);color:var(--tx);font-family:inherit;font-weight:700">
+        </div>
+      </div>
+
+      <div>
+        <label for="wizActivity" style="display:block;font-size:.78rem;font-weight:700;color:var(--so);margin-bottom:6px">5. Activity Level</label>
+        <select id="wizActivity" style="width:100%;padding:8px 10px;border-radius:8px;border:1px solid var(--br);background:var(--c);color:var(--tx);font-family:inherit;font-weight:700">
+          <option value="1.2">Sedentary (desk job, little/no exercise)</option>
+          <option value="1.375">Lightly Active (exercise 1-3 days/week)</option>
+          <option value="1.55" selected>Moderately Active (exercise 4-5 days/week)</option>
+          <option value="1.725">Very Active (intense training 6-7 days/week)</option>
+          <option value="1.9">Extremely Active (hard training & physical job)</option>
+        </select>
+      </div>
+
+      <div>
+        <label style="display:block;font-size:.78rem;font-weight:700;color:var(--so);margin-bottom:6px">6. Primary Goal</label>
+        <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px">
+          <button type="button" class="fw-chip" data-val="muscle" id="wizGoalMuscle" style="padding:8px 6px;border-radius:8px;border:1px solid var(--br);background:var(--c);color:var(--so);font-size:.78rem;font-weight:700;cursor:pointer;text-align:center">💪 Muscle Gain</button>
+          <button type="button" class="fw-chip fw-chip-sel" data-val="recomp" id="wizGoalRecomp" style="padding:8px 6px;border-radius:8px;border:2px solid var(--ac);background:rgba(59,130,246,.15);color:var(--tx);font-size:.78rem;font-weight:700;cursor:pointer;text-align:center">⚡ Recomposition</button>
+          <button type="button" class="fw-chip" data-val="fat_loss" id="wizGoalFatLoss" style="padding:8px 6px;border-radius:8px;border:1px solid var(--br);background:var(--c);color:var(--so);font-size:.78rem;font-weight:700;cursor:pointer;text-align:center">🔥 Fat Loss</button>
+        </div>
+      </div>
+
+      <div>
+        <label for="wizBodyFat" style="display:block;font-size:.78rem;font-weight:700;color:var(--so);margin-bottom:6px">Body Fat % (Optional — uses Katch-McArdle formula)</label>
+        <input type="number" id="wizBodyFat" min="4" max="50" step="0.5" placeholder="e.g. 15 (optional)" style="width:100%;padding:8px 10px;border-radius:8px;border:1px solid var(--br);background:var(--c);color:var(--tx);font-family:inherit;font-weight:700">
+      </div>
+
+      <div id="wizLivePreviewCard" style="padding:12px;background:rgba(59,130,246,.08);border:1px solid rgba(59,130,246,.25);border-radius:10px">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">
+          <span style="font-size:.78rem;font-weight:800;color:var(--ac)">Personalized Scientific Targets</span>
+          <span id="wizCalcKcal" style="font-size:.9rem;font-weight:900;color:var(--tx)">2133 kcal/day</span>
+        </div>
+        <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:6px;text-align:center;font-size:.72rem">
+          <div style="background:rgba(0,0,0,.2);padding:5px;border-radius:6px"><div style="color:var(--so);font-size:.62rem">Protein</div><div id="wizCalcP" style="font-weight:900;color:#38bdf8">165g</div></div>
+          <div style="background:rgba(0,0,0,.2);padding:5px;border-radius:6px"><div style="color:var(--so);font-size:.62rem">Fats</div><div id="wizCalcF" style="font-weight:900;color:#facc15">60g</div></div>
+          <div style="background:rgba(0,0,0,.2);padding:5px;border-radius:6px"><div style="color:var(--so);font-size:.62rem">Carbs</div><div id="wizCalcC" style="font-weight:900;color:#34d399">233g</div></div>
+          <div style="background:rgba(0,0,0,.2);padding:5px;border-radius:6px"><div style="color:var(--so);font-size:.62rem">Fiber</div><div id="wizCalcB" style="font-weight:900;color:#a78bfa">30g</div></div>
+        </div>
+        <div id="wizCalcBmrTdee" style="margin-top:6px;font-size:.68rem;color:var(--mu);text-align:center">BMR: 1720 kcal · TDEE: 2666 kcal</div>
+      </div>
+
+      <div style="display:flex;gap:10px;margin-top:8px">
+        <button type="button" id="btnCancelFitnessWizard" class="modal-opt" style="flex:1;justify-content:center;text-align:center;color:var(--so)">Cancel</button>
+        <button type="button" id="btnSaveFitnessWizard" class="fl-submit-btn" style="flex:2;margin:0">Save & Apply Profile ✅</button>
+      </div>
+    </form>
+  </div>
+</div>
+
 <!-- Weekly Report / History Modal -->
 <div id="reportModal" class="report-overlay">
   <div class="report-box">
@@ -1766,6 +1956,9 @@ body.theme-matrix .tctime{
 <div id="toast"></div>
 
 <script type="module">
+
+let AI_WORKER_URL = window.AI_WORKER_URL || window.location.origin;
+window.AI_WORKER_URL = AI_WORKER_URL;
 
 const originalFetch = window.fetch;
 Object.defineProperty(window, 'fetch', {
@@ -3278,7 +3471,7 @@ async function stHandleDelete(jd,taskId){
 // through onboarding (Stage 1) is asked explicitly and their answer is stored here
 // before they ever see a schedule — this default only matters for accounts that
 // predate the toggle existing at all.
-let USER_SETTINGS={trackPrayers:true,showTracking:true,lang:'en',appIcon:'🏋️'};
+let USER_SETTINGS={trackPrayers:true,showTracking:true,lang:'en',appIcon:'🏋️',fitness_tracking_enabled:undefined,fitness_metrics:null};
 let AI_REPLY_LANG='en';
 function detectTextLang(text){
   const s=String(text||'');
@@ -3291,10 +3484,11 @@ function detectTextLang(text){
 const I18N={
   ar:{
     settings:'⚙️ الإعدادات', close:'إغلاق', save:'حفظ ✅', sign_out:'خروج', sign_in:'تسجيل دخول',
-    nav_general:'عام', nav_tracking:'التتبع', nav_notif:'التذكيرات', nav_reports:'التقارير',
+    nav_general:'عام', nav_tracking:'التتبع', nav_fitness:'🏋️ اللياقة والماكروز', nav_notif:'التذكيرات', nav_reports:'التقارير',
     nav_appearance:'المظهر', nav_language:'اللغة', nav_account:'الحساب',
     sec_general:'عام', sec_general_desc:'إدارة مهامك اليومية من هنا.',
-    sec_tracking:'التتبع', sec_tracking_desc:'أظهر أو أخفِ أنظمة النقاط والصلاة.',
+    sec_tracking:'التتبع', sec_tracking_desc:'أظهر أو أخفِ أنظمة النقاط والصلاة واللياقة.',
+    sec_fitness:'أهداف اللياقة والتغذية', sec_fitness_desc:'حساب السعرات والماكروز اليومية بدقة علمية (BMR / TDEE).',
     show_tracking:'إظهار النقاط والاستريك والتغذية', track_prayers:'تتبع مواعيد الصلاة',
     sec_notif:'التذكيرات', sec_notif_desc:'تفعيل أو إيقاف إشعارات المهام.',
     sec_reports:'التقارير', sec_reports_desc:'سجل التقارير الأسبوعية السابقة.',
@@ -3317,17 +3511,18 @@ const I18N={
     rest_day:'يوم راحة', save_theme:'حفظ المظهر ✅', reset_theme:'افتراضي',
     theme_accent:'لون التمييز', theme_card:'لون البطاقة', theme_bg:'لون الخلفية',
     color_palette:'لوحة الألوان',
-    ai_title:'🤖 مساعد الجدول', ai_ready:'جاهز للمساعدة', ai_close:'إغلاق', ai_send:'إرسال',
-    ai_placeholder:'اكتب أمرك...', ai_welcome:'👋 أهلاً! قولّي أي حاجة عايز تعملها في جدولك.',
+    ai_title:'🤖 منسق الفوضى الذكي (Chaos Coordinator)', ai_ready:'مساعد اللياقة، التغذية، وتحسين العادات', ai_close:'إغلاق', ai_send:'إرسال',
+    ai_placeholder:'اكتب استفسارك أو أمرك...', ai_welcome:'👋 أهلاً! أنا Chaos Coordinator AI — مستشارك الرياضي وخبير التغذية والعادات اليومية. كيف أساعدك اليوم؟',
     not_yet:'⏳ لسه مجاش وقتها', expired:'فات الوقت', late:'متأخر', log_food:'🍽️ سجل الأكل',
     task_icon:'أيقونة المهمة', food_log_opt:'🍽️ تسجيل أكل؟'
   },
   en:{
     settings:'⚙️ Settings', close:'Close', save:'Save ✅', sign_out:'Sign out', sign_in:'Sign in',
-    nav_general:'General', nav_tracking:'Tracking', nav_notif:'Reminders', nav_reports:'Reports',
+    nav_general:'General', nav_tracking:'Tracking', nav_fitness:'🏋️ Fitness & Macros', nav_notif:'Reminders', nav_reports:'Reports',
     nav_appearance:'Appearance', nav_language:'Language', nav_account:'Account',
     sec_general:'General', sec_general_desc:'Manage your daily tasks here.',
-    sec_tracking:'Tracking', sec_tracking_desc:'Show or hide points and prayer tracking.',
+    sec_tracking:'Tracking', sec_tracking_desc:'Show or hide points, prayer, and fitness tracking.',
+    sec_fitness:'Fitness & Nutrition Targets', sec_fitness_desc:'Personalized scientific BMR, TDEE, and macro calculations.',
     show_tracking:'Show points, streak, and nutrition', track_prayers:'Track prayer times',
     sec_notif:'Reminders', sec_notif_desc:'Enable or disable task notifications.',
     sec_reports:'Reports', sec_reports_desc:'Past weekly reports.',
@@ -3350,8 +3545,8 @@ const I18N={
     rest_day:'Rest day', save_theme:'Save appearance ✅', reset_theme:'Default',
     theme_accent:'Accent color', theme_card:'Card color', theme_bg:'Background',
     color_palette:'Color palette',
-    ai_title:'🤖 Schedule assistant', ai_ready:'Ready to help', ai_close:'Close', ai_send:'Send',
-    ai_placeholder:'Type a command...', ai_welcome:'👋 Hi! Tell me anything you want to do with your schedule.',
+    ai_title:'🤖 Chaos Coordinator AI', ai_ready:'Sports Nutritionist & Habit Coach', ai_close:'Close', ai_send:'Send',
+    ai_placeholder:'Type a question or command...', ai_welcome:'👋 Welcome! I am Chaos Coordinator AI, your elite Personal Assistant, Sports Nutritionist, and Behavioral Habit Coach. How can I guide you toward your goals today?',
     not_yet:'⏳ Not yet', expired:'Missed', late:'Late', log_food:'🍽️ Log food',
     task_icon:'Task icon', food_log_opt:'🍽️ Log food for this task?'
   }
@@ -4453,6 +4648,9 @@ async function obFinish(){
     updateUI();
     revealApp();
     showToast('Your schedule is ready',2400);
+    if(lsGet('fitness_prompt_shown')!=='true' && USER_SETTINGS.fitness_tracking_enabled===undefined){
+      setTimeout(()=>{ openFitnessPromptModal(); }, 750);
+    }
   }catch(e){
     console.warn('post-onboarding re-render failed', e);
   }
@@ -5290,6 +5488,7 @@ async function fetchPrayers(){
 // "must stay open" requirement once permission is granted. isIOS()/isStandalonePWA()
 // below are therefore still load-bearing, not legacy leftovers.
 const LS_NOTIF_PREF='sc:notifPref1';
+AI_WORKER_URL = window.AI_WORKER_URL || window.location.origin;
 const VAPID_PUBLIC_KEY='BKgn0lwYCrrfdSIX6PSaaR34nEO1g9FkZ9V3mlZmBAWY_fE7LcbI4osZ9CP8tQsfU1R5vLbg4S0GhNL3QiIOSnQ'; // matches wrangler.toml [vars] VAPID_PUBLIC_KEY — regenerated 2026-07-21 after the old keypair produced "DataError: Invalid EC key in JSON Web Key" on every push send, both sides of this pair MUST always match exactly or subscriptions silently fail
 let NOTIF_ENABLED=false;
 let PUSH_SUBSCRIPTION=null;
@@ -5403,43 +5602,51 @@ function getTaskNotifConfig(taskId){
     endLeadMin:Math.max(1,parseInt(raw.endLeadMin,10)||30)
   };
 }
-function buildTodayReminderPayload(){
-  const jd=todayJD();
-  const tasks=getAllTasks(jd,TODAY);
+function buildUpcomingReminderPayload(daysAhead = 14){
   const reminders=[];
-
   const minToHHMM=m=>{
     m=((m%1440)+1440)%1440;
     const h=Math.floor(m/60),mm=m%60;
     return `${String(h).padStart(2,'0')}:${String(mm).padStart(2,'0')}`;
   };
 
-  for(const t of tasks){
-    if(t._deleted) continue;
-    if(t[2]==='free') continue;
-    if(t[9]) continue;
-    const id=t[0];
-    if(DONE[id]!==undefined && DONE[id]!==false) continue;
-    const cfg=getTaskNotifConfig(id);
-    if(!cfg.enabled) continue;
-    const startMin=toMin(t[10]||t[1]);
+  const days = Math.max(1, Math.min(30, daysAhead || 14));
+  for(let offset = 0; offset < days; offset++){
+    const targetDate = dateOff(offset, TODAY);
+    const jd = getJDfromISO(targetDate);
+    const tasks = getAllTasks(jd, targetDate);
 
-    if(cfg.leadEnabled){
-      const leadAt=startMin-cfg.leadMin;
-      if(leadAt>=0) reminders.push({taskId:id,taskName:t[4],type:'lead',date:TODAY,time:minToHHMM(leadAt)});
-    }
-    if(cfg.startEnabled){
-      reminders.push({taskId:id,taskName:t[4],type:'start',date:TODAY,time:minToHHMM(startMin)});
-    }
-    if(cfg.endLeadEnabled && t[2]!=='sleep'){
-      const endMin=notifTaskEndMin(t);
-      const endLeadMin=endMin-cfg.endLeadMin;
-      if(endLeadMin>startMin){
-        reminders.push({taskId:id,taskName:t[4],type:'ending',date:TODAY,time:minToHHMM(endLeadMin)});
+    for(const t of tasks){
+      if(!t || t._deleted) continue;
+      if(t[2]==='free') continue;
+      if(t[9]) continue;
+      const id=t[0];
+      if(offset === 0 && DONE[id]!==undefined && DONE[id]!==false) continue;
+      const cfg=getTaskNotifConfig(id);
+      if(!cfg.enabled) continue;
+      const startMin=toMin(t[10]||t[1]);
+
+      if(cfg.leadEnabled){
+        const leadAt=startMin-cfg.leadMin;
+        if(leadAt>=0) reminders.push({taskId:id,taskName:t[4],type:'lead',date:targetDate,time:minToHHMM(leadAt)});
+      }
+      if(cfg.startEnabled){
+        reminders.push({taskId:id,taskName:t[4],type:'start',date:targetDate,time:minToHHMM(startMin)});
+      }
+      if(cfg.endLeadEnabled && t[2]!=='sleep'){
+        const endMin=notifTaskEndMin(t);
+        const endLeadMin=endMin-cfg.endLeadMin;
+        if(endLeadMin>startMin){
+          reminders.push({taskId:id,taskName:t[4],type:'ending',date:targetDate,time:minToHHMM(endLeadMin)});
+        }
       }
     }
   }
   return reminders;
+}
+
+function buildTodayReminderPayload(){
+  return buildUpcomingReminderPayload(14);
 }
 function renderTaskNotifList(){
   const list=document.getElementById('taskNotifList');
@@ -5520,61 +5727,163 @@ function notifTaskEndMin(task){
 // always explicitly registering the SW here (registration is idempotent/cheap if
 // already registered) before ever touching .ready, and by bounding the wait with a
 // timeout so a genuinely stuck browser state can never hang this call forever either.
-async function syncPushSchedule(){
+async function syncPushSchedule(forceRenew = false){
   if(!NOTIF_ENABLED) return;
-  const user=fbAuth.currentUser;
-  if(!user){
+  const curUser = (typeof fbAuth !== 'undefined' && fbAuth.currentUser) ? fbAuth.currentUser : null;
+  const localUser = (typeof lsGet === 'function' ? lsGet('current_user') : localStorage.getItem('current_user'));
+  if(!curUser && !localUser){
     showToast('لازم تسجل دخول عشان التذكيرات تتزامن مع السيرفر 🔒',3200,'warn');
     return;
   }
-  if(!PUSH_SUBSCRIPTION){
-    try{
-      const reg=await registerServiceWorker(); // idempotent — safe to call every time
-      if(reg){
-        const ready=await Promise.race([
-          navigator.serviceWorker.ready,
-          new Promise(res=>setTimeout(()=>res(null),6000)) // never hang forever
-        ]).catch(()=>null);
-        const activeReg=ready||reg;
-        const sub=await activeReg.pushManager.getSubscription();
-        if(sub){
-          PUSH_SUBSCRIPTION=sub.toJSON();
-        }else if(VAPID_PUBLIC_KEY && VAPID_PUBLIC_KEY!=='REPLACE_WITH_YOUR_VAPID_PUBLIC_KEY' && typeof Notification!=='undefined' && Notification.permission==='granted'){
-          const newSub=await activeReg.pushManager.subscribe({
-            userVisibleOnly:true,
-            applicationServerKey:urlBase64ToUint8Array(VAPID_PUBLIC_KEY)
-          });
-          PUSH_SUBSCRIPTION=newSub.toJSON();
-        }
+  const uid = curUser ? curUser.uid : (localUser || 'default_user');
+
+  try{
+    const reg = await registerServiceWorker(); // idempotent — safe to call every time
+    if(reg){
+      const ready = await Promise.race([
+        navigator.serviceWorker.ready,
+        new Promise(res=>setTimeout(()=>res(null),6000))
+      ]).catch(()=>null);
+      const activeReg = ready || reg;
+      let sub = await activeReg.pushManager.getSubscription();
+
+      // Check if expired or force renew requested
+      if(sub && (forceRenew || (sub.expirationTime && sub.expirationTime < Date.now() + 60000))){
+        console.warn('Subscription expired or renewal requested. Unsubscribing...');
+        try { await sub.unsubscribe(); } catch(e){}
+        sub = null;
       }
-    }catch(e){
-      // FIX: this was a silent console.warn — invisible on a phone with no devtools
-      // open. A subscription failure here means notifications will NEVER arrive and
-      // there was previously zero way to know why. Now surfaces visibly.
-      console.warn('push subscription recovery failed',e);
-      showToast('⚠️ فشل تفعيل التذكيرات — جرب تقفل وتفتح التطبيق تاني، ولو استمرت المشكلة جرب تلغي وتفعّل التذكيرات من جديد',4500,'warn');
-      return;
+
+      if(!sub && VAPID_PUBLIC_KEY && VAPID_PUBLIC_KEY!=='REPLACE_WITH_YOUR_VAPID_PUBLIC_KEY' && typeof Notification!=='undefined' && Notification.permission==='granted'){
+        sub = await activeReg.pushManager.subscribe({
+          userVisibleOnly:true,
+          applicationServerKey:urlBase64ToUint8Array(VAPID_PUBLIC_KEY)
+        });
+      }
+
+      if(sub){
+        PUSH_SUBSCRIPTION = sub.toJSON();
+      }
     }
-  }
-  if(!PUSH_SUBSCRIPTION){
-    showToast('⚠️ التذكيرات مش متسجلة فعلياً — جرب تلغي وتفعّلها تاني من الزرار',4000,'warn');
-    return; // still not subscribed — genuinely nothing to sync
+  }catch(e){
+    console.warn('push subscription recovery failed',e);
+    showToast('⚠️ تعذر استعادة اشتراك الإشعارات — جرب زرار تجديد التذكيرات',4000,'warn');
+    return;
   }
 
-  const reminders=buildTodayReminderPayload();
+  if(!PUSH_SUBSCRIPTION){
+    showToast('⚠️ التذكيرات مش متسجلة فعلياً — اضغط على زرار تجديد الإشعارات',4000,'warn');
+    return;
+  }
+
+  const reminders = buildUpcomingReminderPayload(14);
+  const workerUrl = (typeof AI_WORKER_URL === 'string' && AI_WORKER_URL) ? AI_WORKER_URL.replace(/\/$/, '') : window.location.origin;
+
   try{
-    const res=await fetch(AI_WORKER_URL+'/api/save-subscription',{
+    const res = await fetch(workerUrl + '/api/save-subscription',{
       method:'POST',
       headers:{'Content-Type':'application/json'},
-      body:JSON.stringify({uid:user.uid,subscription:PUSH_SUBSCRIPTION,reminders})
+      body:JSON.stringify({uid, subscription:PUSH_SUBSCRIPTION, reminders})
     });
     if(!res.ok){
       console.warn('push schedule sync: server rejected',res.status);
-      showToast(`⚠️ السيرفر رفض حفظ التذكيرات (${res.status}) — جرب تاني كمان شوية`,4000,'warn');
+      showToast(`⚠️ السيرفر رفض حفظ التذكيرات (${res.status})`,3000,'warn');
+    } else {
+      const badge = document.getElementById('notif-sync-badge');
+      if(badge) badge.textContent = '✅ مجدول ١٤ يوم سحابياً (' + reminders.length + ' تذكير)';
     }
   }catch(e){
     console.warn('push schedule sync failed',e);
-    showToast('⚠️ فشل الاتصال بالسيرفر لحفظ التذكيرات — تأكد من النت وجرب تاني',4000,'warn');
+  }
+}
+
+async function testPushNotification(){
+  if(typeof Notification === 'undefined'){
+    showToast('المتصفح لا يدعم الإشعارات ❌', 3500, 'warn');
+    return;
+  }
+  if(Notification.permission !== 'granted'){
+    showToast('من فضلك فعّل الإشعارات أولاً بالضغط على زرار التذكيرات ⚠️', 4000, 'warn');
+    return;
+  }
+  showToast('⏳ جاري إرسال إشعار تجريبي عبر السيرفر...', 2500);
+
+  // 1. Ensure service worker and subscription
+  await syncPushSchedule();
+
+  const workerUrl = (typeof AI_WORKER_URL === 'string' && AI_WORKER_URL) ? AI_WORKER_URL.replace(/\/$/, '') : window.location.origin;
+  const curUser = (typeof fbAuth !== 'undefined' && fbAuth.currentUser) ? fbAuth.currentUser : null;
+  const uid = curUser ? curUser.uid : ((typeof lsGet === 'function' ? lsGet('current_user') : localStorage.getItem('current_user')) || 'default_user');
+
+  let cloudSuccess = false;
+  if(PUSH_SUBSCRIPTION){
+    try{
+      const res = await fetch(workerUrl + '/api/test-push', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ uid, subscription: PUSH_SUBSCRIPTION })
+      });
+      const data = await res.json();
+      if(res.ok && data.ok){
+        cloudSuccess = true;
+        showToast('🔔 وصل الإشعار السحابي بنجاح! جدولك شغال ومحفوظ ✅', 5000);
+      } else if(res.status === 410 || (data.error && data.error.includes('expired'))){
+        showToast('🔄 انتهت صلاحية اشتراك المتصفح القديم بسبب الغياب، بنجدده دلوقتي...', 3500);
+        await syncPushSchedule(true);
+        if(PUSH_SUBSCRIPTION){
+          const retryRes = await fetch(workerUrl + '/api/test-push', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ uid, subscription: PUSH_SUBSCRIPTION })
+          });
+          if(retryRes.ok){
+            cloudSuccess = true;
+            showToast('✅ تم تجديد الاشتراك السحابي بنجاح وإرسال الإشعار!', 4500);
+          }
+        }
+      } else {
+        console.warn('test-push error response:', data);
+      }
+    }catch(err){
+      console.warn('test-push fetch error:', err);
+    }
+  }
+
+  // Also verify via Service Worker directly as local confirmation
+  try{
+    const reg = await navigator.serviceWorker.getRegistration();
+    if(reg){
+      await reg.showNotification('🔔 تجربة إشعارات الجدول', {
+        body: 'نظام الإشعارات شغال على جهازك بنجاح ✅',
+        icon: 'data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"%3E%3Ctext y="75" font-size="80"%3E%F0%9F%8F%8B%EF%B8%8F%3C/text%3E%3C/svg%3E',
+        badge: 'data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"%3E%3Ctext y="75" font-size="80"%3E%F0%9F%94%94%3C/text%3E%3C/svg%3E',
+        tag: 'instant-local-test-' + Date.now()
+      });
+      if(!cloudSuccess){
+        showToast('✅ تم إظهار إشعار تجريبي عبر الجهاز بنجاح!', 3500);
+      }
+    }
+  }catch(e){
+    console.warn('Local notification test failed:', e);
+  }
+}
+
+async function renewPushSubscription(){
+  showToast('🔄 جاري تجديد الاشتراك السحابي وجدولة ١٤ يوم قادمة...', 3000);
+  try{
+    const reg = await navigator.serviceWorker.getRegistration();
+    if(reg){
+      const sub = await reg.pushManager.getSubscription();
+      if(sub){
+        try { await sub.unsubscribe(); } catch(e){}
+      }
+    }
+    PUSH_SUBSCRIPTION = null;
+    await syncPushSchedule(true);
+    showToast('✅ تم تجديد الاشتراك السحابي وجدولة الأسبوعين القادمين بنجاح!', 4500);
+  }catch(err){
+    console.error('Renew error:', err);
+    showToast('❌ حصل خطأ أثناء التجديد، جرب تاني', 3500, 'warn');
   }
 }
 
@@ -6349,17 +6658,30 @@ function computeDayMacros(jd,iso){
   const consumed={p:0,c:0,f:0,b:0,k:0};
   const dayDone=(historyData[iso]||{}).done||(iso===SELECTED_DATE?DONE:{});
   const dayFoodLog=(historyData[iso]||{}).foodLog||{};
+
+  // If fitness tracking is enabled and user has calculated metrics, use those scientific daily targets
+  if(USER_SETTINGS.fitness_tracking_enabled && USER_SETTINGS.fitness_metrics){
+    const ft = USER_SETTINGS.fitness_metrics.target_kcal ? USER_SETTINGS.fitness_metrics : (typeof calculateFitnessTargets==='function' ? calculateFitnessTargets(USER_SETTINGS.fitness_metrics) : null);
+    if(ft && ft.target_kcal){
+      target.p = ft.target_protein;
+      target.c = ft.target_carbs;
+      target.f = ft.target_fats;
+      target.b = ft.target_fiber;
+      target.k = ft.target_kcal;
+    }
+  }
+
   for(const t of allTasks){
     const macro=t[11];
     if(!macro) continue;
-    target.p+=macro.p;target.c+=macro.c;target.f+=macro.f;target.b+=(macro.b||0);target.k+=macro.k;
+    // Only accumulate schedule target if personalized fitness targets aren't active
+    if(!USER_SETTINGS.fitness_tracking_enabled || !USER_SETTINGS.fitness_metrics || !USER_SETTINGS.fitness_metrics.target_kcal){
+      target.p+=macro.p;target.c+=macro.c;target.f+=macro.f;target.b+=(macro.b||0);target.k+=macro.k;
+    }
     const v=dayDone[t[0]];
     if(v!==undefined && v!==false){
       const logged=dayFoodLog[t[0]]?.macro;
       const m=logged||macro;
-      // (m.b||0) — old foodLog entries saved before fiber tracking existed won't
-      // have a b field; treat that as 0 rather than NaN so old logged days still
-      // add up correctly instead of corrupting the running total.
       consumed.p+=m.p;consumed.c+=m.c;consumed.f+=m.f;consumed.b+=(m.b||0);consumed.k+=m.k;
     }
   }
@@ -6369,7 +6691,7 @@ function computeDayMacros(jd,iso){
 function updateMacroUI(){
   const jd=getJDfromISO(SELECTED_DATE);
   const{target,consumed}=computeDayMacros(jd,SELECTED_DATE);
-  const r1=n=>Math.round(n*10)/10; // one decimal max, matches the .5g fat figures in the tables
+  const r1=n=>Math.round(n*10)/10; // one decimal max
   const setBar=(fillId,valId,cVal,tVal,unit)=>{
     const fill=document.getElementById(fillId);
     const val=document.getElementById(valId);
@@ -6394,19 +6716,22 @@ function updateMacroUI(){
 function updateUI(){
   try{ updatePrestigeUI(); }catch(e){}
   const showTrack=USER_SETTINGS.showTracking!==false;
+  const showFitness=showTrack && (USER_SETTINGS.fitness_tracking_enabled !== false);
   const sbarStats=document.querySelector('#sbar .sbar-stats');
   if(sbarStats) sbarStats.style.display=showTrack?'flex':'none';
-  document.querySelectorAll('.pw').forEach(el=>{ el.style.display=showTrack?'block':'none'; });
+  document.querySelectorAll('.pw').forEach(el=>{
+    if(el.id==='macroBoxWrapper'){
+      el.style.display=showFitness?'block':'none';
+    } else {
+      el.style.display=showTrack?'block':'none';
+    }
+  });
 
   const s1=document.getElementById('sv1'); if(s1) s1.textContent=STATS.cur;
   const s2=document.getElementById('sv2'); if(s2){s2.textContent=STATS.pts;s2.style.color=STATS.pts<0?'var(--rd)':'var(--ye)';}
   const s3=document.getElementById('sv3'); if(s3) s3.textContent=STATS.best;
 
   const jd=getJDfromISO(SELECTED_DATE);
-  // Pass SELECTED_DATE explicitly — previously this defaulted to "today's natural date
-  // for this weekday", which silently showed the WRONG week's task list/points whenever
-  // browsing history via the prev/next day buttons. Not something I introduced, but
-  // worth fixing since this function is being touched anyway.
   const req=getReqTasks(jd,SELECTED_DATE);
   let d=0,p=0;
   for(const t of req){
@@ -6426,12 +6751,184 @@ function updateUI(){
 
   updateMacroUI();
 
-  // Keep today's scheduled reminders in sync with actual completion state — a task
-  // just marked done should stop having a pending push. Re-syncs to the Worker's D1
-  // store rather than rescheduling local timers.
   if(SELECTED_DATE===TODAY && NOTIF_ENABLED){
     try{ syncPushSchedule(); }catch(e){ console.warn('push schedule sync failed',e); }
   }
+}
+
+function renderFitnessSettingsStats(){
+  const m = USER_SETTINGS.fitness_metrics || {};
+  const ftEnabled = USER_SETTINGS.fitness_tracking_enabled === true;
+  const block = document.getElementById('setFitnessConfigBlock');
+  if(block) block.style.opacity = ftEnabled ? '1' : '0.45';
+
+  const previewCard = document.getElementById('setFitnessPreviewCard');
+  if(!previewCard) return;
+
+  const gender = (document.getElementById('setGenderFemale')?.classList.contains('fw-chip-sel')) ? 'female' : 'male';
+  const age = Number(document.getElementById('setAge')?.value) || (m.age) || 25;
+  const weight = Number(document.getElementById('setWeight')?.value) || (m.weight) || 75;
+  const height = Number(document.getElementById('setHeight')?.value) || (m.height) || 175;
+  const activity = Number(document.getElementById('setActivity')?.value) || (m.activity) || 1.55;
+  let goal = 'recomp';
+  if(document.getElementById('setGoalMuscle')?.classList.contains('fw-chip-sel')) goal = 'muscle';
+  else if(document.getElementById('setGoalFatLoss')?.classList.contains('fw-chip-sel')) goal = 'fat_loss';
+  const bf = document.getElementById('setBodyFat')?.value;
+  const bodyFat = bf ? Number(bf) : null;
+
+  const calc = calculateFitnessTargets({gender, age, weight, height, activity, goal, body_fat: bodyFat});
+
+  if(document.getElementById('setCalcKcal')) document.getElementById('setCalcKcal').textContent = `${calc.target_kcal} kcal/day`;
+  if(document.getElementById('setCalcP')) document.getElementById('setCalcP').textContent = `${calc.target_protein}g`;
+  if(document.getElementById('setCalcF')) document.getElementById('setCalcF').textContent = `${calc.target_fats}g`;
+  if(document.getElementById('setCalcC')) document.getElementById('setCalcC').textContent = `${calc.target_carbs}g`;
+  if(document.getElementById('setCalcB')) document.getElementById('setCalcB').textContent = `${calc.target_fiber}g`;
+  if(document.getElementById('setCalcBmrTdee')) document.getElementById('setCalcBmrTdee').textContent = `BMR: ${calc.bmr} kcal · TDEE: ${calc.tdee} kcal (${calc.goal === 'muscle' ? '+250 kcal surplus' : '15-20% deficit'})`;
+}
+
+function renderFitnessWizardPreview(){
+  const gender = (document.getElementById('wizGenderFemale')?.classList.contains('fw-chip-sel')) ? 'female' : 'male';
+  const age = Number(document.getElementById('wizAge')?.value) || 25;
+  const weight = Number(document.getElementById('wizWeight')?.value) || 75;
+  const height = Number(document.getElementById('wizHeight')?.value) || 175;
+  const activity = Number(document.getElementById('wizActivity')?.value) || 1.55;
+  let goal = 'recomp';
+  if(document.getElementById('wizGoalMuscle')?.classList.contains('fw-chip-sel')) goal = 'muscle';
+  else if(document.getElementById('wizGoalFatLoss')?.classList.contains('fw-chip-sel')) goal = 'fat_loss';
+  const bf = document.getElementById('wizBodyFat')?.value;
+  const bodyFat = bf ? Number(bf) : null;
+
+  const calc = calculateFitnessTargets({gender, age, weight, height, activity, goal, body_fat: bodyFat});
+
+  if(document.getElementById('wizCalcKcal')) document.getElementById('wizCalcKcal').textContent = `${calc.target_kcal} kcal/day`;
+  if(document.getElementById('wizCalcP')) document.getElementById('wizCalcP').textContent = `${calc.target_protein}g`;
+  if(document.getElementById('wizCalcF')) document.getElementById('wizCalcF').textContent = `${calc.target_fats}g`;
+  if(document.getElementById('wizCalcC')) document.getElementById('wizCalcC').textContent = `${calc.target_carbs}g`;
+  if(document.getElementById('wizCalcB')) document.getElementById('wizCalcB').textContent = `${calc.target_fiber}g`;
+  if(document.getElementById('wizCalcBmrTdee')) document.getElementById('wizCalcBmrTdee').textContent = `BMR: ${calc.bmr} kcal · TDEE: ${calc.tdee} kcal (${calc.goal === 'muscle' ? '+250 kcal surplus' : '15-20% deficit'})`;
+}
+
+function openFitnessPromptModal(){
+  document.getElementById('fitnessPromptModal')?.classList.add('open');
+}
+
+function closeFitnessPromptModal(){
+  document.getElementById('fitnessPromptModal')?.classList.remove('open');
+}
+
+function openFitnessWizardModal(){
+  const m = USER_SETTINGS.fitness_metrics || {};
+  const isFemale = m.gender === 'female';
+  const gm = document.getElementById('wizGenderMale');
+  const gf = document.getElementById('wizGenderFemale');
+  if(gm && gf){
+    if(isFemale){
+      gf.classList.add('fw-chip-sel');
+      gf.style.border = '2px solid var(--ac)';
+      gf.style.background = 'rgba(59,130,246,.15)';
+      gf.style.color = 'var(--tx)';
+      gm.classList.remove('fw-chip-sel');
+      gm.style.border = '1px solid var(--br)';
+      gm.style.background = 'var(--c)';
+      gm.style.color = 'var(--so)';
+    } else {
+      gm.classList.add('fw-chip-sel');
+      gm.style.border = '2px solid var(--ac)';
+      gm.style.background = 'rgba(59,130,246,.15)';
+      gm.style.color = 'var(--tx)';
+      gf.classList.remove('fw-chip-sel');
+      gf.style.border = '1px solid var(--br)';
+      gf.style.background = 'var(--c)';
+      gf.style.color = 'var(--so)';
+    }
+  }
+
+  if(document.getElementById('wizAge') && m.age) document.getElementById('wizAge').value = m.age;
+  if(document.getElementById('wizWeight') && m.weight) document.getElementById('wizWeight').value = m.weight;
+  if(document.getElementById('wizHeight') && m.height) document.getElementById('wizHeight').value = m.height;
+  if(document.getElementById('wizActivity') && m.activity) document.getElementById('wizActivity').value = m.activity;
+  if(document.getElementById('wizBodyFat')) document.getElementById('wizBodyFat').value = m.body_fat || '';
+
+  const goal = m.goal || 'recomp';
+  ['wizGoalMuscle', 'wizGoalRecomp', 'wizGoalFatLoss'].forEach(id=>{
+    const el = document.getElementById(id);
+    if(!el) return;
+    const isThis = el.dataset.val === goal;
+    el.classList.toggle('fw-chip-sel', isThis);
+    el.style.border = isThis ? '2px solid var(--ac)' : '1px solid var(--br)';
+    el.style.background = isThis ? 'rgba(59,130,246,.15)' : 'var(--c)';
+    el.style.color = isThis ? 'var(--tx)' : 'var(--so)';
+  });
+
+  renderFitnessWizardPreview();
+  document.getElementById('fitnessWizardModal')?.classList.add('open');
+}
+
+function closeFitnessWizardModal(){
+  document.getElementById('fitnessWizardModal')?.classList.remove('open');
+}
+
+async function handleFitnessPromptChoice(enable){
+  closeFitnessPromptModal();
+  lsSet('fitness_prompt_shown', 'true');
+  USER_SETTINGS.fitness_tracking_enabled = !!enable;
+  try{ await saveUserSettings(); }catch(e){}
+  updateUI();
+  if(enable){
+    openFitnessWizardModal();
+  } else {
+    showToast(USER_SETTINGS.lang==='en' ? 'Fitness tracking disabled' : 'تم تعطيل تتبع اللياقة', 2000);
+  }
+}
+
+async function handleFitnessWizardSave(){
+  const gender = (document.getElementById('wizGenderFemale')?.classList.contains('fw-chip-sel')) ? 'female' : 'male';
+  const age = Math.max(14, Math.min(100, Number(document.getElementById('wizAge')?.value) || 25));
+  const weight = Math.max(30, Math.min(250, Number(document.getElementById('wizWeight')?.value) || 75));
+  const height = Math.max(100, Math.min(250, Number(document.getElementById('wizHeight')?.value) || 175));
+  const activity = Number(document.getElementById('wizActivity')?.value) || 1.55;
+  let goal = 'recomp';
+  if(document.getElementById('wizGoalMuscle')?.classList.contains('fw-chip-sel')) goal = 'muscle';
+  else if(document.getElementById('wizGoalFatLoss')?.classList.contains('fw-chip-sel')) goal = 'fat_loss';
+  const bfVal = document.getElementById('wizBodyFat')?.value;
+  const bodyFat = bfVal ? Number(bfVal) : null;
+
+  const calculated = calculateFitnessTargets({gender, age, weight, height, activity, goal, body_fat: bodyFat});
+
+  USER_SETTINGS.fitness_tracking_enabled = true;
+  USER_SETTINGS.fitness_metrics = calculated;
+
+  closeFitnessWizardModal();
+  try{ await saveUserSettings(); }catch(e){}
+  updateUI();
+  showToast(USER_SETTINGS.lang==='en' ? 'Fitness targets calculated & applied ✅' : 'تم حساب وتطبيق أهداف اللياقة ✅', 2500);
+}
+
+async function handleSettingsFitnessSave(){
+  const ftChecked = document.getElementById('setFitnessTrackingEnabledSec')?.checked ?? true;
+  const gender = (document.getElementById('setGenderFemale')?.classList.contains('fw-chip-sel')) ? 'female' : 'male';
+  const age = Math.max(14, Math.min(100, Number(document.getElementById('setAge')?.value) || 25));
+  const weight = Math.max(30, Math.min(250, Number(document.getElementById('setWeight')?.value) || 75));
+  const height = Math.max(100, Math.min(250, Number(document.getElementById('setHeight')?.value) || 175));
+  const activity = Number(document.getElementById('setActivity')?.value) || 1.55;
+  let goal = 'recomp';
+  if(document.getElementById('setGoalMuscle')?.classList.contains('fw-chip-sel')) goal = 'muscle';
+  else if(document.getElementById('setGoalFatLoss')?.classList.contains('fw-chip-sel')) goal = 'fat_loss';
+  const bfVal = document.getElementById('setBodyFat')?.value;
+  const bodyFat = bfVal ? Number(bfVal) : null;
+
+  const calculated = calculateFitnessTargets({gender, age, weight, height, activity, goal, body_fat: bodyFat});
+
+  USER_SETTINGS.fitness_tracking_enabled = ftChecked;
+  USER_SETTINGS.fitness_metrics = calculated;
+
+  const syncCheck1 = document.getElementById('setFitnessTrackingEnabled');
+  if(syncCheck1) syncCheck1.checked = ftChecked;
+
+  try{ await saveUserSettings(); }catch(e){}
+  updateUI();
+  renderFitnessSettingsStats();
+  showToast(USER_SETTINGS.lang==='en' ? 'Fitness profile saved ✅' : 'تم حفظ بيانات اللياقة ✅', 2200);
 }
 
 function openSettingsScreen(){
@@ -6439,6 +6936,46 @@ function openSettingsScreen(){
   const prayEl=document.getElementById('setTrackPrayers');
   if(showEl) showEl.checked=USER_SETTINGS.showTracking!==false;
   if(prayEl) prayEl.checked=!!USER_SETTINGS.trackPrayers;
+
+  const ftTrackEl=document.getElementById('setFitnessTrackingEnabled');
+  if(ftTrackEl) ftTrackEl.checked=USER_SETTINGS.fitness_tracking_enabled===true;
+  const ftInSec=document.getElementById('setFitnessTrackingEnabledSec');
+  if(ftInSec) ftInSec.checked=USER_SETTINGS.fitness_tracking_enabled===true;
+
+  const m = USER_SETTINGS.fitness_metrics || {};
+  const isFemale = m.gender === 'female';
+  const gm = document.getElementById('setGenderMale');
+  const gf = document.getElementById('setGenderFemale');
+  if(gm && gf){
+    gm.classList.toggle('fw-chip-sel', !isFemale);
+    gm.style.border = !isFemale ? '2px solid var(--ac)' : '1px solid var(--br)';
+    gm.style.background = !isFemale ? 'rgba(59,130,246,.15)' : 'var(--c)';
+    gm.style.color = !isFemale ? 'var(--tx)' : 'var(--so)';
+    gf.classList.toggle('fw-chip-sel', isFemale);
+    gf.style.border = isFemale ? '2px solid var(--ac)' : '1px solid var(--br)';
+    gf.style.background = isFemale ? 'rgba(59,130,246,.15)' : 'var(--c)';
+    gf.style.color = isFemale ? 'var(--tx)' : 'var(--so)';
+  }
+
+  if(document.getElementById('setAge')) document.getElementById('setAge').value = m.age || 25;
+  if(document.getElementById('setWeight')) document.getElementById('setWeight').value = m.weight || 75;
+  if(document.getElementById('setHeight')) document.getElementById('setHeight').value = m.height || 175;
+  if(document.getElementById('setActivity')) document.getElementById('setActivity').value = m.activity || 1.55;
+  if(document.getElementById('setBodyFat')) document.getElementById('setBodyFat').value = m.body_fat || '';
+
+  const goal = m.goal || 'recomp';
+  ['setGoalMuscle', 'setGoalRecomp', 'setGoalFatLoss'].forEach(id=>{
+    const el = document.getElementById(id);
+    if(!el) return;
+    const isThis = el.dataset.val === goal;
+    el.classList.toggle('fw-chip-sel', isThis);
+    el.style.border = isThis ? '2px solid var(--ac)' : '1px solid var(--br)';
+    el.style.background = isThis ? 'rgba(59,130,246,.15)' : 'var(--c)';
+    el.style.color = isThis ? 'var(--tx)' : 'var(--so)';
+  });
+
+  renderFitnessSettingsStats();
+
   const a=document.getElementById('themeAccent');
   const c=document.getElementById('themeCard');
   const b=document.getElementById('themeBg');
@@ -7201,23 +7738,230 @@ function aiMemoryBlock(){
 // The Worker holds the real Anthropic API key server-side — this file never contains
 // it, so it's safe to be in a public GitHub repo. Replace WORKER_URL below with your
 // deployed Worker's URL once you've completed the Cloudflare setup.
-const AI_WORKER_URL = window.location.origin;
+AI_WORKER_URL = window.AI_WORKER_URL || window.location.origin;
 
-// Mentor persona, per Abdullah's explicit instructions. Search Grounding is enabled.
-const AI_SYSTEM_PROMPT=`You are a skeptical, research-oriented mentor embedded in a personal schedule and habit-tracking app ("My Schedule" / الجدول الذكي). Your purpose is to sharpen the user's thinking and help them stick to a realistic plan — not to flatter them.
+// Chaos Coordinator AI: Elite Personal Assistant, Sports Nutritionist & Behavioral Habit Coach.
+function calculateFitnessTargets(m){
+  const gender = (m?.gender || 'male').toLowerCase();
+  const age = Number(m?.age) || 25;
+  const weight = Number(m?.weight) || 75;
+  const height = Number(m?.height) || 175;
+  const activity = Number(m?.activity) || 1.55;
+  const goal = m?.goal || 'recomp';
+  const bodyFat = (m?.body_fat !== undefined && m?.body_fat !== null && m?.body_fat !== '') ? Number(m.body_fat) : null;
 
-You may use Google Search when the platform provides it. Prefer facts over guesses; say when you are uncertain.
+  let bmr = 0;
+  if(bodyFat && bodyFat >= 4 && bodyFat <= 60){
+    // Katch-McArdle Formula (when Body Fat % is known)
+    const leanMass = weight * (1 - (bodyFat / 100));
+    bmr = Math.round(370 + (21.6 * leanMass));
+  } else {
+    // Mifflin-St Jeor Formula
+    if(gender === 'female'){
+      bmr = Math.round((10 * weight) + (6.25 * height) - (5 * age) - 161);
+    } else {
+      bmr = Math.round((10 * weight) + (6.25 * height) - (5 * age) + 5);
+    }
+  }
 
-TONE: Clear, professional, precise. No empty pep talk. If the user is wrong about something practical, correct them briefly and move on.
+  // TDEE Calculation with activity multiplier
+  const tdee = Math.round(bmr * activity);
 
-LENGTH:
-- If they ask to shorten (اختصر / short): core point only.
-- If they ask to explain (اشرح / explain): thorough, structured.
-- Otherwise match the question.
+  // Goal adjustments
+  let targetKcal = tdee;
+  if(goal === 'muscle'){
+    // Muscle Gain: Surplus of +200 to +300 kcal (default +250 kcal)
+    targetKcal = tdee + 250;
+  } else if(goal === 'fat_loss'){
+    // Fat Loss: Moderate deficit of 15% to 20% (default 18% deficit, never >25%)
+    targetKcal = Math.round(tdee * 0.82);
+  } else {
+    // Body Recomposition: Moderate deficit of 15% to 20% (default 15% deficit)
+    targetKcal = Math.round(tdee * 0.85);
+  }
 
-SCHEDULE CONTEXT: This app can edit the signed-in user's own schedule, points, streak, and nutrition. A separate tool-calling layer executes concrete commands (add/move/complete tasks, log food, etc.). You are reached for conversation, planning, and advice. When the user wants schedule changes in plain language, describe the plan clearly; the app's tools handle the actual write when appropriate.
+  // Hard Floor Limits: NEVER go below BMR or <1500 kcal for males (<1200 kcal for females)
+  const minFloor = gender === 'female' ? Math.max(bmr, 1200) : Math.max(bmr, 1500);
+  if(targetKcal < minFloor){
+    targetKcal = minFloor;
+  }
 
-MEMORY: If the user shares a durable personal fact worth remembering later, append ONE line at the very end of your reply in this exact format: [REMEMBER: the fact stated plainly in third person]. Only for things worth recalling weeks later. The tag is stripped before they see the reply.`;
+  // Protein Target: strictly 1.8g - 2.2g / kg total body weight (minimum 1.6g/kg)
+  const proteinMultiplier = goal === 'fat_loss' ? 2.2 : goal === 'recomp' ? 2.0 : 1.9;
+  const targetProtein = Math.round(weight * proteinMultiplier);
+  const proteinKcal = targetProtein * 4;
+
+  // Fats Target: 0.7g - 1.0g / kg (20% - 30% of total calories)
+  let targetFats = Math.round(weight * 0.85);
+  let fatsKcal = targetFats * 9;
+  if(fatsKcal < targetKcal * 0.20) targetFats = Math.round((targetKcal * 0.20) / 9);
+  if(fatsKcal > targetKcal * 0.30) targetFats = Math.round((targetKcal * 0.30) / 9);
+  fatsKcal = targetFats * 9;
+
+  // Carbohydrates Target: remaining calories
+  let carbsKcal = targetKcal - (proteinKcal + fatsKcal);
+  let targetCarbs = Math.max(50, Math.round(carbsKcal / 4));
+
+  // Fiber Target: 14g per 1000 kcal (minimum 25g)
+  const targetFiber = Math.max(25, Math.round((targetKcal / 1000) * 14));
+
+  return {
+    bmr,
+    tdee,
+    target_kcal: targetKcal,
+    target_protein: targetProtein,
+    target_fats: targetFats,
+    target_carbs: targetCarbs,
+    target_fiber: targetFiber,
+    gender,
+    age,
+    weight,
+    height,
+    activity,
+    goal,
+    body_fat: bodyFat
+  };
+}
+
+function analyzeSleepAndFajrCircadian(isoDate){
+  const jd = getJDfromISO(isoDate || SELECTED_DATE || TODAY);
+  const allTasks = typeof getAllTasks === 'function' ? getAllTasks(jd, isoDate).filter(t=>!t._deleted) : [];
+  const sleepTask = allTasks.find(t=>/نوم|sleep|bedtime|rest/i.test(t[4]||t[1]||''));
+  const fajrTask = allTasks.find(t=>/فجر|fajr/i.test(t[4]||''));
+
+  let sleepHours = 7.5;
+  if(sleepTask){
+    const sStart = toMin(sleepTask[10] || sleepTask[1] || '23:00');
+    let sEnd = sleepTask[12] ? toMin(sleepTask[12]) : (sStart + 480);
+    if(sEnd < sStart) sEnd += 1440;
+    sleepHours = Math.round(((sEnd - sStart) / 60) * 10) / 10;
+  }
+
+  const underSevenHours = sleepHours < 7.0;
+  return {
+    sleepHours,
+    fajrTime: fajrTask ? (fajrTask[10] || fajrTask[1]) : '04:30',
+    underSevenHours,
+    recoveryWarning: underSevenHours ? {
+      warningEn: `⚠️ Recovery Warning: Total nocturnal sleep is logged at ${sleepHours}h (under 7h threshold). Fragmented sleep relative to Fajr suppresses nocturnal Growth Hormone (HGH) and elevates daytime cortisol, hindering muscle retention and fat loss. Strive for 7–9 cumulative hours or take a 20-min afternoon power nap.`,
+      warningAr: `⚠️ تحذير الاستشفاء والنوم (Recovery Warning): إجمالي ساعات النوم المسجلة ${sleepHours} ساعة (أقل من 7 ساعات). الاستيقاظ لصلاة الفجر مع السهر يقلل إفراز هرمون النمو (HGH) ويرفع هرمون الكورتيزول مما يعيق الاستشفاء العضلي وحرق الدهون. احرص على النوم المبكر لتحقيق 7-9 ساعات أو خذ قيلولة تعويضية لمدة 20 دقيقة.`
+    } : null
+  };
+}
+
+function getChaosCoordinatorSystemPrompt(){
+  const isAr = (USER_SETTINGS && USER_SETTINGS.lang === 'ar') || (AI_REPLY_LANG === 'ar');
+  const ftEnabled = USER_SETTINGS && USER_SETTINGS.fitness_tracking_enabled === true;
+  const metrics = (USER_SETTINGS && USER_SETTINGS.fitness_metrics) || null;
+  const circadian = analyzeSleepAndFajrCircadian(SELECTED_DATE);
+
+  let fitnessContext = '';
+  if(!ftEnabled){
+    fitnessContext = `
+FITNESS TRACKING STATUS: DISABLED (fitness_tracking_enabled = false).
+- Do NOT force fitness advice, caloric calculations, or ask for weight/height.
+- Act as a general productivity, schedule, and habit optimization coach.
+- If the user manually asks a fitness/nutrition question, answer it generally and remind them:
+  ${isAr
+    ? '"يمكنك تفعيل تتبع اللياقة في أي وقت من [الإعدادات ⚙️ ➔ التتبع] لحساب سعراتك والماكروز بدقة علمية."'
+    : '"You can enable Fitness Tracking anytime in [Settings ⚙️] to get personalized macros and scientific targets."'}
+`;
+  } else {
+    const targets = metrics ? (metrics.target_kcal ? metrics : calculateFitnessTargets(metrics)) : null;
+    fitnessContext = `
+FITNESS TRACKING STATUS: ENABLED (fitness_tracking_enabled = true).
+USER METRICS:
+- Gender: ${metrics?.gender || 'Male'}
+- Age: ${metrics?.age || 25} yrs
+- Weight: ${metrics?.weight || 75} kg
+- Height: ${metrics?.height || 175} cm
+- Activity Multiplier: ${metrics?.activity || 1.55} (4-5 days/wk training)
+- Primary Goal: ${metrics?.goal || 'recomp'} (${metrics?.goal === 'muscle' ? 'Muscle Gain / Bulking' : metrics?.goal === 'fat_loss' ? 'Fat Loss' : 'Body Recomposition'})
+${metrics?.body_fat ? `- Body Fat %: ${metrics.body_fat}% (Katch-McArdle Formula)` : '- Formula: Mifflin-St Jeor'}
+
+CALCULATED METABOLIC & MACRO TARGETS:
+- Basal Metabolic Rate (BMR): ${targets?.bmr || 1720} kcal/day
+- Total Daily Energy Expenditure (TDEE): ${targets?.tdee || 2666} kcal/day
+- Target Daily Energy: ${targets?.target_kcal || 2133} kcal/day (${targets?.goal === 'muscle' ? '+250 surplus' : '15-20% deficit'})
+- Target Protein: ${targets?.target_protein || 165}g/day (1.8g - 2.2g per kg bodyweight)
+- Target Fats: ${targets?.target_fats || 60}g/day (20% - 30% calories, 0.7-1.0g/kg)
+- Target Carbohydrates: ${targets?.target_carbs || 233}g/day (remainder of calories)
+- Target Dietary Fiber: ${targets?.target_fiber || 30}g/day (14g per 1000 kcal, min 25g)
+
+CIRCADIAN & FAJR SLEEP ANALYSIS:
+- Nocturnal Sleep Duration: ${circadian.sleepHours} hours (Optimal: 7-9h)
+- Fajr Prayer: ${circadian.fajrTime}
+${circadian.underSevenHours ? `- CIRCADIAN WARNING: Sleep is under 7 hours! Issue a concise recovery alert emphasizing nocturnal HGH release, cortisol suppression, and restorative nap strategies.` : '- Sleep is optimal for anabolic recovery and tissue repair.'}
+
+SCIENTIFIC STANDARDS:
+1. Ground all recommendations on these calculated figures.
+2. Deficits must never exceed 25% or drop below BMR (${targets?.bmr || 1500} kcal).
+3. Protein target must be protected (1.8 - 2.2g/kg).
+4. Respect Fajr prayer timing and emphasize 7-9 hours sleep.
+`;
+  }
+
+  return `You are "Chaos Coordinator AI", an elite Personal Assistant, Sports Nutritionist, and Behavioral Habit Coach.
+Your primary role is to guide the user toward their fitness and habit goals (Muscle Building, Fat Loss, Body Recomposition, Habit Optimization) using evidence-based sports nutrition and exercise science.
+Your purpose is to sharpen the user's thinking, eliminate procrastination, and help them stick to a realistic, scientifically verified plan — not to flatter them.
+
+### 1. USER PREFERENCES & STATE CONTROL
+- Language: Default English. If the user messages in Arabic or if USER_SETTINGS.lang is "ar", respond strictly in natural, encouraging, and authoritative Modern/Egyptian Arabic.
+${fitnessContext}
+
+### 2. TONE & RESPONSE STYLE
+- Concise, clear, data-driven, and highly actionable.
+- No generic pleasantries (no "Hello, how can I help you today?"). Jump directly into the solution.
+- Grounded in exercise science and sports nutrition. Correct misconceptions directly and briefly with scientific facts.
+
+### 3. PERSISTENT MEMORY
+- If the user shares a durable personal fact worth remembering, append ONE line at the very end of your reply in this exact format: [REMEMBER: the fact stated plainly in third person].
+- The tag is stripped automatically before the user sees the reply.`;
+}
+
+const AI_SYSTEM_PROMPT = getChaosCoordinatorSystemPrompt();
+
+function aiLocalCoachingFallback(userMsg, lang){
+  const low = (userMsg || '').toLowerCase();
+  const isAr = lang === 'ar' || (USER_SETTINGS && USER_SETTINGS.lang === 'ar') || detectTextLang(userMsg) === 'ar';
+  const ftEnabled = USER_SETTINGS && USER_SETTINGS.fitness_tracking_enabled === true;
+  const metrics = (USER_SETTINGS && USER_SETTINGS.fitness_metrics) || {};
+
+  const isFitnessQuery = /macro|calorie|protein|carb|fat|bmr|tdee|weight|diet|recomp|bulk|cut|تغذية|سعرات|بروتين|كارب|دهون|وزن|دايت|تخسيس|تضخيم/i.test(low);
+
+  if(isFitnessQuery){
+    if(!ftEnabled){
+      return isAr
+        ? 'تتبع اللياقة والتغذية غير مفعّل حالياً. يمكنك تفعيله في أي وقت من [الإعدادات ⚙️ ➔ التتبع] أو تشغيل معالج اللياقة لحساب سعراتك والماكروز بدقة علمية.'
+        : 'Fitness tracking is currently disabled. You can enable Fitness Tracking anytime in [Settings ⚙️] to get personalized macros and scientific targets.';
+    } else {
+      const targets = metrics.target_kcal ? metrics : calculateFitnessTargets(metrics);
+      const circadian = analyzeSleepAndFajrCircadian(SELECTED_DATE);
+      if(isAr){
+        return `📊 أهدافك الغذائية والبدنية الشخصية (Chaos Coordinator AI):
+• معدل الأيض الأساسي (BMR): ${targets.bmr} سعرة
+• إجمالي استهلاك الطاقة (TDEE): ${targets.tdee} سعرة
+• السعرات اليومية المستهدفة: ${targets.target_kcal} سعرة (${targets.goal === 'muscle' ? 'فائض +250 للتضخيم' : 'عجز 15-20% للاستشفاء وحرق الدهون'})
+• البروتين المستهدف: ${targets.target_protein}جم (1.8 - 2.2 جم/كجم)
+• الدهون الصحية: ${targets.target_fats}جم (20-30% من السعرات)
+• الكربوهيدرات: ${targets.target_carbs}جم
+• الألياف الغذائية: ${targets.target_fiber}جم (14جم لكل 1000 سعرة)
+${circadian.underSevenHours ? '\n' + circadian.recoveryWarning.warningAr : '\n✅ مواعيد النوم الحالية متناسقة مع الفجر وتدعم هرمون النمو (HGH).'}`;
+      } else {
+        return `📊 Personalized Nutritional & Metabolic Targets (Chaos Coordinator AI):
+• Basal Metabolic Rate (BMR): ${targets.bmr} kcal
+• Total Daily Energy Expenditure (TDEE): ${targets.tdee} kcal
+• Target Daily Calories: ${targets.target_kcal} kcal (${targets.goal === 'muscle' ? '+250 kcal surplus' : '15-20% deficit for recomposition/fat loss'})
+• Target Protein: ${targets.target_protein}g (1.8 - 2.2 g/kg total weight)
+• Target Fats: ${targets.target_fats}g (20-30% total calories)
+• Target Carbohydrates: ${targets.target_carbs}g
+• Target Dietary Fiber: ${targets.target_fiber}g (14g per 1000 kcal)
+${circadian.underSevenHours ? '\n' + circadian.recoveryWarning.warningEn : '\n✅ Circadian alignment verified for optimal growth hormone (HGH) recovery.'}`;
+      }
+    }
+  }
+  return null;
+}
 
 // Detects "move X before/after Y" style relative-position phrasing — these need real
 // reasoning (what time does "before the gym" actually resolve to? which day?) rather
@@ -8229,7 +8973,8 @@ async function aiCallLiveModel(){
   // regardless of session, so personal facts persist across every chat, old and new.
   const session=aiGetActiveSession();
   const recentMsgs=session.messages.slice(-20).map(m=>({role:m.role==='user'?'user':'assistant',content:m.text}));
-  const systemWithMemory=AI_SYSTEM_PROMPT+aiMemoryBlock();
+  const systemWithMemory=getChaosCoordinatorSystemPrompt()+aiMemoryBlock();
+  const lastUserMsg=recentMsgs.filter(m=>m.role==='user').pop()?.content||'';
   try{
     const res=await fetch(AI_WORKER_URL,{
       method:'POST',
@@ -8239,6 +8984,8 @@ async function aiCallLiveModel(){
     const data=await res.json().catch(()=>({}));
     if(!res.ok || data.error){
       console.error('AI worker error:',data.error||res.status);
+      const localCoach=aiLocalCoachingFallback(lastUserMsg, en?'en':'ar');
+      if(localCoach) return {ok:true,text:localCoach};
       const errStr=String(data.error||'');
       if(/GEMINI_API_KEY|api key|API key|not configured/i.test(errStr)){
         return {ok:false,text:en
@@ -8261,6 +9008,8 @@ async function aiCallLiveModel(){
     return{ok:true,text};
   }catch(e){
     console.error('AI worker call failed:',e);
+    const localCoach=aiLocalCoachingFallback(lastUserMsg, en?'en':'ar');
+    if(localCoach) return {ok:true,text:localCoach};
     return {ok:false,text:en
       ?'⚠️ Could not reach the AI server — check connection, or run the local server with GEMINI_API_KEY set.'
       :'⚠️ مش قادر أوصل للسيرفر دلوقتي — تأكد من الاتصال بالإنترنت وجرب تاني.'};
@@ -8756,6 +9505,15 @@ document.body.addEventListener('click',async e=>{
     return;
   }
 
+  if(tgt.id==='btn-notif-test'){
+    await testPushNotification();
+    return;
+  }
+  if(tgt.id==='btn-notif-renew'){
+    await renewPushSubscription();
+    return;
+  }
+
   if(tgt.id==='btn-notif-toggle'){
     if(!NOTIF_ENABLED){
       const granted=await requestNotifPermission();
@@ -8780,6 +9538,18 @@ document.body.addEventListener('click',async e=>{
       showToast('🔕 التذكيرات اتقفلت',2200);
     }
     updateAuthUI(fbAuth.currentUser);
+    return;
+  }
+
+  if(tgt.id==='btn-notif-test'){
+    await testPushNotification();
+    return;
+  }
+
+  if(tgt.id==='btn-notif-renew'){
+    showToast('🔄 جاري تجديد الاشتراك ومزامنة التذكيرات لـ ١٤ يوماً...', 2500);
+    await syncPushSchedule(true);
+    showToast('✅ تم تجديد الاشتراك السحابي ومزامنة الجدول بنجاح!', 3500);
     return;
   }
 
@@ -8899,11 +9669,101 @@ document.body.addEventListener('click',async e=>{
   if(tgt.id==='pm-lang-ar'){ document.getElementById('profileMenu')?.classList.remove('open'); setAppLang('ar'); return; }
   if(tgt.id==='pm-lang-en'){ document.getElementById('profileMenu')?.classList.remove('open'); setAppLang('en'); return; }
   if(tgt.id==='setCloseBtn'){ closeSettingsScreen(); return; }
+  if(tgt.id==='btnFitnessPromptYes'){ await handleFitnessPromptChoice(true); return; }
+  if(tgt.id==='btnFitnessPromptNo'){ await handleFitnessPromptChoice(false); return; }
+  if(tgt.id==='btnCloseFitnessWizard' || tgt.id==='btnCancelFitnessWizard'){ closeFitnessWizardModal(); return; }
+  if(tgt.id==='btnSaveFitnessWizard'){ await handleFitnessWizardSave(); return; }
+  if(tgt.id==='btnOpenFitnessWizardFromTracking' || tgt.id==='btnLaunchFitnessWizard'){ openFitnessWizardModal(); return; }
+  if(tgt.id==='setSaveFitnessBtn'){ await handleSettingsFitnessSave(); return; }
+
+  // Wizard Gender chips
+  if(tgt.id==='wizGenderMale' || tgt.id==='wizGenderFemale'){
+    const isFemale = tgt.id==='wizGenderFemale';
+    const gm=document.getElementById('wizGenderMale');
+    const gf=document.getElementById('wizGenderFemale');
+    if(gm && gf){
+      gm.classList.toggle('fw-chip-sel', !isFemale);
+      gm.style.border = !isFemale ? '2px solid var(--ac)' : '1px solid var(--br)';
+      gm.style.background = !isFemale ? 'rgba(59,130,246,.15)' : 'var(--c)';
+      gm.style.color = !isFemale ? 'var(--tx)' : 'var(--so)';
+      gf.classList.toggle('fw-chip-sel', isFemale);
+      gf.style.border = isFemale ? '2px solid var(--ac)' : '1px solid var(--br)';
+      gf.style.background = isFemale ? 'rgba(59,130,246,.15)' : 'var(--c)';
+      gf.style.color = isFemale ? 'var(--tx)' : 'var(--so)';
+    }
+    renderFitnessWizardPreview();
+    return;
+  }
+
+  // Wizard Goal chips
+  if(tgt.id==='wizGoalMuscle' || tgt.id==='wizGoalRecomp' || tgt.id==='wizGoalFatLoss'){
+    ['wizGoalMuscle', 'wizGoalRecomp', 'wizGoalFatLoss'].forEach(id=>{
+      const el=document.getElementById(id);
+      if(!el) return;
+      const sel = (id === tgt.id);
+      el.classList.toggle('fw-chip-sel', sel);
+      el.style.border = sel ? '2px solid var(--ac)' : '1px solid var(--br)';
+      el.style.background = sel ? 'rgba(59,130,246,.15)' : 'var(--c)';
+      el.style.color = sel ? 'var(--tx)' : 'var(--so)';
+    });
+    renderFitnessWizardPreview();
+    return;
+  }
+
+  // Settings Gender chips
+  if(tgt.id==='setGenderMale' || tgt.id==='setGenderFemale'){
+    const isFemale = tgt.id==='setGenderFemale';
+    const gm=document.getElementById('setGenderMale');
+    const gf=document.getElementById('setGenderFemale');
+    if(gm && gf){
+      gm.classList.toggle('fw-chip-sel', !isFemale);
+      gm.style.border = !isFemale ? '2px solid var(--ac)' : '1px solid var(--br)';
+      gm.style.background = !isFemale ? 'rgba(59,130,246,.15)' : 'var(--c)';
+      gm.style.color = !isFemale ? 'var(--tx)' : 'var(--so)';
+      gf.classList.toggle('fw-chip-sel', isFemale);
+      gf.style.border = isFemale ? '2px solid var(--ac)' : '1px solid var(--br)';
+      gf.style.background = isFemale ? 'rgba(59,130,246,.15)' : 'var(--c)';
+      gf.style.color = isFemale ? 'var(--tx)' : 'var(--so)';
+    }
+    renderFitnessSettingsStats();
+    return;
+  }
+
+  // Settings Goal chips
+  if(tgt.id==='setGoalMuscle' || tgt.id==='setGoalRecomp' || tgt.id==='setGoalFatLoss'){
+    ['setGoalMuscle', 'setGoalRecomp', 'setGoalFatLoss'].forEach(id=>{
+      const el=document.getElementById(id);
+      if(!el) return;
+      const sel = (id === tgt.id);
+      el.classList.toggle('fw-chip-sel', sel);
+      el.style.border = sel ? '2px solid var(--ac)' : '1px solid var(--br)';
+      el.style.background = sel ? 'rgba(59,130,246,.15)' : 'var(--c)';
+      el.style.color = sel ? 'var(--tx)' : 'var(--so)';
+    });
+    renderFitnessSettingsStats();
+    return;
+  }
+
+  if(tgt.id==='setFitnessTrackingEnabled' || tgt.id==='setFitnessTrackingEnabledSec'){
+    const checked = tgt.checked;
+    const c1 = document.getElementById('setFitnessTrackingEnabled');
+    const c2 = document.getElementById('setFitnessTrackingEnabledSec');
+    if(c1) c1.checked = checked;
+    if(c2) c2.checked = checked;
+    USER_SETTINGS.fitness_tracking_enabled = checked;
+    const block = document.getElementById('setFitnessConfigBlock');
+    if(block) block.style.opacity = checked ? '1' : '0.45';
+    updateUI();
+    return;
+  }
+
   if(tgt.id==='setSaveTrackingBtn'){
     const showEl=document.getElementById('setShowTracking');
     const prayEl=document.getElementById('setTrackPrayers');
+    const ftEl=document.getElementById('setFitnessTrackingEnabled');
     USER_SETTINGS.showTracking=showEl?showEl.checked:true;
     USER_SETTINGS.trackPrayers=prayEl?prayEl.checked:false;
+    if(ftEl) USER_SETTINGS.fitness_tracking_enabled=ftEl.checked;
     try{ await saveUserSettings(); }catch(e){}
     try{ renderTabs();renderPanels();switchDay(todayJD());updateUI(); }catch(e){}
     showToast(t('saved'),1800);
@@ -9120,6 +9980,12 @@ document.body.addEventListener('input',e=>{
     e.target.style.height=Math.min(e.target.scrollHeight,90)+'px';
   }
   const t=e.target;
+  if(t && t.id && t.id.startsWith('wiz')){
+    renderFitnessWizardPreview();
+  }
+  if(t && t.id && t.id.startsWith('set') && ['setAge','setWeight','setHeight','setActivity','setBodyFat'].includes(t.id)){
+    renderFitnessSettingsStats();
+  }
   if(t && (t.matches('[data-notif-enabled]')||t.matches('[data-notif-lead]')||t.matches('[data-notif-start]')||t.matches('[data-notif-end]')||t.matches('[data-notif-lead-min]')||t.matches('[data-notif-end-min]'))){
     const id=t.getAttribute('data-notif-enabled')||t.getAttribute('data-notif-lead')||t.getAttribute('data-notif-start')||t.getAttribute('data-notif-end')||t.getAttribute('data-notif-lead-min')||t.getAttribute('data-notif-end-min');
     if(!USER_SETTINGS.taskNotif) USER_SETTINGS.taskNotif={};
@@ -9134,6 +10000,11 @@ document.body.addEventListener('input',e=>{
     try{ saveUserSettings(); }catch(err){}
     try{ if(typeof syncPushSchedule==='function') syncPushSchedule(); }catch(err){}
   }
+});
+document.body.addEventListener('change',e=>{
+  const t=e.target;
+  if(t && t.id==='wizActivity') renderFitnessWizardPreview();
+  if(t && t.id==='setActivity') renderFitnessSettingsStats();
 });
 document.body.addEventListener('keydown',async e=>{
   if(e.target && e.target.id==='aiInput' && e.key==='Enter' && !e.shiftKey){
@@ -9155,10 +10026,18 @@ document.body.addEventListener('keydown',async e=>{
 // silently never fires and is never rescheduled. Re-checking on every foreground-return
 // means the very next time the app is actually open, still-relevant reminders (those
 // whose time hasn't passed yet) get correctly re-armed instead of staying orphaned.
-// visibilitychange re-arm handler REMOVED — it existed specifically to counter
-// setTimeout throttling during tab backgrounding, which no longer applies now that
-// reminder delivery is server-side (Cloudflare cron -> Web Push), not a local timer.
-// Nothing to re-arm on foreground-return anymore.
+// Auto-check and re-sync push notifications whenever user returns to the tab/PWA
+document.addEventListener('visibilitychange', () => {
+  if (document.visibilityState === 'visible' && NOTIF_ENABLED) {
+    try {
+      if (typeof syncPushSchedule === 'function') {
+        syncPushSchedule();
+      }
+    } catch(e) {
+      console.warn('visibilitychange syncPushSchedule error:', e);
+    }
+  }
+});
 
 // ===== Init =====
 // Single shared "app is ready" reveal — used by both the success and error paths of
@@ -9564,6 +10443,9 @@ function initAppFlow(user){
       obShowStep();
     }else{
       try{ document.getElementById('obWizard')?.classList.remove('open'); }catch(e){}
+      if(lsGet('fitness_prompt_shown')!=='true' && USER_SETTINGS.fitness_tracking_enabled===undefined){
+        setTimeout(()=>{ openFitnessPromptModal(); }, 600);
+      }
     }
   }catch(e){ console.warn('Onboarding check error in initAppFlow', e); }
 
