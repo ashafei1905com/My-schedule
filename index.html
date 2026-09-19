@@ -4,7 +4,10 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1.0,maximum-scale=1.0,user-scalable=no">
-<title>Your Schedule</title>
+<title>Chaos Coordinator AI</title>
+<meta name="description" content="Elite Personal Assistant, Sports Nutritionist, and Behavioral Habit Coach with intelligent schedule, Fajr circadian alignment, and personalized macro tracking.">
+<meta property="og:title" content="Chaos Coordinator AI">
+<meta property="og:description" content="Elite Personal Assistant, Sports Nutritionist, and Behavioral Habit Coach with intelligent schedule, Fajr circadian alignment, and personalized macro tracking.">
 <link rel="icon" href="data:," />
 <!-- Web app manifest — REQUIRED for iOS to treat "Add to Home Screen" as a real PWA
      install rather than a plain bookmark. Without this + the apple-mobile-web-app-*
@@ -1484,14 +1487,14 @@ body.theme-matrix .tctime{
           </div>
         </div>
         <div class="set-section" id="setsec-notifications">
-          <h3 data-i18n="sec_notif">التذكيرات</h3>
-          <p class="desc" data-i18n="sec_notif_desc">تفعيل أو إيقاف إشعارات المهام السحابية حتى لو التطبيق مقفول.</p>
+          <h3 data-i18n="sec_notif">التذكيرات (تعمل تلقائياً)</h3>
+          <p class="desc" data-i18n="sec_notif_desc">تعمل التذكيرات وتتزامن سحابياً لمدة ١٤ يوماً قادمة بشكل تلقائي دون الحاجة لأي خطوات يدوية.</p>
           <div class="set-actions" style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">
-            <button type="button" id="btn-notif-toggle" class="topbtn" style="background:rgba(100,116,139,.15);border:1px solid var(--br);color:var(--tx)">🔕 التذكيرات</button>
+            <button type="button" id="btn-notif-toggle" class="topbtn" style="background:rgba(16,185,129,.18);border:1px solid var(--br);color:var(--gr)">🔔 التذكيرات (تلقائية)</button>
             <button type="button" id="btn-notif-test" class="altbtn" style="padding:8px 12px;font-size:0.85rem">🔔 تجربة الإشعار</button>
             <button type="button" id="btn-notif-renew" class="altbtn" style="padding:8px 12px;font-size:0.85rem">🔄 تجديد وجدولة ١٤ يوم</button>
           </div>
-          <div id="notif-sync-badge" style="font-size:0.8rem;margin-top:8px;color:var(--so);font-weight:600"></div>
+          <div id="notif-sync-badge" style="font-size:0.8rem;margin-top:8px;color:var(--gr);font-weight:600">✅ التذكيرات تعمل تلقائياً في الخلفية</div>
           <p class="desc" style="margin-top:16px;font-weight:800" id="taskNotifListTitle">Per-task notifications</p>
           <div id="taskNotifList" style="margin-top:8px;display:flex;flex-direction:column;gap:8px"></div>
           <p class="desc" style="margin-top:18px;font-weight:800" id="prayerLocTitle">Prayer locations</p>
@@ -5490,14 +5493,37 @@ async function fetchPrayers(){
 const LS_NOTIF_PREF='sc:notifPref1';
 AI_WORKER_URL = window.AI_WORKER_URL || window.location.origin;
 const VAPID_PUBLIC_KEY='BKgn0lwYCrrfdSIX6PSaaR34nEO1g9FkZ9V3mlZmBAWY_fE7LcbI4osZ9CP8tQsfU1R5vLbg4S0GhNL3QiIOSnQ'; // matches wrangler.toml [vars] VAPID_PUBLIC_KEY — regenerated 2026-07-21 after the old keypair produced "DataError: Invalid EC key in JSON Web Key" on every push send, both sides of this pair MUST always match exactly or subscriptions silently fail
-let NOTIF_ENABLED=false;
+let NOTIF_ENABLED=true;
 let PUSH_SUBSCRIPTION=null;
+
+function getNotificationUid(){
+  const curUser = (typeof fbAuth !== 'undefined' && fbAuth.currentUser) ? fbAuth.currentUser : null;
+  if(curUser && curUser.uid) return curUser.uid;
+  const localUser = (typeof lsGet === 'function' ? lsGet('current_user') : localStorage.getItem('current_user'));
+  if(localUser) return localUser;
+  let deviceUid = (typeof lsGet === 'function' ? lsGet('sc:device_notif_uid') : localStorage.getItem('sc:device_notif_uid'));
+  if(!deviceUid){
+    deviceUid = 'client_' + Math.random().toString(36).slice(2, 10) + '_' + Date.now().toString(36);
+    try {
+      if (typeof lsSet === 'function') lsSet('sc:device_notif_uid', deviceUid);
+      else localStorage.setItem('sc:device_notif_uid', deviceUid);
+    } catch(e) {}
+  }
+  return deviceUid;
+}
 
 async function loadNotifPref(){
   const v=await sGet(LS_NOTIF_PREF);
-  NOTIF_ENABLED=!!v;
+  // Default to true (fully automated) unless user explicitly disabled it
+  if(v === false || v === 'disabled' || v === '0'){
+    NOTIF_ENABLED = false;
+  } else {
+    NOTIF_ENABLED = true;
+  }
 }
-async function saveNotifPref(){await sSet(LS_NOTIF_PREF,NOTIF_ENABLED);}
+async function saveNotifPref(){
+  await sSet(LS_NOTIF_PREF, NOTIF_ENABLED ? 'enabled' : 'disabled');
+}
 
 function isIOS(){
   return /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
@@ -5520,13 +5546,6 @@ function urlBase64ToUint8Array(base64String){
 async function registerServiceWorker(){
   if(typeof navigator==='undefined' || !('serviceWorker' in navigator)) return null;
   try{
-    // Registered at the ROOT relative to this page so its scope covers the whole
-    // site — sw.js must physically live alongside index.html for this to work.
-    // Filename corrected to './sw.js' -- the actual deployed file is named sw.js, not
-    // service-worker.js. The mismatched filename was causing every registration
-    // attempt to 404 and throw, which is the exact "مش قادر أسجل الـ service worker"
-    // error being shown: it wasn't a permissions/PWA issue, the file being requested
-    // simply didn't exist at that path.
     return await navigator.serviceWorker.register('./sw.js');
   }catch(e){
     console.warn('service worker registration failed',e);
@@ -5534,18 +5553,18 @@ async function registerServiceWorker(){
   }
 }
 
-async function requestNotifPermission(){
+async function requestNotifPermission(silent = false){
   // Same iOS constraint as before — see the block comment above this section.
   if(isIOS() && !isStandalonePWA()){
-    showToast('📱 على الآيفون، الإشعارات بتشتغل بس لو ضفت الموقع للشاشة الرئيسية:\n(مشاركة ⬆️ ← أضف إلى الشاشة الرئيسية) وبعدين افتحه من الأيقونة',6500,'warn');
+    if(!silent) showToast('📱 على الآيفون، الإشعارات بتشتغل بس لو ضفت الموقع للشاشة الرئيسية:\n(مشاركة ⬆️ ← أضف إلى الشاشة الرئيسية) وبعدين افتحه من الأيقونة',6500,'warn');
     return false;
   }
   if(typeof Notification==='undefined'){
-    showToast('المتصفح ده مش بيدعم الإشعارات',3500,'warn');
+    if(!silent) showToast('المتصفح ده مش بيدعم الإشعارات',3500,'warn');
     return false;
   }
   if(Notification.permission==='denied'){
-    showToast('الإشعارات متبلوكة من إعدادات المتصفح — لازم تفعّلها يدوياً من هناك',4200,'warn');
+    if(!silent) showToast('الإشعارات متبلوكة من إعدادات المتصفح — لازم تفعّلها يدوياً من هناك',4200,'warn');
     return false;
   }
   if(Notification.permission!=='granted'){
@@ -5557,12 +5576,12 @@ async function requestNotifPermission(){
 
   const reg=await registerServiceWorker();
   if(!reg){
-    showToast('⚠️ مش قادر أسجل الـ service worker — جرب تعيد تحميل الصفحة',4000,'warn');
+    if(!silent) showToast('⚠️ مش قادر أسجل الـ service worker — جرب تعيد تحميل الصفحة',4000,'warn');
     return false;
   }
 
   if(!VAPID_PUBLIC_KEY || VAPID_PUBLIC_KEY==='REPLACE_WITH_YOUR_VAPID_PUBLIC_KEY'){
-    showToast('⚠️ مفتاح الإشعارات (VAPID) لسه مش متظبط في الكود',4200,'warn');
+    if(!silent) showToast('⚠️ مفتاح الإشعارات (VAPID) لسه مش متظبط في الكود',4200,'warn');
     return false;
   }
 
@@ -5578,8 +5597,72 @@ async function requestNotifPermission(){
     return true;
   }catch(e){
     console.warn('push subscribe failed',e);
-    showToast('⚠️ حصل خطأ أثناء الاشتراك في الإشعارات — جرب تاني',4000,'warn');
+    if(!silent) showToast('⚠️ حصل خطأ أثناء الاشتراك في الإشعارات — جرب تاني',4000,'warn');
     return false;
+  }
+}
+
+let _autoNotifRequested = false;
+async function autoInitNotifications(userGesture = false){
+  if(typeof Notification === 'undefined') return false;
+  if(Notification.permission === 'denied') return false;
+  if(isIOS() && !isStandalonePWA()) return false;
+
+  if(Notification.permission === 'granted'){
+    NOTIF_ENABLED = true;
+    await syncPushSchedule(false, true);
+    return true;
+  }
+
+  // If permission is default, try requesting
+  try {
+    const perm = await Notification.requestPermission();
+    if(perm === 'granted'){
+      NOTIF_ENABLED = true;
+      await saveNotifPref();
+      await syncPushSchedule(false, true);
+      const curUser = (typeof fbAuth !== 'undefined' && fbAuth.currentUser) ? fbAuth.currentUser : null;
+      updateAuthUI(curUser);
+      return true;
+    }
+  } catch(e) {
+    console.warn('Auto notification permission request error:', e);
+  }
+  return false;
+}
+
+function setupAutoNotificationTriggers(){
+  // 1. Immediate auto-init on load if permission is already granted
+  if(typeof Notification !== 'undefined' && Notification.permission === 'granted'){
+    autoInitNotifications(false).catch(()=>{});
+  }
+
+  // 2. Global user-gesture handler: on very first tap / click anywhere, automatically prompt for permission
+  const onUserGesture = () => {
+    if(_autoNotifRequested) return;
+    if(typeof Notification !== 'undefined' && Notification.permission === 'default'){
+      _autoNotifRequested = true;
+      autoInitNotifications(true).catch(()=>{});
+    }
+  };
+
+  ['click', 'touchstart', 'pointerdown', 'keydown'].forEach(evt => {
+    window.addEventListener(evt, onUserGesture, { once: true, passive: true });
+  });
+
+  // 3. Also try silent request on load if supported
+  if(typeof Notification !== 'undefined' && Notification.permission === 'default'){
+    try {
+      const maybePromise = Notification.requestPermission();
+      if(maybePromise && typeof maybePromise.then === 'function'){
+        maybePromise.then(p => {
+          if(p === 'granted'){
+            _autoNotifRequested = true;
+            autoInitNotifications(false).catch(()=>{});
+          }
+        }).catch(()=>{});
+      }
+    } catch(e) {}
   }
 }
 
@@ -5713,29 +5796,21 @@ function notifTaskEndMin(task){
   return start+NOTIF_DEFAULT_DURATION_MIN;
 }
 
-// Sends the subscription (if we have one) + this reminder payload to the Worker,
-// which stores it in D1. Called after enabling notifications and whenever today's
-// task list changes (same trigger points the old scheduleTodayNotifications had).
-// ROOT CAUSE of "no notifications after the first session": this function only ever
-// recovered PUSH_SUBSCRIPTION by awaiting navigator.serviceWorker.ready — but nothing
-// on a normal page load ever called navigator.serviceWorker.register() to begin with
-// (registerServiceWorker() previously only ran inside requestNotifPermission(), i.e.
-// only at the exact moment the toggle was first tapped). Without an active
-// registration for THIS page load, .ready has nothing to resolve against and can hang
-// indefinitely — so on every subsequent app open (even with NOTIF_ENABLED=true and
-// permission already granted), this function silently did nothing, forever. Fixed by
-// always explicitly registering the SW here (registration is idempotent/cheap if
-// already registered) before ever touching .ready, and by bounding the wait with a
-// timeout so a genuinely stuck browser state can never hang this call forever either.
-async function syncPushSchedule(forceRenew = false){
+let _syncPushScheduleTimeout = null;
+function triggerAutoPushSync(delay = 1500){
   if(!NOTIF_ENABLED) return;
-  const curUser = (typeof fbAuth !== 'undefined' && fbAuth.currentUser) ? fbAuth.currentUser : null;
-  const localUser = (typeof lsGet === 'function' ? lsGet('current_user') : localStorage.getItem('current_user'));
-  if(!curUser && !localUser){
-    showToast('لازم تسجل دخول عشان التذكيرات تتزامن مع السيرفر 🔒',3200,'warn');
-    return;
-  }
-  const uid = curUser ? curUser.uid : (localUser || 'default_user');
+  if(_syncPushScheduleTimeout) clearTimeout(_syncPushScheduleTimeout);
+  _syncPushScheduleTimeout = setTimeout(() => {
+    syncPushSchedule(false, true).catch(err => console.warn('auto push sync failed', err));
+  }, delay);
+}
+
+// Sends the subscription (if we have one) + this reminder payload to the Worker,
+// which stores it in D1. Called automatically after enabling notifications, on task changes,
+// on visibility change, and on startup.
+async function syncPushSchedule(forceRenew = false, silent = true){
+  if(!NOTIF_ENABLED) return;
+  const uid = getNotificationUid();
 
   try{
     const reg = await registerServiceWorker(); // idempotent — safe to call every time
@@ -5767,12 +5842,12 @@ async function syncPushSchedule(forceRenew = false){
     }
   }catch(e){
     console.warn('push subscription recovery failed',e);
-    showToast('⚠️ تعذر استعادة اشتراك الإشعارات — جرب زرار تجديد التذكيرات',4000,'warn');
+    if(!silent) showToast('⚠️ تعذر استعادة اشتراك الإشعارات — جرب زرار تجديد التذكيرات',4000,'warn');
     return;
   }
 
   if(!PUSH_SUBSCRIPTION){
-    showToast('⚠️ التذكيرات مش متسجلة فعلياً — اضغط على زرار تجديد الإشعارات',4000,'warn');
+    if(!silent) showToast('⚠️ التذكيرات مش متسجلة فعلياً — اضغط على زرار تجديد الإشعارات',4000,'warn');
     return;
   }
 
@@ -5787,13 +5862,14 @@ async function syncPushSchedule(forceRenew = false){
     });
     if(!res.ok){
       console.warn('push schedule sync: server rejected',res.status);
-      showToast(`⚠️ السيرفر رفض حفظ التذكيرات (${res.status})`,3000,'warn');
+      if(!silent) showToast(`⚠️ السيرفر رفض حفظ التذكيرات (${res.status})`,3000,'warn');
     } else {
       const badge = document.getElementById('notif-sync-badge');
-      if(badge) badge.textContent = '✅ مجدول ١٤ يوم سحابياً (' + reminders.length + ' تذكير)';
+      if(badge) badge.textContent = '✅ التذكيرات تعمل تلقائياً · مجدول ١٤ يوم سحابياً (' + reminders.length + ' تذكير)';
     }
   }catch(e){
     console.warn('push schedule sync failed',e);
+    if(!silent) showToast('⚠️ فشل الاتصال بالسيرفر لحفظ التذكيرات',3500,'warn');
   }
 }
 
@@ -5803,17 +5879,19 @@ async function testPushNotification(){
     return;
   }
   if(Notification.permission !== 'granted'){
-    showToast('من فضلك فعّل الإشعارات أولاً بالضغط على زرار التذكيرات ⚠️', 4000, 'warn');
-    return;
+    const granted = await requestNotifPermission(false);
+    if(!granted){
+      showToast('من فضلك فعّل الإشعارات أولاً بالضغط على زرار التذكيرات ⚠️', 4000, 'warn');
+      return;
+    }
   }
   showToast('⏳ جاري إرسال إشعار تجريبي عبر السيرفر...', 2500);
 
   // 1. Ensure service worker and subscription
-  await syncPushSchedule();
+  await syncPushSchedule(false, false);
 
   const workerUrl = (typeof AI_WORKER_URL === 'string' && AI_WORKER_URL) ? AI_WORKER_URL.replace(/\/$/, '') : window.location.origin;
-  const curUser = (typeof fbAuth !== 'undefined' && fbAuth.currentUser) ? fbAuth.currentUser : null;
-  const uid = curUser ? curUser.uid : ((typeof lsGet === 'function' ? lsGet('current_user') : localStorage.getItem('current_user')) || 'default_user');
+  const uid = getNotificationUid();
 
   let cloudSuccess = false;
   if(PUSH_SUBSCRIPTION){
@@ -5879,7 +5957,7 @@ async function renewPushSubscription(){
       }
     }
     PUSH_SUBSCRIPTION = null;
-    await syncPushSchedule(true);
+    await syncPushSchedule(true, false);
     showToast('✅ تم تجديد الاشتراك السحابي وجدولة الأسبوعين القادمين بنجاح!', 4500);
   }catch(err){
     console.error('Renew error:', err);
@@ -6752,7 +6830,7 @@ function updateUI(){
   updateMacroUI();
 
   if(SELECTED_DATE===TODAY && NOTIF_ENABLED){
-    try{ syncPushSchedule(); }catch(e){ console.warn('push schedule sync failed',e); }
+    try{ triggerAutoPushSync(2000); }catch(e){ console.warn('push schedule sync failed',e); }
   }
 }
 
@@ -9516,12 +9594,12 @@ document.body.addEventListener('click',async e=>{
 
   if(tgt.id==='btn-notif-toggle'){
     if(!NOTIF_ENABLED){
-      const granted=await requestNotifPermission();
+      const granted=await requestNotifPermission(false);
       if(!granted)return;
       NOTIF_ENABLED=true;
       await saveNotifPref();
-      await syncPushSchedule();
-      showToast('🔔 التذكيرات اشتغلت — هتوصلك إشعارات حتى لو التطبيق مقفول',3000);
+      await syncPushSchedule(false, false);
+      showToast('🔔 التذكيرات تعمل تلقائياً — هتوصلك إشعارات حتى لو التطبيق مقفول',3000);
     }else{
       NOTIF_ENABLED=false;
       await saveNotifPref();
@@ -9548,7 +9626,7 @@ document.body.addEventListener('click',async e=>{
 
   if(tgt.id==='btn-notif-renew'){
     showToast('🔄 جاري تجديد الاشتراك ومزامنة التذكيرات لـ ١٤ يوماً...', 2500);
-    await syncPushSchedule(true);
+    await syncPushSchedule(true, false);
     showToast('✅ تم تجديد الاشتراك السحابي ومزامنة الجدول بنجاح!', 3500);
     return;
   }
@@ -9847,7 +9925,7 @@ document.body.addEventListener('click',async e=>{
     if(tgt.hasAttribute('data-notif-end-min')) cfg.endLeadMin=Math.max(1,parseInt(tgt.value,10)||30);
     USER_SETTINGS.taskNotif[id]=cfg;
     try{ await saveUserSettings(); }catch(e){}
-    try{ if(typeof syncPushSchedule==='function') syncPushSchedule(); }catch(e){}
+    try{ triggerAutoPushSync(1200); }catch(e){}
     return;
   }
   const setNavBtn=closest('[data-setsec]');
@@ -9998,7 +10076,7 @@ document.body.addEventListener('input',e=>{
     if(t.hasAttribute('data-notif-end-min')) cfg.endLeadMin=Math.max(1,parseInt(t.value,10)||30);
     USER_SETTINGS.taskNotif[id]=cfg;
     try{ saveUserSettings(); }catch(err){}
-    try{ if(typeof syncPushSchedule==='function') syncPushSchedule(); }catch(err){}
+    try{ triggerAutoPushSync(1200); }catch(err){}
   }
 });
 document.body.addEventListener('change',e=>{
@@ -10017,25 +10095,21 @@ document.body.addEventListener('keydown',async e=>{
   }
 });
 
-// Re-arms notification timers whenever the tab/PWA regains visibility. This does NOT
-// make notifications fire while the phone is locked or the tab is backgrounded — that
-// requires server-sent Web Push, which is out of scope for a static GitHub Pages site
-// with no backend (documented limit, not a bug). What this DOES fix: setTimeout timers
-// scheduled hours in advance are frequently throttled/dropped by mobile browsers during
-// backgrounding, so a reminder whose time already passed while the tab was backgrounded
-// silently never fires and is never rescheduled. Re-checking on every foreground-return
-// means the very next time the app is actually open, still-relevant reminders (those
-// whose time hasn't passed yet) get correctly re-armed instead of staying orphaned.
 // Auto-check and re-sync push notifications whenever user returns to the tab/PWA
 document.addEventListener('visibilitychange', () => {
   if (document.visibilityState === 'visible' && NOTIF_ENABLED) {
     try {
       if (typeof syncPushSchedule === 'function') {
-        syncPushSchedule();
+        syncPushSchedule(false, true);
       }
     } catch(e) {
       console.warn('visibilitychange syncPushSchedule error:', e);
     }
+  }
+});
+window.addEventListener('focus', () => {
+  if (NOTIF_ENABLED && typeof triggerAutoPushSync === 'function') {
+    triggerAutoPushSync(1500);
   }
 });
 
@@ -10455,8 +10529,11 @@ function initAppFlow(user){
       if(PENALTY_FLASH_PENDING){flashPenalty();PENALTY_FLASH_PENDING=false;}
       await loadNotifPref();
       updateAuthUI(user);
+      if(typeof setupAutoNotificationTriggers === 'function'){
+        setupAutoNotificationTriggers();
+      }
       if(NOTIF_ENABLED && typeof Notification!=='undefined' && Notification.permission==='granted'){
-        try{ await syncPushSchedule(); }catch(e){ console.warn('startup push sync failed',e); }
+        try{ await syncPushSchedule(false, true); }catch(e){ console.warn('startup push sync failed',e); }
       }
     }catch(e){}
 
@@ -10716,5 +10793,6 @@ setTimeout(()=>{
     revealApp();
   }
 }, 2200);
+try{ setupAutoNotificationTriggers(); }catch(e){}
 </script>
 </html>
