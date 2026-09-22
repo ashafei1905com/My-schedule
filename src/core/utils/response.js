@@ -1,8 +1,8 @@
-const ALLOWED_ORIGIN = '';
+export const ALLOWED_ORIGIN = '';
 
 export function corsHeaders() {
   return {
-    'Access-Control-Allow-Origin': ALLOWED_ORIGIN,
+    'Access-Control-Allow-Origin': ALLOWED_ORIGIN || '*',
     'Access-Control-Allow-Methods': 'POST, OPTIONS',
     'Access-Control-Allow-Headers': 'Content-Type',
   };

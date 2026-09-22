@@ -134,15 +134,36 @@ export default {
       const config = {};
       if (system) config.systemInstruction = system;
 
-      // Add search grounding for general chat (handled in root POST)
-      // config.tools = [{ googleSearch: {} }];
+      // Add search grounding for general chat when requested or when informative
+      if (body.useSearch) {
+        config.tools = [{ googleSearch: {} }];
+      }
 
-      const response = await ai.models.generateContent({
-        model: 'gemini-3.6-flash',
-        contents: geminiContents,
-        config
-      });
-      return json({ text: response.text || '' });
+      let response;
+      const modelsToTry = ['gemini-3.6-flash', 'gemini-3.5-flash', 'gemini-3.8-flash'];
+      let lastErr = null;
+      for (const m of modelsToTry) {
+        try {
+          response = await ai.models.generateContent({
+            model: m,
+            contents: geminiContents,
+            config
+          });
+          if (response && response.text) break;
+        } catch (err) {
+          lastErr = err;
+          console.warn(`Model ${m} failed in worker proxy, falling back to next:`, err.message);
+        }
+      }
+      if (!response && lastErr) {
+        throw lastErr;
+      }
+
+      const replyText = response?.text || '';
+      const groundingChunks = response?.candidates?.[0]?.groundingMetadata?.groundingChunks;
+      const webSearchSources = groundingChunks ? groundingChunks.map(c => c.web).filter(Boolean) : undefined;
+
+      return json({ text: replyText, sources: webSearchSources });
     } catch (e) {
       return json({ error: 'Upstream request failed: ' + e.message }, 502);
     }
@@ -159,7 +180,7 @@ export default {
 
 function corsHeaders() {
   return {
-    'Access-Control-Allow-Origin': ALLOWED_ORIGIN,
+    'Access-Control-Allow-Origin': ALLOWED_ORIGIN || '*',
     'Access-Control-Allow-Methods': 'POST, OPTIONS',
     'Access-Control-Allow-Headers': 'Content-Type',
   };

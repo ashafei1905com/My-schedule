@@ -121,6 +121,9 @@ export function fromFirestoreValue(v) {
 }
 
 export async function firestoreGetFood(env, docId) {
+  if (!env.FIREBASE_CLIENT_EMAIL || !env.FIREBASE_PRIVATE_KEY) {
+    return null;
+  }
   const token = await getFirestoreAccessToken(env);
   const res = await fetch(`${FIRESTORE_BASE(env)}/foods/${encodeURIComponent(docId)}`, {
     headers: { Authorization: `Bearer ${token}` }
@@ -138,6 +141,9 @@ export async function firestoreGetFood(env, docId) {
 }
 
 export async function firestoreSetFood(env, docId, fieldsObj) {
+  if (!env.FIREBASE_CLIENT_EMAIL || !env.FIREBASE_PRIVATE_KEY) {
+    return;
+  }
   try {
     const token = await getFirestoreAccessToken(env);
     const fields = {};

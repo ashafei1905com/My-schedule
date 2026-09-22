@@ -1,6 +1,35 @@
 
 import { firestoreGetFood, firestoreSetFood } from '../../../core/database/firestore.js';
 
+export const USDA_NUTRIENT_IDS = { protein: 1003, fat: 1004, carbs: 1005, fiber: 1079, energy: 1008 };
+export const USDA_DATATYPE_PRIORITY = ['Foundation', 'SR Legacy', 'Survey (FNDDS)', 'Branded'];
+export const USDA_RELEVANCE_MIN_SCORE = 0.5;
+export const USDA_RELEVANCE_MIN_OVERLAP_COUNT = 2;
+
+export const COMPOSITE_DISH_STEMS = [
+  { stems: ['كشري', 'كوشري', 'kosh', 'kush'], label: 'koshary' },
+  { stems: ['كبس', 'kabs'], label: 'kabsa' },
+  { stems: ['مندي', 'mandi', 'mendi'], label: 'mandi' },
+  { stems: ['ملوخي', 'moloukh', 'molokh'], label: 'molokhia' },
+  { stems: ['فت ', 'فتة', 'fattah', 'fatteh'], label: 'fatta' },
+  { stems: ['بيتزا', 'pizza'], label: 'pizza' },
+  { stems: ['ساندوتش', 'ساندويتش', 'sandwich', 'sandwitch'], label: 'sandwich' },
+  { stems: ['برجر', 'burger', 'burgur'], label: 'burger' }
+];
+export const EXCLUSION_RE = /بدون|من غير|without\b|\bno\s+\w/i;
+
+export const TIER3_SYSTEM_PROMPT = `You are a precise nutrition estimator. You will receive a food description, possibly in Arabic (including Egyptian/Gulf/Levantine dialect or regional dish names), possibly with a quantity and unit.
+
+Respond with ONLY a raw JSON object, nothing else — no markdown fences, no explanation outside the JSON:
+{"canonicalName":"<the food's common name, in English, for internal cataloging>","macroPer100g":{"p":<protein grams per 100g, number>,"c":<carb grams per 100g, number>,"f":<fat grams per 100g, number>,"b":<fiber grams per 100g, number>,"k":<calories per 100g, number>},"estimatedGrams":<your best-estimate total gram weight of the described portion, number>}
+
+Rules:
+- macroPer100g must be a per-100g baseline for this food, NOT scaled to the described portion — estimatedGrams is what scaling happens against, separately, by the caller.
+- Use standard nutritional values for the identified food. For regional/traditional dishes (e.g. كشري, ملوخية, مندي, مسخن), estimate based on typical home/restaurant preparation and standard ingredient ratios.
+- estimatedGrams should reflect the quantity/unit given in the description if present (e.g. "150 جرام" -> 150), or a normal single-adult serving if no quantity was given.
+- k (calories) must be consistent with p*4 + c*4 + f*9 approximately (per 100g).
+- Never fabricate a food that doesn't match the description — if the description is genuinely unidentifiable, respond with {"error":"<short explanation>"} instead.`;
+
 export function normalizeFoodKey(raw) {
   // original logic...
 
@@ -107,6 +136,25 @@ export function needsDecomposition(query) {
   return COMPOSITE_DISH_STEMS.some(entry => entry.stems.some(stem => low.includes(stem)));
 }
 
+async function generateContentWithFallback(ai, contents, config) {
+  const models = ['gemini-3.6-flash', 'gemini-3.5-flash', 'gemini-3.8-flash'];
+  let lastErr = null;
+  for (const m of models) {
+    try {
+      const res = await ai.models.generateContent({
+        model: m,
+        contents,
+        config
+      });
+      if (res && (res.text || res.candidates)) return res;
+    } catch (err) {
+      lastErr = err;
+      console.warn(`nutritionService model ${m} failed, trying next:`, err.message);
+    }
+  }
+  throw lastErr || new Error('All Gemini models failed');
+}
+
 export async function decomposeDish(env, query) {
   if (!env.GEMINI_API_KEY) return null;
   const sys = `You decompose a food description into its raw component ingredients with estimated gram weights, for a nutrition lookup pipeline that will fetch REAL macro data per ingredient from the USDA database — you are a parser, NOT a nutrition estimator, so never include any macro/calorie numbers yourself.
@@ -125,13 +173,9 @@ Rules:
   try {
     const { GoogleGenAI } = await import('@google/genai');
     const ai = new GoogleGenAI({ apiKey: env.GEMINI_API_KEY });
-    const response = await ai.models.generateContent({
-      model: 'gemini-3.1-pro-preview',
-      contents: query,
-      config: {
-        systemInstruction: sys,
-        responseMimeType: 'application/json'
-      }
+    const response = await generateContentWithFallback(ai, query, {
+      systemInstruction: sys,
+      responseMimeType: 'application/json'
     });
     let raw = (response.text || '').trim().replace(/^\`\`\`json\s*|\`\`\`$/g, '').trim();
     let parsed;
@@ -149,10 +193,8 @@ export async function translateToArabic(env, englishName) {
   try {
     const { GoogleGenAI } = await import('@google/genai');
     const ai = new GoogleGenAI({ apiKey: env.GEMINI_API_KEY });
-    const response = await ai.models.generateContent({
-      model: 'gemini-3.1-flash-lite',
-      contents: englishName,
-      config: { systemInstruction: 'Translate the given food name into short, natural Arabic. Respond with ONLY the Arabic translation, nothing else — no quotes, no explanation.' }
+    const response = await generateContentWithFallback(ai, englishName, {
+      systemInstruction: 'Translate the given food name into short, natural Arabic. Respond with ONLY the Arabic translation, nothing else — no quotes, no explanation.'
     });
     const ar = (response.text || '').trim();
     return ar || null;
@@ -168,11 +210,7 @@ export async function usdaNormalizeAndRetry(env, originalQuery, isIngredientLook
   try {
     const { GoogleGenAI } = await import('@google/genai');
     const ai = new GoogleGenAI({ apiKey: env.GEMINI_API_KEY });
-    const response = await ai.models.generateContent({
-      model: 'gemini-3.1-flash-lite',
-      contents: originalQuery,
-      config: { systemInstruction: sys }
-    });
+    const response = await generateContentWithFallback(ai, originalQuery, { systemInstruction: sys });
     const normalized = (response.text || '').trim();
     if (!normalized) return null;
     return await usdaSearchRaw(env, normalized, isIngredientLookup);
@@ -304,13 +342,9 @@ export async function tier3EstimateMacro(env, query) {
   try {
     const { GoogleGenAI } = await import('@google/genai');
     const ai = new GoogleGenAI({ apiKey: env.GEMINI_API_KEY });
-    const response = await ai.models.generateContent({
-      model: 'gemini-3.1-pro-preview',
-      contents: query,
-      config: {
-        systemInstruction: TIER3_SYSTEM_PROMPT,
-        responseMimeType: 'application/json'
-      }
+    const response = await generateContentWithFallback(ai, query, {
+      systemInstruction: TIER3_SYSTEM_PROMPT,
+      responseMimeType: 'application/json'
     });
     let raw = (response.text || '').trim().replace(/^\`\`\`json\s*|\`\`\`$/g, '').trim();
     let parsed;

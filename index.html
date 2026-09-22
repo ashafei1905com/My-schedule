@@ -36,6 +36,15 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;700;900&display=swap" rel="stylesheet">
+<script src="/node_modules/d3/dist/d3.min.js"></script>
+<script>
+  if (typeof window.d3 === 'undefined') {
+    const s = document.createElement('script');
+    s.src = 'https://cdn.jsdelivr.net/npm/d3@7/dist/d3.min.js';
+    document.head.appendChild(s);
+  }
+</script>
+<script src="/macro-trends.bundle.js"></script>
 <style>
 :root{--bg:#0a0e1a;--bg-main:#0a0e1a;--c:#111827;--c2:#1a2235;--br:#1e2d45;--ac:#3b82f6;--accent-color:#3b82f6;--accent-glow:rgba(59,130,246,0.4);--text-main:#f1f5f9;--text-on-accent:#ffffff;--gr:#10b981;--or:#f59e0b;--rd:#ef4444;--pu:#8b5cf6;--ye:#fbbf24;--cy:#06b6d4;--pk:#ec4899;--tx:#f1f5f9;--mu:#64748b;--so:#94a3b8;--scrollbar-size:8px;--scrollbar-track:transparent;--scrollbar-thumb:var(--br);--scrollbar-thumb-hover:var(--ac)}
 *{margin:0;padding:0;box-sizing:border-box}
@@ -126,7 +135,40 @@ html[dir="ltr"] .tc[data-c="sunrise"]{border-left:3px solid var(--or)}
 @keyframes ontimeGlow{0%{box-shadow:0 0 0 rgba(16,185,129,0);border-color:var(--br)}40%{box-shadow:0 0 18px 3px rgba(16,185,129,.55);border-color:var(--gr)}100%{box-shadow:0 0 0 rgba(16,185,129,0)}}
 @keyframes lateGlow{0%{box-shadow:0 0 0 rgba(245,158,11,0);border-color:var(--br)}40%{box-shadow:0 0 18px 3px rgba(245,158,11,.55);border-color:var(--or)}100%{box-shadow:0 0 0 rgba(245,158,11,0)}}
 @keyframes qadaGlow{0%{box-shadow:0 0 0 rgba(148,163,184,0)}40%{box-shadow:0 0 14px 2px rgba(148,163,184,.4)}100%{box-shadow:0 0 0 rgba(148,163,184,0)}}
-@keyframes barGold{0%{filter:brightness(1)}50%{filter:brightness(1.6) saturate(1.4)}100%{filter:brightness(1)}} @keyframes checkmarkPop{0%{transform:scale(0.5);opacity:0}50%{transform:scale(1.25);opacity:1}100%{transform:scale(1);opacity:1}}
+@keyframes barGold{0%{filter:brightness(1)}50%{filter:brightness(1.6) saturate(1.4)}100%{filter:brightness(1)}}
+@keyframes checkmarkPop{0%{transform:scale(0.5);opacity:0}50%{transform:scale(1.25);opacity:1}100%{transform:scale(1);opacity:1}}
+@keyframes taskFadeOutDone{
+  0%{opacity:1;transform:scale(1);box-shadow:0 0 0 0 rgba(16,185,129,0)}
+  30%{transform:scale(0.99);border-color:var(--gr);box-shadow:0 0 16px 2px rgba(16,185,129,.35)}
+  100%{opacity:0.64;transform:scale(1);background:rgba(16,185,129,.05);border-color:rgba(16,185,129,.28);box-shadow:0 0 0 0 rgba(16,185,129,0);filter:saturate(0.85)}
+}
+@keyframes dotTransformDone{
+  0%{transform:scale(1)}
+  50%{transform:scale(1.4);background:var(--gr);border-color:var(--gr);box-shadow:0 0 10px rgba(16,185,129,.8)}
+  100%{transform:scale(1);background:var(--gr);border-color:var(--gr);box-shadow:0 0 6px rgba(16,185,129,.4)}
+}
+@keyframes checkmarkBtnMorph{
+  0%{transform:scale(0.94);background:rgba(16,185,129,.2);border-color:var(--gr)}
+  40%{transform:scale(1.12);background:rgba(16,185,129,.25);border-color:var(--gr);box-shadow:0 0 14px rgba(16,185,129,.4)}
+  100%{transform:scale(1);background:rgba(16,185,129,.08);border-color:rgba(16,185,129,.25)}
+}
+@keyframes checkmarkCirclePop{
+  0%{transform:scale(0.3) rotate(-25deg);opacity:0;background:rgba(16,185,129,.45)}
+  50%{transform:scale(1.3) rotate(5deg);opacity:1;background:rgba(16,185,129,.28)}
+  100%{transform:scale(1) rotate(0deg);opacity:1;background:rgba(16,185,129,.18)}
+}
+@keyframes checkmarkStrokeDraw{
+  0%{stroke-dashoffset:24}
+  100%{stroke-dashoffset:0}
+}
+@keyframes checkmarkRipple{
+  0%{opacity:0.85;transform:scale(0.9)}
+  100%{opacity:0;transform:scale(1.4)}
+}
+@keyframes fadeInUpSubtle{
+  from{opacity:0;transform:translateY(3px)}
+  to{opacity:1;transform:translateY(0)}
+}
 #sbar{position:sticky;top:0;z-index:100;background-color:var(--bg-main);border-bottom:1px solid rgba(255,255,255,0.05);color:var(--text-main);backdrop-filter:blur(12px);padding:12px 16px;display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;min-height:64px}
 #sbar .sbar-stats{display:flex;gap:14px;align-items:center;flex:1;justify-content:center}
 #sbar .sbar-auth{display:flex;flex-direction:column;align-items:flex-end;gap:6px;flex-shrink:0}
@@ -201,10 +243,15 @@ html[dir="ltr"] .tc[data-c="sunrise"]{border-left:3px solid var(--or)}
 .ptim{font-size:.72rem;font-weight:700}
 .tl{position:relative;padding-right:20px}
 .tl::before{content:'';position:absolute;right:7px;top:0;bottom:0;width:2px;background:linear-gradient(to bottom,var(--ac),transparent);border-radius:2px}
-.tc{position:relative;margin-bottom:8px;padding:12px 14px;background:var(--c);border:1px solid var(--br);border-radius:12px;display:flex;align-items:flex-start;gap:10px;transition:border-color .2s,background .2s}
-.tc::before{content:'';position:absolute;right:-24px;top:16px;width:10px;height:10px;border-radius:50%;background:var(--c2);border:2px solid var(--br)}
-.tc.done{background:rgba(16,185,129,.05);border-color:rgba(16,185,129,.3)}
-.tc.done::before{border-color:var(--gr);background:var(--gr)}
+.tc{position:relative;margin-bottom:8px;padding:12px 14px;background:var(--c);border:1px solid var(--br);border-radius:12px;display:flex;align-items:flex-start;gap:10px;transition:opacity .45s cubic-bezier(0.4,0,0.2,1),background .35s ease,border-color .35s ease,filter .45s ease,transform .35s ease}
+.tc::before{content:'';position:absolute;right:-24px;top:16px;width:10px;height:10px;border-radius:50%;background:var(--c2);border:2px solid var(--br);transition:transform .35s cubic-bezier(0.34,1.56,0.64,1),background .35s ease,border-color .35s ease,box-shadow .35s ease}
+.tc.done{background:rgba(16,185,129,.05);border-color:rgba(16,185,129,.28);opacity:0.64;filter:saturate(0.85)}
+.tc.done:hover{opacity:0.94;filter:saturate(1)}
+.tc.done::before{border-color:var(--gr);background:var(--gr);box-shadow:0 0 6px rgba(16,185,129,.4)}
+.tc.done .tcname{color:color-mix(in srgb,var(--tx) 78%,var(--mu));text-decoration:line-through rgba(16,185,129,.4);text-decoration-thickness:1.5px;transition:color .35s ease,text-decoration-color .35s ease}
+.tc.done .tcico{opacity:0.8;transition:opacity .35s ease}
+.tc.tc-marking-done{animation:taskFadeOutDone .5s cubic-bezier(0.4,0,0.2,1) forwards}
+.tc.tc-marking-done::before{animation:dotTransformDone .5s cubic-bezier(0.34,1.56,0.64,1) forwards}
 .tc.excx{background:rgba(6,182,212,.04);border-color:rgba(6,182,212,.2)}
 .tc[data-c="prayer"]{border-right:3px solid var(--ye)}
 .tc[data-c="food"]{border-right:3px solid var(--or)}
@@ -229,9 +276,16 @@ html[dir="ltr"] .tc[data-c="sunrise"]{border-left:3px solid var(--or)}
 .altbtn{margin-top:5px;padding:5px 10px;background:color-mix(in srgb,var(--accent-color,var(--ac)) 18%,transparent);border:1px solid color-mix(in srgb,var(--accent-color,var(--ac)) 50%,transparent);border-radius:8px;color:var(--tx);cursor:pointer;font-family:inherit;font-weight:700;font-size:.8rem}
 .altbtn:hover{background:rgba(59,130,246,.3)}
 .altbtn:disabled{opacity:.5;cursor:not-allowed}
-.cbtn{flex-shrink:0;padding:6px 10px;background:rgba(16,185,129,.1);border:1px solid rgba(16,185,129,.4);border-radius:8px;cursor:pointer;font-family:'Cairo',sans-serif;font-size:.73rem;font-weight:700;color:var(--gr);transition:all .2s;display:flex;flex-direction:column;align-items:center;gap:1px}
+.cbtn{flex-shrink:0;padding:6px 10px;background:rgba(16,185,129,.1);border:1px solid rgba(16,185,129,.4);border-radius:8px;cursor:pointer;font-family:'Cairo',sans-serif;font-size:.73rem;font-weight:700;color:var(--gr);transition:all .25s cubic-bezier(0.4,0,0.2,1);display:flex;flex-direction:column;align-items:center;gap:1px;position:relative;overflow:visible}
 .cbtn:hover{background:rgba(16,185,129,.2)}
-.cbtn.done{background:rgba(16,185,129,.06);border-color:rgba(16,185,129,.2);color:var(--mu);cursor:default;animation:checkmarkPop 0.4s cubic-bezier(0.175,0.885,0.32,1.275) forwards}
+.cbtn-check-badge{display:inline-flex;align-items:center;justify-content:center;width:20px;height:20px;border-radius:50%;background:rgba(16,185,129,.18);color:var(--gr);flex-shrink:0;transition:transform .3s cubic-bezier(0.34,1.56,0.64,1),background .3s ease,color .3s ease}
+.cbtn-check-svg{width:13px;height:13px;display:block}
+.cbtn-check-path{stroke-dasharray:24;stroke-dashoffset:0;stroke:currentColor}
+.cbtn.done{background:rgba(16,185,129,.08);border-color:rgba(16,185,129,.25);color:var(--gr);cursor:default;min-width:44px;padding:5px 9px}
+.cbtn.cbtn-transforming{animation:checkmarkBtnMorph .5s cubic-bezier(0.34,1.56,0.64,1) forwards;pointer-events:none}
+.cbtn.cbtn-transforming .cbtn-check-badge{animation:checkmarkCirclePop .5s cubic-bezier(0.34,1.56,0.64,1) forwards}
+.cbtn.cbtn-transforming .cbtn-check-path{animation:checkmarkStrokeDraw .38s cubic-bezier(0.65,0,0.45,1) forwards .06s;stroke-dashoffset:24}
+.cbtn.cbtn-transforming::after{content:'';position:absolute;inset:-4px;border-radius:12px;border:2px solid var(--gr);opacity:0;animation:checkmarkRipple .55s ease-out forwards}
 .cbtn.exp{background:rgba(100,116,139,.08);border-color:rgba(100,116,139,.4);color:var(--mu);cursor:not-allowed}
 .cbtn.qada{background:rgba(245,158,11,.08);border-color:rgba(245,158,11,.35);color:var(--or)}
 .cbtn.qada:hover{background:rgba(245,158,11,.15)}
@@ -417,6 +471,75 @@ html[dir="ltr"] .tc[data-c="sunrise"]{border-left:3px solid var(--or)}
 .report-back-btn:hover{background:rgba(124,58,237,.24)}
 .history-empty{color:var(--mu);font-weight:700;text-align:center;padding:30px 10px}
 @media(max-width:500px){.report-summary{grid-template-columns:1fr 1fr;}}
+
+/* Weekly Trends & Consistency Dashboard (D3) */
+.topbtn-trends{background:linear-gradient(135deg,rgba(16,185,129,.18),rgba(6,182,212,.18));border:1px solid rgba(6,182,212,.4);color:#38bdf8;box-shadow:0 2px 10px rgba(6,182,212,.12);display:inline-flex;align-items:center;gap:6px;cursor:pointer;padding:7px 13px;border-radius:10px;font-family:'Cairo',sans-serif;font-size:.78rem;font-weight:800;transition:all .2s}
+.topbtn-trends:hover{background:linear-gradient(135deg,rgba(16,185,129,.28),rgba(6,182,212,.32));border-color:#38bdf8;color:#fff;transform:translateY(-1px);box-shadow:0 4px 16px rgba(6,182,212,.28)}
+
+.prog-trends-pill{background:rgba(6,182,212,.12);border:1px solid rgba(6,182,212,.3);color:#38bdf8;padding:2px 10px;border-radius:999px;font-size:.72rem;font-weight:800;cursor:pointer;display:inline-flex;align-items:center;gap:4px;transition:all .2s;font-family:'Cairo',sans-serif}
+.prog-trends-pill:hover{background:rgba(6,182,212,.24);border-color:#38bdf8;color:#fff;transform:scale(1.04)}
+
+.trends-modal-box{background:var(--c2);border:2px solid var(--br);border-radius:20px;padding:24px;width:100%;max-width:760px;margin:auto;box-shadow:0 12px 48px rgba(0,0,0,0.85);color:var(--tx)}
+.trends-header{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:18px;padding-bottom:14px;border-bottom:1px solid var(--br);gap:12px}
+.trends-title-group h3{font-size:1.35rem;font-weight:900;color:#38bdf8;display:flex;align-items:center;gap:8px}
+.trends-subtitle{font-size:.75rem;color:var(--so);margin-top:4px;font-weight:600}
+
+.trends-controls-bar{display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:12px;margin-bottom:18px;background:rgba(0,0,0,.22);padding:10px 14px;border-radius:12px;border:1px solid rgba(255,255,255,.05)}
+.trends-tabs-group{display:flex;gap:6px;flex-wrap:wrap}
+.trends-tab-btn{background:rgba(255,255,255,.05);border:1px solid var(--br);color:var(--so);padding:6px 12px;border-radius:8px;font-size:.76rem;font-weight:700;cursor:pointer;transition:all .18s;font-family:'Cairo',sans-serif}
+.trends-tab-btn:hover{background:rgba(255,255,255,.1);color:var(--tx)}
+.trends-tab-btn.act{background:rgba(59,130,246,.25);border-color:var(--ac);color:#60a5fa}
+
+.trends-metrics-filter{display:flex;gap:6px}
+.trends-metric-btn{background:rgba(255,255,255,.04);border:1px solid var(--br);color:var(--so);padding:5px 10px;border-radius:6px;font-size:.72rem;font-weight:700;cursor:pointer;transition:all .15s}
+.trends-metric-btn.act{background:rgba(16,185,129,.18);border-color:var(--gr);color:#34d399}
+
+.trends-kpis-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:20px}
+.trends-kpi-card{background:var(--c);border:1px solid var(--br);border-radius:12px;padding:12px 10px;text-align:center;box-shadow:0 3px 10px rgba(0,0,0,.25)}
+.trends-kpi-val{font-size:1.45rem;font-weight:900;line-height:1.2}
+.trends-kpi-lbl{font-size:.7rem;color:var(--so);font-weight:700;margin-top:4px}
+.trends-kpi-sub{font-size:.65rem;color:var(--mu);margin-top:2px}
+
+.trends-chart-card{background:var(--c);border:1px solid var(--br);border-radius:16px;padding:16px 14px 12px;margin-bottom:20px;position:relative;box-shadow:0 4px 16px rgba(0,0,0,.3)}
+.trends-chart-legend{display:flex;align-items:center;justify-content:center;gap:18px;margin-bottom:12px;font-size:.74rem;font-weight:700;color:var(--so);flex-wrap:wrap}
+.legend-item{display:inline-flex;align-items:center;gap:6px}
+.legend-dot-points{width:10px;height:10px;border-radius:3px;background:#fbbf24}
+.legend-dot-pct{width:14px;height:3px;border-radius:2px;background:#10b981}
+.legend-dot-target{width:14px;height:0;border-top:2px dashed #94a3b8}
+
+.trends-chart-svg-wrap{width:100%;height:auto;min-height:260px;overflow:visible;position:relative}
+.trends-chart-svg-wrap svg{width:100%;height:auto;display:block}
+
+.trends-tooltip{position:absolute;pointer-events:none;background:rgba(15,23,42,.96);border:1px solid rgba(56,189,248,.4);border-radius:10px;padding:10px 14px;box-shadow:0 8px 24px rgba(0,0,0,.7);font-size:.75rem;z-index:25;display:none;backdrop-filter:blur(8px);transition:opacity .15s ease;line-height:1.6;color:var(--tx)}
+
+.trends-insights-section{margin-top:22px}
+.trends-section-title{font-size:.95rem;font-weight:900;color:var(--tx);margin-bottom:12px;display:flex;align-items:center;gap:8px}
+.trends-insights-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:18px}
+.insight-card{background:var(--c);border:1px solid var(--br);border-radius:12px;padding:14px;display:flex;flex-direction:column;gap:6px;transition:all .2s}
+.insight-card:hover{border-color:rgba(255,255,255,.18);transform:translateY(-1px)}
+.insight-header{display:flex;justify-content:space-between;align-items:center;gap:8px}
+.insight-title{font-size:.82rem;font-weight:800;display:flex;align-items:center;gap:6px}
+.insight-badge{font-size:.65rem;font-weight:800;padding:2px 8px;border-radius:6px}
+.insight-desc{font-size:.76rem;color:var(--so);line-height:1.55}
+.insight-action{font-size:.72rem;background:rgba(0,0,0,.3);border-radius:6px;padding:6px 10px;margin-top:4px;color:var(--tx);font-weight:600;display:flex;align-items:flex-start;gap:6px;border-left:3px solid #38bdf8}
+
+.trends-cats-card{background:var(--c);border:1px solid var(--br);border-radius:14px;padding:14px;margin-top:12px}
+.cat-bars-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:10px;margin-top:10px}
+.cat-bar-item{background:rgba(0,0,0,.2);border:1px solid rgba(255,255,255,.05);border-radius:8px;padding:8px 10px}
+.cat-bar-head{display:flex;justify-content:space-between;align-items:center;font-size:.72rem;font-weight:700;margin-bottom:5px}
+.cat-bar-track{width:100%;height:6px;background:rgba(255,255,255,.08);border-radius:999px;overflow:hidden}
+.cat-bar-fill{height:100%;border-radius:999px;transition:width .4s ease}
+
+/* Embedded Report Trend Chart */
+.report-trends-embed{background:var(--c);border:1px solid var(--br);border-radius:14px;padding:16px 14px;margin-bottom:20px;box-shadow:0 4px 12px rgba(0,0,0,.25)}
+.report-trends-head{display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;flex-wrap:wrap;gap:8px}
+.report-trends-title{font-size:.85rem;font-weight:900;color:var(--ac);display:flex;align-items:center;gap:6px}
+
+@media(max-width:600px){
+  .trends-kpis-grid{grid-template-columns:1fr 1fr}
+  .trends-insights-grid{grid-template-columns:1fr}
+  .trends-controls-bar{flex-direction:column;align-items:stretch}
+}
 
 /* AI Assistant widget */
 @keyframes aiPopIn{0%{opacity:0;transform:scale(.85) translateY(30px)}100%{opacity:1;transform:scale(1) translateY(0)}}
@@ -874,6 +997,11 @@ body.theme-chrono .tc.done::before{
   color:#1a1208!important;
   box-shadow:0 0 12px rgba(251,191,36,.55)!important;
 }
+body.theme-gold .cbtn.done .cbtn-check-badge,
+body.theme-chrono .cbtn.done .cbtn-check-badge{
+  background:rgba(26,18,8,0.18)!important;
+  color:#1a1208!important;
+}
 body.theme-gold .floatpts,
 body.theme-chrono .floatpts{
   color:#fcf6ba!important;
@@ -1285,6 +1413,667 @@ body.theme-matrix .tctime{
   .profile-wrap{align-items:flex-end;width:auto}
 }
 </style>
+<style id="fitnessWizardCustomStyles">
+/* Fitness Profile Wizard Styles */
+.fw-wizard-box {
+  max-width: 580px !important;
+  width: 95% !important;
+  max-height: 92vh !important;
+  display: flex !important;
+  flex-direction: column !important;
+  overflow-y: auto !important;
+  background: #0d1322 !important;
+  border: 1px solid rgba(255,255,255,0.12) !important;
+  border-radius: 18px !important;
+  padding: 20px !important;
+  box-shadow: 0 25px 65px -10px rgba(0,0,0,0.85) !important;
+  color: var(--tx, #f1f5f9) !important;
+  text-align: left !important;
+  direction: ltr !important;
+}
+[dir="rtl"] .fw-wizard-box {
+  text-align: right !important;
+  direction: rtl !important;
+}
+.fw-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  border-bottom: 1px solid rgba(255,255,255,0.07);
+  padding-bottom: 12px;
+}
+.fw-title-group {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.fw-icon {
+  font-size: 1.8rem;
+  line-height: 1;
+}
+.fw-main-title {
+  margin: 0 !important;
+  font-size: 1.15rem !important;
+  font-weight: 900 !important;
+  color: var(--tx, #f1f5f9);
+}
+.fw-subtitle {
+  font-size: 0.72rem;
+  color: var(--mu, #94a3b8);
+  margin-top: 2px;
+}
+.fw-close-btn {
+  background: none;
+  border: none;
+  color: var(--so, #94a3b8);
+  font-size: 1.35rem;
+  cursor: pointer;
+  padding: 4px 8px;
+  border-radius: 6px;
+  transition: all 0.2s;
+}
+.fw-close-btn:hover {
+  color: var(--tx, #ffffff);
+  background: rgba(255,255,255,0.06);
+}
+
+/* Tabs */
+.fw-tabs-container {
+  display: flex;
+  position: relative;
+  background: rgba(15,23,42,0.6);
+  border: 1px solid rgba(255,255,255,0.08);
+  border-radius: 10px;
+  padding: 4px;
+  margin: 14px 0 16px;
+  gap: 4px;
+}
+.fw-tab-btn {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 8px 12px;
+  border-radius: 8px;
+  font-size: 0.8rem;
+  font-weight: 800;
+  border: none;
+  background: transparent;
+  color: var(--so, #94a3b8);
+  cursor: pointer;
+  transition: all 0.22s ease;
+}
+.fw-tab-btn:hover {
+  color: var(--tx, #ffffff);
+}
+.fw-tab-btn.active {
+  color: #60a5fa;
+  background: rgba(59,130,246,0.18);
+  border: 1px solid rgba(59,130,246,0.35);
+  box-shadow: 0 2px 8px rgba(0,0,0,0.25);
+}
+
+/* Animations */
+@keyframes fwSlideInRight {
+  from { opacity: 0; transform: translateX(20px); }
+  to { opacity: 1; transform: translateX(0); }
+}
+@keyframes fwSlideInLeft {
+  from { opacity: 0; transform: translateX(-20px); }
+  to { opacity: 1; transform: translateX(0); }
+}
+@keyframes fwShake {
+  0%, 100% { transform: translateX(0); }
+  20%, 60% { transform: translateX(-6px); }
+  40%, 80% { transform: translateX(6px); }
+}
+.fw-view {
+  display: none;
+}
+.fw-view.fw-view-active {
+  display: block;
+}
+.fw-anim-right {
+  animation: fwSlideInRight 0.28s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+.fw-anim-left {
+  animation: fwSlideInLeft 0.28s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+/* Group Cards */
+.fw-group-card {
+  background: rgba(255,255,255,0.025);
+  border: 1px solid rgba(255,255,255,0.07);
+  border-radius: 12px;
+  padding: 14px;
+  margin-bottom: 12px;
+}
+.fw-group-header {
+  margin-bottom: 10px;
+}
+.fw-group-title {
+  display: block;
+  font-size: 0.82rem;
+  font-weight: 800;
+  color: #60a5fa;
+}
+.fw-group-desc {
+  display: block;
+  font-size: 0.68rem;
+  color: var(--mu, #94a3b8);
+  margin-top: 1px;
+}
+
+/* Grid Layouts */
+.fw-grid-2x2 {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+}
+.fw-field-col2 {
+  grid-column: span 2;
+}
+.fw-grid-activity {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+}
+@media (max-width: 520px) {
+  .fw-grid-activity {
+    grid-template-columns: 1fr;
+  }
+}
+.fw-field {
+  display: flex;
+  flex-direction: column;
+}
+.fw-label-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 5px;
+}
+.fw-field-label {
+  font-size: 0.76rem;
+  font-weight: 700;
+  color: var(--so, #cbd5e1);
+  margin-bottom: 5px;
+}
+.fw-unit-badge {
+  font-size: 0.65rem;
+  color: var(--mu, #64748b);
+  font-weight: 600;
+}
+.fw-input-wrap {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+.fw-input {
+  width: 100%;
+  padding: 9px 38px 9px 10px;
+  border-radius: 8px;
+  border: 1px solid rgba(255,255,255,0.12);
+  background: rgba(15,23,42,0.8);
+  color: var(--tx, #f1f5f9);
+  font-family: inherit;
+  font-size: 0.84rem;
+  font-weight: 700;
+  outline: none;
+  transition: border-color 0.2s, box-shadow 0.2s, background-color 0.2s;
+}
+[dir="rtl"] .fw-input {
+  padding: 9px 10px 9px 38px;
+}
+.fw-input:focus {
+  border-color: #3b82f6;
+  box-shadow: 0 0 0 2px rgba(59,130,246,0.25);
+  background: rgba(15,23,42,0.95);
+}
+.fw-input.error {
+  border-color: #ef4444 !important;
+  background: rgba(239,68,68,0.06) !important;
+  box-shadow: 0 0 0 2px rgba(239,68,68,0.2) !important;
+}
+.fw-input.valid {
+  border-color: rgba(16,185,129,0.5) !important;
+}
+.fw-input-suffix {
+  position: absolute;
+  right: 10px;
+  font-size: 0.72rem;
+  font-weight: 700;
+  color: var(--mu, #64748b);
+  pointer-events: none;
+}
+[dir="rtl"] .fw-input-suffix {
+  right: auto;
+  left: 10px;
+}
+.fw-field-error {
+  display: none;
+  font-size: 0.68rem;
+  font-weight: 700;
+  color: #f87171;
+  margin-top: 4px;
+}
+.fw-field-error.visible {
+  display: block;
+}
+.fw-field-hint {
+  font-size: 0.66rem;
+  color: var(--mu, #94a3b8);
+  margin-top: 4px;
+}
+.fw-field.shake {
+  animation: fwShake 0.4s ease;
+}
+
+/* Gender chips */
+.fw-chip-pair {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+}
+.fw-chip {
+  padding: 9px;
+  border-radius: 8px;
+  border: 1px solid rgba(255,255,255,0.12);
+  background: rgba(15,23,42,0.8);
+  color: var(--so, #cbd5e1);
+  font-family: inherit;
+  font-size: 0.8rem;
+  font-weight: 800;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  transition: all 0.2s;
+}
+.fw-chip:hover {
+  border-color: rgba(59,130,246,0.4);
+}
+.fw-chip.fw-chip-sel {
+  border: 2px solid #3b82f6 !important;
+  background: rgba(59,130,246,0.16) !important;
+  color: #ffffff !important;
+  box-shadow: 0 2px 10px rgba(59,130,246,0.2) !important;
+}
+
+/* Activity select */
+.fw-select {
+  width: 100%;
+  padding: 9px 10px;
+  border-radius: 8px;
+  border: 1px solid rgba(255,255,255,0.12);
+  background: rgba(15,23,42,0.8);
+  color: var(--tx, #f1f5f9);
+  font-family: inherit;
+  font-size: 0.82rem;
+  font-weight: 700;
+  outline: none;
+  cursor: pointer;
+  transition: border-color 0.2s;
+}
+.fw-select:focus {
+  border-color: #3b82f6;
+  box-shadow: 0 0 0 2px rgba(59,130,246,0.25);
+}
+
+/* Goal Chips Grid */
+.fw-grid-goals {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr;
+  gap: 8px;
+}
+@media (max-width: 480px) {
+  .fw-grid-goals {
+    grid-template-columns: 1fr;
+  }
+}
+.fw-goal-chip {
+  padding: 10px 8px;
+  border-radius: 10px;
+  border: 1px solid rgba(255,255,255,0.12);
+  background: rgba(15,23,42,0.8);
+  color: var(--so, #cbd5e1);
+  cursor: pointer;
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 3px;
+  transition: all 0.2s;
+}
+.fw-goal-chip:hover {
+  border-color: rgba(59,130,246,0.4);
+}
+.fw-goal-chip.fw-chip-sel {
+  border: 2px solid #3b82f6 !important;
+  background: rgba(59,130,246,0.16) !important;
+  color: #ffffff !important;
+  box-shadow: 0 2px 10px rgba(59,130,246,0.2) !important;
+}
+.fw-goal-icon {
+  font-size: 1.3rem;
+  line-height: 1;
+}
+.fw-goal-name {
+  font-size: 0.78rem;
+  font-weight: 800;
+}
+.fw-goal-sub {
+  font-size: 0.65rem;
+  color: var(--mu, #94a3b8);
+}
+.fw-goal-tag {
+  font-size: 0.58rem;
+  font-weight: 700;
+  padding: 1px 6px;
+  border-radius: 999px;
+  background: rgba(255,255,255,0.08);
+  color: #60a5fa;
+  margin-top: 2px;
+}
+
+/* Action Bars */
+.fw-actions-bar {
+  display: flex;
+  gap: 10px;
+  margin-top: 14px;
+}
+.fw-btn-secondary {
+  flex: 1;
+  padding: 11px;
+  border-radius: 9px;
+  border: 1px solid rgba(255,255,255,0.14);
+  background: rgba(255,255,255,0.04);
+  color: var(--so, #cbd5e1);
+  font-family: inherit;
+  font-size: 0.82rem;
+  font-weight: 800;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  transition: all 0.2s;
+}
+.fw-btn-secondary:hover {
+  background: rgba(255,255,255,0.08);
+  color: var(--tx, #ffffff);
+}
+.fw-btn-primary {
+  flex: 2;
+  padding: 11px;
+  border-radius: 9px;
+  border: none;
+  background: #2563eb;
+  color: #ffffff;
+  font-family: inherit;
+  font-size: 0.84rem;
+  font-weight: 800;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  box-shadow: 0 4px 14px rgba(37,99,235,0.35);
+  transition: all 0.2s;
+}
+.fw-btn-primary:hover {
+  background: #1d4ed8;
+  box-shadow: 0 6px 18px rgba(37,99,235,0.45);
+}
+.fw-btn-success {
+  background: #059669 !important;
+  box-shadow: 0 4px 14px rgba(5,150,105,0.35) !important;
+}
+.fw-btn-success:hover {
+  background: #047857 !important;
+  box-shadow: 0 6px 18px rgba(5,150,105,0.45) !important;
+}
+
+/* Results View Styles */
+.fw-results-container {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.fw-result-hero-card {
+  background: linear-gradient(135deg, rgba(30,58,138,0.25) 0%, rgba(15,23,42,0.8) 100%);
+  border: 1px solid rgba(59,130,246,0.3);
+  border-radius: 14px;
+  padding: 16px;
+}
+.fw-hero-meta-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+}
+.fw-hero-badge {
+  display: inline-block;
+  font-size: 0.64rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  padding: 2px 8px;
+  border-radius: 999px;
+  background: rgba(59,130,246,0.18);
+  color: #60a5fa;
+  border: 1px solid rgba(59,130,246,0.3);
+  margin-bottom: 4px;
+}
+.fw-hero-target-label {
+  font-size: 0.78rem;
+  color: var(--so, #cbd5e1);
+  font-weight: 700;
+}
+.fw-hero-strategy-pill {
+  font-size: 0.72rem;
+  font-weight: 800;
+  padding: 3px 10px;
+  border-radius: 999px;
+  background: rgba(16,185,129,0.18);
+  color: #34d399;
+  border: 1px solid rgba(16,185,129,0.35);
+}
+.fw-hero-kcal-row {
+  margin: 8px 0 12px;
+}
+.fw-hero-kcal-val {
+  font-size: 1.9rem;
+  font-weight: 900;
+  color: #ffffff;
+  letter-spacing: -0.5px;
+}
+.fw-hero-kcal-unit {
+  font-size: 0.95rem;
+  font-weight: 700;
+  color: #93c5fd;
+  letter-spacing: normal;
+}
+.fw-hero-sub-stats {
+  display: flex;
+  align-items: center;
+  background: rgba(0,0,0,0.35);
+  border-radius: 9px;
+  padding: 8px 12px;
+}
+.fw-sub-stat-item {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  text-align: center;
+}
+.fw-sub-stat-lbl {
+  font-size: 0.62rem;
+  color: var(--mu, #94a3b8);
+  font-weight: 600;
+}
+.fw-sub-stat-val {
+  font-size: 0.78rem;
+  color: var(--tx, #f1f5f9);
+  font-weight: 800;
+  margin-top: 1px;
+}
+.fw-sub-stat-div {
+  width: 1px;
+  height: 24px;
+  background: rgba(255,255,255,0.08);
+}
+
+/* Macro 4-card Bento Grid */
+.fw-macro-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+}
+.fw-macro-card {
+  background: rgba(255,255,255,0.03);
+  border: 1px solid rgba(255,255,255,0.08);
+  border-radius: 12px;
+  padding: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.fw-card-protein { border-left: 3px solid #38bdf8; }
+.fw-card-fats { border-left: 3px solid #facc15; }
+.fw-card-carbs { border-left: 3px solid #34d399; }
+.fw-card-fiber { border-left: 3px solid #a78bfa; }
+[dir="rtl"] .fw-card-protein { border-left: none; border-right: 3px solid #38bdf8; }
+[dir="rtl"] .fw-card-fats { border-left: none; border-right: 3px solid #facc15; }
+[dir="rtl"] .fw-card-carbs { border-left: none; border-right: 3px solid #34d399; }
+[dir="rtl"] .fw-card-fiber { border-left: none; border-right: 3px solid #a78bfa; }
+
+.fw-macro-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+.fw-macro-name {
+  font-size: 0.76rem;
+  font-weight: 800;
+  color: var(--tx, #f1f5f9);
+}
+.fw-macro-pct {
+  font-size: 0.68rem;
+  font-weight: 800;
+  color: var(--mu, #94a3b8);
+}
+.fw-macro-val {
+  font-size: 1.35rem;
+  font-weight: 900;
+  color: #ffffff;
+}
+.fw-macro-unit {
+  font-size: 0.78rem;
+  font-weight: 700;
+  color: var(--mu, #94a3b8);
+  margin-left: 2px;
+}
+[dir="rtl"] .fw-macro-unit {
+  margin-left: 0;
+  margin-right: 2px;
+}
+.fw-macro-sub {
+  font-size: 0.66rem;
+  color: var(--mu, #94a3b8);
+  font-weight: 600;
+}
+.fw-macro-bar-track {
+  width: 100%;
+  height: 4px;
+  background: rgba(255,255,255,0.08);
+  border-radius: 999px;
+  overflow: hidden;
+  margin-top: 4px;
+}
+.fw-macro-bar-fill {
+  height: 100%;
+  border-radius: 999px;
+  transition: width 0.4s ease;
+}
+.fw-bar-p { background: #38bdf8; }
+.fw-bar-f { background: #facc15; }
+.fw-bar-c { background: #34d399; }
+.fw-bar-b { background: #a78bfa; }
+
+/* Ratio Stacked Bar */
+.fw-ratio-card {
+  background: rgba(255,255,255,0.025);
+  border: 1px solid rgba(255,255,255,0.07);
+  border-radius: 12px;
+  padding: 12px;
+}
+.fw-ratio-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 0.72rem;
+  margin-bottom: 8px;
+}
+.fw-ratio-title {
+  font-weight: 800;
+  color: var(--so, #cbd5e1);
+}
+.fw-ratio-legend {
+  font-size: 0.66rem;
+  color: var(--mu, #94a3b8);
+  display: flex;
+  align-items: center;
+}
+.fw-dot {
+  display: inline-block;
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  margin-right: 4px;
+}
+[dir="rtl"] .fw-dot {
+  margin-right: 0;
+  margin-left: 4px;
+}
+.fw-dot-p { background: #38bdf8; }
+.fw-dot-c { background: #34d399; }
+.fw-dot-f { background: #facc15; }
+
+.fw-stacked-bar {
+  display: flex;
+  width: 100%;
+  height: 10px;
+  border-radius: 999px;
+  overflow: hidden;
+  background: rgba(255,255,255,0.05);
+}
+.fw-stacked-segment {
+  height: 100%;
+  transition: width 0.4s ease;
+}
+.fw-seg-p { background: #38bdf8; }
+.fw-seg-c { background: #34d399; }
+.fw-seg-f { background: #facc15; }
+
+/* Coaching Note */
+.fw-coaching-note {
+  display: flex;
+  gap: 8px;
+  background: rgba(59,130,246,0.08);
+  border: 1px solid rgba(59,130,246,0.22);
+  border-radius: 10px;
+  padding: 10px 12px;
+  font-size: 0.72rem;
+  line-height: 1.5;
+  color: #bfdbfe;
+}
+.fw-coach-icon {
+  font-size: 1rem;
+  line-height: 1.2;
+}
+</style>
 <script>
 (function(){
   try{
@@ -1417,72 +2206,149 @@ body.theme-matrix .tctime{
           </div>
         </div>
         <div class="set-section" id="setsec-fitness">
-          <h3>🏋️ أهداف اللياقة والماكروز / Fitness & Macros</h3>
-          <p class="desc">إدارة قياساتك، معدل الأيض (BMR/TDEE)، وأهداف السعرات والماكروز اليومية.</p>
-          <div class="set-row">
-            <label for="setFitnessTrackingEnabledSec">تفعيل تتبع اللياقة (Fitness Tracking Enabled)</label>
-            <input type="checkbox" id="setFitnessTrackingEnabledSec">
-          </div>
-          <div id="setFitnessConfigBlock" style="margin-top:14px;display:flex;flex-direction:column;gap:12px">
-            <div>
-              <label style="display:block;font-size:.78rem;font-weight:700;color:var(--so);margin-bottom:6px">1. Gender (النوع)</label>
-              <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
-                <button type="button" class="fw-chip fw-chip-sel" data-val="male" id="setGenderMale" style="padding:10px;border-radius:10px;border:2px solid var(--ac);background:rgba(59,130,246,.15);color:var(--tx);font-weight:700;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:6px">👨 Male</button>
-                <button type="button" class="fw-chip" data-val="female" id="setGenderFemale" style="padding:10px;border-radius:10px;border:1px solid var(--br);background:var(--c);color:var(--so);font-weight:700;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:6px">👩 Female</button>
-              </div>
-            </div>
-            <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px">
+          <div id="fitnessWizard" class="fitness-wizard-card" data-component="FitnessWizard" style="display:flex;flex-direction:column;gap:12px">
+            <div style="display:flex;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:8px;border-bottom:1px solid var(--br);padding-bottom:10px">
               <div>
-                <label for="setAge" style="display:block;font-size:.78rem;font-weight:700;color:var(--so);margin-bottom:6px">2. Age</label>
-                <input type="number" id="setAge" min="14" max="100" value="25" style="width:100%;padding:8px 10px;border-radius:8px;border:1px solid var(--br);background:var(--c);color:var(--tx);font-family:inherit;font-weight:700">
+                <h3 style="margin:0;display:flex;align-items:center;gap:8px;font-size:1.05rem;font-weight:900">
+                  <span>🏋️</span>
+                  <span id="fwTitle">FitnessWizard · معالج اللياقة والماكروز</span>
+                </h3>
+                <p class="desc" style="margin:4px 0 0 0;font-size:.78rem;color:var(--so)" id="fwDesc">
+                  حساب دقيق لمعدل الأيض الأساسي (BMR) ومعدل حرق الطاقة اليومي (TDEE) بمعادلة Mifflin-St Jeor واقتراح نسب الماكروز.
+                </p>
+              </div>
+              <span class="badge" style="background:rgba(59,130,246,.15);color:var(--ac);border:1px solid rgba(59,130,246,.3);font-size:.7rem;font-weight:800;padding:4px 8px;border-radius:6px">Mifflin-St Jeor</span>
+            </div>
+
+            <div class="set-row" style="padding:8px 12px;background:rgba(255,255,255,.03);border:1px solid var(--br);border-radius:8px">
+              <label for="setFitnessTrackingEnabledSec" style="font-weight:700;font-size:.82rem">تفعيل تتبع اللياقة (Fitness Tracking Enabled)</label>
+              <input type="checkbox" id="setFitnessTrackingEnabledSec">
+            </div>
+
+            <div id="setFitnessConfigBlock" style="display:flex;flex-direction:column;gap:12px">
+              <div>
+                <label style="display:block;font-size:.78rem;font-weight:800;color:var(--so);margin-bottom:6px">1. Gender / النوع</label>
+                <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+                  <button type="button" class="fw-chip fw-chip-sel" data-val="male" id="setGenderMale" style="padding:10px;border-radius:10px;border:2px solid var(--ac);background:rgba(59,130,246,.15);color:var(--tx);font-weight:800;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:6px">👨 Male / ذكر</button>
+                  <button type="button" class="fw-chip" data-val="female" id="setGenderFemale" style="padding:10px;border-radius:10px;border:1px solid var(--br);background:var(--c);color:var(--so);font-weight:800;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:6px">👩 Female / أنثى</button>
+                </div>
+              </div>
+              <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px">
+                <div>
+                  <label for="setAge" style="display:block;font-size:.78rem;font-weight:800;color:var(--so);margin-bottom:6px">2. Age / العمر</label>
+                  <div style="position:relative">
+                    <input type="number" id="setAge" min="14" max="100" value="25" style="width:100%;padding:8px 10px;border-radius:8px;border:1px solid var(--br);background:var(--c);color:var(--tx);font-family:inherit;font-weight:800">
+                  </div>
+                </div>
+                <div>
+                  <label for="setWeight" style="display:block;font-size:.78rem;font-weight:800;color:var(--so);margin-bottom:6px">3. Weight / الوزن (kg)</label>
+                  <div style="position:relative">
+                    <input type="number" id="setWeight" min="30" max="250" step="0.5" value="75" style="width:100%;padding:8px 10px;border-radius:8px;border:1px solid var(--br);background:var(--c);color:var(--tx);font-family:inherit;font-weight:800">
+                  </div>
+                </div>
+                <div>
+                  <label for="setHeight" style="display:block;font-size:.78rem;font-weight:800;color:var(--so);margin-bottom:6px">4. Height / الطول (cm)</label>
+                  <div style="position:relative">
+                    <input type="number" id="setHeight" min="100" max="250" value="175" style="width:100%;padding:8px 10px;border-radius:8px;border:1px solid var(--br);background:var(--c);color:var(--tx);font-family:inherit;font-weight:800">
+                  </div>
+                </div>
               </div>
               <div>
-                <label for="setWeight" style="display:block;font-size:.78rem;font-weight:700;color:var(--so);margin-bottom:6px">3. Weight (kg)</label>
-                <input type="number" id="setWeight" min="30" max="250" step="0.5" value="75" style="width:100%;padding:8px 10px;border-radius:8px;border:1px solid var(--br);background:var(--c);color:var(--tx);font-family:inherit;font-weight:700">
+                <label for="setActivity" style="display:block;font-size:.78rem;font-weight:800;color:var(--so);margin-bottom:6px">5. Activity Level / مستوى النشاط</label>
+                <select id="setActivity" style="width:100%;padding:8px 10px;border-radius:8px;border:1px solid var(--br);background:var(--c);color:var(--tx);font-family:inherit;font-weight:800">
+                  <option value="1.2">Sedentary (desk job, minimal exercise) — 1.200</option>
+                  <option value="1.375">Lightly Active (training 1-3 days/wk) — 1.375</option>
+                  <option value="1.55" selected>Moderately Active (lifting 4-5 days/wk) — 1.550</option>
+                  <option value="1.725">Very Active (hard training 6-7 days/wk) — 1.725</option>
+                  <option value="1.9">Extremely Active (hard daily training + physical work) — 1.900</option>
+                </select>
               </div>
               <div>
-                <label for="setHeight" style="display:block;font-size:.78rem;font-weight:700;color:var(--so);margin-bottom:6px">4. Height (cm)</label>
-                <input type="number" id="setHeight" min="100" max="250" value="175" style="width:100%;padding:8px 10px;border-radius:8px;border:1px solid var(--br);background:var(--c);color:var(--tx);font-family:inherit;font-weight:700">
+                <label style="display:block;font-size:.78rem;font-weight:800;color:var(--so);margin-bottom:6px">6. Primary Goal / الهدف الأساسي</label>
+                <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px">
+                  <button type="button" class="fw-chip" data-val="muscle" id="setGoalMuscle" style="padding:8px 6px;border-radius:8px;border:1px solid var(--br);background:var(--c);color:var(--so);font-size:.75rem;font-weight:800;cursor:pointer;text-align:center">💪 Build Muscle<br><span style="font-size:.64rem;opacity:.8">+250 kcal</span></button>
+                  <button type="button" class="fw-chip fw-chip-sel" data-val="recomp" id="setGoalRecomp" style="padding:8px 6px;border-radius:8px;border:2px solid var(--ac);background:rgba(59,130,246,.15);color:var(--tx);font-size:.75rem;font-weight:800;cursor:pointer;text-align:center">⚡ Recomp<br><span style="font-size:.64rem;opacity:.8">15% Deficit</span></button>
+                  <button type="button" class="fw-chip" data-val="fat_loss" id="setGoalFatLoss" style="padding:8px 6px;border-radius:8px;border:1px solid var(--br);background:var(--c);color:var(--so);font-size:.75rem;font-weight:800;cursor:pointer;text-align:center">🔥 Lose Fat<br><span style="font-size:.64rem;opacity:.8">18% Deficit</span></button>
+                </div>
               </div>
-            </div>
-            <div>
-              <label for="setActivity" style="display:block;font-size:.78rem;font-weight:700;color:var(--so);margin-bottom:6px">5. Activity Level</label>
-              <select id="setActivity" style="width:100%;padding:8px 10px;border-radius:8px;border:1px solid var(--br);background:var(--c);color:var(--tx);font-family:inherit;font-weight:700">
-                <option value="1.2">Sedentary (desk job, minimal exercise)</option>
-                <option value="1.375">Lightly Active (training 1-3 days/wk)</option>
-                <option value="1.55" selected>Moderately Active (lifting 4-5 days/wk)</option>
-                <option value="1.725">Very Active (hard training 6-7 days/wk)</option>
-                <option value="1.9">Extremely Active (hard daily training + physical work)</option>
-              </select>
-            </div>
-            <div>
-              <label style="display:block;font-size:.78rem;font-weight:700;color:var(--so);margin-bottom:6px">6. Primary Goal</label>
-              <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px">
-                <button type="button" class="fw-chip" data-val="muscle" id="setGoalMuscle" style="padding:8px 6px;border-radius:8px;border:1px solid var(--br);background:var(--c);color:var(--so);font-size:.75rem;font-weight:700;cursor:pointer;text-align:center">💪 Build Muscle</button>
-                <button type="button" class="fw-chip fw-chip-sel" data-val="recomp" id="setGoalRecomp" style="padding:8px 6px;border-radius:8px;border:2px solid var(--ac);background:rgba(59,130,246,.15);color:var(--tx);font-size:.75rem;font-weight:700;cursor:pointer;text-align:center">⚡ Recomp</button>
-                <button type="button" class="fw-chip" data-val="fat_loss" id="setGoalFatLoss" style="padding:8px 6px;border-radius:8px;border:1px solid var(--br);background:var(--c);color:var(--so);font-size:.75rem;font-weight:700;cursor:pointer;text-align:center">🔥 Lose Fat</button>
+              <div>
+                <label for="setBodyFat" style="display:block;font-size:.78rem;font-weight:800;color:var(--so);margin-bottom:6px">Body Fat % / نسبة الدهون (Optional)</label>
+                <input type="number" id="setBodyFat" min="4" max="50" step="0.5" placeholder="e.g. 15 (optional)" style="width:100%;padding:8px 10px;border-radius:8px;border:1px solid var(--br);background:var(--c);color:var(--tx);font-family:inherit;font-weight:800">
               </div>
-            </div>
-            <div>
-              <label for="setBodyFat" style="display:block;font-size:.78rem;font-weight:700;color:var(--so);margin-bottom:6px">Body Fat % (Optional)</label>
-              <input type="number" id="setBodyFat" min="4" max="50" step="0.5" placeholder="e.g. 15 (optional)" style="width:100%;padding:8px 10px;border-radius:8px;border:1px solid var(--br);background:var(--c);color:var(--tx);font-family:inherit;font-weight:700">
-            </div>
-            <div id="setFitnessPreviewCard" style="padding:12px;background:rgba(59,130,246,.08);border:1px solid rgba(59,130,246,.25);border-radius:10px;margin-top:6px">
-              <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">
-                <span style="font-size:.78rem;font-weight:800;color:var(--ac)">Personalized Scientific Targets</span>
-                <span id="setCalcKcal" style="font-size:.88rem;font-weight:900;color:var(--tx)">2133 kcal/day</span>
+
+              <!-- Real-time Scientific Target Calculation Card -->
+              <div id="setFitnessPreviewCard" style="padding:12px;background:rgba(59,130,246,.08);border:1px solid rgba(59,130,246,.25);border-radius:10px;margin-top:4px">
+                <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;flex-wrap:wrap;gap:6px">
+                  <span style="font-size:.8rem;font-weight:900;color:var(--ac);display:flex;align-items:center;gap:6px">
+                    <span>🎯</span>
+                    <span>Mifflin-St Jeor Scientific Targets</span>
+                  </span>
+                  <span id="setCalcKcal" style="font-size:.92rem;font-weight:900;color:var(--tx);background:rgba(0,0,0,.25);padding:3px 10px;border-radius:6px;border:1px solid var(--br)">2133 kcal/day</span>
+                </div>
+
+                <!-- BMR & TDEE Metrics -->
+                <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:8px">
+                  <div style="background:rgba(0,0,0,.2);padding:6px 8px;border-radius:6px;border:1px solid var(--br);text-align:center">
+                    <div style="font-size:.66rem;color:var(--mu);font-weight:700">Basal Metabolic Rate (BMR)</div>
+                    <div id="fwCalcBmrVal" style="font-size:.9rem;font-weight:900;color:var(--tx)">1720 <span style="font-size:.65rem;color:var(--so)">kcal</span></div>
+                  </div>
+                  <div style="background:rgba(0,0,0,.2);padding:6px 8px;border-radius:6px;border:1px solid var(--br);text-align:center">
+                    <div style="font-size:.66rem;color:var(--mu);font-weight:700">Total Daily Expenditure (TDEE)</div>
+                    <div id="fwCalcTdeeVal" style="font-size:.9rem;font-weight:900;color:var(--ac)">2666 <span style="font-size:.65rem;color:var(--so)">kcal</span></div>
+                  </div>
+                </div>
+
+                <!-- Suggested Macros -->
+                <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:6px;text-align:center;font-size:.7rem">
+                  <div style="background:rgba(56,189,248,.1);border:1px solid rgba(56,189,248,.25);padding:6px 4px;border-radius:6px">
+                    <div style="color:var(--so);font-size:.62rem;font-weight:700">🥩 Protein</div>
+                    <div id="setCalcP" style="font-weight:900;color:#38bdf8;font-size:.88rem">165g</div>
+                    <div id="fwCalcPPct" style="font-size:.6rem;color:var(--mu)">31% kcal</div>
+                  </div>
+                  <div style="background:rgba(250,204,21,.1);border:1px solid rgba(250,204,21,.25);padding:6px 4px;border-radius:6px">
+                    <div style="color:var(--so);font-size:.62rem;font-weight:700">🥑 Fats</div>
+                    <div id="setCalcF" style="font-weight:900;color:#facc15;font-size:.88rem">60g</div>
+                    <div id="fwCalcfPct" style="font-size:.6rem;color:var(--mu)">25% kcal</div>
+                  </div>
+                  <div style="background:rgba(52,211,153,.1);border:1px solid rgba(52,211,153,.25);padding:6px 4px;border-radius:6px">
+                    <div style="color:var(--so);font-size:.62rem;font-weight:700">🍚 Carbs</div>
+                    <div id="setCalcC" style="font-weight:900;color:#34d399;font-size:.88rem">233g</div>
+                    <div id="fwCalcCPct" style="font-size:.6rem;color:var(--mu)">44% kcal</div>
+                  </div>
+                  <div style="background:rgba(167,139,250,.1);border:1px solid rgba(167,139,250,.25);padding:6px 4px;border-radius:6px">
+                    <div style="color:var(--so);font-size:.62rem;font-weight:700">🌾 Fiber</div>
+                    <div id="setCalcB" style="font-weight:900;color:#a78bfa;font-size:.88rem">30g</div>
+                    <div style="font-size:.6rem;color:var(--mu)">Target</div>
+                  </div>
+                </div>
+
+                <!-- Macro Energy Distribution Bar -->
+                <div style="margin-top:8px">
+                  <div style="display:flex;justify-content:space-between;font-size:.62rem;color:var(--mu);margin-bottom:3px">
+                    <span>Macro Caloric Ratio</span>
+                    <span id="fwMacroRatioText">Protein 31% · Fats 25% · Carbs 44%</span>
+                  </div>
+                  <div style="display:flex;height:6px;border-radius:3px;overflow:hidden;background:rgba(0,0,0,.3)">
+                    <div id="fwBarP" style="width:31%;background:#38bdf8" title="Protein"></div>
+                    <div id="fwBarF" style="width:25%;background:#facc15" title="Fats"></div>
+                    <div id="fwBarC" style="width:44%;background:#34d399" title="Carbs"></div>
+                  </div>
+                </div>
+
+                <div id="setCalcBmrTdee" style="margin-top:6px;font-size:.66rem;color:var(--mu);text-align:center">BMR: 1720 kcal · TDEE: 2666 kcal (15% deficit)</div>
               </div>
-              <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:6px;text-align:center;font-size:.7rem">
-                <div style="background:rgba(0,0,0,.2);padding:5px;border-radius:6px"><div style="color:var(--so);font-size:.62rem">Protein</div><div id="setCalcP" style="font-weight:900;color:#38bdf8">165g</div></div>
-                <div style="background:rgba(0,0,0,.2);padding:5px;border-radius:6px"><div style="color:var(--so);font-size:.62rem">Fats</div><div id="setCalcF" style="font-weight:900;color:#facc15">60g</div></div>
-                <div style="background:rgba(0,0,0,.2);padding:5px;border-radius:6px"><div style="color:var(--so);font-size:.62rem">Carbs</div><div id="setCalcC" style="font-weight:900;color:#34d399">233g</div></div>
-                <div style="background:rgba(0,0,0,.2);padding:5px;border-radius:6px"><div style="color:var(--so);font-size:.62rem">Fiber</div><div id="setCalcB" style="font-weight:900;color:#a78bfa">30g</div></div>
+
+              <!-- Buttons -->
+              <div style="display:flex;gap:10px;margin-top:4px">
+                <button type="button" id="setSaveFitnessBtn" class="fl-submit-btn" style="flex:2;margin:0;padding:10px">Save to USER_SETTINGS ✅</button>
+                <button type="button" id="btnLaunchFitnessWizard" class="altbtn" style="flex:1;padding:10px">🧙‍♂️ Fullscreen</button>
               </div>
-              <div id="setCalcBmrTdee" style="margin-top:6px;font-size:.66rem;color:var(--mu);text-align:center">BMR: 1720 kcal · TDEE: 2666 kcal</div>
-            </div>
-            <div style="display:flex;gap:10px;margin-top:6px">
-              <button type="button" id="btnLaunchFitnessWizard" class="altbtn" style="flex:1">🧙‍♂️ Launch Wizard</button>
-              <button type="button" id="setSaveFitnessBtn" class="fl-submit-btn" style="flex:1;margin:0">Save Profile ✅</button>
+              <div style="margin-top:8px">
+                <button type="button" id="btn-open-macro-trends-settings" class="altbtn" style="width:100%;padding:10px;border-radius:8px;font-size:13px;font-weight:800;background:rgba(59,130,246,0.12);color:#60a5fa;border:1px solid rgba(59,130,246,0.3);cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px">
+                  <span>📊</span>
+                  <span id="macroTrendsSettingsBtnText">عرض مخطط توزيع الماكروز والأهداف (Recharts)</span>
+                </button>
+              </div>
             </div>
           </div>
         </div>
@@ -1510,8 +2376,9 @@ body.theme-matrix .tctime{
         <div class="set-section" id="setsec-reports">
           <h3 data-i18n="sec_reports">التقارير</h3>
           <p class="desc" data-i18n="sec_reports_desc">سجل التقارير الأسبوعية السابقة.</p>
-          <div class="set-actions">
+          <div class="set-actions" style="display:flex;gap:10px;flex-wrap:wrap">
             <button type="button" id="btn-report-history" class="topbtn topbtn-history" data-i18n="report_history">🗂️ سجل التقارير</button>
+            <button type="button" id="btn-trends-from-settings" class="topbtn topbtn-trends">📊 اتجاهات النقاط والإنجاز (D3)</button>
           </div>
         </div>
         <div class="set-section" id="setsec-appearance">
@@ -1601,7 +2468,11 @@ body.theme-matrix .tctime{
 
   <div class="pw">
     <div class="pb" id="progBox">
-      <div class="ph"><span id="ptxt">٠/٠ مهمة</span><span id="ppts">٠ نقطة اليوم</span></div>
+      <div class="ph">
+        <span id="ptxt">٠/٠ مهمة</span>
+        <button id="btn-prog-trends" class="prog-trends-pill" type="button" title="Weekly Trends & Consistency Insights">📈 <span id="progTrendsText">الاتجاهات الأسبوعية</span></button>
+        <span id="ppts">٠ نقطة اليوم</span>
+      </div>
       <div class="pbg"><div class="pfx" id="pfill" style="width:0"></div></div>
     </div>
   </div>
@@ -1609,7 +2480,10 @@ body.theme-matrix .tctime{
   <div class="pw">
     <div class="macrobox" id="macroBox">
       <div class="macrohead">
-        <span class="macrotitle">🍽️ التغذية اليومية</span>
+        <div style="display:flex;align-items:center;gap:6px">
+          <span class="macrotitle">🍽️ التغذية اليومية</span>
+          <button id="btn-macro-trends" class="prog-trends-pill" type="button" title="View Macro Trends & Target Distribution (Recharts)" style="background:rgba(59,130,246,0.15);color:#60a5fa;border:1px solid rgba(59,130,246,0.3);padding:2px 8px;font-size:11px;border-radius:999px;cursor:pointer">📊 <span id="macroTrendsPillText">مخطط الماكروز</span></button>
+        </div>
         <span class="macrokcal" id="macroKcal">٠/٠ سعرة</span>
       </div>
       <div class="macrorow">
@@ -1820,89 +2694,306 @@ body.theme-matrix .tctime{
 
 <!-- Fitness Wizard Pop-up 2 -->
 <div id="fitnessWizardModal" class="modal-overlay" style="z-index:9996">
-  <div class="modal-box" style="max-width:480px;text-align:left;direction:ltr">
-    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
-      <div style="display:flex;align-items:center;gap:8px">
-        <span style="font-size:1.6rem">🏋️</span>
+  <div class="modal-box fw-wizard-box">
+    <!-- Header with Title and Close -->
+    <div class="fw-header">
+      <div class="fw-title-group">
+        <span class="fw-icon">🏋️</span>
         <div>
-          <div class="modal-title" style="margin:0;font-size:1.15rem;font-weight:900">Fitness Profile Wizard</div>
-          <div style="font-size:.72rem;color:var(--mu)">Scientific BMR, TDEE & Macro Calculations</div>
+          <div class="modal-title fw-main-title" id="fwHeaderMainTitle">Fitness Profile Wizard</div>
+          <div class="fw-subtitle" id="fwHeaderSubtitle">Mifflin-St Jeor & Katch-McArdle Scientific Nutrition Engine</div>
         </div>
       </div>
-      <button type="button" id="btnCloseFitnessWizard" style="background:none;border:none;color:var(--so);font-size:1.3rem;cursor:pointer">✕</button>
-    </div>
-    <div class="modal-sub" style="margin-bottom:14px;font-size:.78rem;color:var(--so)">
-      Enter your metrics to calculate personalized nutrition and training targets.
+      <button type="button" id="btnCloseFitnessWizard" class="fw-close-btn" aria-label="Close">✕</button>
     </div>
 
-    <form id="fitnessWizardForm" onsubmit="return false;" style="display:flex;flex-direction:column;gap:12px">
-      <div>
-        <label style="display:block;font-size:.78rem;font-weight:700;color:var(--so);margin-bottom:6px">1. Gender</label>
-        <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
-          <button type="button" class="fw-chip fw-chip-sel" data-val="male" id="wizGenderMale" style="padding:10px;border-radius:10px;border:2px solid var(--ac);background:rgba(59,130,246,.15);color:var(--tx);font-weight:700;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:6px">👨 Male</button>
-          <button type="button" class="fw-chip" data-val="female" id="wizGenderFemale" style="padding:10px;border-radius:10px;border:1px solid var(--br);background:var(--c);color:var(--so);font-weight:700;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:6px">👩 Female</button>
-        </div>
-      </div>
+    <!-- View Switcher / Tabs -->
+    <div class="fw-tabs-container">
+      <button type="button" id="wizTabConfig" class="fw-tab-btn active" data-view="config">
+        <span class="fw-tab-icon">⚙️</span>
+        <span id="wizTabConfigText">1. Configuration</span>
+      </button>
+      <button type="button" id="wizTabResult" class="fw-tab-btn" data-view="result">
+        <span class="fw-tab-icon">🎯</span>
+        <span id="wizTabResultText">2. Scientific Targets</span>
+      </button>
+    </div>
 
-      <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px">
-        <div>
-          <label for="wizAge" style="display:block;font-size:.78rem;font-weight:700;color:var(--so);margin-bottom:6px">2. Age</label>
-          <input type="number" id="wizAge" min="14" max="100" value="25" required style="width:100%;padding:8px 10px;border-radius:8px;border:1px solid var(--br);background:var(--c);color:var(--tx);font-family:inherit;font-weight:700">
-        </div>
-        <div>
-          <label for="wizWeight" style="display:block;font-size:.78rem;font-weight:700;color:var(--so);margin-bottom:6px">3. Weight (kg)</label>
-          <input type="number" id="wizWeight" min="30" max="250" step="0.5" value="75" required style="width:100%;padding:8px 10px;border-radius:8px;border:1px solid var(--br);background:var(--c);color:var(--tx);font-family:inherit;font-weight:700">
-        </div>
-        <div>
-          <label for="wizHeight" style="display:block;font-size:.78rem;font-weight:700;color:var(--so);margin-bottom:6px">4. Height (cm)</label>
-          <input type="number" id="wizHeight" min="100" max="250" value="175" required style="width:100%;padding:8px 10px;border-radius:8px;border:1px solid var(--br);background:var(--c);color:var(--tx);font-family:inherit;font-weight:700">
-        </div>
-      </div>
+    <!-- VIEW 1: Configuration Form View -->
+    <div id="wizConfigView" class="fw-view fw-view-active">
+      <form id="fitnessWizardForm" onsubmit="return false;" novalidate>
+        
+        <!-- Group 1: Biometric Metrics (Gender, Age, Weight, Height) in Clean 2x2 Grid -->
+        <div class="fw-group-card">
+          <div class="fw-group-header">
+            <span class="fw-group-title">👤 <span id="fwBioTitle">Biometric Profile</span></span>
+            <span class="fw-group-desc" id="fwBioDesc">Core physical variables for basal metabolic rate (BMR)</span>
+          </div>
 
-      <div>
-        <label for="wizActivity" style="display:block;font-size:.78rem;font-weight:700;color:var(--so);margin-bottom:6px">5. Activity Level</label>
-        <select id="wizActivity" style="width:100%;padding:8px 10px;border-radius:8px;border:1px solid var(--br);background:var(--c);color:var(--tx);font-family:inherit;font-weight:700">
-          <option value="1.2">Sedentary (desk job, little/no exercise)</option>
-          <option value="1.375">Lightly Active (exercise 1-3 days/week)</option>
-          <option value="1.55" selected>Moderately Active (exercise 4-5 days/week)</option>
-          <option value="1.725">Very Active (intense training 6-7 days/week)</option>
-          <option value="1.9">Extremely Active (hard training & physical job)</option>
-        </select>
-      </div>
+          <div class="fw-grid-2x2">
+            <!-- 1. Gender -->
+            <div class="fw-field fw-field-col2">
+              <label class="fw-field-label" id="fwGenderLbl">Gender</label>
+              <div class="fw-chip-pair">
+                <button type="button" class="fw-chip fw-chip-sel" data-val="male" id="wizGenderMale">
+                  <span class="fw-chip-symbol">👨</span> <span id="wizGenderMaleText">Male</span>
+                </button>
+                <button type="button" class="fw-chip" data-val="female" id="wizGenderFemale">
+                  <span class="fw-chip-symbol">👩</span> <span id="wizGenderFemaleText">Female</span>
+                </button>
+              </div>
+            </div>
 
-      <div>
-        <label style="display:block;font-size:.78rem;font-weight:700;color:var(--so);margin-bottom:6px">6. Primary Goal</label>
-        <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px">
-          <button type="button" class="fw-chip" data-val="muscle" id="wizGoalMuscle" style="padding:8px 6px;border-radius:8px;border:1px solid var(--br);background:var(--c);color:var(--so);font-size:.78rem;font-weight:700;cursor:pointer;text-align:center">💪 Muscle Gain</button>
-          <button type="button" class="fw-chip fw-chip-sel" data-val="recomp" id="wizGoalRecomp" style="padding:8px 6px;border-radius:8px;border:2px solid var(--ac);background:rgba(59,130,246,.15);color:var(--tx);font-size:.78rem;font-weight:700;cursor:pointer;text-align:center">⚡ Recomposition</button>
-          <button type="button" class="fw-chip" data-val="fat_loss" id="wizGoalFatLoss" style="padding:8px 6px;border-radius:8px;border:1px solid var(--br);background:var(--c);color:var(--so);font-size:.78rem;font-weight:700;cursor:pointer;text-align:center">🔥 Fat Loss</button>
+            <!-- 2. Age -->
+            <div class="fw-field" id="wizAgeContainer">
+              <div class="fw-label-row">
+                <label for="wizAge" class="fw-field-label" id="fwAgeLbl">Age</label>
+                <span class="fw-unit-badge" id="fwAgeUnit">14–100 yrs</span>
+              </div>
+              <div class="fw-input-wrap">
+                <input type="number" id="wizAge" min="14" max="100" value="25" required class="fw-input" placeholder="25">
+                <span class="fw-input-suffix" id="wizAgeSuffix">yrs</span>
+              </div>
+              <div class="fw-field-error" id="wizAgeErr"></div>
+            </div>
+
+            <!-- 3. Weight -->
+            <div class="fw-field" id="wizWeightContainer">
+              <div class="fw-label-row">
+                <label for="wizWeight" class="fw-field-label" id="fwWeightLbl">Weight</label>
+                <span class="fw-unit-badge" id="fwWeightUnit">30–250 kg</span>
+              </div>
+              <div class="fw-input-wrap">
+                <input type="number" id="wizWeight" min="30" max="250" step="0.5" value="75" required class="fw-input" placeholder="75">
+                <span class="fw-input-suffix" id="wizWeightSuffix">kg</span>
+              </div>
+              <div class="fw-field-error" id="wizWeightErr"></div>
+            </div>
+
+            <!-- 4. Height -->
+            <div class="fw-field" id="wizHeightContainer">
+              <div class="fw-label-row">
+                <label for="wizHeight" class="fw-field-label" id="fwHeightLbl">Height</label>
+                <span class="fw-unit-badge" id="fwHeightUnit">100–250 cm</span>
+              </div>
+              <div class="fw-input-wrap">
+                <input type="number" id="wizHeight" min="100" max="250" value="175" required class="fw-input" placeholder="175">
+                <span class="fw-input-suffix" id="wizHeightSuffix">cm</span>
+              </div>
+              <div class="fw-field-error" id="wizHeightErr"></div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Group 2: Activity Level & Body Composition Grid -->
+        <div class="fw-group-card">
+          <div class="fw-group-header">
+            <span class="fw-group-title">⚡ <span id="fwActivityTitle">Activity & Body Composition</span></span>
+            <span class="fw-group-desc" id="fwActivityDesc">Energy multiplier and lean muscle mass adjustment</span>
+          </div>
+
+          <div class="fw-grid-activity">
+            <!-- Activity Level Select -->
+            <div class="fw-field">
+              <label for="wizActivity" class="fw-field-label" id="fwActivityLbl">Physical Activity Level</label>
+              <select id="wizActivity" class="fw-select">
+                <option value="1.2">🛋️ Sedentary (1.20x · Desk job, minimal exercise)</option>
+                <option value="1.375">🚶 Lightly Active (1.375x · Exercise 1–3 days/wk)</option>
+                <option value="1.55" selected>🏃 Moderately Active (1.55x · Exercise 4–5 days/wk)</option>
+                <option value="1.725">🏋️ Very Active (1.725x · Intense training 6–7 days/wk)</option>
+                <option value="1.9">⚡ Extremely Active (1.90x · Hard physical work & 2x training)</option>
+              </select>
+            </div>
+
+            <!-- Body Fat % (Optional) -->
+            <div class="fw-field" id="wizBodyFatContainer">
+              <div class="fw-label-row">
+                <label for="wizBodyFat" class="fw-field-label" id="fwBodyFatLbl">Body Fat % (Optional)</label>
+                <span class="fw-unit-badge">4–50%</span>
+              </div>
+              <div class="fw-input-wrap">
+                <input type="number" id="wizBodyFat" min="4" max="50" step="0.5" placeholder="e.g. 15 (optional)" class="fw-input">
+                <span class="fw-input-suffix">%</span>
+              </div>
+              <div class="fw-field-hint" id="fwBfHint">Enables Katch-McArdle formula for lean body mass</div>
+              <div class="fw-field-error" id="wizBodyFatErr"></div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Group 3: Strategic Goal in 3-Column Bento Grid -->
+        <div class="fw-group-card">
+          <div class="fw-group-header">
+            <span class="fw-group-title">🎯 <span id="fwGoalTitle">Primary Nutrition & Training Goal</span></span>
+            <span class="fw-group-desc" id="fwGoalDesc">Caloric strategy and macronutrient distribution priorities</span>
+          </div>
+
+          <div class="fw-grid-goals">
+            <button type="button" class="fw-goal-chip" data-val="muscle" id="wizGoalMuscle">
+              <div class="fw-goal-icon">💪</div>
+              <div class="fw-goal-name" id="fwGoalMuscleText">Muscle Gain</div>
+              <div class="fw-goal-sub" id="fwGoalMuscleSub">+250 kcal surplus</div>
+              <div class="fw-goal-tag" id="fwGoalMuscleTag">Hypertrophy</div>
+            </button>
+            <button type="button" class="fw-goal-chip fw-chip-sel" data-val="recomp" id="wizGoalRecomp">
+              <div class="fw-goal-icon">⚡</div>
+              <div class="fw-goal-name" id="fwGoalRecompText">Recomposition</div>
+              <div class="fw-goal-sub" id="fwGoalRecompSub">15% moderate deficit</div>
+              <div class="fw-goal-tag" id="fwGoalRecompTag">Lean Recomp</div>
+            </button>
+            <button type="button" class="fw-goal-chip" data-val="fat_loss" id="wizGoalFatLoss">
+              <div class="fw-goal-icon">🔥</div>
+              <div class="fw-goal-name" id="fwGoalFatLossText">Fat Loss</div>
+              <div class="fw-goal-sub" id="fwGoalFatLossSub">18% active deficit</div>
+              <div class="fw-goal-tag" id="fwGoalFatLossTag">Muscle-Sparing</div>
+            </button>
+          </div>
+        </div>
+
+        <!-- Configuration Actions -->
+        <div class="fw-actions-bar">
+          <button type="button" id="btnCancelFitnessWizard" class="fw-btn-secondary">
+            <span id="fwCancelText">Cancel</span>
+          </button>
+          <button type="button" id="btnCalcAndShowResults" class="fw-btn-primary">
+            <span id="fwCalcBtnText">Calculate & View Results</span> <span>➔</span>
+          </button>
+        </div>
+      </form>
+    </div>
+
+    <!-- VIEW 2: Animated Results & Target Plan View -->
+    <div id="wizResultView" class="fw-view" style="display:none">
+      <div id="wizResultViewMount"></div>
+      <div id="wizResultViewVanilla" class="fw-results-container">
+        
+        <!-- Metabolic Energy Card -->
+        <div class="fw-result-hero-card">
+          <div class="fw-hero-meta-row">
+            <div>
+              <span class="fw-hero-badge" id="wizHeroFormulaBadge">Mifflin-St Jeor Formula</span>
+              <div class="fw-hero-target-label" id="wizHeroTargetLbl">Target Daily Intake</div>
+            </div>
+            <div class="fw-hero-strategy-pill" id="wizHeroStrategyPill">15% Deficit</div>
+          </div>
+          <div class="fw-hero-kcal-row">
+            <div class="fw-hero-kcal-val"><span id="wizCalcKcal">2133</span> <span class="fw-hero-kcal-unit" id="wizHeroKcalUnit">kcal/day</span></div>
+          </div>
+          <div class="fw-hero-sub-stats">
+            <div class="fw-sub-stat-item">
+              <span class="fw-sub-stat-lbl" id="wizBmrLbl">Basal Metabolic Rate (BMR)</span>
+              <span class="fw-sub-stat-val" id="wizResBmr">1,720 kcal</span>
+            </div>
+            <div class="fw-sub-stat-div"></div>
+            <div class="fw-sub-stat-item">
+              <span class="fw-sub-stat-lbl" id="wizTdeeLbl">Maintenance Energy (TDEE)</span>
+              <span class="fw-sub-stat-val" id="wizResTdee">2,666 kcal</span>
+            </div>
+            <div class="fw-sub-stat-div"></div>
+            <div class="fw-sub-stat-item">
+              <span class="fw-sub-stat-lbl" id="wizDeltaLbl">Caloric Delta</span>
+              <span class="fw-sub-stat-val" id="wizResDelta">-400 kcal/day</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- 4-Card Macronutrient Bento Grid -->
+        <div class="fw-macro-grid">
+          <!-- Protein -->
+          <div class="fw-macro-card fw-card-protein">
+            <div class="fw-macro-head">
+              <span class="fw-macro-name" id="wizPName">Protein</span>
+              <span class="fw-macro-pct" id="wizCalcPPct">31%</span>
+            </div>
+            <div class="fw-macro-val"><span id="wizCalcP">165</span><span class="fw-macro-unit">g</span></div>
+            <div class="fw-macro-sub">
+              <span id="wizCalcPKcal">660 kcal</span> · <span id="wizCalcPRatio">2.2 g/kg</span>
+            </div>
+            <div class="fw-macro-bar-track">
+              <div class="fw-macro-bar-fill fw-bar-p" id="wizPBarFill" style="width:31%"></div>
+            </div>
+          </div>
+
+          <!-- Fats -->
+          <div class="fw-macro-card fw-card-fats">
+            <div class="fw-macro-head">
+              <span class="fw-macro-name" id="wizFName">Fats</span>
+              <span class="fw-macro-pct" id="wizCalcFPct">25%</span>
+            </div>
+            <div class="fw-macro-val"><span id="wizCalcF">60</span><span class="fw-macro-unit">g</span></div>
+            <div class="fw-macro-sub">
+              <span id="wizCalcFKcal">540 kcal</span> · <span id="wizCalcFRatio">0.8 g/kg</span>
+            </div>
+            <div class="fw-macro-bar-track">
+              <div class="fw-macro-bar-fill fw-bar-f" id="wizFBarFill" style="width:25%"></div>
+            </div>
+          </div>
+
+          <!-- Carbs -->
+          <div class="fw-macro-card fw-card-carbs">
+            <div class="fw-macro-head">
+              <span class="fw-macro-name" id="wizCName">Carbohydrates</span>
+              <span class="fw-macro-pct" id="wizCalcCPct">44%</span>
+            </div>
+            <div class="fw-macro-val"><span id="wizCalcC">233</span><span class="fw-macro-unit">g</span></div>
+            <div class="fw-macro-sub">
+              <span id="wizCalcCKcal">932 kcal</span> · <span id="wizCalcCRole">Glycogen & Performance</span>
+            </div>
+            <div class="fw-macro-bar-track">
+              <div class="fw-macro-bar-fill fw-bar-c" id="wizCBarFill" style="width:44%"></div>
+            </div>
+          </div>
+
+          <!-- Fiber -->
+          <div class="fw-macro-card fw-card-fiber">
+            <div class="fw-macro-head">
+              <span class="fw-macro-name" id="wizBName">Dietary Fiber</span>
+              <span class="fw-macro-pct" id="wizCalcBPct">14g/1k</span>
+            </div>
+            <div class="fw-macro-val"><span id="wizCalcB">30</span><span class="fw-macro-unit">g</span></div>
+            <div class="fw-macro-sub">
+              <span id="wizCalcBRole">Digestive Satiety & Health</span>
+            </div>
+            <div class="fw-macro-bar-track">
+              <div class="fw-macro-bar-fill fw-bar-b" style="width:100%"></div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Caloric Ratio Distribution Bar -->
+        <div class="fw-ratio-card">
+          <div class="fw-ratio-header">
+            <span class="fw-ratio-title" id="wizRatioTitle">Caloric Energy Ratio Distribution</span>
+            <span class="fw-ratio-legend">
+              <span class="fw-dot fw-dot-p"></span> <span id="wizLegendP">Protein</span>
+              <span class="fw-dot fw-dot-c" style="margin-left:8px"></span> <span id="wizLegendC">Carbs</span>
+              <span class="fw-dot fw-dot-f" style="margin-left:8px"></span> <span id="wizLegendF">Fats</span>
+            </span>
+          </div>
+          <div class="fw-stacked-bar">
+            <div class="fw-stacked-segment fw-seg-p" id="wizSegP" style="width:31%" title="Protein 31%"></div>
+            <div class="fw-stacked-segment fw-seg-c" id="wizSegC" style="width:44%" title="Carbs 44%"></div>
+            <div class="fw-stacked-segment fw-seg-f" id="wizSegF" style="width:25%" title="Fats 25%"></div>
+          </div>
+        </div>
+
+        <!-- Actionable Coaching Insight Note -->
+        <div class="fw-coaching-note" id="wizCoachingNote">
+          <span class="fw-coach-icon">💡</span>
+          <div id="wizCoachingText">Target 4–5 protein feedings distributed evenly every 3–4 hours to maximize muscle protein synthesis and recovery.</div>
+        </div>
+
+        <!-- Results Actions Bar -->
+        <div class="fw-actions-bar">
+          <button type="button" id="btnBackToConfig" class="fw-btn-secondary">
+            <span>←</span> <span id="fwBackBtnText">Edit Configuration</span>
+          </button>
+          <button type="button" id="btnSaveFitnessWizard" class="fw-btn-primary fw-btn-success">
+            <span id="fwSaveBtnText">Save & Apply Profile in USER_SETTINGS</span> ✅
+          </button>
         </div>
       </div>
-
-      <div>
-        <label for="wizBodyFat" style="display:block;font-size:.78rem;font-weight:700;color:var(--so);margin-bottom:6px">Body Fat % (Optional — uses Katch-McArdle formula)</label>
-        <input type="number" id="wizBodyFat" min="4" max="50" step="0.5" placeholder="e.g. 15 (optional)" style="width:100%;padding:8px 10px;border-radius:8px;border:1px solid var(--br);background:var(--c);color:var(--tx);font-family:inherit;font-weight:700">
-      </div>
-
-      <div id="wizLivePreviewCard" style="padding:12px;background:rgba(59,130,246,.08);border:1px solid rgba(59,130,246,.25);border-radius:10px">
-        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">
-          <span style="font-size:.78rem;font-weight:800;color:var(--ac)">Personalized Scientific Targets</span>
-          <span id="wizCalcKcal" style="font-size:.9rem;font-weight:900;color:var(--tx)">2133 kcal/day</span>
-        </div>
-        <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:6px;text-align:center;font-size:.72rem">
-          <div style="background:rgba(0,0,0,.2);padding:5px;border-radius:6px"><div style="color:var(--so);font-size:.62rem">Protein</div><div id="wizCalcP" style="font-weight:900;color:#38bdf8">165g</div></div>
-          <div style="background:rgba(0,0,0,.2);padding:5px;border-radius:6px"><div style="color:var(--so);font-size:.62rem">Fats</div><div id="wizCalcF" style="font-weight:900;color:#facc15">60g</div></div>
-          <div style="background:rgba(0,0,0,.2);padding:5px;border-radius:6px"><div style="color:var(--so);font-size:.62rem">Carbs</div><div id="wizCalcC" style="font-weight:900;color:#34d399">233g</div></div>
-          <div style="background:rgba(0,0,0,.2);padding:5px;border-radius:6px"><div style="color:var(--so);font-size:.62rem">Fiber</div><div id="wizCalcB" style="font-weight:900;color:#a78bfa">30g</div></div>
-        </div>
-        <div id="wizCalcBmrTdee" style="margin-top:6px;font-size:.68rem;color:var(--mu);text-align:center">BMR: 1720 kcal · TDEE: 2666 kcal</div>
-      </div>
-
-      <div style="display:flex;gap:10px;margin-top:8px">
-        <button type="button" id="btnCancelFitnessWizard" class="modal-opt" style="flex:1;justify-content:center;text-align:center;color:var(--so)">Cancel</button>
-        <button type="button" id="btnSaveFitnessWizard" class="fl-submit-btn" style="flex:2;margin:0">Save & Apply Profile ✅</button>
-      </div>
-    </form>
+    </div>
   </div>
 </div>
 
@@ -1917,6 +3008,101 @@ body.theme-matrix .tctime{
       <button class="report-close" id="closeReport" onclick="document.getElementById('reportModal').classList.remove('open')" data-i18n-close="1">✕ Close</button>
     </div>
     <div id="reportContent"></div>
+  </div>
+</div>
+
+<!-- Weekly Trends & Consistency Dashboard Modal (D3) -->
+<div id="trendsModal" class="report-overlay">
+  <div class="trends-modal-box">
+    <div class="trends-header">
+      <div class="trends-title-group">
+        <h3 id="trendsModalTitle">📈 <span id="trendsTitleText">تحليل اتجاهات النقاط والإنجاز</span></h3>
+        <div class="trends-subtitle" id="trendsSubText">مؤشرات الأداء الأسبوعي ومعدل الاستمرارية في بناء العادات</div>
+      </div>
+      <div style="display:flex;align-items:center;gap:8px">
+        <button type="button" class="trends-tab-btn" id="btn-switch-to-macro-trends" style="font-size:12px;background:rgba(59,130,246,0.15);color:#60a5fa;border:1px solid rgba(59,130,246,0.3);padding:6px 12px;border-radius:8px;cursor:pointer">🍽️ <span id="macroTrendsSwitchText">توزيع الماكروز (Recharts)</span></button>
+        <button class="report-close" id="closeTrendsModal" type="button">✕ <span data-i18n-close="1">Close</span></button>
+      </div>
+    </div>
+
+    <!-- Controls Bar: Time Range Tabs + Metric Toggle -->
+    <div class="trends-controls-bar">
+      <div class="trends-tabs-group" id="trendsRangeTabs">
+        <button type="button" class="trends-tab-btn act" data-range="current_week" id="tabRangeCurrWeek">📅 الأسبوع الحالي</button>
+        <button type="button" class="trends-tab-btn" data-range="last_7_days" id="tabRange7Days">⏮️ آخر ٧ أيام</button>
+        <button type="button" class="trends-tab-btn" data-range="last_4_weeks" id="tabRange4Weeks">📊 آخر ٤ أسابيع</button>
+      </div>
+      <div class="trends-metrics-filter" id="trendsMetricFilter">
+        <button type="button" class="trends-metric-btn act" data-metric="combined" id="btnMetricCombined">⚡ مدمج</button>
+        <button type="button" class="trends-metric-btn" data-metric="points" id="btnMetricPoints">⭐ النقاط</button>
+        <button type="button" class="trends-metric-btn" data-metric="pct" id="btnMetricPct">📈 نسبة الإنجاز</button>
+      </div>
+    </div>
+
+    <!-- Key KPIs Grid -->
+    <div class="trends-kpis-grid" id="trendsKpisGrid">
+      <div class="trends-kpi-card">
+        <div class="trends-kpi-val" style="color:var(--ye)" id="kpiAvgPts">--</div>
+        <div class="trends-kpi-lbl" id="lblKpiAvgPts">متوسط النقاط اليومي</div>
+        <div class="trends-kpi-sub" id="subKpiAvgPts">⭐ نقطة/يوم</div>
+      </div>
+      <div class="trends-kpi-card">
+        <div class="trends-kpi-val" style="color:var(--gr)" id="kpiAvgPct">--%</div>
+        <div class="trends-kpi-lbl" id="lblKpiAvgPct">معدل الإنجاز العام</div>
+        <div class="trends-kpi-sub" id="subKpiAvgPct">من إجمالي المهام</div>
+      </div>
+      <div class="trends-kpi-card">
+        <div class="trends-kpi-val" style="color:#60a5fa" id="kpiBestDay">--</div>
+        <div class="trends-kpi-lbl" id="lblKpiBestDay">يوم الذروة والأداء الأعلى</div>
+        <div class="trends-kpi-sub" id="subKpiBestDay">أعلى نسبة تنفيذ</div>
+      </div>
+      <div class="trends-kpi-card">
+        <div class="trends-kpi-val" style="color:#c084fc" id="kpiConsistencyScore">--</div>
+        <div class="trends-kpi-lbl" id="lblKpiConsistency">مؤشر استمرارية العادات</div>
+        <div class="trends-kpi-sub" id="subKpiConsistency">درجة الثبات / 100</div>
+      </div>
+    </div>
+
+    <!-- D3 Chart Card -->
+    <div class="trends-chart-card">
+      <div class="trends-chart-legend">
+        <span class="legend-item"><span class="legend-dot-points"></span> <span id="legPtsText">⭐ النقاط المكتسبة</span></span>
+        <span class="legend-item"><span class="legend-dot-pct"></span> <span id="legPctText">📈 نسبة الإنجاز (%)</span></span>
+        <span class="legend-item"><span class="legend-dot-target"></span> <span id="legTgtText">🎯 خط الاستمرارية (80%)</span></span>
+      </div>
+      <div class="trends-chart-svg-wrap" id="trendsD3Chart">
+        <!-- D3 SVG injected here -->
+      </div>
+      <div class="trends-tooltip" id="trendsTooltip"></div>
+    </div>
+
+    <!-- Actionable Habit Consistency Insights -->
+    <div class="trends-insights-section">
+      <div class="trends-section-title">
+        <span>🧠 <span id="insightsSecTitle">رؤى وتوجيهات عملية لبناء الاستمرارية</span></span>
+      </div>
+      <div class="trends-insights-grid" id="trendsInsightsContainer">
+        <!-- Rendered dynamically -->
+      </div>
+    </div>
+
+    <!-- Habit Categories Breakdown -->
+    <div class="trends-cats-card">
+      <div style="font-size:.82rem;font-weight:800;color:var(--so);display:flex;justify-content:space-between;align-items:center">
+        <span id="catBreakdownTitle">📊 نسبة التزام العادات حسب المجال</span>
+        <span style="font-size:.7rem;color:var(--mu)" id="catBreakdownSub">معدل الإنجاز الفعلي</span>
+      </div>
+      <div class="cat-bars-grid" id="trendsCatBreakdown">
+        <!-- Rendered dynamically -->
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Daily Macro Distribution & Trends Modal (Recharts) -->
+<div id="macroTrendsModal" class="report-overlay" style="display:none;z-index:10002;">
+  <div class="trends-modal-box" style="max-width:860px;width:96%;padding:0;background:transparent;border:none;box-shadow:none;">
+    <div id="macroTrendsModalMount"></div>
   </div>
 </div>
 
@@ -3517,7 +4703,8 @@ const I18N={
     ai_title:'🤖 منسق الفوضى الذكي (Chaos Coordinator)', ai_ready:'مساعد اللياقة، التغذية، وتحسين العادات', ai_close:'إغلاق', ai_send:'إرسال',
     ai_placeholder:'اكتب استفسارك أو أمرك...', ai_welcome:'👋 أهلاً! أنا Chaos Coordinator AI — مستشارك الرياضي وخبير التغذية والعادات اليومية. كيف أساعدك اليوم؟',
     not_yet:'⏳ لسه مجاش وقتها', expired:'فات الوقت', late:'متأخر', log_food:'🍽️ سجل الأكل',
-    task_icon:'أيقونة المهمة', food_log_opt:'🍽️ تسجيل أكل؟'
+    task_icon:'أيقونة المهمة', food_log_opt:'🍽️ تسجيل أكل؟',
+    trends_btn:'📊 الاتجاهات', trends_title:'تحليل اتجاهات النقاط والإنجاز', trends_desc:'تتبع منحنى النقاط ومعدل إنجاز العادات مع نصائح الاستمرارية'
   },
   en:{
     settings:'⚙️ Settings', close:'Close', save:'Save ✅', sign_out:'Sign out', sign_in:'Sign in',
@@ -3551,7 +4738,8 @@ const I18N={
     ai_title:'🤖 Chaos Coordinator AI', ai_ready:'Sports Nutritionist & Habit Coach', ai_close:'Close', ai_send:'Send',
     ai_placeholder:'Type a question or command...', ai_welcome:'👋 Welcome! I am Chaos Coordinator AI, your elite Personal Assistant, Sports Nutritionist, and Behavioral Habit Coach. How can I guide you toward your goals today?',
     not_yet:'⏳ Not yet', expired:'Missed', late:'Late', log_food:'🍽️ Log food',
-    task_icon:'Task icon', food_log_opt:'🍽️ Log food for this task?'
+    task_icon:'Task icon', food_log_opt:'🍽️ Log food for this task?',
+    trends_btn:'📊 Trends', trends_title:'Weekly Point Trends & Completion Rates', trends_desc:'Track points trajectory, completion rates, and actionable consistency insights'
   }
 };
 function t(key){
@@ -3717,6 +4905,46 @@ function applyI18n(){
   }catch(e){}
   if(hist && SELECTED_DATE===TODAY) hist.textContent=t('today');
   document.querySelectorAll('.macrotitle').forEach(el=>{ el.textContent=t('nutrition'); });
+  const isEn = (USER_SETTINGS && USER_SETTINGS.lang) === 'en';
+  const mtPill = document.getElementById('macroTrendsPillText');
+  if(mtPill) mtPill.textContent = isEn ? 'Macro Trends' : 'مخطط الماكروز';
+  const mtSwitch = document.getElementById('macroTrendsSwitchText');
+  if(mtSwitch) mtSwitch.textContent = isEn ? 'Macro Trends (Recharts)' : 'توزيع الماكروز (Recharts)';
+  const mtSetBtn = document.getElementById('macroTrendsSettingsBtnText');
+  if(mtSetBtn) mtSetBtn.textContent = isEn ? 'View Macro Distribution & Targets (Recharts)' : 'عرض مخطط توزيع الماكروز والأهداف (Recharts)';
+
+  // Fitness Wizard Bilingual UI
+  const setElText = (id, en, ar) => { const el = document.getElementById(id); if(el) el.textContent = isEn ? en : ar; };
+  setElText('fwHeaderMainTitle', 'Fitness Profile Wizard', 'معالج اللياقة والماكروز');
+  setElText('fwHeaderSubtitle', 'Mifflin-St Jeor & Katch-McArdle Scientific Nutrition Engine', 'حسابات BMR و TDEE والماكروز بدقة علمية');
+  setElText('wizTabConfigText', '1. Configuration', '١. إعداد البيانات');
+  setElText('wizTabResultText', '2. Scientific Targets', '٢. الأهداف العلمية');
+  setElText('fwBioTitle', 'Biometric Profile', 'البيانات البيومترية');
+  setElText('fwBioDesc', 'Core physical variables for basal metabolic rate (BMR)', 'المتغيرات الأساسية لحساب معدل الأيض الأساسي (BMR)');
+  setElText('fwGenderLbl', 'Gender', 'الجنس');
+  setElText('wizGenderMaleText', 'Male', 'ذكر');
+  setElText('wizGenderFemaleText', 'Female', 'أنثى');
+  setElText('fwAgeLbl', 'Age', 'العمر');
+  setElText('fwWeightLbl', 'Weight', 'الوزن');
+  setElText('fwHeightLbl', 'Height', 'الطول');
+  setElText('fwActivityTitle', 'Activity & Body Composition', 'مستوى النشاط وتكوين الجسم');
+  setElText('fwActivityDesc', 'Energy multiplier and lean muscle mass adjustment', 'معامل النشاط وحساب الكتلة العضلية');
+  setElText('fwActivityLbl', 'Physical Activity Level', 'مستوى النشاط البدني');
+  setElText('fwBodyFatLbl', 'Body Fat % (Optional)', 'نسبة الدهون % (اختياري)');
+  setElText('fwBfHint', 'Enables Katch-McArdle formula for lean body mass', 'يفعل معادلة كاتش-ماكاردل لحساب الكتلة العضلية الصافية');
+  setElText('fwGoalTitle', 'Primary Nutrition & Training Goal', 'الهدف الغذائي والتدريبي الأساسي');
+  setElText('fwGoalDesc', 'Caloric strategy and macronutrient distribution priorities', 'استراتيجية السعرات وتوزيع الماكروز');
+  setElText('fwGoalMuscleText', 'Muscle Gain', 'بناء العضلات');
+  setElText('fwGoalRecompText', 'Recomposition', 'إعادة تشكيل الجسم');
+  setElText('fwGoalFatLossText', 'Fat Loss', 'حرق الدهون');
+  setElText('fwCancelText', 'Cancel', 'إلغاء');
+  setElText('fwCalcBtnText', 'Calculate & View Results', 'احسب واعرض الأهداف');
+  setElText('fwBackBtnText', 'Edit Configuration', 'تعديل البيانات');
+  setElText('fwSaveBtnText', 'Save & Apply Profile in USER_SETTINGS', 'حفظ وتطبيق الملف في الإعدادات');
+  setElText('wizRatioTitle', 'Caloric Energy Ratio Distribution', 'توزيع نسب السعرات الحرارية');
+  setElText('wizBmrLbl', 'Basal Metabolic Rate (BMR)', 'الأيض الأساسي (BMR)');
+  setElText('wizTdeeLbl', 'Maintenance Energy (TDEE)', 'سعرات الثبات (TDEE)');
+  setElText('wizDeltaLbl', 'Caloric Delta', 'فارق السعرات اليومي');
   const aiTitle=document.querySelector('.ai-title');
   if(aiTitle) aiTitle.textContent=t('ai_title');
   const aiSub=document.getElementById('aiSubStatus');
@@ -6164,6 +7392,7 @@ function buildWeekReportData(){
 
   let totalPts=0,totalMissed=0,totalQada=0,totalDone=0,totalTasks=0;
   const dayBlocks=[];
+  const dayStatsList=[];
   let rangeStart=null,rangeEnd=null;
   const weekMacroTarget={p:0,c:0,f:0,b:0,k:0};
   const weekMacroConsumed={p:0,c:0,f:0,b:0,k:0};
@@ -6295,10 +7524,22 @@ function buildWeekReportData(){
       ${macroLine}
       ${encLine}
     </div>`);
+
+    dayStatsList.push({
+      iso,
+      jd,
+      dayName,
+      pts,
+      tasksCount: tasks.length,
+      doneCount: done,
+      missedCount: missed,
+      qadaCount: qada,
+      pct: tasks.length > 0 ? Math.round(done / tasks.length * 100) : 0
+    });
   }
 
   const pct=totalTasks>0?Math.round(totalDone/totalTasks*100):0;
-  return{totalPts,totalMissed,totalQada,totalDone,totalTasks,pct,dayBlocksHtml:dayBlocks.join(''),rangeStart,rangeEnd,weekMacroTarget,weekMacroConsumed};
+  return{totalPts,totalMissed,totalQada,totalDone,totalTasks,pct,dayBlocksHtml:dayBlocks.join(''),rangeStart,rangeEnd,weekMacroTarget,weekMacroConsumed,dayStatsList};
 }
 
 function renderReportSummaryHtml(data){
@@ -6375,6 +7616,13 @@ function renderReportSummaryHtml(data){
       <div class="report-stat"><div class="report-stat-val" style="color:var(--rd)">${data.totalMissed}</div><div class="report-stat-lbl">${L.missed}</div></div>
       <div class="report-stat"><div class="report-stat-val" style="color:var(--or)">${data.totalQada}</div><div class="report-stat-lbl">${L.qada}</div></div>
     </div>
+    <div class="report-trends-embed">
+      <div class="report-trends-head">
+        <span class="report-trends-title">📈 ${en?'Weekly Points & Completion Dynamics (D3)':'مخطط اتجاه النقاط ونسبة الإنجاز الأسبوعية (D3)'}</span>
+        <button type="button" id="btn-open-trends-from-report" class="topbtn topbtn-trends" style="font-size:.74rem;padding:4px 10px">🔍 ${en?'Consistency Deep-Dive ↗':'تحليل الاستمرارية الشامل ↗'}</button>
+      </div>
+      <div id="reportD3Chart" class="trends-chart-svg-wrap" style="min-height:210px;width:100%"></div>
+    </div>
     ${macroSummaryBi}
     ${data.dayBlocksHtml}
   `;
@@ -6398,6 +7646,18 @@ async function showWeeklyReport(){
   if(rangeEl) rangeEl.textContent=(USER_SETTINGS.lang==='en')?`From ${data.rangeStart} to ${data.rangeEnd}`:`من ${data.rangeStart} إلى ${data.rangeEnd} — لا يشمل اليوم الحالي`;
 
   el.innerHTML=renderReportSummaryHtml(data);
+  setTimeout(()=>{
+    if(typeof renderReportD3MiniChart==='function' && data.dayStatsList){
+      renderReportD3MiniChart('reportD3Chart', data.dayStatsList, (USER_SETTINGS&&USER_SETTINGS.lang)==='en');
+    }
+    const openBtn=document.getElementById('btn-open-trends-from-report');
+    if(openBtn){
+      openBtn.onclick=()=>{
+        document.getElementById('reportModal')?.classList.remove('open');
+        showTrendsModal('current_week');
+      };
+    }
+  }, 50);
 
   // Do NOT persist a report if there is genuinely nothing to show for that week —
   // either every day had zero required tasks, or the underlying historyData for
@@ -6418,7 +7678,7 @@ async function showWeeklyReport(){
   // of seeing the "same" report multiple times in the history list).
   const weekStart=data.rangeStart;
   const existingIdx=savedReports.findIndex(r=>r.weekStart===weekStart);
-  const entry={weekStart,weekEnd:data.rangeEnd,totalPts:data.totalPts,totalMissed:data.totalMissed,totalQada:data.totalQada,pct:data.pct,snapshotHtml:renderReportSummaryHtml(data)};
+  const entry={weekStart,weekEnd:data.rangeEnd,totalPts:data.totalPts,totalMissed:data.totalMissed,totalQada:data.totalQada,pct:data.pct,dayStatsList:data.dayStatsList,snapshotHtml:renderReportSummaryHtml(data)};
   
   if(existingIdx>=0) {
     savedReports[existingIdx]=entry;
@@ -6485,6 +7745,18 @@ function showReportHistoryDetail(idx){
       <button class="report-close" data-action="delreport" data-hist-idx="${idx}" type="button">🗑️ حذف هذا التقرير</button>
     </div>
     ${r.snapshotHtml||'<div style="color:var(--mu)">لا توجد تفاصيل محفوظة لهذا التقرير القديم</div>'}`;
+  setTimeout(()=>{
+    if(typeof renderReportD3MiniChart==='function' && r.dayStatsList){
+      renderReportD3MiniChart('reportD3Chart', r.dayStatsList, (USER_SETTINGS&&USER_SETTINGS.lang)==='en');
+    }
+    const openBtn=document.getElementById('btn-open-trends-from-report');
+    if(openBtn){
+      openBtn.onclick=()=>{
+        document.getElementById('reportModal')?.classList.remove('open');
+        showTrendsModal('current_week');
+      };
+    }
+  }, 50);
 }
 
 async function deleteSavedReport(idx){
@@ -6493,6 +7765,942 @@ async function deleteSavedReport(idx){
   await saveAll();
   showToast('🗑️ تم حذف التقرير',2200);
   showReportHistoryList();
+}
+
+// ===== Weekly Trends & Habit Consistency Analytics (D3 Engine) =====
+let currentTrendsRange = 'current_week';
+let currentTrendsMetric = 'combined';
+
+function getDayStatsForISO(iso){
+  const jd = getJDfromISO(iso);
+  const tasks = getReqTasks(jd, iso).filter(t => !t._deleted);
+  const isToday = (iso === TODAY);
+  const dayDone = isToday ? DONE : ((historyData[iso] && historyData[iso].done) || {});
+  
+  let pointsEarned = 0;
+  let pointsPossible = 0;
+  let completedCount = 0;
+  let missedCount = 0;
+  let qadaCount = 0;
+
+  const catMap = {
+    prayer: { req: 0, done: 0, label: '🕌 الصلوات' },
+    food: { req: 0, done: 0, label: '🍽️ الوجبات' },
+    gym: { req: 0, done: 0, label: '🏋️ اللياقة' },
+    prog: { req: 0, done: 0, label: '💻 البرمجة والتركيز' },
+    quran: { req: 0, done: 0, label: '📿 القرآن' },
+    recovery: { req: 0, done: 0, label: '♨️ الاستشفاء' },
+    other: { req: 0, done: 0, label: '✨ عادات أخرى' }
+  };
+
+  for(const t of tasks){
+    const pts = t[6] || 0;
+    pointsPossible += pts;
+    const cat = t[2] || 'other';
+    const targetCat = catMap[cat] ? cat : 'other';
+    catMap[targetCat].req++;
+
+    const val = dayDone[t[0]];
+    if(val !== undefined && val !== false){
+      completedCount++;
+      catMap[targetCat].done++;
+      if(val === 'qada'){
+        qadaCount++;
+        pointsEarned += Math.floor(pts / 2);
+      } else if(typeof val === 'number'){
+        pointsEarned += val;
+      } else {
+        pointsEarned += pts;
+      }
+    } else {
+      if(!isToday || isLateNonPrayer(t)){
+        missedCount++;
+      }
+    }
+  }
+
+  const completionRate = tasks.length > 0 ? Math.round((completedCount / tasks.length) * 100) : 0;
+  const dayNamesAr = ['الأحد', 'الاثنين', 'الثلاثاء', 'الأربعاء', 'الخميس', 'الجمعة', 'السبت'];
+  const dayNamesEn = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+  const shortNamesAr = ['أحد', 'إثنين', 'ثلاثاء', 'أربعاء', 'خميس', 'جمعة', 'سبت'];
+  const shortNamesEn = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+
+  return {
+    iso,
+    jd,
+    labelAr: shortNamesAr[jd],
+    labelEn: shortNamesEn[jd],
+    fullLabelAr: dayNamesAr[jd],
+    fullLabelEn: dayNamesEn[jd],
+    totalTasks: tasks.length,
+    completedTasks: completedCount,
+    missedTasks: missedCount,
+    qadaTasks: qadaCount,
+    pointsEarned,
+    pointsPossible,
+    completionRate,
+    isToday,
+    isFuture: iso > TODAY,
+    categories: catMap
+  };
+}
+
+function computeWeeklyTrendsData(rangeType = 'current_week', en = false){
+  let days = [];
+
+  if(rangeType === 'last_7_days'){
+    for(let i = -6; i <= 0; i++){
+      const iso = dateOff(i, TODAY);
+      days.push(getDayStatsForISO(iso));
+    }
+  } else if(rangeType === 'last_4_weeks'){
+    const currSat = currentWeekStartISO(TODAY);
+    const startSat = dateOff(-21, currSat);
+    for(let i = 0; i < 28; i++){
+      const iso = dateOff(i, startSat);
+      days.push(getDayStatsForISO(iso));
+    }
+  } else {
+    const sat = currentWeekStartISO(TODAY);
+    for(let i = 0; i < 7; i++){
+      const iso = dateOff(i, sat);
+      days.push(getDayStatsForISO(iso));
+    }
+  }
+
+  const validDays = days.filter(d => !d.isFuture);
+  const totalPts = validDays.reduce((acc, d) => acc + d.pointsEarned, 0);
+  const totalPossible = validDays.reduce((acc, d) => acc + d.pointsPossible, 0);
+  const avgPts = validDays.length ? Math.round(totalPts / validDays.length) : 0;
+  
+  const totalTasks = validDays.reduce((acc, d) => acc + d.totalTasks, 0);
+  const totalDone = validDays.reduce((acc, d) => acc + d.completedTasks, 0);
+  const avgPct = totalTasks > 0 ? Math.round((totalDone / totalTasks) * 100) : 0;
+
+  const activeDaysWithTasks = validDays.filter(d => d.totalTasks > 0);
+  let bestDay = null;
+  let lowestDay = null;
+  if(activeDaysWithTasks.length){
+    bestDay = [...activeDaysWithTasks].sort((a,b) => b.completionRate - a.completionRate || b.pointsEarned - a.pointsEarned)[0];
+    lowestDay = [...activeDaysWithTasks].sort((a,b) => a.completionRate - b.completionRate || a.pointsEarned - b.pointsEarned)[0];
+  }
+
+  const activeStreak = (typeof STATS !== 'undefined' && STATS.cur) || 0;
+  const streakBoost = Math.min(25, activeStreak * 5);
+  const consistencyScore = Math.min(100, Math.round(avgPct * 0.75 + streakBoost));
+
+  const catSummary = {};
+  for(const d of validDays){
+    for(const [catKey, catVal] of Object.entries(d.categories)){
+      if(!catSummary[catKey]) catSummary[catKey] = { req: 0, done: 0, label: catVal.label };
+      catSummary[catKey].req += catVal.req;
+      catSummary[catKey].done += catVal.done;
+    }
+  }
+
+  const trendData = {
+    rangeType,
+    days,
+    validDays,
+    totalPts,
+    totalPossible,
+    avgPts,
+    avgPct,
+    bestDay,
+    lowestDay,
+    consistencyScore,
+    activeStreak,
+    catSummary
+  };
+
+  trendData.insights = generateHabitInsights(trendData, en);
+  return trendData;
+}
+
+function generateHabitInsights(trendData, en){
+  const insights = [];
+  const { avgPct, consistencyScore, bestDay, lowestDay, activeStreak, catSummary } = trendData;
+
+  let tierTitle, tierBadge, tierDesc, tierAction, badgeClass;
+  if(consistencyScore >= 90){
+    tierTitle = en ? 'Elite Habit Automaticity' : 'ثبات عادات استثنائي (نخبة)';
+    tierBadge = en ? 'Elite 90%+' : 'نخبوي 90%+';
+    badgeClass = 'badge-green';
+    tierDesc = en
+      ? 'Your neuro-behavioral routines are executing with high automaticity. Friction is minimal and keystone habits are protected.'
+      : 'عاداتك وسلوكياتك اليومية تنفذ بسلاسة تلقائية عالية. مقاومة البدء تكاد تنعدم وأركان يومك الأساسية محمية بالكامل.';
+    tierAction = en
+      ? 'Priority: Protect sleep recovery windows so cognitive fatigue does not silently degrade this high baseline.'
+      : 'التوجيه: احمِ ساعات النوم والاستشفاء حتى لا يتسلل الإجهاد الذهني ويؤثر على هذا الأداء العالي.';
+  } else if(consistencyScore >= 75){
+    tierTitle = en ? 'High Momentum & Anchor Stability' : 'زخم مرتفع واستقرار قوي';
+    tierBadge = en ? 'Strong 75-89%' : 'قوي 75-89%';
+    badgeClass = 'badge-alt';
+    tierDesc = en
+      ? 'Strong core execution. You consistently clear primary anchors with minor slippage in auxiliary tasks.'
+      : 'تنفيذ صلب لركائز اليوم. تنجز أهدافك الأساسية باستمرار مع تسويف طفيف في المهام الهامشية أو المتأخرة.';
+    tierAction = en
+      ? 'Action: Add 10-minute transition buffers between afternoon work and evening workouts to eliminate late delays.'
+      : 'التوجيه: ضع فاصلاً زمنياً مدته 10 دقائق بين فترات التركيز والمساء لمنع تأثير الدومينو في تأخير المهام.';
+  } else if(consistencyScore >= 60){
+    tierTitle = en ? 'Foundation Under Construction' : 'مرحلة تثبيت الأساسات';
+    tierBadge = en ? 'Building 60-74%' : 'قيد البناء 60-74%';
+    badgeClass = 'badge-or';
+    tierDesc = en
+      ? 'Consistent execution days alternate with disrupted days. Energy swings are driving inconsistency.'
+      : 'أيام الانضباط العالي تتعاقب مع أيام التشتت. التباين في مستويات الطاقة اليومية هو السبب الأكبر في التراجع.';
+    tierAction = en
+      ? 'Action: Lock your first 90 minutes (Fajr, Quran, Breakfast) as sacred and non-negotiable every morning.'
+      : 'التوجيه: اجعل أول 90 دقيقة من صباحك (الفجر، القرآن، الفطور) موعداً مقدساً غير قابل للتأجيل أياً كانت الظروف.';
+  } else {
+    tierTitle = en ? 'Cognitive Load Reset Required' : 'الحاجة لإعادة ضبط الحمل الذهني';
+    tierBadge = en ? 'Recovery Mode' : 'وضع التعافي';
+    badgeClass = 'badge-red';
+    tierDesc = en
+      ? 'Task overload or scheduling friction is triggering decision paralysis. Too many open loops drain willpower.'
+      : 'تراكم الأعباء أو فوضى المواعيد تسبب إرهاق اتخاذ القرار. محاولة إنجاز كل شيء دفعة واحدة تستنزف طاقتك.';
+    tierAction = en
+      ? 'Action: Strip tomorrow down to the Essential 3: (1) All Prayers on time, (2) One 45-min Deep Work block, (3) Log food.'
+      : 'التوجيه: قلص أهداف الغد إلى ٣ ركائز جوهرية فقط: الصلوات في وقتها، جلسة عمل واحدة مركزة (45 دقيقة)، وتسجيل الأكل.';
+  }
+
+  insights.push({
+    id: 'momentum',
+    title: tierTitle,
+    badge: tierBadge,
+    badgeClass,
+    icon: '⚡',
+    desc: tierDesc,
+    action: tierAction
+  });
+
+  const bestLabel = bestDay ? (en ? bestDay.fullLabelEn : bestDay.fullLabelAr) : (en ? 'Active Day' : 'يوم نشط');
+  const bestRate = bestDay ? bestDay.completionRate : 0;
+  const bestPts = bestDay ? bestDay.pointsEarned : 0;
+  const lowLabel = lowestDay ? (en ? lowestDay.fullLabelEn : lowestDay.fullLabelAr) : (en ? 'Rest Day' : 'يوم راحة');
+  const lowRate = lowestDay ? lowestDay.completionRate : 0;
+
+  insights.push({
+    id: 'anchors',
+    title: en ? 'Peak Day vs Vulnerability Window' : 'يوم الذروة مقابل نقطة الاحتكاك',
+    badge: en ? `Peak: ${bestLabel}` : `الذروة: ${bestLabel}`,
+    badgeClass: 'badge-alt',
+    icon: '🎯',
+    desc: en
+      ? `Your highest follow-through occurs on ${bestLabel} (${bestRate}% completion, +${bestPts}⭐). Conversely, ${lowLabel} experiences the steepest task drop-off (${lowRate}%).`
+      : `تحقق أعلى معدل التزام يوم ${bestLabel} بنسبة إنجاز ${bestRate}% واكتساب +${bestPts}⭐. في المقابل، يشهد يوم ${lowLabel} أكبر معدل تسويف (${lowRate}%).`,
+    action: en
+      ? `Coaching Rule: Pre-schedule a designated 15-minute decompression break on ${lowLabel} afternoon to prevent willpower depletion.`
+      : `التوجيه السلوكي: خصص فترة استراحة واضحة لمدة 15 دقيقة بعد ظهر يوم ${lowLabel} لمنع استنزاف الإرادة قبل مهام المساء.`
+  });
+
+  const prayerStats = catSummary.prayer || { req: 0, done: 0 };
+  const prayerRate = prayerStats.req > 0 ? Math.round((prayerStats.done / prayerStats.req) * 100) : 0;
+  const foodStats = catSummary.food || { req: 0, done: 0 };
+  const foodRate = foodStats.req > 0 ? Math.round((foodStats.done / foodStats.req) * 100) : 0;
+
+  insights.push({
+    id: 'keystone',
+    title: en ? 'Keystone Habit Domino Effect' : 'تأثير أحجار الزاوية (العادات المفتاحية)',
+    badge: en ? `Prayer: ${prayerRate}%` : `الصلاة: ${prayerRate}%`,
+    badgeClass: prayerRate >= 80 ? 'badge-green' : 'badge-or',
+    icon: '🕌',
+    desc: en
+      ? `Prayer & Circadian alignment rate is ${prayerRate}%, and Meal logging adherence is ${foodRate}%. Research demonstrates morning anchor completion elevates total day task adherence by over 28%.`
+      : `بلغت نسبة الالتزام بالصلوات ومواعيدها ${prayerRate}%، وتسجيل الوجبات الغذائية ${foodRate}%. تشير المؤشرات إلى أن إتمام ركائز الصباح يرفع إنجاز باقي مهام اليوم بنسبة تتجاوز 28%.`,
+    action: en
+      ? 'Coaching Rule: Never negotiate Fajr and morning hydration — they set the dopamine threshold for your entire day.'
+      : 'التوجيه السلوكي: اعتبر صلاة الفجر والترطيب الصباحي حجر الأساس الذي يضبط توازن الدوبامين والتركيز لبقية اليوم.'
+  });
+
+  insights.push({
+    id: 'protocol',
+    title: en ? 'Weekly Behavioral Execution Protocol' : 'بروتوكول تعزيز الاستمرارية العملي',
+    badge: en ? '3 Golden Rules' : '٣ قواعد ذهبية',
+    badgeClass: 'badge-alt',
+    icon: '🛡️',
+    desc: en
+      ? '1. The 2-Minute Floor: On exhausting days, complete a 2-minute micro version of a habit instead of skipping completely to preserve cognitive identity.\n2. Protected Transitions: Treat the spaces between tasks as sacred pauses.\n3. Night-Before Setup: Lay out tomorrow\'s gym kit or notebook before sleeping.'
+      : '١. قاعدة الدقيقتين: في الأيام المرهقة، نفّذ نسخة مصغرة لمدة دقيقتين من العادة بدلاً من إلغائها تماماً للحفاظ على الهوية الذهنية.\n٢. الفواصل المحمية: عامل أوقات الانتقال بين المهام كفترات راحة حقيقية.\n٣. الإعداد المسبق: جهز ملابس التمرين أو دفتر العمل في المساء قبل النوم لتقليل مقاومة الصباح.',
+    action: en
+      ? 'Daily Mantra: Consistency beats intensity. Small daily anchors compound into massive lifetime transformations.'
+      : 'شعار الأسبوع: الاستمرارية تتفوق دائماً على الحماس المؤقت. العادات اليومية البسيطة تصنع فارقاً هائلاً عبر الزمن.'
+  });
+
+  return insights;
+}
+
+function renderD3TrendsChart(containerId, trendsData, metricMode = 'combined', en = false){
+  const container = document.getElementById(containerId);
+  if(!container) return;
+
+  if(typeof window.d3 === 'undefined'){
+    container.innerHTML = '<div style="text-align:center;padding:30px;color:var(--mu);font-size:.8rem">جاري تحميل محرك الرسوم البيانية (D3)...</div>';
+    const s = document.createElement('script');
+    s.src = '/node_modules/d3/dist/d3.min.js';
+    s.onload = () => renderD3TrendsChart(containerId, trendsData, metricMode, en);
+    s.onerror = () => {
+      s.src = 'https://cdn.jsdelivr.net/npm/d3@7/dist/d3.min.js';
+      s.onload = () => renderD3TrendsChart(containerId, trendsData, metricMode, en);
+    };
+    document.head.appendChild(s);
+    return;
+  }
+
+  const d3 = window.d3;
+  d3.select('#' + containerId).selectAll('*').remove();
+
+  const days = trendsData.days || [];
+  if(!days.length){
+    container.innerHTML = '<div style="text-align:center;padding:40px;color:var(--mu);font-size:.8rem">لا توجد بيانات متاحة لهذا النطاق الزمني.</div>';
+    return;
+  }
+
+  const rect = container.getBoundingClientRect();
+  const width = Math.max(340, rect.width || 660);
+  const height = 290;
+  const margin = { top: 28, right: en ? 45 : 50, bottom: 42, left: en ? 50 : 45 };
+
+  const svg = d3.select('#' + containerId)
+    .append('svg')
+    .attr('viewBox', `0 0 ${width} ${height}`)
+    .attr('preserveAspectRatio', 'xMidYMid meet')
+    .style('width', '100%')
+    .style('height', 'auto')
+    .style('overflow', 'visible');
+
+  const defs = svg.append('defs');
+
+  const barGrad = defs.append('linearGradient')
+    .attr('id', 'trendsBarGrad')
+    .attr('x1', '0%').attr('y1', '0%').attr('x2', '0%').attr('y2', '100%');
+  barGrad.append('stop').attr('offset', '0%').attr('stop-color', '#fbbf24');
+  barGrad.append('stop').attr('offset', '100%').attr('stop-color', 'rgba(245,158,11,0.25)');
+
+  const barGradHighlight = defs.append('linearGradient')
+    .attr('id', 'trendsBarGradHighlight')
+    .attr('x1', '0%').attr('y1', '0%').attr('x2', '0%').attr('y2', '100%');
+  barGradHighlight.append('stop').attr('offset', '0%').attr('stop-color', '#fef08a');
+  barGradHighlight.append('stop').attr('offset', '100%').attr('stop-color', 'rgba(234,179,8,0.5)');
+
+  const areaGrad = defs.append('linearGradient')
+    .attr('id', 'trendsAreaGrad')
+    .attr('x1', '0%').attr('y1', '0%').attr('x2', '0%').attr('y2', '100%');
+  areaGrad.append('stop').attr('offset', '0%').attr('stop-color', 'rgba(16,185,129,0.35)');
+  areaGrad.append('stop').attr('offset', '100%').attr('stop-color', 'rgba(16,185,129,0.0)');
+
+  const filter = defs.append('filter')
+    .attr('id', 'trendsGlow')
+    .attr('x', '-20%').attr('y', '-20%').attr('width', '140%').attr('height', '140%');
+  filter.append('feGaussianBlur').attr('stdDeviation', '3').attr('result', 'coloredBlur');
+  const feMerge = filter.append('feMerge');
+  feMerge.append('feMergeNode').attr('in', 'coloredBlur');
+  feMerge.append('feMergeNode').attr('in', 'SourceGraphic');
+
+  const xScale = d3.scaleBand()
+    .domain(days.map(d => d.iso))
+    .range([margin.left, width - margin.right])
+    .padding(days.length > 14 ? 0.2 : 0.38);
+
+  const maxPoints = Math.max(50, (d3.max(days, d => Math.max(d.pointsEarned, d.pointsPossible || 0)) || 0) * 1.15);
+  const yPtsScale = d3.scaleLinear()
+    .domain([0, maxPoints])
+    .range([height - margin.bottom, margin.top]);
+
+  const yPctScale = d3.scaleLinear()
+    .domain([0, 100])
+    .range([height - margin.bottom, margin.top]);
+
+  const gridPcts = [25, 50, 75, 100];
+  svg.append('g')
+    .attr('class', 'trends-grid')
+    .selectAll('line')
+    .data(gridPcts)
+    .enter()
+    .append('line')
+    .attr('x1', margin.left)
+    .attr('x2', width - margin.right)
+    .attr('y1', d => yPctScale(d))
+    .attr('y2', d => yPctScale(d))
+    .attr('stroke', 'rgba(255,255,255,0.05)')
+    .attr('stroke-width', 1);
+
+  svg.append('line')
+    .attr('x1', margin.left)
+    .attr('x2', width - margin.right)
+    .attr('y1', yPctScale(80))
+    .attr('y2', yPctScale(80))
+    .attr('stroke', '#64748b')
+    .attr('stroke-dasharray', '4 4')
+    .attr('stroke-width', 1.5)
+    .attr('opacity', 0.85);
+
+  svg.append('text')
+    .attr('x', width - margin.right - 6)
+    .attr('y', yPctScale(80) - 5)
+    .attr('text-anchor', 'end')
+    .attr('fill', '#94a3b8')
+    .attr('font-size', '10px')
+    .attr('font-weight', '700')
+    .attr('font-family', 'sans-serif')
+    .text(en ? '🎯 80% Consistency Target' : '🎯 هدف الاستمرارية 80%');
+
+  if(metricMode === 'combined' || metricMode === 'points'){
+    svg.append('g')
+      .selectAll('.ghost-bar')
+      .data(days)
+      .enter()
+      .append('rect')
+      .attr('class', 'ghost-bar')
+      .attr('x', d => xScale(d.iso))
+      .attr('y', d => yPtsScale(d.pointsPossible))
+      .attr('width', xScale.bandwidth())
+      .attr('height', d => Math.max(0, yPtsScale(0) - yPtsScale(d.pointsPossible)))
+      .attr('fill', 'rgba(255,255,255,0.04)')
+      .attr('rx', 4);
+
+    svg.append('g')
+      .selectAll('.pts-bar')
+      .data(days)
+      .enter()
+      .append('rect')
+      .attr('class', 'pts-bar')
+      .attr('x', d => xScale(d.iso))
+      .attr('y', d => yPtsScale(d.pointsEarned))
+      .attr('width', xScale.bandwidth())
+      .attr('height', d => Math.max(0, yPtsScale(0) - yPtsScale(d.pointsEarned)))
+      .attr('fill', d => d.isToday ? 'url(#trendsBarGradHighlight)' : 'url(#trendsBarGrad)')
+      .attr('stroke', d => d.isToday ? '#facc15' : 'transparent')
+      .attr('stroke-width', d => d.isToday ? 1.5 : 0)
+      .attr('rx', 4)
+      .attr('cursor', 'pointer');
+
+    if(days.length <= 14){
+      svg.append('g')
+        .selectAll('.pts-label')
+        .data(days.filter(d => d.pointsEarned > 0))
+        .enter()
+        .append('text')
+        .attr('class', 'pts-label')
+        .attr('x', d => xScale(d.iso) + xScale.bandwidth() / 2)
+        .attr('y', d => yPtsScale(d.pointsEarned) - 4)
+        .attr('text-anchor', 'middle')
+        .attr('fill', '#facc15')
+        .attr('font-size', '9px')
+        .attr('font-weight', '800')
+        .attr('font-family', 'sans-serif')
+        .text(d => `+${d.pointsEarned}⭐`);
+    }
+  }
+
+  if(metricMode === 'combined' || metricMode === 'pct'){
+    const areaGen = d3.area()
+      .x(d => xScale(d.iso) + xScale.bandwidth() / 2)
+      .y0(yPctScale(0))
+      .y1(d => yPctScale(d.completionRate))
+      .curve(d3.curveMonotoneX);
+
+    const lineGen = d3.line()
+      .x(d => xScale(d.iso) + xScale.bandwidth() / 2)
+      .y(d => yPctScale(d.completionRate))
+      .curve(d3.curveMonotoneX);
+
+    svg.append('path')
+      .datum(days)
+      .attr('d', areaGen)
+      .attr('fill', 'url(#trendsAreaGrad)')
+      .attr('pointer-events', 'none');
+
+    svg.append('path')
+      .datum(days)
+      .attr('d', lineGen)
+      .attr('fill', 'none')
+      .attr('stroke', '#10b981')
+      .attr('stroke-width', 2.8)
+      .attr('filter', 'url(#trendsGlow)')
+      .attr('pointer-events', 'none');
+
+    const nodes = svg.append('g')
+      .selectAll('.pct-node')
+      .data(days)
+      .enter()
+      .append('g')
+      .attr('class', 'pct-node')
+      .attr('transform', d => `translate(${xScale(d.iso) + xScale.bandwidth() / 2}, ${yPctScale(d.completionRate)})`);
+
+    nodes.filter(d => d.isToday)
+      .append('circle')
+      .attr('r', 10)
+      .attr('fill', 'none')
+      .attr('stroke', '#38bdf8')
+      .attr('stroke-width', 2)
+      .attr('opacity', 0.8)
+      .append('animate')
+      .attr('attributeName', 'r')
+      .attr('values', '7;13;7')
+      .attr('dur', '2s')
+      .attr('repeatCount', 'indefinite');
+
+    nodes.append('circle')
+      .attr('r', 5)
+      .attr('fill', '#0a0e1a')
+      .attr('stroke', d => d.isToday ? '#38bdf8' : '#10b981')
+      .attr('stroke-width', 2.5);
+
+    nodes.append('circle')
+      .attr('r', 2)
+      .attr('fill', d => d.isToday ? '#38bdf8' : '#34d399');
+
+    if(days.length <= 7){
+      nodes.append('text')
+        .attr('y', -9)
+        .attr('text-anchor', 'middle')
+        .attr('fill', '#34d399')
+        .attr('font-size', '10px')
+        .attr('font-weight', '800')
+        .attr('font-family', 'sans-serif')
+        .text(d => `${d.completionRate}%`);
+    }
+  }
+
+  const xAxisGroup = svg.append('g')
+    .attr('transform', `translate(0, ${height - margin.bottom})`);
+
+  days.forEach(d => {
+    const xCenter = xScale(d.iso) + xScale.bandwidth() / 2;
+    const dateFormatted = d.iso.slice(5).replace('-', '/');
+    const dayLabelText = en ? (days.length > 7 ? d.labelEn : d.fullLabelEn) : (days.length > 7 ? d.labelAr : d.fullLabelAr);
+
+    const textGroup = xAxisGroup.append('g')
+      .attr('transform', `translate(${xCenter}, 16)`)
+      .attr('cursor', 'pointer');
+
+    textGroup.append('text')
+      .attr('text-anchor', 'middle')
+      .attr('fill', d.isToday ? '#38bdf8' : 'var(--so)')
+      .attr('font-size', days.length > 14 ? '9px' : '11px')
+      .attr('font-weight', d.isToday ? '900' : '700')
+      .attr('font-family', 'Cairo, sans-serif')
+      .text(dayLabelText);
+
+    if(days.length <= 14){
+      textGroup.append('text')
+        .attr('y', 14)
+        .attr('text-anchor', 'middle')
+        .attr('fill', d.isToday ? '#38bdf8' : 'var(--mu)')
+        .attr('font-size', '9px')
+        .attr('font-weight', '600')
+        .attr('font-family', 'sans-serif')
+        .text(dateFormatted);
+    }
+  });
+
+  if(metricMode === 'combined' || metricMode === 'points'){
+    const yPtsAxis = d3.axisLeft(yPtsScale)
+      .ticks(4)
+      .tickFormat(d => `${d}⭐`);
+
+    svg.append('g')
+      .attr('transform', `translate(${margin.left}, 0)`)
+      .call(yPtsAxis)
+      .call(g => g.select('.domain').remove())
+      .call(g => g.selectAll('.tick line').remove())
+      .call(g => g.selectAll('.tick text')
+        .attr('fill', '#facc15')
+        .attr('font-size', '10px')
+        .attr('font-weight', '700')
+        .attr('font-family', 'sans-serif')
+      );
+  }
+
+  if(metricMode === 'combined' || metricMode === 'pct'){
+    const yPctAxis = d3.axisRight(yPctScale)
+      .ticks(4)
+      .tickFormat(d => `${d}%`);
+
+    svg.append('g')
+      .attr('transform', `translate(${width - margin.right}, 0)`)
+      .call(yPctAxis)
+      .call(g => g.select('.domain').remove())
+      .call(g => g.selectAll('.tick line').remove())
+      .call(g => g.selectAll('.tick text')
+        .attr('fill', '#34d399')
+        .attr('font-size', '10px')
+        .attr('font-weight', '700')
+        .attr('font-family', 'sans-serif')
+      );
+  }
+
+  const tooltip = document.getElementById('trendsTooltip');
+  const overlay = svg.append('rect')
+    .attr('x', margin.left)
+    .attr('y', margin.top)
+    .attr('width', width - margin.left - margin.right)
+    .attr('height', height - margin.top - margin.bottom)
+    .attr('fill', 'transparent')
+    .attr('cursor', 'pointer');
+
+  function updateTooltip(event){
+    const [pointerX] = d3.pointer(event, svg.node());
+    let closestDay = null;
+    let minDiff = Infinity;
+    days.forEach(d => {
+      const xCenter = xScale(d.iso) + xScale.bandwidth() / 2;
+      const diff = Math.abs(pointerX - xCenter);
+      if(diff < minDiff){
+        minDiff = diff;
+        closestDay = d;
+      }
+    });
+
+    if(!closestDay || !tooltip) return;
+
+    const dayName = en ? closestDay.fullLabelEn : closestDay.fullLabelAr;
+    const todayBadge = closestDay.isToday ? `<span style="background:rgba(56,189,248,.2);color:#38bdf8;padding:2px 6px;border-radius:4px;font-size:.65rem;font-weight:800;margin-inline-start:6px">${en?'Today':'اليوم'}</span>` : '';
+    
+    let ratingBadge = '';
+    if(closestDay.completionRate >= 90){
+      ratingBadge = `<span style="color:#10b981;font-weight:800">${en?'🏅 Elite Execution':'🏅 تنفيذ مثالي'}</span>`;
+    } else if(closestDay.completionRate >= 75){
+      ratingBadge = `<span style="color:#60a5fa;font-weight:800">${en?'💪 Strong Day':'💪 أداء قوي'}</span>`;
+    } else if(closestDay.completionRate >= 50){
+      ratingBadge = `<span style="color:#f59e0b;font-weight:800">${en?'⚖️ Balanced':'⚖️ أداء متوسط'}</span>`;
+    } else {
+      ratingBadge = `<span style="color:#ef4444;font-weight:800">${en?'🌱 Low Adherence':'🌱 يحتاج تركيز'}</span>`;
+    }
+
+    tooltip.innerHTML = `
+      <div style="font-weight:900;font-size:.85rem;color:#f1f5f9;display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid rgba(255,255,255,.1);padding-bottom:5px;margin-bottom:6px">
+        <span>${dayName} (${closestDay.iso}) ${todayBadge}</span>
+        ${ratingBadge}
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;font-size:.74rem">
+        <div>⭐ <b>${en?'Points:':'النقاط:'}</b> <span style="color:#facc15;font-weight:800">${closestDay.pointsEarned}</span> / ${closestDay.pointsPossible}⭐</div>
+        <div>📈 <b>${en?'Completion:':'نسبة الإنجاز:'}</b> <span style="color:#34d399;font-weight:800">${closestDay.completionRate}%</span></div>
+        <div>✅ <b>${en?'Done Tasks:':'المهام المنجزة:'}</b> ${closestDay.completedTasks} / ${closestDay.totalTasks}</div>
+        <div>⚠️ <b>${en?'Missed:':'المفقودة:'}</b> <span style="color:#f87171">${closestDay.missedTasks}</span></div>
+      </div>
+      <div style="margin-top:6px;font-size:.68rem;color:#94a3b8;border-top:1px dashed rgba(255,255,255,.08);padding-top:4px;text-align:center">
+        👉 ${en?'Click to open this day\'s schedule':'انقر للانتقال لجدول هذا اليوم'}
+      </div>
+    `;
+
+    tooltip.style.display = 'block';
+    
+    const xPos = xScale(closestDay.iso) + xScale.bandwidth() / 2;
+    const isLeft = xPos > width / 2;
+    tooltip.style.top = '20px';
+    if(isLeft){
+      tooltip.style.left = 'auto';
+      tooltip.style.right = `${width - xPos + 10}px`;
+    } else {
+      tooltip.style.right = 'auto';
+      tooltip.style.left = `${xPos + 10}px`;
+    }
+  }
+
+  overlay.on('pointermove', updateTooltip);
+  overlay.on('pointerleave', () => {
+    if(tooltip) tooltip.style.display = 'none';
+  });
+
+  overlay.on('click', (event) => {
+    const [pointerX] = d3.pointer(event, svg.node());
+    let closestDay = null;
+    let minDiff = Infinity;
+    days.forEach(d => {
+      const xCenter = xScale(d.iso) + xScale.bandwidth() / 2;
+      const diff = Math.abs(pointerX - xCenter);
+      if(diff < minDiff){
+        minDiff = diff;
+        closestDay = d;
+      }
+    });
+
+    if(closestDay){
+      closeTrendsModal();
+      switchDay(closestDay.jd);
+      SELECTED_DATE = closestDay.iso;
+      try{
+        loadDay();
+        renderPanels();
+        updateUI();
+        showToast(en ? `Navigated to ${closestDay.fullLabelEn}` : `تم الانتقال إلى جدول ${closestDay.fullLabelAr} 📅`, 2200);
+      }catch(e){
+        console.warn('Navigation to day failed', e);
+      }
+    }
+  });
+}
+
+function renderReportD3MiniChart(containerId, dayStatsList, en = false){
+  const container = document.getElementById(containerId);
+  if(!container) return;
+
+  if(typeof window.d3 === 'undefined'){
+    container.innerHTML = '<div style="text-align:center;padding:20px;color:var(--mu);font-size:.75rem">جاري تحميل المخطط...</div>';
+    return;
+  }
+
+  const d3 = window.d3;
+  d3.select('#' + containerId).selectAll('*').remove();
+
+  const days = (dayStatsList && dayStatsList.length) ? dayStatsList : [];
+  if(!days.length){
+    container.innerHTML = '<div style="text-align:center;padding:20px;color:var(--mu);font-size:.75rem">لا توجد إحصائيات يومية لهذا التقرير</div>';
+    return;
+  }
+
+  const rect = container.getBoundingClientRect();
+  const width = Math.max(300, rect.width || 560);
+  const height = 210;
+  const margin = { top: 20, right: 35, bottom: 32, left: 35 };
+
+  const svg = d3.select('#' + containerId)
+    .append('svg')
+    .attr('viewBox', `0 0 ${width} ${height}`)
+    .attr('preserveAspectRatio', 'xMidYMid meet')
+    .style('width', '100%')
+    .style('height', 'auto');
+
+  const xScale = d3.scaleBand()
+    .domain(days.map(d => d.iso))
+    .range([margin.left, width - margin.right])
+    .padding(0.35);
+
+  const maxPts = Math.max(40, (d3.max(days, d => d.pts || 0) || 0) * 1.15);
+  const yPtsScale = d3.scaleLinear()
+    .domain([0, maxPts])
+    .range([height - margin.bottom, margin.top]);
+
+  const yPctScale = d3.scaleLinear()
+    .domain([0, 100])
+    .range([height - margin.bottom, margin.top]);
+
+  svg.append('g')
+    .selectAll('.mini-bar')
+    .data(days)
+    .enter()
+    .append('rect')
+    .attr('class', 'mini-bar')
+    .attr('x', d => xScale(d.iso))
+    .attr('y', d => yPtsScale(d.pts || 0))
+    .attr('width', xScale.bandwidth())
+    .attr('height', d => Math.max(0, yPtsScale(0) - yPtsScale(d.pts || 0)))
+    .attr('fill', '#fbbf24')
+    .attr('opacity', 0.85)
+    .attr('rx', 3);
+
+  const lineGen = d3.line()
+    .x(d => xScale(d.iso) + xScale.bandwidth() / 2)
+    .y(d => yPctScale(d.pct || 0))
+    .curve(d3.curveMonotoneX);
+
+  svg.append('path')
+    .datum(days)
+    .attr('d', lineGen)
+    .attr('fill', 'none')
+    .attr('stroke', '#10b981')
+    .attr('stroke-width', 2.5);
+
+  svg.append('g')
+    .selectAll('.mini-node')
+    .data(days)
+    .enter()
+    .append('circle')
+    .attr('cx', d => xScale(d.iso) + xScale.bandwidth() / 2)
+    .attr('cy', d => yPctScale(d.pct || 0))
+    .attr('r', 3.5)
+    .attr('fill', '#10b981')
+    .attr('stroke', '#0a0e1a')
+    .attr('stroke-width', 1.5);
+
+  days.forEach(d => {
+    const xCenter = xScale(d.iso) + xScale.bandwidth() / 2;
+    const shortLabel = d.dayName ? d.dayName.split(' ')[0] : d.iso.slice(5);
+    svg.append('text')
+      .attr('x', xCenter)
+      .attr('y', height - 12)
+      .attr('text-anchor', 'middle')
+      .attr('fill', 'var(--so)')
+      .attr('font-size', '10px')
+      .attr('font-weight', '700')
+      .attr('font-family', 'Cairo, sans-serif')
+      .text(shortLabel);
+  });
+}
+
+function showTrendsModal(defaultRange = 'current_week'){
+  const modal = document.getElementById('trendsModal');
+  if(!modal) return;
+
+  currentTrendsRange = defaultRange;
+  const en = (USER_SETTINGS && USER_SETTINGS.lang) === 'en';
+
+  const titleEl = document.getElementById('trendsTitleText');
+  const subEl = document.getElementById('trendsSubText');
+  const legPts = document.getElementById('legPtsText');
+  const legPct = document.getElementById('legPctText');
+  const legTgt = document.getElementById('legTgtText');
+  const insightsTitle = document.getElementById('insightsSecTitle');
+  const catTitle = document.getElementById('catBreakdownTitle');
+  const catSub = document.getElementById('catBreakdownSub');
+
+  if(titleEl) titleEl.textContent = en ? 'Weekly Points & Completion Rates' : 'تحليل اتجاهات النقاط والإنجاز';
+  if(subEl) subEl.textContent = en ? 'Track trajectory, completion benchmarks, and actionable habit insights' : 'مؤشرات الأداء الأسبوعي ومعدل الاستمرارية في بناء العادات';
+  if(legPts) legPts.textContent = en ? '⭐ Points Earned' : '⭐ النقاط المكتسبة';
+  if(legPct) legPct.textContent = en ? '📈 Completion Rate (%)' : '📈 نسبة الإنجاز (%)';
+  if(legTgt) legTgt.textContent = en ? '🎯 Consistency Target (80%)' : '🎯 خط الاستمرارية (80%)';
+  if(insightsTitle) insightsTitle.textContent = en ? 'Actionable Habit Consistency Insights' : 'رؤى وتوجيهات عملية لبناء الاستمرارية';
+  if(catTitle) catTitle.textContent = en ? 'Habit Category Adherence Breakdown' : 'نسبة التزام العادات حسب المجال';
+  if(catSub) catSub.textContent = en ? 'Actual completion rate' : 'معدل الإنجاز الفعلي';
+
+  document.querySelectorAll('#trendsRangeTabs .trends-tab-btn').forEach(btn => {
+    const r = btn.getAttribute('data-range');
+    btn.classList.toggle('act', r === currentTrendsRange);
+    if(en){
+      if(r === 'current_week') btn.textContent = '📅 Current Week';
+      if(r === 'last_7_days') btn.textContent = '⏮️ Last 7 Days';
+      if(r === 'last_4_weeks') btn.textContent = '📊 Past 4 Weeks';
+    } else {
+      if(r === 'current_week') btn.textContent = '📅 الأسبوع الحالي';
+      if(r === 'last_7_days') btn.textContent = '⏮️ آخر ٧ أيام';
+      if(r === 'last_4_weeks') btn.textContent = '📊 آخر ٤ أسابيع';
+    }
+  });
+
+  const data = computeWeeklyTrendsData(currentTrendsRange, en);
+
+  const kpiAvgPts = document.getElementById('kpiAvgPts');
+  const kpiAvgPct = document.getElementById('kpiAvgPct');
+  const kpiBestDay = document.getElementById('kpiBestDay');
+  const kpiConsistency = document.getElementById('kpiConsistencyScore');
+
+  if(kpiAvgPts) kpiAvgPts.textContent = `${data.avgPts}⭐`;
+  if(kpiAvgPct) kpiAvgPct.textContent = `${data.avgPct}%`;
+  if(kpiBestDay){
+    kpiBestDay.textContent = data.bestDay ? (en ? data.bestDay.labelEn : data.bestDay.labelAr) : '--';
+  }
+  if(kpiConsistency) kpiConsistency.textContent = `${data.consistencyScore}`;
+
+  const lblKpiAvgPts = document.getElementById('lblKpiAvgPts');
+  const subKpiAvgPts = document.getElementById('subKpiAvgPts');
+  const lblKpiAvgPct = document.getElementById('lblKpiAvgPct');
+  const subKpiAvgPct = document.getElementById('subKpiAvgPct');
+  const lblKpiBestDay = document.getElementById('lblKpiBestDay');
+  const subKpiBestDay = document.getElementById('subKpiBestDay');
+  const lblKpiConsistency = document.getElementById('lblKpiConsistency');
+  const subKpiConsistency = document.getElementById('subKpiConsistency');
+
+  if(lblKpiAvgPts) lblKpiAvgPts.textContent = en ? 'Daily Points Average' : 'متوسط النقاط اليومي';
+  if(subKpiAvgPts) subKpiAvgPts.textContent = en ? '⭐ points / day' : '⭐ نقطة/يوم';
+  if(lblKpiAvgPct) lblKpiAvgPct.textContent = en ? 'Overall Completion' : 'معدل الإنجاز العام';
+  if(subKpiAvgPct) subKpiAvgPct.textContent = en ? 'Across all tasks' : 'من إجمالي المهام';
+  if(lblKpiBestDay) lblKpiBestDay.textContent = en ? 'Peak Anchor Day' : 'يوم الذروة والأداء الأعلى';
+  if(subKpiBestDay) subKpiBestDay.textContent = en ? `${data.bestDay ? data.bestDay.completionRate : 0}% execution` : `${data.bestDay ? data.bestDay.completionRate : 0}% نسبة إنجاز`;
+  if(lblKpiConsistency) lblKpiConsistency.textContent = en ? 'Consistency Index' : 'مؤشر استمرارية العادات';
+  if(subKpiConsistency) subKpiConsistency.textContent = en ? 'Composite stability / 100' : 'درجة الثبات / 100';
+
+  renderD3TrendsChart('trendsD3Chart', data, currentTrendsMetric, en);
+
+  const insightsContainer = document.getElementById('trendsInsightsContainer');
+  if(insightsContainer && data.insights){
+    insightsContainer.innerHTML = data.insights.map(ins => `
+      <div class="insight-card">
+        <div class="insight-header">
+          <div class="insight-title">${ins.icon} ${ins.title}</div>
+          <span class="insight-badge ${ins.badgeClass}">${ins.badge}</span>
+        </div>
+        <div class="insight-desc">${ins.desc.replace(/\n/g, '<br>')}</div>
+        <div class="insight-action">
+          <span style="color:#38bdf8;font-weight:800">💡</span>
+          <span>${ins.action}</span>
+        </div>
+      </div>
+    `).join('');
+  }
+
+  const catContainer = document.getElementById('trendsCatBreakdown');
+  if(catContainer && data.catSummary){
+    const cats = Object.entries(data.catSummary).filter(([_, v]) => v.req > 0);
+    if(!cats.length){
+      catContainer.innerHTML = '<div style="grid-column:1/-1;text-align:center;color:var(--mu);padding:14px;font-size:.74rem">لا توجد مهام مسجلة في هذا النطاق</div>';
+    } else {
+      catContainer.innerHTML = cats.map(([k, v]) => {
+        const pct = Math.round((v.done / v.req) * 100);
+        let color = '#3b82f6';
+        if(k === 'prayer') color = '#10b981';
+        else if(k === 'food') color = '#f59e0b';
+        else if(k === 'gym') color = '#ec4899';
+        else if(k === 'quran') color = '#8b5cf6';
+        else if(k === 'prog') color = '#06b6d4';
+
+        return `
+          <div class="cat-bar-item">
+            <div class="cat-bar-head">
+              <span>${v.label}</span>
+              <span style="color:${color};font-weight:800">${pct}% (${v.done}/${v.req})</span>
+            </div>
+            <div class="cat-bar-track">
+              <div class="cat-bar-fill" style="width:${pct}%;background:${color}"></div>
+            </div>
+          </div>
+        `;
+      }).join('');
+    }
+  }
+
+  modal.classList.add('open');
+}
+
+function closeTrendsModal(){
+  const modal = document.getElementById('trendsModal');
+  if(modal) modal.classList.remove('open');
+}
+
+function showMacroTrendsModal(date){
+  const modal = document.getElementById('macroTrendsModal');
+  if(!modal) return;
+  modal.style.display = 'flex';
+  modal.classList.add('open');
+
+  const targetDate = date || (typeof SELECTED_DATE !== 'undefined' ? SELECTED_DATE : (typeof TODAY !== 'undefined' ? TODAY : new Date().toISOString().slice(0, 10)));
+  const mount = document.getElementById('macroTrendsModalMount');
+  if(mount && window.MacroTrends && typeof window.MacroTrends.mount === 'function'){
+    window.MacroTrends.mount(mount, {
+      userSettings: USER_SETTINGS,
+      selectedDate: targetDate,
+      onClose: closeMacroTrendsModal,
+      lang: (USER_SETTINGS && USER_SETTINGS.lang) === 'en' ? 'en' : 'ar'
+    });
+  }
+}
+
+function closeMacroTrendsModal(){
+  const modal = document.getElementById('macroTrendsModal');
+  if(modal){
+    modal.style.display = 'none';
+    modal.classList.remove('open');
+  }
+  const mount = document.getElementById('macroTrendsModalMount');
+  if(mount && window.MacroTrends && typeof window.MacroTrends.unmount === 'function'){
+    window.MacroTrends.unmount(mount);
+  }
+}
+
+function switchTrendsRange(newRange){
+  currentTrendsRange = newRange;
+  showTrendsModal(newRange);
+}
+
+function switchTrendsMetric(newMetric){
+  currentTrendsMetric = newMetric;
+  document.querySelectorAll('#trendsMetricFilter .trends-metric-btn').forEach(btn => {
+    btn.classList.toggle('act', btn.getAttribute('data-metric') === newMetric);
+  });
+  const en = (USER_SETTINGS && USER_SETTINGS.lang) === 'en';
+  const data = computeWeeklyTrendsData(currentTrendsRange, en);
+  renderD3TrendsChart('trendsD3Chart', data, currentTrendsMetric, en);
 }
 
 // ===== UI =====
@@ -6506,6 +8714,11 @@ function getDisplayDesc(task,iso){
   return tn(task[5]);
 }
 
+function renderDoneCheckBtn(done,en){
+  const ptsLbl=typeof done==='number'?`+${done}⭐`:(done==='qada'?(en?'Qada':'قضاء'):'');
+  return `<div class="cbtn done"><span class="cbtn-check-badge"><svg class="cbtn-check-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline class="cbtn-check-path" points="20 6 9 17 4 12"></polyline></svg></span>${ptsLbl?`<span class="ptslbl">${ptsLbl}</span>`:''}</div>`;
+}
+
 function renderCard(task,isToday,jd){
   const[id,arTimeRaw,cat,ico,name,,pts,,hw,isEx]=task; const arTime=(typeof formatTaskTimeDisplay==='function')?formatTaskTimeDisplay(arTimeRaw):arTimeRaw;
   const dispName=tn(name);
@@ -6513,6 +8726,7 @@ function renderCard(task,isToday,jd){
   const isDone=done!==undefined&&done!==false;
   const state=getState(task);
   const isFoodLoggable=cat==='food'||cat==='snack';
+  const en=(USER_SETTINGS.lang==='en');
 
   if(cat==='free'){
     const customColor=task[10]||null;
@@ -6522,8 +8736,7 @@ function renderCard(task,isToday,jd){
     let freeAct='';
     if(isCustom && isToday && pts>0){
       if(isDone){
-        const lbl=typeof done==='number'?`✅ +${done}⭐`:'✅';
-        freeAct=`<div class="cbtn done">${lbl}</div>`;
+        freeAct=renderDoneCheckBtn(done,en);
       }else{
         freeAct=`<button class="cbtn" data-action="confirm" data-id="${id}" data-pts="${pts}">✓<span class="ptslbl">+${pts}⭐</span></button>`;
       }
@@ -6533,15 +8746,13 @@ function renderCard(task,isToday,jd){
   }
 
   const isSnack=cat==='snack';
-  const en=(USER_SETTINGS.lang==='en');
   let act='';
   if(isEx){act=`<div class="excbadge">🔓 ${en?'Exception':'استثناء'}</div>`;}
   else if(isToday){
     if(isDone){
-      const lbl=typeof done==='number'?`✅ +${done}⭐`:'✅';
       const canEditFood=isFoodLoggable && !!(historyData[SELECTED_DATE||TODAY]||{}).foodLog?.[id];
       const editBtn=canEditFood?`<button class="cbtn" data-action="editfood" data-id="${id}" style="margin-top:4px;background:rgba(59,130,246,.1);border-color:rgba(59,130,246,.4);color:#60a5fa">✏️ ${en?'Edit':'تعديل'}</button>`:'';
-      act=`<div style="display:flex;flex-direction:column;align-items:flex-end;gap:0"><div class="cbtn done">${lbl}</div>${editBtn}</div>`;
+      act=`<div style="display:flex;flex-direction:column;align-items:flex-end;gap:0">${renderDoneCheckBtn(done,en)}${editBtn}</div>`;
     }else if(state==='NOTYET'){
       act=`<div class="cbtn exp">${t('not_yet')}</div>`;
     }else if(state==='QADA'){
@@ -6563,7 +8774,7 @@ function renderCard(task,isToday,jd){
       act=`<button class="cbtn" data-action="confirm" data-id="${id}" data-pts="${pts}">${en?'Confirm ✓':'تأكيد ✓'}<span class="ptslbl">+${pts}⭐</span></button>`;
     }
   }else{
-    act=isDone? (doneMap[id] && doneMap[id].skipped ? `<div class="cbtn exp" style="opacity:0.7">⏩ ${en?'Skipped':'تم التخطي'}</div>` : `<div class="cbtn done">✅</div>`) : (isSnack?`<div class="ptsbdg">🍎 ${pts}⭐ ${en?'optional':'اختياري'}</div>`:`<div class="ptsbdg">${pts}⭐</div>`);
+    act=isDone? (doneMap[id] && doneMap[id].skipped ? `<div class="cbtn exp" style="opacity:0.7">⏩ ${en?'Skipped':'تم التخطي'}</div>` : renderDoneCheckBtn(done,en)) : (isSnack?`<div class="ptsbdg">🍎 ${pts}⭐ ${en?'optional':'اختياري'}</div>`:`<div class="ptsbdg">${pts}⭐</div>`);
   }
 
   const hwH=hw?`<div class="hwtag">⏰ ${hw}</div>`:'';
@@ -6824,6 +9035,8 @@ function updateUI(){
   const pct=req.length?Math.round(d/req.length*100):0;
   document.getElementById('ptxt').textContent=`${d}/${req.length} ${t('tasks_label')} (${pct}%)`;
   document.getElementById('ppts').textContent=`${p} ${t('pts_today')}`;
+  const progTrendsText=document.getElementById('progTrendsText');
+  if(progTrendsText) progTrendsText.textContent=(USER_SETTINGS&&USER_SETTINGS.lang==='en')?'Weekly Trends':'الاتجاهات الأسبوعية';
   document.getElementById('pfill').style.width=req.length?`${(d/req.length)*100}%`:'0%';
   const hlbl=document.getElementById('hist-label'); if(hlbl) hlbl.textContent=SELECTED_DATE===TODAY?t('today'):SELECTED_DATE;
 
@@ -6833,6 +9046,68 @@ function updateUI(){
     try{ triggerAutoPushSync(2000); }catch(e){ console.warn('push schedule sync failed',e); }
   }
 }
+
+// ===== FitnessWizard Component =====
+// Calculates BMR & TDEE using the Mifflin-St Jeor formula, suggests protein/carb/fat/fiber macros,
+// and persists them in USER_SETTINGS.
+const FitnessWizard = {
+  calculate: function(params = {}) {
+    return calculateFitnessTargets(params);
+  },
+  persist: async function(params = {}) {
+    const calculated = this.calculate(params);
+    if(!USER_SETTINGS) USER_SETTINGS = {};
+    USER_SETTINGS.fitness_tracking_enabled = true;
+    USER_SETTINGS.fitness_metrics = calculated;
+    USER_SETTINGS.gender = calculated.gender;
+    USER_SETTINGS.age = calculated.age;
+    USER_SETTINGS.weight = calculated.weight;
+    USER_SETTINGS.height = calculated.height;
+    USER_SETTINGS.activity = calculated.activity;
+    USER_SETTINGS.activity_level = calculated.activity;
+    USER_SETTINGS.goal = calculated.goal;
+    USER_SETTINGS.body_fat = calculated.body_fat;
+    USER_SETTINGS.bmr = calculated.bmr;
+    USER_SETTINGS.tdee = calculated.tdee;
+    USER_SETTINGS.target_kcal = calculated.target_kcal;
+    USER_SETTINGS.target_protein = calculated.target_protein;
+    USER_SETTINGS.target_carbs = calculated.target_carbs;
+    USER_SETTINGS.target_fats = calculated.target_fats;
+    USER_SETTINGS.target_fiber = calculated.target_fiber;
+    USER_SETTINGS.calories = calculated.target_kcal;
+    USER_SETTINGS.kcal = calculated.target_kcal;
+    USER_SETTINGS.protein = calculated.target_protein;
+    USER_SETTINGS.carbs = calculated.target_carbs;
+    USER_SETTINGS.fat = calculated.target_fats;
+    USER_SETTINGS.fats = calculated.target_fats;
+    USER_SETTINGS.fiber = calculated.target_fiber;
+
+    try{ if(typeof saveUserSettings==='function') await saveUserSettings(); }catch(e){ console.warn('saveUserSettings error', e); }
+    if(typeof updateUI === 'function') updateUI();
+    if(typeof updateMacroUI === 'function') updateMacroUI();
+    if(typeof renderFitnessSettingsStats === 'function') renderFitnessSettingsStats();
+    return calculated;
+  },
+  getSettings: function() {
+    return USER_SETTINGS.fitness_metrics || {
+      gender: USER_SETTINGS.gender || 'male',
+      age: USER_SETTINGS.age || 25,
+      weight: USER_SETTINGS.weight || 75,
+      height: USER_SETTINGS.height || 175,
+      activity: USER_SETTINGS.activity || USER_SETTINGS.activity_level || 1.55,
+      goal: USER_SETTINGS.goal || 'recomp'
+    };
+  },
+  render: function() {
+    renderFitnessSettingsStats();
+  }
+};
+
+window.FitnessWizard = function(props) {
+  if(props && typeof props === 'object') return FitnessWizard.persist(props);
+  return FitnessWizard;
+};
+Object.assign(window.FitnessWizard, FitnessWizard);
 
 function renderFitnessSettingsStats(){
   const m = USER_SETTINGS.fitness_metrics || {};
@@ -6844,15 +9119,15 @@ function renderFitnessSettingsStats(){
   if(!previewCard) return;
 
   const gender = (document.getElementById('setGenderFemale')?.classList.contains('fw-chip-sel')) ? 'female' : 'male';
-  const age = Number(document.getElementById('setAge')?.value) || (m.age) || 25;
-  const weight = Number(document.getElementById('setWeight')?.value) || (m.weight) || 75;
-  const height = Number(document.getElementById('setHeight')?.value) || (m.height) || 175;
-  const activity = Number(document.getElementById('setActivity')?.value) || (m.activity) || 1.55;
+  const age = Number(document.getElementById('setAge')?.value) || (m.age) || USER_SETTINGS.age || 25;
+  const weight = Number(document.getElementById('setWeight')?.value) || (m.weight) || USER_SETTINGS.weight || 75;
+  const height = Number(document.getElementById('setHeight')?.value) || (m.height) || USER_SETTINGS.height || 175;
+  const activity = Number(document.getElementById('setActivity')?.value) || (m.activity) || USER_SETTINGS.activity || USER_SETTINGS.activity_level || 1.55;
   let goal = 'recomp';
   if(document.getElementById('setGoalMuscle')?.classList.contains('fw-chip-sel')) goal = 'muscle';
   else if(document.getElementById('setGoalFatLoss')?.classList.contains('fw-chip-sel')) goal = 'fat_loss';
   const bf = document.getElementById('setBodyFat')?.value;
-  const bodyFat = bf ? Number(bf) : null;
+  const bodyFat = bf ? Number(bf) : (m.body_fat || USER_SETTINGS.body_fat || null);
 
   const calc = calculateFitnessTargets({gender, age, weight, height, activity, goal, body_fat: bodyFat});
 
@@ -6861,7 +9136,366 @@ function renderFitnessSettingsStats(){
   if(document.getElementById('setCalcF')) document.getElementById('setCalcF').textContent = `${calc.target_fats}g`;
   if(document.getElementById('setCalcC')) document.getElementById('setCalcC').textContent = `${calc.target_carbs}g`;
   if(document.getElementById('setCalcB')) document.getElementById('setCalcB').textContent = `${calc.target_fiber}g`;
-  if(document.getElementById('setCalcBmrTdee')) document.getElementById('setCalcBmrTdee').textContent = `BMR: ${calc.bmr} kcal · TDEE: ${calc.tdee} kcal (${calc.goal === 'muscle' ? '+250 kcal surplus' : '15-20% deficit'})`;
+
+  if(document.getElementById('fwCalcBmrVal')) document.getElementById('fwCalcBmrVal').innerHTML = `${calc.bmr} <span style="font-size:.65rem;color:var(--so)">kcal</span>`;
+  if(document.getElementById('fwCalcTdeeVal')) document.getElementById('fwCalcTdeeVal').innerHTML = `${calc.tdee} <span style="font-size:.65rem;color:var(--so)">kcal</span>`;
+
+  const pPct = calc.protein_pct ?? Math.round((calc.target_protein * 4 / calc.target_kcal) * 100);
+  const fPct = calc.fats_pct ?? Math.round((calc.target_fats * 9 / calc.target_kcal) * 100);
+  const cPct = calc.carbs_pct ?? Math.max(0, 100 - pPct - fPct);
+
+  if(document.getElementById('fwCalcPPct')) document.getElementById('fwCalcPPct').textContent = `${pPct}% kcal`;
+  if(document.getElementById('fwCalcfPct')) document.getElementById('fwCalcfPct').textContent = `${fPct}% kcal`;
+  if(document.getElementById('fwCalcCPct')) document.getElementById('fwCalcCPct').textContent = `${cPct}% kcal`;
+
+  const barP = document.getElementById('fwBarP');
+  const barF = document.getElementById('fwBarF');
+  const barC = document.getElementById('fwBarC');
+  if(barP) barP.style.width = `${pPct}%`;
+  if(barF) barF.style.width = `${fPct}%`;
+  if(barC) barC.style.width = `${cPct}%`;
+
+  const ratioText = document.getElementById('fwMacroRatioText');
+  if(ratioText) ratioText.textContent = `Protein ${pPct}% · Fats ${fPct}% · Carbs ${cPct}%`;
+
+  if(document.getElementById('setCalcBmrTdee')){
+    const goalText = calc.goal === 'muscle' ? '+250 kcal surplus' : (calc.goal === 'fat_loss' ? '18% deficit' : '15% deficit');
+    document.getElementById('setCalcBmrTdee').textContent = `Mifflin-St Jeor BMR: ${calc.bmr} kcal · TDEE: ${calc.tdee} kcal (${goalText})`;
+  }
+}
+
+function validateFitnessWizardForm(){
+  const isEn = (USER_SETTINGS && USER_SETTINGS.lang) === 'en';
+  let isValid = true;
+  const errors = {};
+
+  const ageEl = document.getElementById('wizAge');
+  const weightEl = document.getElementById('wizWeight');
+  const heightEl = document.getElementById('wizHeight');
+  const bodyFatEl = document.getElementById('wizBodyFat');
+
+  // 1. Age: 14 to 100
+  const ageVal = Number(ageEl?.value);
+  const ageContainer = document.getElementById('wizAgeContainer');
+  const ageErr = document.getElementById('wizAgeErr');
+  if(!ageEl?.value || isNaN(ageVal) || ageVal < 14 || ageVal > 100){
+    isValid = false;
+    const msg = isEn ? 'Please enter a valid age between 14 and 100.' : 'يرجى إدخال عمر صحيح بين 14 و 100 سنة.';
+    errors.age = msg;
+    if(ageEl){ ageEl.classList.add('error'); ageEl.classList.remove('valid'); }
+    if(ageErr){ ageErr.textContent = msg; ageErr.classList.add('visible'); }
+    if(ageContainer){
+      ageContainer.classList.remove('shake');
+      void ageContainer.offsetWidth;
+      ageContainer.classList.add('shake');
+    }
+  } else {
+    if(ageEl){ ageEl.classList.remove('error'); ageEl.classList.add('valid'); }
+    if(ageErr){ ageErr.textContent = ''; ageErr.classList.remove('visible'); }
+  }
+
+  // 2. Weight: 30 to 250 kg
+  const weightVal = Number(weightEl?.value);
+  const weightContainer = document.getElementById('wizWeightContainer');
+  const weightErr = document.getElementById('wizWeightErr');
+  if(!weightEl?.value || isNaN(weightVal) || weightVal < 30 || weightVal > 250){
+    isValid = false;
+    const msg = isEn ? 'Please enter a valid weight between 30 and 250 kg.' : 'يرجى إدخال وزن صحيح بين 30 و 250 كجم.';
+    errors.weight = msg;
+    if(weightEl){ weightEl.classList.add('error'); weightEl.classList.remove('valid'); }
+    if(weightErr){ weightErr.textContent = msg; weightErr.classList.add('visible'); }
+    if(weightContainer){
+      weightContainer.classList.remove('shake');
+      void weightContainer.offsetWidth;
+      weightContainer.classList.add('shake');
+    }
+  } else {
+    if(weightEl){ weightEl.classList.remove('error'); weightEl.classList.add('valid'); }
+    if(weightErr){ weightErr.textContent = ''; weightErr.classList.remove('visible'); }
+  }
+
+  // 3. Height: 100 to 250 cm
+  const heightVal = Number(heightEl?.value);
+  const heightContainer = document.getElementById('wizHeightContainer');
+  const heightErr = document.getElementById('wizHeightErr');
+  if(!heightEl?.value || isNaN(heightVal) || heightVal < 100 || heightVal > 250){
+    isValid = false;
+    const msg = isEn ? 'Please enter a valid height between 100 and 250 cm.' : 'يرجى إدخال طول صحيح بين 100 و 250 سم.';
+    errors.height = msg;
+    if(heightEl){ heightEl.classList.add('error'); heightEl.classList.remove('valid'); }
+    if(heightErr){ heightErr.textContent = msg; heightErr.classList.add('visible'); }
+    if(heightContainer){
+      heightContainer.classList.remove('shake');
+      void heightContainer.offsetWidth;
+      heightContainer.classList.add('shake');
+    }
+  } else {
+    if(heightEl){ heightEl.classList.remove('error'); heightEl.classList.add('valid'); }
+    if(heightErr){ heightErr.textContent = ''; heightErr.classList.remove('visible'); }
+  }
+
+  // 4. Body Fat %: optional, but if entered, 4 to 50%
+  const bfStr = bodyFatEl?.value?.trim();
+  const bodyFatErr = document.getElementById('wizBodyFatErr');
+  const bfContainer = document.getElementById('wizBodyFatContainer');
+  if(bfStr){
+    const bfVal = Number(bfStr);
+    if(isNaN(bfVal) || bfVal < 4 || bfVal > 50){
+      isValid = false;
+      const msg = isEn ? 'Body fat must be between 4% and 50%.' : 'نسبة الدهون يجب أن تكون بين 4% و 50%.';
+      errors.bodyFat = msg;
+      if(bodyFatEl){ bodyFatEl.classList.add('error'); bodyFatEl.classList.remove('valid'); }
+      if(bodyFatErr){ bodyFatErr.textContent = msg; bodyFatErr.classList.add('visible'); }
+      if(bfContainer){
+        bfContainer.classList.remove('shake');
+        void bfContainer.offsetWidth;
+        bfContainer.classList.add('shake');
+      }
+    } else {
+      if(bodyFatEl){ bodyFatEl.classList.remove('error'); bodyFatEl.classList.add('valid'); }
+      if(bodyFatErr){ bodyFatErr.textContent = ''; bodyFatErr.classList.remove('visible'); }
+    }
+  } else {
+    if(bodyFatEl){ bodyFatEl.classList.remove('error'); bodyFatEl.classList.remove('valid'); }
+    if(bodyFatErr){ bodyFatErr.textContent = ''; bodyFatErr.classList.remove('visible'); }
+  }
+
+  return {
+    isValid,
+    errors,
+    data: {
+      gender: (document.getElementById('wizGenderFemale')?.classList.contains('fw-chip-sel')) ? 'female' : 'male',
+      age: Math.max(14, Math.min(100, ageVal || 25)),
+      weight: Math.max(30, Math.min(250, weightVal || 75)),
+      height: Math.max(100, Math.min(250, heightVal || 175)),
+      activity: Number(document.getElementById('wizActivity')?.value) || 1.55,
+      goal: (document.getElementById('wizGoalMuscle')?.classList.contains('fw-chip-sel')) ? 'muscle' : (document.getElementById('wizGoalFatLoss')?.classList.contains('fw-chip-sel') ? 'fat_loss' : 'recomp'),
+      body_fat: bfStr ? Number(bfStr) : null
+    }
+  };
+}
+
+function clearFitnessWizardFieldValidation(fieldId){
+  const el = document.getElementById(fieldId);
+  const err = document.getElementById(fieldId + 'Err');
+  if(el){ el.classList.remove('error'); }
+  if(err){ err.textContent = ''; err.classList.remove('visible'); }
+}
+
+function renderFitnessWizardResults(calc){
+  if(!calc) return;
+  const isEn = (USER_SETTINGS && USER_SETTINGS.lang) === 'en';
+
+  // Target kcal
+  const kcalEl = document.getElementById('wizCalcKcal');
+  if(kcalEl) kcalEl.textContent = Number(calc.target_kcal).toLocaleString();
+
+  // Formula badge
+  const formulaEl = document.getElementById('wizHeroFormulaBadge');
+  if(formulaEl){
+    if(calc.body_fat){
+      formulaEl.textContent = isEn ? `Katch-McArdle Formula (${calc.body_fat}% BF)` : `معادلة كاتش-ماكاردل (${calc.body_fat}% دهون)`;
+    } else {
+      formulaEl.textContent = isEn ? 'Mifflin-St Jeor Formula' : 'معادلة ميفلين-سانت جور';
+    }
+  }
+
+  // Strategy pill
+  const strategyEl = document.getElementById('wizHeroStrategyPill');
+  if(strategyEl){
+    if(calc.goal === 'muscle'){
+      strategyEl.textContent = isEn ? '+250 kcal Surplus' : '+250 سعرة فائض عضل';
+      strategyEl.style.color = '#38bdf8';
+      strategyEl.style.borderColor = 'rgba(56,189,248,.35)';
+      strategyEl.style.background = 'rgba(56,189,248,.18)';
+    } else if(calc.goal === 'fat_loss'){
+      strategyEl.textContent = isEn ? '18% Active Deficit' : 'عجز 18% لحرق الدهون';
+      strategyEl.style.color = '#f87171';
+      strategyEl.style.borderColor = 'rgba(248,113,113,.35)';
+      strategyEl.style.background = 'rgba(248,113,113,.18)';
+    } else {
+      strategyEl.textContent = isEn ? '15% Moderate Deficit' : 'عجز 15% متوازن';
+      strategyEl.style.color = '#34d399';
+      strategyEl.style.borderColor = 'rgba(52,211,153,.35)';
+      strategyEl.style.background = 'rgba(52,211,153,.18)';
+    }
+  }
+
+  // Sub stats: BMR, TDEE, Caloric Delta
+  const bmrEl = document.getElementById('wizResBmr');
+  if(bmrEl) bmrEl.textContent = `${Number(calc.bmr).toLocaleString()} kcal`;
+  const tdeeEl = document.getElementById('wizResTdee');
+  if(tdeeEl) tdeeEl.textContent = `${Number(calc.tdee).toLocaleString()} kcal`;
+  const deltaEl = document.getElementById('wizResDelta');
+  if(deltaEl){
+    const delta = calc.target_kcal - calc.tdee;
+    const sign = delta > 0 ? '+' : '';
+    deltaEl.textContent = `${sign}${delta} kcal/day`;
+    deltaEl.style.color = delta > 0 ? '#38bdf8' : (delta < 0 ? '#34d399' : '#ffffff');
+  }
+
+  // Calculate macro calories and percentages
+  const pKcal = calc.target_protein * 4;
+  const fKcal = calc.target_fats * 9;
+  const cKcal = calc.target_carbs * 4;
+  const totalMacroKcal = pKcal + fKcal + cKcal || calc.target_kcal;
+
+  const pPct = Math.round((pKcal / totalMacroKcal) * 100);
+  const fPct = Math.round((fKcal / totalMacroKcal) * 100);
+  const cPct = Math.max(0, 100 - pPct - fPct);
+
+  // Protein card
+  if(document.getElementById('wizCalcP')) document.getElementById('wizCalcP').textContent = calc.target_protein;
+  if(document.getElementById('wizCalcPPct')) document.getElementById('wizCalcPPct').textContent = `${pPct}%`;
+  if(document.getElementById('wizCalcPKcal')) document.getElementById('wizCalcPKcal').textContent = `${pKcal} kcal`;
+  if(document.getElementById('wizCalcPRatio')){
+    const ratio = (calc.target_protein / calc.weight).toFixed(1);
+    document.getElementById('wizCalcPRatio').textContent = `${ratio} g/kg`;
+  }
+  if(document.getElementById('wizPBarFill')) document.getElementById('wizPBarFill').style.width = `${Math.min(100, pPct)}%`;
+
+  // Fats card
+  if(document.getElementById('wizCalcF')) document.getElementById('wizCalcF').textContent = calc.target_fats;
+  if(document.getElementById('wizCalcFPct')) document.getElementById('wizCalcFPct').textContent = `${fPct}%`;
+  if(document.getElementById('wizCalcFKcal')) document.getElementById('wizCalcFKcal').textContent = `${fKcal} kcal`;
+  if(document.getElementById('wizCalcFRatio')){
+    const ratio = (calc.target_fats / calc.weight).toFixed(1);
+    document.getElementById('wizCalcFRatio').textContent = `${ratio} g/kg`;
+  }
+  if(document.getElementById('wizFBarFill')) document.getElementById('wizFBarFill').style.width = `${Math.min(100, fPct)}%`;
+
+  // Carbs card
+  if(document.getElementById('wizCalcC')) document.getElementById('wizCalcC').textContent = calc.target_carbs;
+  if(document.getElementById('wizCalcCPct')) document.getElementById('wizCalcCPct').textContent = `${cPct}%`;
+  if(document.getElementById('wizCalcCKcal')) document.getElementById('wizCalcCKcal').textContent = `${cKcal} kcal`;
+  if(document.getElementById('wizCBarFill')) document.getElementById('wizCBarFill').style.width = `${Math.min(100, cPct)}%`;
+
+  // Fiber card
+  if(document.getElementById('wizCalcB')) document.getElementById('wizCalcB').textContent = calc.target_fiber;
+
+  // Stacked ratio distribution bar
+  const segP = document.getElementById('wizSegP');
+  const segC = document.getElementById('wizSegC');
+  const segF = document.getElementById('wizSegF');
+  if(segP){ segP.style.width = `${pPct}%`; segP.title = `Protein: ${pPct}%`; }
+  if(segC){ segC.style.width = `${cPct}%`; segC.title = `Carbs: ${cPct}%`; }
+  if(segF){ segF.style.width = `${fPct}%`; segF.title = `Fats: ${fPct}%`; }
+
+  // Coaching insight note
+  const coachEl = document.getElementById('wizCoachingText');
+  if(coachEl){
+    if(calc.goal === 'muscle'){
+      coachEl.textContent = isEn
+        ? 'Target 4–5 protein feedings distributed evenly every 3–4 hours with 0.3–0.5g/kg carbs post-workout to support anabolic recovery.'
+        : 'احرص على توزيع البروتين على 4–5 وجبات كل 3–4 ساعات مع تناول كربوهيدرات بعد التمرين لدعم الاستشفاء ونمو العضلات.';
+    } else if(calc.goal === 'fat_loss'){
+      coachEl.textContent = isEn
+        ? 'Maintain high protein intake to preserve lean muscle mass during your caloric deficit. Prioritize fibrous vegetables and hydration.'
+        : 'حافظ على تناول كمية عالية من البروتين لحماية الكتلة العضلية أثناء عجز السعرات، واعتمد على الخضروات الورقية والماء.';
+    } else {
+      coachEl.textContent = isEn
+        ? 'Optimize nutrient timing with complex carbohydrates centered around your resistance training sessions to stimulate lean recomposition.'
+        : 'وزع الكربوهيدرات المعقدة حول أوقات التمارين الرياضية مع بروتين ثابت على مدار اليوم لتحقيق إعادة تشكيل الجسم بكفاءة.';
+    }
+  }
+
+  // Framer Motion Animations & React Component Mounting
+  if(window.FitnessWizardResults && typeof window.FitnessWizardResults.mount === 'function'){
+    const mountEl = document.getElementById('wizResultViewMount');
+    const vanillaEl = document.getElementById('wizResultViewVanilla');
+    if(mountEl){
+      mountEl.style.display = 'block';
+      if(vanillaEl) vanillaEl.style.display = 'none';
+      window.FitnessWizardResults.mount(mountEl, {
+        calc: calc,
+        lang: isEn ? 'en' : 'ar',
+        onBack: () => switchFitnessWizardView('config', 'left'),
+        onSave: () => handleFitnessWizardSave()
+      });
+    }
+  } else if(window.FitnessWizardResults && typeof window.FitnessWizardResults.animateElements === 'function'){
+    window.FitnessWizardResults.animateElements(document.getElementById('wizResultViewVanilla') || document.getElementById('wizResultView'));
+  }
+}
+
+function switchFitnessWizardView(targetView, direction){
+  const configView = document.getElementById('wizConfigView');
+  const resultView = document.getElementById('wizResultView');
+  const tabConfig = document.getElementById('wizTabConfig');
+  const tabResult = document.getElementById('wizTabResult');
+
+  if(targetView === 'result'){
+    const validation = validateFitnessWizardForm();
+    if(!validation.isValid){
+      // Focus first invalid field
+      if(validation.errors.age) document.getElementById('wizAge')?.focus();
+      else if(validation.errors.weight) document.getElementById('wizWeight')?.focus();
+      else if(validation.errors.height) document.getElementById('wizHeight')?.focus();
+      else if(validation.errors.bodyFat) document.getElementById('wizBodyFat')?.focus();
+      return false;
+    }
+
+    const calc = calculateFitnessTargets(validation.data);
+
+    if(configView && resultView){
+      configView.style.display = 'none';
+      configView.classList.remove('fw-view-active', 'fw-anim-left', 'fw-anim-right');
+
+      resultView.style.display = 'block';
+      resultView.classList.remove('fw-anim-left', 'fw-anim-right');
+      void resultView.offsetWidth; // force DOM reflow for CSS animation
+      resultView.classList.add('fw-view-active', direction === 'left' ? 'fw-anim-left' : 'fw-anim-right');
+    }
+
+    renderFitnessWizardResults(calc);
+
+    if(tabConfig && tabResult){
+      tabConfig.classList.remove('active');
+      tabResult.classList.add('active');
+    }
+    return true;
+  } else {
+    // Switch to config view
+    if(configView && resultView){
+      resultView.style.display = 'none';
+      resultView.classList.remove('fw-view-active', 'fw-anim-left', 'fw-anim-right');
+
+      configView.style.display = 'block';
+      configView.classList.remove('fw-anim-left', 'fw-anim-right');
+      void configView.offsetWidth; // force DOM reflow for CSS animation
+      configView.classList.add('fw-view-active', direction === 'right' ? 'fw-anim-right' : 'fw-anim-left');
+    }
+
+    if(tabConfig && tabResult){
+      tabResult.classList.remove('active');
+      tabConfig.classList.add('active');
+    }
+    return true;
+  }
+}
+
+function setupFitnessWizardInputListeners(){
+  ['wizAge', 'wizWeight', 'wizHeight', 'wizBodyFat'].forEach(id=>{
+    const el = document.getElementById(id);
+    if(el && !el._fwWired){
+      el._fwWired = true;
+      el.addEventListener('input', ()=>{
+        clearFitnessWizardFieldValidation(id);
+        renderFitnessWizardPreview();
+      });
+      el.addEventListener('blur', ()=>{
+        validateFitnessWizardForm();
+      });
+    }
+  });
+
+  const actEl = document.getElementById('wizActivity');
+  if(actEl && !actEl._fwWired){
+    actEl._fwWired = true;
+    actEl.addEventListener('change', ()=>{
+      renderFitnessWizardPreview();
+    });
+  }
 }
 
 function renderFitnessWizardPreview(){
@@ -6877,13 +9511,7 @@ function renderFitnessWizardPreview(){
   const bodyFat = bf ? Number(bf) : null;
 
   const calc = calculateFitnessTargets({gender, age, weight, height, activity, goal, body_fat: bodyFat});
-
-  if(document.getElementById('wizCalcKcal')) document.getElementById('wizCalcKcal').textContent = `${calc.target_kcal} kcal/day`;
-  if(document.getElementById('wizCalcP')) document.getElementById('wizCalcP').textContent = `${calc.target_protein}g`;
-  if(document.getElementById('wizCalcF')) document.getElementById('wizCalcF').textContent = `${calc.target_fats}g`;
-  if(document.getElementById('wizCalcC')) document.getElementById('wizCalcC').textContent = `${calc.target_carbs}g`;
-  if(document.getElementById('wizCalcB')) document.getElementById('wizCalcB').textContent = `${calc.target_fiber}g`;
-  if(document.getElementById('wizCalcBmrTdee')) document.getElementById('wizCalcBmrTdee').textContent = `BMR: ${calc.bmr} kcal · TDEE: ${calc.tdee} kcal (${calc.goal === 'muscle' ? '+250 kcal surplus' : '15-20% deficit'})`;
+  renderFitnessWizardResults(calc);
 }
 
 function openFitnessPromptModal(){
@@ -6896,54 +9524,48 @@ function closeFitnessPromptModal(){
 
 function openFitnessWizardModal(){
   const m = USER_SETTINGS.fitness_metrics || {};
-  const isFemale = m.gender === 'female';
+  const isFemale = (m.gender || USER_SETTINGS.gender) === 'female';
   const gm = document.getElementById('wizGenderMale');
   const gf = document.getElementById('wizGenderFemale');
   if(gm && gf){
-    if(isFemale){
-      gf.classList.add('fw-chip-sel');
-      gf.style.border = '2px solid var(--ac)';
-      gf.style.background = 'rgba(59,130,246,.15)';
-      gf.style.color = 'var(--tx)';
-      gm.classList.remove('fw-chip-sel');
-      gm.style.border = '1px solid var(--br)';
-      gm.style.background = 'var(--c)';
-      gm.style.color = 'var(--so)';
-    } else {
-      gm.classList.add('fw-chip-sel');
-      gm.style.border = '2px solid var(--ac)';
-      gm.style.background = 'rgba(59,130,246,.15)';
-      gm.style.color = 'var(--tx)';
-      gf.classList.remove('fw-chip-sel');
-      gf.style.border = '1px solid var(--br)';
-      gf.style.background = 'var(--c)';
-      gf.style.color = 'var(--so)';
-    }
+    gm.classList.toggle('fw-chip-sel', !isFemale);
+    gf.classList.toggle('fw-chip-sel', isFemale);
   }
 
-  if(document.getElementById('wizAge') && m.age) document.getElementById('wizAge').value = m.age;
-  if(document.getElementById('wizWeight') && m.weight) document.getElementById('wizWeight').value = m.weight;
-  if(document.getElementById('wizHeight') && m.height) document.getElementById('wizHeight').value = m.height;
-  if(document.getElementById('wizActivity') && m.activity) document.getElementById('wizActivity').value = m.activity;
-  if(document.getElementById('wizBodyFat')) document.getElementById('wizBodyFat').value = m.body_fat || '';
+  if(document.getElementById('wizAge')) document.getElementById('wizAge').value = m.age || USER_SETTINGS.age || 25;
+  if(document.getElementById('wizWeight')) document.getElementById('wizWeight').value = m.weight || USER_SETTINGS.weight || 75;
+  if(document.getElementById('wizHeight')) document.getElementById('wizHeight').value = m.height || USER_SETTINGS.height || 175;
+  if(document.getElementById('wizActivity')) document.getElementById('wizActivity').value = m.activity || USER_SETTINGS.activity || USER_SETTINGS.activity_level || 1.55;
+  if(document.getElementById('wizBodyFat')) document.getElementById('wizBodyFat').value = m.body_fat || USER_SETTINGS.body_fat || '';
 
-  const goal = m.goal || 'recomp';
+  const goal = m.goal || USER_SETTINGS.goal || 'recomp';
   ['wizGoalMuscle', 'wizGoalRecomp', 'wizGoalFatLoss'].forEach(id=>{
     const el = document.getElementById(id);
     if(!el) return;
-    const isThis = el.dataset.val === goal;
-    el.classList.toggle('fw-chip-sel', isThis);
-    el.style.border = isThis ? '2px solid var(--ac)' : '1px solid var(--br)';
-    el.style.background = isThis ? 'rgba(59,130,246,.15)' : 'var(--c)';
-    el.style.color = isThis ? 'var(--tx)' : 'var(--so)';
+    el.classList.toggle('fw-chip-sel', el.dataset.val === goal);
   });
 
+  // Clear validation styling
+  ['wizAge', 'wizWeight', 'wizHeight', 'wizBodyFat'].forEach(id => clearFitnessWizardFieldValidation(id));
+
+  // Reset to Configuration view
+  switchFitnessWizardView('config');
+
+  // Setup input listeners
+  setupFitnessWizardInputListeners();
+
+  // Render initial calculations
   renderFitnessWizardPreview();
+
   document.getElementById('fitnessWizardModal')?.classList.add('open');
 }
 
 function closeFitnessWizardModal(){
   document.getElementById('fitnessWizardModal')?.classList.remove('open');
+  if(window.FitnessWizardResults && typeof window.FitnessWizardResults.unmount === 'function'){
+    const mountEl = document.getElementById('wizResultViewMount');
+    if(mountEl) window.FitnessWizardResults.unmount(mountEl);
+  }
 }
 
 async function handleFitnessPromptChoice(enable){
@@ -6960,26 +9582,52 @@ async function handleFitnessPromptChoice(enable){
 }
 
 async function handleFitnessWizardSave(){
-  const gender = (document.getElementById('wizGenderFemale')?.classList.contains('fw-chip-sel')) ? 'female' : 'male';
-  const age = Math.max(14, Math.min(100, Number(document.getElementById('wizAge')?.value) || 25));
-  const weight = Math.max(30, Math.min(250, Number(document.getElementById('wizWeight')?.value) || 75));
-  const height = Math.max(100, Math.min(250, Number(document.getElementById('wizHeight')?.value) || 175));
-  const activity = Number(document.getElementById('wizActivity')?.value) || 1.55;
-  let goal = 'recomp';
-  if(document.getElementById('wizGoalMuscle')?.classList.contains('fw-chip-sel')) goal = 'muscle';
-  else if(document.getElementById('wizGoalFatLoss')?.classList.contains('fw-chip-sel')) goal = 'fat_loss';
-  const bfVal = document.getElementById('wizBodyFat')?.value;
-  const bodyFat = bfVal ? Number(bfVal) : null;
+  if(handleFitnessWizardSave._saving) return;
+  handleFitnessWizardSave._saving = true;
+  try {
+    const validation = validateFitnessWizardForm();
+    if(!validation.isValid){
+      switchFitnessWizardView('config', 'left');
+      showToast(USER_SETTINGS.lang==='en' ? 'Please fix the highlighted fields' : 'يرجى تصحيح الحقول المحددة', 2500);
+      return;
+    }
 
-  const calculated = calculateFitnessTargets({gender, age, weight, height, activity, goal, body_fat: bodyFat});
+    const calculated = calculateFitnessTargets(validation.data);
 
-  USER_SETTINGS.fitness_tracking_enabled = true;
-  USER_SETTINGS.fitness_metrics = calculated;
+    USER_SETTINGS.fitness_tracking_enabled = true;
+    USER_SETTINGS.fitness_metrics = calculated;
 
-  closeFitnessWizardModal();
-  try{ await saveUserSettings(); }catch(e){}
-  updateUI();
-  showToast(USER_SETTINGS.lang==='en' ? 'Fitness targets calculated & applied ✅' : 'تم حساب وتطبيق أهداف اللياقة ✅', 2500);
+    USER_SETTINGS.gender = calculated.gender;
+    USER_SETTINGS.age = calculated.age;
+    USER_SETTINGS.weight = calculated.weight;
+    USER_SETTINGS.height = calculated.height;
+    USER_SETTINGS.activity = calculated.activity;
+    USER_SETTINGS.activity_level = calculated.activity;
+    USER_SETTINGS.goal = calculated.goal;
+    USER_SETTINGS.body_fat = calculated.body_fat;
+    USER_SETTINGS.bmr = calculated.bmr;
+    USER_SETTINGS.tdee = calculated.tdee;
+    USER_SETTINGS.target_kcal = calculated.target_kcal;
+    USER_SETTINGS.target_protein = calculated.target_protein;
+    USER_SETTINGS.target_carbs = calculated.target_carbs;
+    USER_SETTINGS.target_fats = calculated.target_fats;
+    USER_SETTINGS.target_fiber = calculated.target_fiber;
+    USER_SETTINGS.calories = calculated.target_kcal;
+    USER_SETTINGS.kcal = calculated.target_kcal;
+    USER_SETTINGS.protein = calculated.target_protein;
+    USER_SETTINGS.carbs = calculated.target_carbs;
+    USER_SETTINGS.fat = calculated.target_fats;
+    USER_SETTINGS.fats = calculated.target_fats;
+    USER_SETTINGS.fiber = calculated.target_fiber;
+
+    closeFitnessWizardModal();
+    try{ await saveUserSettings(); }catch(e){}
+    updateUI();
+    renderFitnessSettingsStats();
+    showToast(USER_SETTINGS.lang==='en' ? 'Fitness targets calculated & applied in USER_SETTINGS ✅' : 'تم حساب وتطبيق أهداف اللياقة في الإعدادات ✅', 2500);
+  } finally {
+    handleFitnessWizardSave._saving = false;
+  }
 }
 
 async function handleSettingsFitnessSave(){
@@ -7000,13 +9648,36 @@ async function handleSettingsFitnessSave(){
   USER_SETTINGS.fitness_tracking_enabled = ftChecked;
   USER_SETTINGS.fitness_metrics = calculated;
 
+  USER_SETTINGS.gender = calculated.gender;
+  USER_SETTINGS.age = calculated.age;
+  USER_SETTINGS.weight = calculated.weight;
+  USER_SETTINGS.height = calculated.height;
+  USER_SETTINGS.activity = calculated.activity;
+  USER_SETTINGS.activity_level = calculated.activity;
+  USER_SETTINGS.goal = calculated.goal;
+  USER_SETTINGS.body_fat = calculated.body_fat;
+  USER_SETTINGS.bmr = calculated.bmr;
+  USER_SETTINGS.tdee = calculated.tdee;
+  USER_SETTINGS.target_kcal = calculated.target_kcal;
+  USER_SETTINGS.target_protein = calculated.target_protein;
+  USER_SETTINGS.target_carbs = calculated.target_carbs;
+  USER_SETTINGS.target_fats = calculated.target_fats;
+  USER_SETTINGS.target_fiber = calculated.target_fiber;
+  USER_SETTINGS.calories = calculated.target_kcal;
+  USER_SETTINGS.kcal = calculated.target_kcal;
+  USER_SETTINGS.protein = calculated.target_protein;
+  USER_SETTINGS.carbs = calculated.target_carbs;
+  USER_SETTINGS.fat = calculated.target_fats;
+  USER_SETTINGS.fats = calculated.target_fats;
+  USER_SETTINGS.fiber = calculated.target_fiber;
+
   const syncCheck1 = document.getElementById('setFitnessTrackingEnabled');
   if(syncCheck1) syncCheck1.checked = ftChecked;
 
   try{ await saveUserSettings(); }catch(e){}
   updateUI();
   renderFitnessSettingsStats();
-  showToast(USER_SETTINGS.lang==='en' ? 'Fitness profile saved ✅' : 'تم حفظ بيانات اللياقة ✅', 2200);
+  showToast(USER_SETTINGS.lang==='en' ? 'Fitness targets saved in USER_SETTINGS ✅' : 'تم حفظ بيانات وأهداف اللياقة في الإعدادات ✅', 2200);
 }
 
 function openSettingsScreen(){
@@ -7021,7 +9692,7 @@ function openSettingsScreen(){
   if(ftInSec) ftInSec.checked=USER_SETTINGS.fitness_tracking_enabled===true;
 
   const m = USER_SETTINGS.fitness_metrics || {};
-  const isFemale = m.gender === 'female';
+  const isFemale = (m.gender || USER_SETTINGS.gender) === 'female';
   const gm = document.getElementById('setGenderMale');
   const gf = document.getElementById('setGenderFemale');
   if(gm && gf){
@@ -7035,13 +9706,13 @@ function openSettingsScreen(){
     gf.style.color = isFemale ? 'var(--tx)' : 'var(--so)';
   }
 
-  if(document.getElementById('setAge')) document.getElementById('setAge').value = m.age || 25;
-  if(document.getElementById('setWeight')) document.getElementById('setWeight').value = m.weight || 75;
-  if(document.getElementById('setHeight')) document.getElementById('setHeight').value = m.height || 175;
-  if(document.getElementById('setActivity')) document.getElementById('setActivity').value = m.activity || 1.55;
-  if(document.getElementById('setBodyFat')) document.getElementById('setBodyFat').value = m.body_fat || '';
+  if(document.getElementById('setAge')) document.getElementById('setAge').value = m.age || USER_SETTINGS.age || 25;
+  if(document.getElementById('setWeight')) document.getElementById('setWeight').value = m.weight || USER_SETTINGS.weight || 75;
+  if(document.getElementById('setHeight')) document.getElementById('setHeight').value = m.height || USER_SETTINGS.height || 175;
+  if(document.getElementById('setActivity')) document.getElementById('setActivity').value = m.activity || USER_SETTINGS.activity || USER_SETTINGS.activity_level || 1.55;
+  if(document.getElementById('setBodyFat')) document.getElementById('setBodyFat').value = m.body_fat || USER_SETTINGS.body_fat || '';
 
-  const goal = m.goal || 'recomp';
+  const goal = m.goal || USER_SETTINGS.goal || 'recomp';
   ['setGoalMuscle', 'setGoalRecomp', 'setGoalFatLoss'].forEach(id=>{
     const el = document.getElementById(id);
     if(!el) return;
@@ -7883,6 +10554,10 @@ function calculateFitnessTargets(m){
   // Fiber Target: 14g per 1000 kcal (minimum 25g)
   const targetFiber = Math.max(25, Math.round((targetKcal / 1000) * 14));
 
+  const pPct = Math.round((proteinKcal / targetKcal) * 100);
+  const fPct = Math.round((fatsKcal / targetKcal) * 100);
+  const cPct = Math.max(0, 100 - pPct - fPct);
+
   return {
     bmr,
     tdee,
@@ -7891,11 +10566,25 @@ function calculateFitnessTargets(m){
     target_fats: targetFats,
     target_carbs: targetCarbs,
     target_fiber: targetFiber,
+    calories: targetKcal,
+    kcal: targetKcal,
+    protein: targetProtein,
+    carbs: targetCarbs,
+    fat: targetFats,
+    fats: targetFats,
+    fiber: targetFiber,
+    protein_kcal: proteinKcal,
+    fats_kcal: fatsKcal,
+    carbs_kcal: carbsKcal,
+    protein_pct: pPct,
+    fats_pct: fPct,
+    carbs_pct: cPct,
     gender,
     age,
     weight,
     height,
     activity,
+    activity_level: activity,
     goal,
     body_fat: bodyFat
   };
@@ -9075,6 +11764,7 @@ async function aiCallLiveModel(){
         :'⚠️ حصل خطأ من السيرفر — جرب تاني بعد شوية.'};
     }
     let text=data.text||(en?'(empty reply)':'(رد فارغ)');
+    const sources=Array.isArray(data.sources)?data.sources:[];
     // Parse out the [REMEMBER: ...] tag the model may have appended, store it in
     // USER_MEMORY, and strip it from what's actually shown in the chat bubble.
     const memMatch=text.match(/\[REMEMBER:\s*([^\]]+)\]\s*$/i);
@@ -9083,7 +11773,7 @@ async function aiCallLiveModel(){
       await saveUserMemory();
       text=text.slice(0,memMatch.index).trim();
     }
-    return{ok:true,text};
+    return{ok:true,text,sources};
   }catch(e){
     console.error('AI worker call failed:',e);
     const localCoach=aiLocalCoachingFallback(lastUserMsg, en?'en':'ar');
@@ -9134,7 +11824,13 @@ function aiRenderMessages(){
       ?`<div style="margin-top:6px;display:flex;gap:6px;flex-wrap:wrap">${m.undoIds.map((uid,i)=>`<button class="ai-undo-btn" data-undo-id="${uid}" type="button">↩️ ${en?'Undo':'تراجع'}${m.undoIds.length>1?' #'+(i+1):''}</button>`).join('')}</div>`
       :'';
     const shown=m.role==='user'?m.text:translateAiReply(m.text);
-    return`<div class="ai-msg ${cls}">${shown.replace(/</g,'&lt;')}${undoBtns}</div>`;
+    const sourceLinks=(m.sources&&m.sources.length)
+      ?`<div style="margin-top:8px;font-size:11px;opacity:0.8;border-top:1px solid rgba(255,255,255,0.1);padding-top:4px;display:flex;flex-direction:column;gap:2px;">
+         <span style="font-weight:600;">🔗 ${en?'Sources:':'المصادر:'}</span>
+         ${m.sources.slice(0,3).map(s=>`<a href="${(s.uri||'').replace(/"/g,'&quot;')}" target="_blank" rel="noopener noreferrer" style="color:var(--brand, #38bdf8);text-decoration:underline;text-overflow:ellipsis;overflow:hidden;white-space:nowrap;">${(s.title||s.uri||'').replace(/</g,'&lt;')}</a>`).join('')}
+       </div>`
+      :'';
+    return`<div class="ai-msg ${cls}">${shown.replace(/</g,'&lt;')}${sourceLinks}${undoBtns}</div>`;
   }).join('');
   body.scrollTop=body.scrollHeight;
 }
@@ -9422,7 +12118,7 @@ async function aiHandleSend(){
 
   const result=await aiCallLiveModel();
   session.messages.pop(); // remove the typing placeholder
-  session.messages.push({role:'bot',text:result.text,ts:Date.now(),tone:result.ok?null:'err'});
+  session.messages.push({role:'bot',text:result.text,sources:result.sources,ts:Date.now(),tone:result.ok?null:'err'});
   session.lastMsgAt=Date.now();
   aiRenderMessages();
   await saveAiChat();
@@ -9722,6 +12418,45 @@ document.body.addEventListener('click',async e=>{
   }
 
   if(tgt.id==='closeReport'){document.getElementById('reportModal')?.classList.remove('open');return;}
+  if(tgt.id==='closeTrendsModal' || (tgt.closest && tgt.closest('#closeTrendsModal'))){ closeTrendsModal(); return; }
+  if(tgt.id==='trendsModal'){ closeTrendsModal(); return; }
+  if(tgt.id==='closeMacroTrendsModal' || (tgt.closest && tgt.closest('#closeMacroTrendsModal'))){ closeMacroTrendsModal(); return; }
+  if(tgt.id==='macroTrendsModal'){ closeMacroTrendsModal(); return; }
+  if(tgt.id==='btn-macro-trends' || (tgt.closest && tgt.closest('#btn-macro-trends'))){
+    showMacroTrendsModal(typeof SELECTED_DATE !== 'undefined' ? SELECTED_DATE : TODAY);
+    return;
+  }
+  if(tgt.id==='btn-open-macro-trends-settings' || (tgt.closest && tgt.closest('#btn-open-macro-trends-settings'))){
+    document.getElementById('settingsScreen')?.classList.remove('open');
+    showMacroTrendsModal(typeof SELECTED_DATE !== 'undefined' ? SELECTED_DATE : TODAY);
+    return;
+  }
+  if(tgt.id==='btn-switch-to-macro-trends' || (tgt.closest && tgt.closest('#btn-switch-to-macro-trends'))){
+    closeTrendsModal();
+    showMacroTrendsModal(typeof SELECTED_DATE !== 'undefined' ? SELECTED_DATE : TODAY);
+    return;
+  }
+  if(tgt.id==='btn-trends-from-settings'){
+    document.getElementById('settingsScreen')?.classList.remove('open');
+    showTrendsModal('current_week');
+    return;
+  }
+  if(tgt.id==='btn-prog-trends' || (tgt.closest && tgt.closest('#btn-prog-trends'))){
+    showTrendsModal('current_week');
+    return;
+  }
+  const tabRangeBtn = tgt.closest ? tgt.closest('.trends-tab-btn') : null;
+  if(tabRangeBtn){
+    const r = tabRangeBtn.getAttribute('data-range');
+    if(r) switchTrendsRange(r);
+    return;
+  }
+  const tabMetricBtn = tgt.closest ? tgt.closest('.trends-metric-btn') : null;
+  if(tabMetricBtn){
+    const m = tabMetricBtn.getAttribute('data-metric');
+    if(m) switchTrendsMetric(m);
+    return;
+  }
 
   if(tgt.id==='btn-prayer-back'){
     if(!activePrayer) return;
@@ -9749,40 +12484,35 @@ document.body.addEventListener('click',async e=>{
   if(tgt.id==='setCloseBtn'){ closeSettingsScreen(); return; }
   if(tgt.id==='btnFitnessPromptYes'){ await handleFitnessPromptChoice(true); return; }
   if(tgt.id==='btnFitnessPromptNo'){ await handleFitnessPromptChoice(false); return; }
-  if(tgt.id==='btnCloseFitnessWizard' || tgt.id==='btnCancelFitnessWizard'){ closeFitnessWizardModal(); return; }
-  if(tgt.id==='btnSaveFitnessWizard'){ await handleFitnessWizardSave(); return; }
-  if(tgt.id==='btnOpenFitnessWizardFromTracking' || tgt.id==='btnLaunchFitnessWizard'){ openFitnessWizardModal(); return; }
+  if(tgt.closest && (tgt.closest('#btnCloseFitnessWizard') || tgt.closest('#btnCancelFitnessWizard'))){ closeFitnessWizardModal(); return; }
+  if(tgt.id==='fitnessWizardModal'){ closeFitnessWizardModal(); return; }
+  if(tgt.closest && tgt.closest('#btnSaveFitnessWizard')){ await handleFitnessWizardSave(); return; }
+  if(tgt.closest && (tgt.closest('#btnOpenFitnessWizardFromTracking') || tgt.closest('#btnLaunchFitnessWizard'))){ openFitnessWizardModal(); return; }
+  if(tgt.closest && (tgt.closest('#wizTabConfig') || tgt.closest('#btnBackToConfig'))){ switchFitnessWizardView('config', 'left'); return; }
+  if(tgt.closest && (tgt.closest('#wizTabResult') || tgt.closest('#btnCalcAndShowResults'))){ switchFitnessWizardView('result', 'right'); return; }
   if(tgt.id==='setSaveFitnessBtn'){ await handleSettingsFitnessSave(); return; }
 
   // Wizard Gender chips
-  if(tgt.id==='wizGenderMale' || tgt.id==='wizGenderFemale'){
-    const isFemale = tgt.id==='wizGenderFemale';
+  const fwGenderChip = tgt.closest ? tgt.closest('#wizGenderMale, #wizGenderFemale') : null;
+  if(fwGenderChip){
+    const isFemale = fwGenderChip.id==='wizGenderFemale';
     const gm=document.getElementById('wizGenderMale');
     const gf=document.getElementById('wizGenderFemale');
     if(gm && gf){
       gm.classList.toggle('fw-chip-sel', !isFemale);
-      gm.style.border = !isFemale ? '2px solid var(--ac)' : '1px solid var(--br)';
-      gm.style.background = !isFemale ? 'rgba(59,130,246,.15)' : 'var(--c)';
-      gm.style.color = !isFemale ? 'var(--tx)' : 'var(--so)';
       gf.classList.toggle('fw-chip-sel', isFemale);
-      gf.style.border = isFemale ? '2px solid var(--ac)' : '1px solid var(--br)';
-      gf.style.background = isFemale ? 'rgba(59,130,246,.15)' : 'var(--c)';
-      gf.style.color = isFemale ? 'var(--tx)' : 'var(--so)';
     }
     renderFitnessWizardPreview();
     return;
   }
 
   // Wizard Goal chips
-  if(tgt.id==='wizGoalMuscle' || tgt.id==='wizGoalRecomp' || tgt.id==='wizGoalFatLoss'){
+  const fwGoalChip = tgt.closest ? tgt.closest('#wizGoalMuscle, #wizGoalRecomp, #wizGoalFatLoss') : null;
+  if(fwGoalChip){
     ['wizGoalMuscle', 'wizGoalRecomp', 'wizGoalFatLoss'].forEach(id=>{
       const el=document.getElementById(id);
       if(!el) return;
-      const sel = (id === tgt.id);
-      el.classList.toggle('fw-chip-sel', sel);
-      el.style.border = sel ? '2px solid var(--ac)' : '1px solid var(--br)';
-      el.style.background = sel ? 'rgba(59,130,246,.15)' : 'var(--c)';
-      el.style.color = sel ? 'var(--tx)' : 'var(--so)';
+      el.classList.toggle('fw-chip-sel', id === fwGoalChip.id);
     });
     renderFitnessWizardPreview();
     return;
@@ -10011,6 +12741,19 @@ document.body.addEventListener('click',async e=>{
     const late=taskObj?isLateNonPrayer(taskObj):false;
     const awarded=awardTaskPoints(pts,{x:e.clientX,y:e.clientY});
     DONE[id]=awarded;
+
+    // Smooth checkmark transformation and card fade-out animation
+    const cardEl=document.getElementById(`c-${id}`) || actionEl.closest('.tc');
+    if(cardEl){
+      cardEl.classList.add('tc-marking-done');
+      cardEl.classList.add('done');
+    }
+    if(actionEl){
+      actionEl.classList.add('cbtn-transforming');
+      actionEl.classList.add('done');
+      actionEl.innerHTML=`<span class="cbtn-check-badge"><svg class="cbtn-check-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline class="cbtn-check-path" points="20 6 9 17 4 12"></polyline></svg></span><span class="ptslbl" style="animation:fadeInUpSubtle .35s ease forwards">+${awarded}⭐</span>`;
+    }
+
     const enConfirm=(USER_SETTINGS&&USER_SETTINGS.lang)==='en';
     if(late){showToast(enConfirm?'⏰ A bit late but done — keep going 💪':'⏰ متأخر شوي بس تم — استمر كذا 💪',3000,'late');cardEffect(id,'late');}
     else{showToast(enConfirm?'✅ In the perfect window — well done':'✅ في الوقت المثالي، أحسنت',2200);cardEffect(id,'ontime');}
@@ -10024,6 +12767,8 @@ document.body.addEventListener('click',async e=>{
       console.error('saveAll failed after confirm:',err);
       showToast(enConfirm?'⚠️ Save failed — try again or reload':'⚠️ حصل خطأ أثناء الحفظ — جرب تاني أو أعد تحميل الصفحة',4000,'warn');
     }
+    // Smooth delay allows the checkmark morph & card fade animation to complete seamlessly
+    await new Promise(r=>setTimeout(r,420));
     try{
       renderPanels();switchDay(getJDfromISO(SELECTED_DATE));updateUI();
       window.scrollTo(0,scrollYBefore);
@@ -10037,7 +12782,21 @@ document.body.addEventListener('click',async e=>{
     const half=Math.floor(pts/2);
     const awarded=awardTaskPoints(half,{x:e.clientX,y:e.clientY});
     DONE[id]='qada';
+
+    const cardEl=document.getElementById(`c-${id}`) || actionEl.closest('.tc');
+    if(cardEl){
+      cardEl.classList.add('tc-marking-done');
+      cardEl.classList.add('done');
+    }
+    if(actionEl){
+      actionEl.classList.add('cbtn-transforming');
+      actionEl.classList.add('done');
+      const enQada=(USER_SETTINGS&&USER_SETTINGS.lang)==='en';
+      actionEl.innerHTML=`<span class="cbtn-check-badge"><svg class="cbtn-check-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline class="cbtn-check-path" points="20 6 9 17 4 12"></polyline></svg></span><span class="ptslbl" style="animation:fadeInUpSubtle .35s ease forwards">+${half}⭐</span>`;
+    }
+
     cardEffect(id,'qada');
+    const scrollYBefore=window.scrollY;
     try{ checkStreak(); }catch(err){ console.error('checkStreak failed, saving anyway:',err); }
     try{
       await saveAll();
@@ -10045,7 +12804,8 @@ document.body.addEventListener('click',async e=>{
       console.error('saveAll failed after qada:',err);
       showToast('⚠️ حصل خطأ أثناء الحفظ — جرب تاني أو أعد تحميل الصفحة',4000,'warn');
     }
-    try{ renderPanels();switchDay(getJDfromISO(SELECTED_DATE));updateUI(); }catch(err){ console.error('re-render failed:',err); }
+    await new Promise(r=>setTimeout(r,420));
+    try{ renderPanels();switchDay(getJDfromISO(SELECTED_DATE));updateUI(); window.scrollTo(0,scrollYBefore); }catch(err){ console.error('re-render failed:',err); }
     showToast((USER_SETTINGS&&USER_SETTINGS.lang)==='en'
       ?'Make-up (Qada) logged — try to pray on time tomorrow 🌙'
       :'تم تسجيل القضاء — حاول تصلي بدري بكرة 🌙',3500,'qada');return;

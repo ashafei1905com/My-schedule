@@ -1,5 +1,5 @@
 
-import { json, corsHeaders } from '../../../core/utils/response.js';
+import { json, corsHeaders, ALLOWED_ORIGIN } from '../../../core/utils/response.js';
 import { normalizeFoodKey, tier3EstimateMacro, usdaLookupFood } from '../services/nutritionService.js';
 import { firestoreGetFood, firestoreSetFood } from '../../../core/database/firestore.js';
 

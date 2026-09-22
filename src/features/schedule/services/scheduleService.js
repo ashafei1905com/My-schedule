@@ -13,15 +13,26 @@ Return ONLY JSON:
   const userContent = `Today is ${today}. Language: ${lang}.\n\nMessy task list:\n${messyText}`;
 
   const ai = new GoogleGenAI({ apiKey });
-  const response = await ai.models.generateContent({
-    model: 'gemini-3.8-flash',
-    contents: userContent,
-    config: {
-      systemInstruction: system,
-      responseMimeType: 'application/json',
-      temperature: 0.3
+  const models = ['gemini-3.6-flash', 'gemini-3.5-flash', 'gemini-3.8-flash'];
+  let lastErr = null;
+  for (const m of models) {
+    try {
+      const response = await ai.models.generateContent({
+        model: m,
+        contents: userContent,
+        config: {
+          systemInstruction: system,
+          responseMimeType: 'application/json',
+          temperature: 0.3
+        }
+      });
+      if (response && response.text) {
+        return response.text;
+      }
+    } catch (err) {
+      lastErr = err;
+      console.warn(`buildSchedule model ${m} failed:`, err.message);
     }
-  });
-
-  return response.text || '';
+  }
+  throw lastErr || new Error('All schedule models failed');
 }
