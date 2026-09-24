@@ -2171,7 +2171,7 @@ body.theme-matrix .tctime{
       <div class="set-nav" id="setNav">
         <button type="button" data-setsec="general" class="act" data-i18n="nav_general">عام</button>
         <button type="button" data-setsec="tracking" data-i18n="nav_tracking">التتبع</button>
-        <button type="button" data-setsec="fitness" id="navFitnessBtn">🏋️ اللياقة والماكروز</button>
+        <button type="button" data-setsec="fitness" id="navFitnessBtn" data-i18n="nav_fitness">🏋️ Fitness & Macros</button>
         <button type="button" data-setsec="notifications" data-i18n="nav_notif">التذكيرات</button>
         <button type="button" data-setsec="reports" data-i18n="nav_reports">التقارير</button>
         <button type="button" data-setsec="appearance" data-i18n="nav_appearance">المظهر</button>
@@ -2211,10 +2211,10 @@ body.theme-matrix .tctime{
             <input type="checkbox" id="setTrackPrayers">
           </div>
           <div class="set-row">
-            <label for="setFitnessTrackingEnabled">تفعيل تتبع اللياقة والماكروز (Fitness Tracking)</label>
+            <label for="setFitnessTrackingEnabled" data-i18n="fitness_tracking_enable">Enable fitness & macro tracking</label>
             <input type="checkbox" id="setFitnessTrackingEnabled">
           </div>
-          <button type="button" id="btnOpenFitnessWizardFromTracking" class="altbtn" style="margin-top:10px;width:100%">🧙‍♂️ فتح معالج اللياقة (Fitness Wizard)</button>
+          <button type="button" id="btnOpenFitnessWizardFromTracking" class="altbtn" style="margin-top:10px;width:100%" data-i18n="open_fitness_wizard">🧙‍♂️ Open fitness wizard</button>
           <div class="set-actions" style="margin-top:16px">
             <button type="button" id="setSaveTrackingBtn" class="fl-submit-btn" style="margin:0" data-i18n="save">حفظ ✅</button>
           </div>
@@ -2281,7 +2281,7 @@ body.theme-matrix .tctime{
                 <label style="display:block;font-size:.78rem;font-weight:800;color:var(--so);margin-bottom:6px">6. Primary Goal / الهدف الأساسي</label>
                 <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px">
                   <button type="button" class="fw-chip" data-val="muscle" id="setGoalMuscle" style="padding:8px 6px;border-radius:8px;border:1px solid var(--br);background:var(--c);color:var(--so);font-size:.75rem;font-weight:800;cursor:pointer;text-align:center">💪 Build Muscle<br><span style="font-size:.64rem;opacity:.8">+250 kcal</span></button>
-                  <button type="button" class="fw-chip fw-chip-sel" data-val="recomp" id="setGoalRecomp" style="padding:8px 6px;border-radius:8px;border:2px solid var(--ac);background:rgba(59,130,246,.15);color:var(--tx);font-size:.75rem;font-weight:800;cursor:pointer;text-align:center">⚡ Recomp<br><span style="font-size:.64rem;opacity:.8">15% Deficit</span></button>
+                  <button type="button" class="fw-chip fw-chip-sel" data-val="recomp" id="setGoalRecomp" style="padding:8px 6px;border-radius:8px;border:2px solid var(--ac);background:rgba(59,130,246,.15);color:var(--tx);font-size:.75rem;font-weight:800;cursor:pointer;text-align:center">⚡ Recomp<br><span style="font-size:.64rem;opacity:.8">10% Deficit</span></button>
                   <button type="button" class="fw-chip" data-val="fat_loss" id="setGoalFatLoss" style="padding:8px 6px;border-radius:8px;border:1px solid var(--br);background:var(--c);color:var(--so);font-size:.75rem;font-weight:800;cursor:pointer;text-align:center">🔥 Lose Fat<br><span style="font-size:.64rem;opacity:.8">18% Deficit</span></button>
                 </div>
               </div>
@@ -2391,8 +2391,8 @@ body.theme-matrix .tctime{
           <h3 data-i18n="sec_reports">التقارير</h3>
           <p class="desc" data-i18n="sec_reports_desc">سجل التقارير الأسبوعية السابقة.</p>
           <div class="set-actions" style="display:flex;gap:10px;flex-wrap:wrap">
-            <button type="button" id="btn-report-history" class="topbtn topbtn-history" data-i18n="report_history">🗂️ سجل التقارير</button>
-            <button type="button" id="btn-trends-from-settings" class="topbtn topbtn-trends">📊 اتجاهات النقاط والإنجاز (D3)</button>
+            <button type="button" id="btn-report-history" class="topbtn topbtn-history" data-i18n="report_history">🗂️ Report history</button>
+            <button type="button" id="btn-trends-from-settings" class="topbtn topbtn-trends" data-i18n="trends_btn_settings">📊 Points & completion trends</button>
           </div>
         </div>
         <div class="set-section" id="setsec-appearance">
@@ -2852,7 +2852,7 @@ body.theme-matrix .tctime{
             <button type="button" class="fw-goal-chip fw-chip-sel" data-val="recomp" id="wizGoalRecomp">
               <div class="fw-goal-icon">⚡</div>
               <div class="fw-goal-name" id="fwGoalRecompText">Recomposition</div>
-              <div class="fw-goal-sub" id="fwGoalRecompSub">15% moderate deficit</div>
+              <div class="fw-goal-sub" id="fwGoalRecompSub">10% mild deficit</div>
               <div class="fw-goal-tag" id="fwGoalRecompTag">Lean Recomp</div>
             </button>
             <button type="button" class="fw-goal-chip" data-val="fat_loss" id="wizGoalFatLoss">
@@ -2888,7 +2888,7 @@ body.theme-matrix .tctime{
               <span class="fw-hero-badge" id="wizHeroFormulaBadge">Mifflin-St Jeor Formula</span>
               <div class="fw-hero-target-label" id="wizHeroTargetLbl">Target Daily Intake</div>
             </div>
-            <div class="fw-hero-strategy-pill" id="wizHeroStrategyPill">15% Deficit</div>
+            <div class="fw-hero-strategy-pill" id="wizHeroStrategyPill">10% Deficit</div>
           </div>
           <div class="fw-hero-kcal-row">
             <div class="fw-hero-kcal-val"><span id="wizCalcKcal">2133</span> <span class="fw-hero-kcal-unit" id="wizHeroKcalUnit">kcal/day</span></div>
@@ -4824,6 +4824,9 @@ const I18N={
     sec_notif:'التذكيرات', sec_notif_desc:'تفعيل أو إيقاف إشعارات المهام.',
     sec_reports:'التقارير', sec_reports_desc:'سجل التقارير الأسبوعية السابقة.',
     report_history:'🗂️ سجل التقارير', weekly_report:'التقرير الأسبوعي',
+    trends_btn_settings:'📊 اتجاهات النقاط والإنجاز',
+    fitness_tracking_enable:'تفعيل تتبع اللياقة والماكروز',
+    open_fitness_wizard:'🧙‍♂️ فتح معالج اللياقة',
     sec_appearance:'المظهر', sec_appearance_desc:'أيقونة التطبيق وألوان الجدول.',
     icon_hint:'بعد الاختيار، احذف التطبيق من الشاشة الرئيسية وأضفه من جديد لتحديث الأيقونة.',
     sec_language:'اللغة', sec_language_desc:'واجهة التطبيق.',
@@ -4859,6 +4862,9 @@ const I18N={
     sec_notif:'Reminders', sec_notif_desc:'Enable or disable task notifications.',
     sec_reports:'Reports', sec_reports_desc:'Past weekly reports.',
     report_history:'🗂️ Report history', weekly_report:'Weekly report',
+    trends_btn_settings:'📊 Points & completion trends',
+    fitness_tracking_enable:'Enable fitness & macro tracking',
+    open_fitness_wizard:'🧙‍♂️ Open fitness wizard',
     sec_appearance:'Appearance', sec_appearance_desc:'App icon and schedule colors.',
     icon_hint:'After choosing, remove the app from the home screen and add it again to refresh the icon.',
     sec_language:'Language', sec_language_desc:'App interface language.',
@@ -5047,6 +5053,13 @@ function applyI18n(){
   }catch(e){}
   if(hist && SELECTED_DATE===TODAY) hist.textContent=t('today');
   document.querySelectorAll('.macrotitle').forEach(el=>{ el.textContent=t('nutrition'); });
+  document.querySelectorAll('.macrolbl').forEach(el=>{
+    const raw=(el.textContent||'').trim();
+    if(/بروتين|Protein/i.test(raw)) el.textContent=t('protein');
+    else if(/كارب|Carb/i.test(raw)) el.textContent=t('carbs');
+    else if(/دهون|Fat/i.test(raw)) el.textContent=t('fats');
+    else if(/ألياف|Fiber/i.test(raw)) el.textContent=t('fiber');
+  });
   const isEn = (USER_SETTINGS && USER_SETTINGS.lang) === 'en';
   const mtPill = document.getElementById('macroTrendsPillText');
   if(mtPill) mtPill.textContent = isEn ? 'Macro Trends' : 'مخطط الماكروز';
@@ -5054,6 +5067,32 @@ function applyI18n(){
   if(mtSwitch) mtSwitch.textContent = isEn ? 'Macro Trends (Recharts)' : 'توزيع الماكروز (Recharts)';
   const mtSetBtn = document.getElementById('macroTrendsSettingsBtnText');
   if(mtSetBtn) mtSetBtn.textContent = isEn ? 'View Macro Distribution & Targets (Recharts)' : 'عرض مخطط توزيع الماكروز والأهداف (Recharts)';
+  const progTrendsText=document.getElementById('progTrendsText');
+  if(progTrendsText) progTrendsText.textContent=isEn?'Weekly Trends':'الاتجاهات الأسبوعية';
+  const trendsFromSettings=document.getElementById('btn-trends-from-settings');
+  if(trendsFromSettings) trendsFromSettings.textContent=t('trends_btn_settings');
+  const navFitness=document.getElementById('navFitnessBtn');
+  if(navFitness) navFitness.textContent=t('nav_fitness');
+  const fwTitleEl=document.getElementById('fwTitle');
+  if(fwTitleEl) fwTitleEl.textContent=isEn?'FitnessWizard · Fitness & macros':'FitnessWizard · معالج اللياقة والماكروز';
+  const fwDescEl=document.getElementById('fwDesc');
+  if(fwDescEl) fwDescEl.textContent=isEn
+    ?'Precise BMR & TDEE with Mifflin-St Jeor and macro recommendations.'
+    :'حساب دقيق لمعدل الأيض الأساسي (BMR) ومعدل حرق الطاقة اليومي (TDEE) بمعادلة Mifflin-St Jeor واقتراح نسب الماكروز.';
+  const notifToggle=document.getElementById('btn-notif-toggle');
+  // Keep dynamic on/off state in updateAuthUI; only translate generic static notif labels here
+  const notifTest=document.getElementById('btn-notif-test');
+  if(notifTest) notifTest.textContent=isEn?'🔔 Test notification':'🔔 تجربة الإشعار';
+  const notifRenew=document.getElementById('btn-notif-renew');
+  if(notifRenew) notifRenew.textContent=isEn?'🔄 Renew & schedule 14 days':'🔄 تجديد وجدولة ١٤ يوم';
+  const notifBadge=document.getElementById('notif-sync-badge');
+  if(notifBadge) notifBadge.textContent=isEn?'✅ Reminders run automatically in the background':'✅ التذكيرات تعمل تلقائياً في الخلفية';
+  const taskNotifTitle=document.getElementById('taskNotifListTitle');
+  if(taskNotifTitle) taskNotifTitle.textContent=isEn?'Per-task notifications':'إشعارات لكل مهمة';
+  const prayerLocTitle=document.getElementById('prayerLocTitle');
+  if(prayerLocTitle) prayerLocTitle.textContent=isEn?'Prayer locations':'أماكن الصلاة';
+  const prayerLocDesc=document.getElementById('prayerLocDesc');
+  if(prayerLocDesc) prayerLocDesc.textContent=isEn?'Mosque is fixed at max points. Add your own places below (points capped at Mosque).':'المسجد ثابت بأعلى النقاط. أضف أماكنك بالأسفل (بحد أقصى نقاط المسجد).';
 
   // Fitness Wizard Bilingual UI
   const setElText = (id, en, ar) => { const el = document.getElementById(id); if(el) el.textContent = isEn ? en : ar; };
@@ -9317,7 +9356,7 @@ function renderFitnessSettingsStats(){
   if(ratioText) ratioText.textContent = `Protein ${pPct}% · Fats ${fPct}% · Carbs ${cPct}%`;
 
   if(document.getElementById('setCalcBmrTdee')){
-    const goalText = calc.goal === 'muscle' ? '+250 kcal surplus' : (calc.goal === 'fat_loss' ? '18% deficit' : '15% deficit');
+    const goalText = calc.goal === 'muscle' ? '+250 kcal surplus' : (calc.goal === 'fat_loss' ? '15% deficit' : '10% deficit');
     document.getElementById('setCalcBmrTdee').textContent = `Mifflin-St Jeor BMR: ${calc.bmr} kcal · TDEE: ${calc.tdee} kcal (${goalText})`;
   }
 }
@@ -10662,11 +10701,12 @@ function calculateFitnessTargets(m){
 
   let bmr = 0;
   if(bodyFat && bodyFat >= 4 && bodyFat <= 60){
-    // Katch-McArdle Formula (when Body Fat % is known)
+    // Katch-McArdle (preferred when BF% known): BMR = 370 + 21.6 × lean body mass (kg)
     const leanMass = weight * (1 - (bodyFat / 100));
     bmr = Math.round(370 + (21.6 * leanMass));
   } else {
-    // Mifflin-St Jeor Formula
+    // Mifflin-St Jeor (Academy of Nutrition & Dietetics preferred equation)
+    // Male: 10w + 6.25h − 5a + 5 | Female: 10w + 6.25h − 5a − 161
     if(gender === 'female'){
       bmr = Math.round((10 * weight) + (6.25 * height) - (5 * age) - 161);
     } else {
@@ -10674,49 +10714,56 @@ function calculateFitnessTargets(m){
     }
   }
 
-  // TDEE Calculation with activity multiplier
+  // TDEE = BMR × Harris-Benedict activity multiplier (1.2–1.9)
   const tdee = Math.round(bmr * activity);
 
-  // Goal adjustments
+  // Goal energy adjustments (evidence-based ranges)
+  // Muscle: mild surplus +200–300 kcal supports lean gains without excess fat
+  // Fat loss: ~15–20% deficit (cap ~500 kcal) preserves adherence and lean mass
+  // Recomp: mild deficit ~10% or ~200–300 kcal (not aggressive cut) — literature favors small deficits for concurrent fat loss + muscle gain
   let targetKcal = tdee;
   if(goal === 'muscle'){
-    // Muscle Gain: Surplus of +200 to +300 kcal (default +250 kcal)
     targetKcal = tdee + 250;
   } else if(goal === 'fat_loss'){
-    // Fat Loss: Moderate deficit of 15% to 20% (default 18% deficit, never >25%)
-    targetKcal = Math.round(tdee * 0.82);
+    targetKcal = Math.round(tdee * 0.85); // ~15% deficit
   } else {
-    // Body Recomposition: Moderate deficit of 15% to 20% (default 15% deficit)
-    targetKcal = Math.round(tdee * 0.85);
+    // recomp — mild deficit (~10%), closer to maintenance than a cut
+    targetKcal = Math.round(tdee * 0.90);
   }
 
-  // Hard Floor Limits: NEVER go below BMR or <1500 kcal for males (<1200 kcal for females)
+  // Safety floors: never below BMR; clinical floors 1500♂ / 1200♀
   const minFloor = gender === 'female' ? Math.max(bmr, 1200) : Math.max(bmr, 1500);
-  if(targetKcal < minFloor){
-    targetKcal = minFloor;
-  }
+  if(targetKcal < minFloor) targetKcal = minFloor;
 
-  // Protein Target: strictly 1.8g - 2.2g / kg total body weight (minimum 1.6g/kg)
-  const proteinMultiplier = goal === 'fat_loss' ? 2.2 : goal === 'recomp' ? 2.0 : 1.9;
+  // Protein (ISSN / Helms): 1.6–2.4 g/kg; higher in deficit to protect lean mass
+  const proteinMultiplier = goal === 'fat_loss' ? 2.2 : goal === 'recomp' ? 2.0 : 1.8;
   const targetProtein = Math.round(weight * proteinMultiplier);
   const proteinKcal = targetProtein * 4;
 
-  // Fats Target: 0.7g - 1.0g / kg (20% - 30% of total calories)
-  let targetFats = Math.round(weight * 0.85);
-  let fatsKcal = targetFats * 9;
-  if(fatsKcal < targetKcal * 0.20) targetFats = Math.round((targetKcal * 0.20) / 9);
-  if(fatsKcal > targetKcal * 0.30) targetFats = Math.round((targetKcal * 0.30) / 9);
-  fatsKcal = targetFats * 9;
+  // Fat: ~25% of kcal, clamped 20–30%, with hormonal floor ≥0.6 g/kg
+  let targetFats = Math.round((targetKcal * 0.25) / 9);
+  const fatFloorKg = Math.round(weight * 0.6);
+  const fatMinKcal = Math.round((targetKcal * 0.20) / 9);
+  const fatMaxKcal = Math.round((targetKcal * 0.30) / 9);
+  targetFats = Math.max(fatFloorKg, fatMinKcal, Math.min(fatMaxKcal, targetFats));
+  const fatsKcal = targetFats * 9;
 
-  // Carbohydrates Target: remaining calories
+  // Carbs: remainder of calories (performance fuel); floor 50g
   let carbsKcal = targetKcal - (proteinKcal + fatsKcal);
-  let targetCarbs = Math.max(50, Math.round(carbsKcal / 4));
+  if(carbsKcal < 50 * 4){
+    // If protein+fat crowd out carbs, trim fat toward the 20% floor to free carbs
+    const minFat = Math.max(fatFloorKg, fatMinKcal);
+    targetFats = minFat;
+    carbsKcal = targetKcal - (proteinKcal + targetFats * 9);
+  }
+  const targetCarbs = Math.max(50, Math.round(carbsKcal / 4));
+  carbsKcal = targetCarbs * 4;
 
-  // Fiber Target: 14g per 1000 kcal (minimum 25g)
+  // Fiber: USDA ~14g per 1000 kcal (min 25g)
   const targetFiber = Math.max(25, Math.round((targetKcal / 1000) * 14));
 
   const pPct = Math.round((proteinKcal / targetKcal) * 100);
-  const fPct = Math.round((fatsKcal / targetKcal) * 100);
+  const fPct = Math.round((targetFats * 9 / targetKcal) * 100);
   const cPct = Math.max(0, 100 - pPct - fPct);
 
   return {
@@ -13810,4 +13857,4 @@ setTimeout(()=>{
 }, 2200);
 try{ setupAutoNotificationTriggers(); }catch(e){}
 </script>
-</html>
+</html> 
