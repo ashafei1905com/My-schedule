@@ -4359,6 +4359,39 @@ function renderSlotsUI(){
   }).join('');
 }
 
+// Populates Settings → Workspaces (Routines) list (#routineList). Called from
+// openSettingsScreen. Missing definition was the exact cause of
+// "ReferenceError: renderRoutinesUI is not defined" when opening Settings.
+function renderRoutinesUI(){
+  ensureScheduleSlots();
+  const list=document.getElementById('routineList');
+  if(!list) return;
+  const en=(USER_SETTINGS&&USER_SETTINGS.lang)==='en';
+  const ids=Object.keys(USER_SCHEDULES||{});
+  if(!ids.length){
+    list.innerHTML=`<div class="desc" style="opacity:.8">${en?'No workspaces yet. Add one below.':'لا توجد مساحات عمل بعد. أضف واحدة من الزر بالأسفل.'}</div>`;
+    return;
+  }
+  list.innerHTML=ids.map(id=>{
+    const s=USER_SCHEDULES[id]||{};
+    const name=(s.name||id);
+    const isActive=id===ACTIVE_SCHEDULE_ID;
+    const activeTag=isActive
+      ?`<span style="font-size:.65rem;font-weight:800;color:var(--gr);background:rgba(16,185,129,.12);border:1px solid rgba(16,185,129,.35);padding:2px 7px;border-radius:6px">${en?'Active':'نشط'}</span>`
+      :'';
+    const switchBtn=isActive?'':`<button type="button" class="altbtn" data-routine-switch="${id}" style="padding:5px 10px;font-size:.72rem">${en?'Switch':'تبديل'}</button>`;
+    const renameBtn=`<button type="button" class="altbtn" data-routine-rename="${id}" style="padding:5px 10px;font-size:.72rem">${en?'Rename':'إعادة تسمية'}</button>`;
+    const delBtn=ids.length>1?`<button type="button" class="altbtn" data-routine-delete="${id}" style="padding:5px 10px;font-size:.72rem;color:#f87171;border-color:rgba(239,68,68,.4)">${en?'Delete':'حذف'}</button>`:'';
+    return `<div style="display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;padding:10px 12px;background:var(--c);border:1px solid ${isActive?'var(--ac)':'var(--br)'};border-radius:10px">
+      <div style="display:flex;align-items:center;gap:8px;min-width:0">
+        <span style="font-weight:800;font-size:.88rem;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${name}</span>
+        ${activeTag}
+      </div>
+      <div style="display:flex;gap:6px;flex-wrap:wrap">${switchBtn}${renameBtn}${delBtn}</div>
+    </div>`;
+  }).join('');
+}
+
 // One-time, idempotent migration: copies every task out of the static SCHED object
 // into USER_SCHEDULE's identical shape, for Abdullah's account ONLY. Idempotent by
 // design — safe to call on every load, since it only ever does anything when
@@ -8948,7 +8981,10 @@ function renderPanel(jd){
     pills.push(`<div class="ppill${dn?' done':''}" id="pp-${pid}"><div class="pnam">${tn(pm.ar)}</div><div class="ptim">${fmt24(PRYT[pk]||FALLBK[pk])}</div></div>`);
   }
 
-  const tasks=getAllTasks(jd);
+  // Soft-deleted tasks stay in USER_EDITS.deletes (so AI restoreTask still works)
+  // but are hidden from the day timeline — showing greyed "Deleted" cards forever
+  // after a one-time delete was the reported bug.
+  const tasks=getAllTasks(jd).filter(t=>!t||!t._deleted);
   const addTaskBtn='';
   const en=(USER_SETTINGS.lang==='en');
   let dhm=en
@@ -9853,7 +9889,7 @@ function openSettingsScreen(){
   if(a) a.value=USER_SETTINGS.themeAccent||THEME_DEFAULTS.themeAccent;
   if(c) c.value=USER_SETTINGS.themeCard||THEME_DEFAULTS.themeCard;
   if(b) b.value=USER_SETTINGS.themeBg||THEME_DEFAULTS.themeBg;
-  renderRoutinesUI();
+  try{ renderRoutinesUI(); }catch(e){ console.warn('renderRoutinesUI failed',e); }
   applyI18n();
   renderIconPresets();
   renderThemeSwatches();
@@ -12775,6 +12811,30 @@ document.body.addEventListener('click',async e=>{
     deleteScheduleSlot(id).then(ok=>{ if(ok) showToast('Slot deleted',1800); });
     return;
   }
+  const routineSwitch=closest('[data-routine-switch]');
+  if(routineSwitch){
+    const id=routineSwitch.getAttribute('data-routine-switch');
+    switchActiveSchedule(id).then(ok=>{
+      if(ok){ try{ renderRoutinesUI(); renderSlotsUI(); }catch(e){} showToast((USER_SETTINGS.lang==='en')?'Switched workspace':'تم تبديل مساحة العمل',1800); }
+    });
+    return;
+  }
+  const routineRename=closest('[data-routine-rename]');
+  if(routineRename){
+    const id=routineRename.getAttribute('data-routine-rename');
+    const cur=(USER_SCHEDULES[id]&&USER_SCHEDULES[id].name)||'';
+    const name=prompt((USER_SETTINGS.lang==='en')?'Rename workspace:':'إعادة تسمية مساحة العمل:',cur);
+    if(name==null) return;
+    renameScheduleSlot(id,name).then(ok=>{ if(ok){ try{ renderRoutinesUI(); renderSlotsUI(); }catch(e){} showToast((USER_SETTINGS.lang==='en')?'Renamed':'تمت إعادة التسمية',1600); } });
+    return;
+  }
+  const routineDelete=closest('[data-routine-delete]');
+  if(routineDelete){
+    const id=routineDelete.getAttribute('data-routine-delete');
+    if(!confirm((USER_SETTINGS.lang==='en')?'Delete this workspace? Tasks in it will be removed. Points & streak are kept.':'حذف مساحة العمل؟ المهام داخلها ستُحذف. النقاط والاستريك محفوظة.')) return;
+    deleteScheduleSlot(id).then(ok=>{ if(ok){ try{ renderRoutinesUI(); renderSlotsUI(); }catch(e){} showToast((USER_SETTINGS.lang==='en')?'Workspace deleted':'تم حذف مساحة العمل',1800); } });
+    return;
+  }
   if(tgt.id==='setLangAr'){ setAppLang('ar'); return; }
   if(tgt.id==='setLangEn'){ setAppLang('en'); return; }
   if(tgt.id==='setMobileBack'){
@@ -12783,7 +12843,7 @@ document.body.addEventListener('click',async e=>{
   }
   if(tgt.id==='setNewRoutineBtn') {
     IS_NEW_WORKSPACE_FLOW = true;
-    closeSettingsModal();
+    closeSettingsScreen();
     OB_STEP = 2; 
     OB_ACTIVE_DAY = 'Mon';
     OB_ANSWERS = {
