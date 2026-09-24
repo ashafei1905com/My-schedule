@@ -1,6 +1,6 @@
 <!DOCTYPE html>
 <html lang="en" dir="ltr">
-<!-- cache-bust: 2026-08-26 -->
+<!-- cache-bust: 2026-09-24 -->
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1.0,maximum-scale=1.0,user-scalable=no">
@@ -363,10 +363,10 @@ html[dir="ltr"] .tc[data-c="sunrise"]{border-left:3px solid var(--or)}
 .task-icon-row{display:flex;flex-wrap:wrap;gap:8px}
 .task-icon-btn{width:40px;height:40px;border-radius:10px;border:2px solid var(--br);background:var(--c);cursor:pointer;font-size:1.2rem;display:flex;align-items:center;justify-content:center}
 .task-icon-btn.sel{border-color:var(--ac);box-shadow:0 0 0 1px var(--ac)}
-#toast{z-index:10050 !important}
+#toast{z-index:10350 !important}
 
 /* Prayer Modal */
-.modal-overlay{position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(10,14,26,.92);display:none;align-items:center;justify-content:center;z-index:10055;padding:20px}
+.modal-overlay{position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(10,14,26,.92);display:none;align-items:center;justify-content:center;z-index:10220;padding:20px}
 .modal-overlay.open{display:flex}
 .modal-box{background:var(--c2);border:2px solid var(--br);border-radius:20px;padding:28px 20px;width:100%;max-width:420px;text-align:center;box-shadow:0 16px 40px rgba(0,0,0,.7)}
 .modal-step-ind{font-size:.65rem;color:var(--mu);margin-bottom:10px}
@@ -380,6 +380,33 @@ html[dir="ltr"] .tc[data-c="sunrise"]{border-left:3px solid var(--or)}
 .opt-pts{font-size:.72rem;direction:ltr;opacity:.9;white-space:nowrap}
 .modal-back-btn{margin-top:16px;padding:9px 18px;background:rgba(239,68,68,.12);border:2px solid rgba(239,68,68,.45);border-radius:10px;color:#ef4444;font-family:'Cairo',sans-serif;font-weight:800;font-size:.82rem;cursor:pointer;transition:all .2s}
 .modal-back-btn:hover{background:rgba(239,68,68,.22)}
+.app-dialog-box{text-align:start;max-width:400px;width:min(92vw,400px);padding:22px 22px 18px;border-radius:16px;border:1px solid rgba(59,130,246,.35);box-shadow:0 20px 50px rgba(0,0,0,.55),0 0 0 1px rgba(255,255,255,.04);background:linear-gradient(165deg,var(--c2),var(--c))}
+.app-dialog-box .modal-title{text-align:start;font-size:1.05rem;font-weight:900;margin-bottom:4px}
+.app-dialog-box .modal-sub{text-align:start;margin-bottom:12px;line-height:1.5;font-size:.82rem;color:var(--so)}
+.app-dialog-input{width:100%;padding:13px 14px;border-radius:12px;border:1.5px solid var(--ac);background:rgba(10,14,26,.65);color:var(--tx);font-family:inherit;font-weight:700;font-size:.95rem;margin:8px 0 18px;outline:none;box-shadow:0 0 0 3px rgba(59,130,246,.15)}
+.app-dialog-input:focus{border-color:#60a5fa;box-shadow:0 0 0 4px rgba(59,130,246,.25)}
+.app-dialog-actions{display:flex;gap:10px;justify-content:flex-end}
+.app-dialog-actions button{min-width:100px;padding:11px 18px;border-radius:11px;font-family:inherit;font-weight:800;cursor:pointer;border:1px solid var(--br);transition:transform .15s,box-shadow .15s}
+.app-dialog-actions button:hover{transform:translateY(-1px)}
+.app-dialog-cancel{background:rgba(100,116,139,.14);color:var(--tx)}
+.app-dialog-ok{background:linear-gradient(135deg,#2563eb,#1d4ed8);color:#fff;border:none;box-shadow:0 4px 14px rgba(37,99,235,.35)}
+.tn-row{background:var(--c);border:1px solid var(--br);border-radius:14px;padding:14px 16px;transition:border-color .2s}
+.tn-row:hover{border-color:rgba(59,130,246,.35)}
+.tn-head{display:flex;align-items:center;justify-content:space-between;gap:12px}
+.tn-name{font-weight:800;font-size:.88rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.tn-time{font-size:.72rem;color:var(--mu);font-weight:700;direction:ltr;margin-top:2px}
+.tn-name{font-weight:800;font-size:.86rem;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.tn-time{font-size:.7rem;color:var(--mu);font-weight:700;direction:ltr}
+.tn-grid{display:grid;grid-template-columns:1fr;gap:8px;margin-top:10px;padding-top:10px;border-top:1px solid var(--br)}
+@media(min-width:640px){.tn-grid{grid-template-columns:1fr 1fr 1fr}}
+.tn-field{display:flex;flex-direction:column;gap:4px;font-size:.72rem;color:var(--so);font-weight:700}
+.tn-field-row{display:flex;align-items:center;gap:8px}
+.tn-field input[type="number"]{width:58px;padding:5px 6px;border-radius:8px;border:1px solid var(--br);background:var(--c2);color:var(--tx);font-family:inherit;font-weight:800}
+.tn-switch{display:inline-flex;align-items:center;gap:6px;font-size:.75rem;font-weight:800;cursor:pointer;flex-shrink:0}
+.prestige-howto{margin:12px 0 16px;padding:14px 16px;background:rgba(59,130,246,.08);border:1px solid rgba(59,130,246,.25);border-radius:12px;font-size:.8rem;line-height:1.55;color:var(--so)}
+.prestige-howto strong{color:var(--tx)}
+.prestige-howto ol{margin:8px 0 0 18px;padding:0}
+.prestige-howto li{margin:4px 0}
 .fw-chip{transition:all .2s;font-family:inherit;}
 .fw-chip:hover{border-color:var(--ac);background:rgba(59,130,246,.08);}
 .fw-chip.fw-chip-sel{border-color:var(--ac)!important;background:rgba(59,130,246,.18)!important;color:var(--tx)!important;box-shadow:0 0 0 1px var(--ac);}
@@ -446,7 +473,7 @@ html[dir="ltr"] .tc[data-c="sunrise"]{border-left:3px solid var(--or)}
 .fl-mini-no{background:rgba(100,116,139,.1);border-color:var(--br);color:var(--mu)}
 
 /* Weekly Report / History Modal */
-.report-overlay{position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(10,14,26,.95);display:none;align-items:flex-start;justify-content:center;z-index:10001;padding:40px 20px;overflow-y:auto}
+.report-overlay{position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(10,14,26,.95);display:none;align-items:flex-start;justify-content:center;z-index:10210;padding:40px 20px;overflow-y:auto}
 .report-overlay.open{display:flex}
 .report-box{background:var(--c2);border:2px solid var(--br);border-radius:20px;padding:24px 24px;width:100%;max-width:650px;margin:auto;box-shadow:0 10px 40px rgba(0,0,0,0.8);color:var(--tx)}
 .report-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:24px;padding-bottom:12px;border-bottom:2px solid var(--br)}
@@ -2185,8 +2212,8 @@ body.theme-matrix .tctime{
           <h3 data-i18n="sec_general">General</h3>
           <p class="desc" data-i18n="sec_general_desc">Manage daily tasks and schedule slots from here.</p>
           <div style="margin-bottom:18px;padding:14px;background:var(--c);border:1px solid var(--br);border-radius:12px">
-            <div style="font-size:.78rem;font-weight:800;color:var(--so);margin-bottom:8px">Schedule slots</div>
-            <p style="font-size:.72rem;color:var(--mu);margin:0 0 10px;line-height:1.45">Switch between independent schedules (Work, Vacation, Gym Focus…). Points & streak stay shared.</p>
+            <div style="font-size:.78rem;font-weight:800;color:var(--so);margin-bottom:8px" id="slotHeading">Schedule slots</div>
+            <p style="font-size:.72rem;color:var(--mu);margin:0 0 10px;line-height:1.45" id="slotHelp">Switch between independent schedules (Work, Vacation, Gym Focus…). Points & streak stay shared.</p>
             <select id="slotSelect" style="width:100%;padding:10px 12px;border-radius:10px;border:1px solid var(--br);background:var(--c2);color:var(--tx);font-family:inherit;font-weight:700;margin-bottom:10px"></select>
             <div style="display:flex;flex-wrap:wrap;gap:8px">
               <button type="button" id="slotSwitchBtn" class="altbtn" style="flex:1;min-width:110px">Switch</button>
@@ -2214,7 +2241,6 @@ body.theme-matrix .tctime{
             <label for="setFitnessTrackingEnabled" data-i18n="fitness_tracking_enable">Enable fitness & macro tracking</label>
             <input type="checkbox" id="setFitnessTrackingEnabled">
           </div>
-          <button type="button" id="btnOpenFitnessWizardFromTracking" class="altbtn" style="margin-top:10px;width:100%" data-i18n="open_fitness_wizard">🧙‍♂️ Open fitness wizard</button>
           <div class="set-actions" style="margin-top:16px">
             <button type="button" id="setSaveTrackingBtn" class="fl-submit-btn" style="margin:0" data-i18n="save">حفظ ✅</button>
           </div>
@@ -2235,40 +2261,40 @@ body.theme-matrix .tctime{
             </div>
 
             <div class="set-row" style="padding:8px 12px;background:rgba(255,255,255,.03);border:1px solid var(--br);border-radius:8px">
-              <label for="setFitnessTrackingEnabledSec" style="font-weight:700;font-size:.82rem">تفعيل تتبع اللياقة (Fitness Tracking Enabled)</label>
+              <label for="setFitnessTrackingEnabledSec" style="font-weight:700;font-size:.82rem" id="setFtEnabledLbl">Enable fitness tracking</label>
               <input type="checkbox" id="setFitnessTrackingEnabledSec">
             </div>
 
             <div id="setFitnessConfigBlock" style="display:flex;flex-direction:column;gap:12px">
               <div>
-                <label style="display:block;font-size:.78rem;font-weight:800;color:var(--so);margin-bottom:6px">1. Gender / النوع</label>
+                <label style="display:block;font-size:.78rem;font-weight:800;color:var(--so);margin-bottom:6px" id="setGenderLbl">Gender</label>
                 <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
-                  <button type="button" class="fw-chip fw-chip-sel" data-val="male" id="setGenderMale" style="padding:10px;border-radius:10px;border:2px solid var(--ac);background:rgba(59,130,246,.15);color:var(--tx);font-weight:800;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:6px">👨 Male / ذكر</button>
-                  <button type="button" class="fw-chip" data-val="female" id="setGenderFemale" style="padding:10px;border-radius:10px;border:1px solid var(--br);background:var(--c);color:var(--so);font-weight:800;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:6px">👩 Female / أنثى</button>
+                  <button type="button" class="fw-chip fw-chip-sel" data-val="male" id="setGenderMale" style="padding:10px;border-radius:10px;border:2px solid var(--ac);background:rgba(59,130,246,.15);color:var(--tx);font-weight:800;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:6px">Male</button>
+                  <button type="button" class="fw-chip" data-val="female" id="setGenderFemale" style="padding:10px;border-radius:10px;border:1px solid var(--br);background:var(--c);color:var(--so);font-weight:800;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:6px">Female</button>
                 </div>
               </div>
               <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px">
                 <div>
-                  <label for="setAge" style="display:block;font-size:.78rem;font-weight:800;color:var(--so);margin-bottom:6px">2. Age / العمر</label>
+                  <label for="setAge" style="display:block;font-size:.78rem;font-weight:800;color:var(--so);margin-bottom:6px" id="setAgeLbl">Age</label>
                   <div style="position:relative">
                     <input type="number" id="setAge" min="14" max="100" value="25" style="width:100%;padding:8px 10px;border-radius:8px;border:1px solid var(--br);background:var(--c);color:var(--tx);font-family:inherit;font-weight:800">
                   </div>
                 </div>
                 <div>
-                  <label for="setWeight" style="display:block;font-size:.78rem;font-weight:800;color:var(--so);margin-bottom:6px">3. Weight / الوزن (kg)</label>
+                  <label for="setWeight" style="display:block;font-size:.78rem;font-weight:800;color:var(--so);margin-bottom:6px" id="setWeightLbl">Weight (kg)</label>
                   <div style="position:relative">
                     <input type="number" id="setWeight" min="30" max="250" step="0.5" value="75" style="width:100%;padding:8px 10px;border-radius:8px;border:1px solid var(--br);background:var(--c);color:var(--tx);font-family:inherit;font-weight:800">
                   </div>
                 </div>
                 <div>
-                  <label for="setHeight" style="display:block;font-size:.78rem;font-weight:800;color:var(--so);margin-bottom:6px">4. Height / الطول (cm)</label>
+                  <label for="setHeight" style="display:block;font-size:.78rem;font-weight:800;color:var(--so);margin-bottom:6px" id="setHeightLbl">Height (cm)</label>
                   <div style="position:relative">
                     <input type="number" id="setHeight" min="100" max="250" value="175" style="width:100%;padding:8px 10px;border-radius:8px;border:1px solid var(--br);background:var(--c);color:var(--tx);font-family:inherit;font-weight:800">
                   </div>
                 </div>
               </div>
               <div>
-                <label for="setActivity" style="display:block;font-size:.78rem;font-weight:800;color:var(--so);margin-bottom:6px">5. Activity Level / مستوى النشاط</label>
+                <label for="setActivity" style="display:block;font-size:.78rem;font-weight:800;color:var(--so);margin-bottom:6px" id="setActivityLbl">Activity level</label>
                 <select id="setActivity" style="width:100%;padding:8px 10px;border-radius:8px;border:1px solid var(--br);background:var(--c);color:var(--tx);font-family:inherit;font-weight:800">
                   <option value="1.2">Sedentary (desk job, minimal exercise) — 1.200</option>
                   <option value="1.375">Lightly Active (training 1-3 days/wk) — 1.375</option>
@@ -2278,16 +2304,16 @@ body.theme-matrix .tctime{
                 </select>
               </div>
               <div>
-                <label style="display:block;font-size:.78rem;font-weight:800;color:var(--so);margin-bottom:6px">6. Primary Goal / الهدف الأساسي</label>
+                <label style="display:block;font-size:.78rem;font-weight:800;color:var(--so);margin-bottom:6px" id="setGoalLbl">Primary goal</label>
                 <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px">
-                  <button type="button" class="fw-chip" data-val="muscle" id="setGoalMuscle" style="padding:8px 6px;border-radius:8px;border:1px solid var(--br);background:var(--c);color:var(--so);font-size:.75rem;font-weight:800;cursor:pointer;text-align:center">💪 Build Muscle<br><span style="font-size:.64rem;opacity:.8">+250 kcal</span></button>
-                  <button type="button" class="fw-chip fw-chip-sel" data-val="recomp" id="setGoalRecomp" style="padding:8px 6px;border-radius:8px;border:2px solid var(--ac);background:rgba(59,130,246,.15);color:var(--tx);font-size:.75rem;font-weight:800;cursor:pointer;text-align:center">⚡ Recomp<br><span style="font-size:.64rem;opacity:.8">10% Deficit</span></button>
-                  <button type="button" class="fw-chip" data-val="fat_loss" id="setGoalFatLoss" style="padding:8px 6px;border-radius:8px;border:1px solid var(--br);background:var(--c);color:var(--so);font-size:.75rem;font-weight:800;cursor:pointer;text-align:center">🔥 Lose Fat<br><span style="font-size:.64rem;opacity:.8">18% Deficit</span></button>
+                  <button type="button" class="fw-chip" data-val="muscle" id="setGoalMuscle" style="padding:8px 6px;border-radius:8px;border:1px solid var(--br);background:var(--c);color:var(--so);font-size:.75rem;font-weight:800;cursor:pointer;text-align:center">Build muscle<br><span style="font-size:.64rem;opacity:.8">+250 kcal</span></button>
+                  <button type="button" class="fw-chip fw-chip-sel" data-val="recomp" id="setGoalRecomp" style="padding:8px 6px;border-radius:8px;border:2px solid var(--ac);background:rgba(59,130,246,.15);color:var(--tx);font-size:.75rem;font-weight:800;cursor:pointer;text-align:center">Recomp<br><span style="font-size:.64rem;opacity:.8">10% deficit</span></button>
+                  <button type="button" class="fw-chip" data-val="fat_loss" id="setGoalFatLoss" style="padding:8px 6px;border-radius:8px;border:1px solid var(--br);background:var(--c);color:var(--so);font-size:.75rem;font-weight:800;cursor:pointer;text-align:center">Lose fat<br><span style="font-size:.64rem;opacity:.8">15% deficit</span></button>
                 </div>
               </div>
               <div>
-                <label for="setBodyFat" style="display:block;font-size:.78rem;font-weight:800;color:var(--so);margin-bottom:6px">Body Fat % / نسبة الدهون (Optional)</label>
-                <input type="number" id="setBodyFat" min="4" max="50" step="0.5" placeholder="e.g. 15 (optional)" style="width:100%;padding:8px 10px;border-radius:8px;border:1px solid var(--br);background:var(--c);color:var(--tx);font-family:inherit;font-weight:800">
+                <label for="setBodyFat" style="display:block;font-size:.78rem;font-weight:800;color:var(--so);margin-bottom:6px" id="setBodyFatLbl">Body fat % (optional)</label>
+                <input type="number" id="setBodyFat" min="4" max="50" step="0.5" placeholder="e.g. 15" style="width:100%;padding:8px 10px;border-radius:8px;border:1px solid var(--br);background:var(--c);color:var(--tx);font-family:inherit;font-weight:800">
               </div>
 
               <!-- Real-time Scientific Target Calculation Card -->
@@ -2354,8 +2380,7 @@ body.theme-matrix .tctime{
 
               <!-- Buttons -->
               <div style="display:flex;gap:10px;margin-top:4px">
-                <button type="button" id="setSaveFitnessBtn" class="fl-submit-btn" style="flex:2;margin:0;padding:10px">Save to USER_SETTINGS ✅</button>
-                <button type="button" id="btnLaunchFitnessWizard" class="altbtn" style="flex:1;padding:10px">🧙‍♂️ Fullscreen</button>
+                <button type="button" id="setSaveFitnessBtn" class="fl-submit-btn" style="flex:1;margin:0;padding:12px" data-i18n="save">Save ✅</button>
               </div>
               <div style="margin-top:8px">
                 <button type="button" id="btn-open-macro-trends-settings" class="altbtn" style="width:100%;padding:10px;border-radius:8px;font-size:13px;font-weight:800;background:rgba(59,130,246,0.12);color:#60a5fa;border:1px solid rgba(59,130,246,0.3);cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px">
@@ -2396,11 +2421,9 @@ body.theme-matrix .tctime{
           </div>
         </div>
         <div class="set-section" id="setsec-appearance">
-          <h3 data-i18n="sec_appearance">المظهر</h3>
-          <p class="desc" data-i18n="sec_appearance_desc">أيقونة التطبيق وألوان الجدول.</p>
-          <div class="icon-presets" id="iconPresets"></div>
-          <p class="desc" style="margin-top:12px" data-i18n="icon_hint">بعد الاختيار، احذف التطبيق من الشاشة الرئيسية وأضفه من جديد لتحديث الأيقونة.</p>
-          <p class="desc" style="margin-top:18px" data-i18n="color_palette">Color palette</p>
+          <h3 data-i18n="sec_appearance">Appearance</h3>
+          <p class="desc" data-i18n="sec_appearance_desc">Schedule colors and rare themes.</p>
+          <p class="desc" style="margin-top:4px" data-i18n="color_palette">Color palette</p>
           <div class="theme-palette-row" id="themePaletteRow"></div>
           <div class="theme-custom-panel" id="themeCustomPanel">
             <div class="theme-custom-row">
@@ -2439,8 +2462,9 @@ body.theme-matrix .tctime{
         </div>
         <div class="set-section" id="setsec-prestige">
           <div id="prestigeCenterContainer">
-            <h3 id="prestigeCenterTitle">Prestige Center</h3>
-            <p class="desc" id="prestigeCenterDesc">Lifetime XP, rebirth tokens, and Mythic rewards.</p>
+            <h3 id="prestigeCenterTitle">Perfection Center</h3>
+            <p class="desc" id="prestigeCenterDesc">Lifetime XP, rebirth tokens, and rare theme rewards.</p>
+            <div class="prestige-howto" id="prestigeHowto"></div>
             <div id="prestigePanel" style="margin-top:12px">
               <div class="desc" id="prestigeHubTitle" style="font-weight:900">Prestige Hub</div>
               <p class="desc" id="prestigeStatsLine" style="margin-top:4px">Lifetime XP · Rank · Tokens</p>
@@ -2687,7 +2711,7 @@ body.theme-matrix .tctime{
 </div>
 
 <!-- Fitness Onboarding Pop-up 1 -->
-<div id="fitnessPromptModal" class="modal-overlay" style="z-index:9995">
+<div id="fitnessPromptModal" class="modal-overlay" style="z-index:10230">
   <div class="modal-box" style="max-width:440px;text-align:center">
     <div style="font-size:2.8rem;margin-bottom:8px">🏋️‍♂️</div>
     <div class="modal-title" style="font-size:1.25rem;font-weight:900;margin-bottom:6px">Do you like to track your fitness here?</div>
@@ -2707,7 +2731,7 @@ body.theme-matrix .tctime{
 </div>
 
 <!-- Fitness Wizard Pop-up 2 -->
-<div id="fitnessWizardModal" class="modal-overlay" style="z-index:9996">
+<div id="fitnessWizardModal" class="modal-overlay" style="z-index:10240">
   <div class="modal-box fw-wizard-box">
     <!-- Header with Title and Close -->
     <div class="fw-header">
@@ -3011,6 +3035,19 @@ body.theme-matrix .tctime{
   </div>
 </div>
 
+<!-- In-app prompt / confirm (replaces native browser dialogs) -->
+<div id="appDialog" class="modal-overlay" style="z-index:10320">
+  <div class="modal-box app-dialog-box" onclick="event.stopPropagation()">
+    <div class="modal-title" id="appDialogTitle">Rename</div>
+    <div class="modal-sub" id="appDialogMsg"></div>
+    <input id="appDialogInput" class="app-dialog-input" type="text" autocomplete="off">
+    <div class="app-dialog-actions">
+      <button type="button" id="appDialogCancel" class="app-dialog-cancel">Cancel</button>
+      <button type="button" id="appDialogOk" class="app-dialog-ok">OK</button>
+    </div>
+  </div>
+</div>
+
 <!-- Weekly Report / History Modal -->
 <div id="reportModal" class="report-overlay">
   <div class="report-box">
@@ -3160,7 +3197,10 @@ body.theme-matrix .tctime{
 
 <script type="module">
 
-let AI_WORKER_URL = window.AI_WORKER_URL || window.location.origin;
+// Always point at the Cloudflare Worker — GitHub Pages origin cannot handle AI/push POSTs.
+const AI_WORKER_URL = (typeof window.AI_WORKER_URL === 'string' && window.AI_WORKER_URL && window.AI_WORKER_URL !== 'REPLACE_WITH_YOUR_WORKER_URL')
+  ? window.AI_WORKER_URL
+  : 'https://falling-frost-7656.ashafei1905.workers.dev';
 window.AI_WORKER_URL = AI_WORKER_URL;
 
 const originalFetch = window.fetch;
@@ -3786,9 +3826,12 @@ async function doRebirth(){
       :'للوصول لترقية الامتياز تحتاج 3500+ من نقاط الخبرة الدائمة (رتبة سيد الزمن)',3200,'warn');
     return;
   }
-  const ok=window.confirm(en
-    ?'Upgrade prestige rank? Lifetime XP resets to 0, your points multiplier increases permanently, and you earn 1 Mythic Prestige Token.'
-    :'ترقية رتبة الامتياز والتصفير؟ سيتم تصفير نقاط الخبرة الدائمة، ويزداد مضاعف النقاط بشكل دائم، وتحصل على رمز امتياز واحد.');
+  const ok=await appConfirm(
+    en?'Rebirth?':'إعادة الولادة؟',
+    en
+      ?'Lifetime XP resets to 0. You gain 1 token and a permanent +10% points multiplier. Streak and weekly points stay.'
+      :'سيتم تصفير الخبرة الدائمة. تحصل على رمز واحد ومضاعف نقاط دائم +10٪. الاستريك ونقاط الأسبوع تبقى.'
+  );
   if(!ok) return;
   STATS.lifetime_xp=0;
   STATS.prestige_level=(STATS.prestige_level||0)+1;
@@ -3948,8 +3991,26 @@ function updatePrestigeUI(){
   const pcDesc=document.getElementById('prestigeCenterDesc');
   if(pcTitle) pcTitle.textContent=en?'Perfection Center':'مركز الامتياز';
   if(pcDesc) pcDesc.textContent=en
-    ?'Lifetime XP, rebirth tokens, and rare theme rewards.'
-    :'الخبرة الدائمة، رموز الامتياز، ومكافآت المظاهر النادرة.';
+    ?'A lightweight rank game: complete tasks, earn lifetime XP, rebirth for tokens, unlock rare themes.'
+    :'نظام رتب بسيط: أكمل المهام، اجمع الخبرة، أعد الولادة لتحصل على رموز، وافتح مظاهر نادرة.';
+  const howto=document.getElementById('prestigeHowto');
+  if(howto){
+    howto.innerHTML=en
+      ?`<strong>How it works</strong>
+        <ol>
+          <li>Every completed task adds Lifetime XP (with your prestige multiplier).</li>
+          <li>Ranks: Chaos 0 · Habit 500 · Focus 1000 · Defender 2000 · Time Lord 3500.</li>
+          <li>At 3500 XP the Rebirth button appears. Rebirth resets XP to 0, gives +1 token, and permanently adds +10% to points you earn.</li>
+          <li>Spend tokens in the shop below. Then activate the theme in Appearance.</li>
+        </ol>`
+      :`<strong>كيف يعمل</strong>
+        <ol>
+          <li>كل مهمة مكتملة تضيف نقاط خبرة دائمة (مع مضاعف الامتياز).</li>
+          <li>الرتب: فوضى 0 · عادات 500 · تركيز 1000 · مدافع 2000 · سيد الزمن 3500.</li>
+          <li>عند 3500 تظهر إعادة الولادة. تصفّر الخبرة، تمنحك رمزاً واحداً، وتزيد نقاطك +10٪ للأبد.</li>
+          <li>اصرف الرموز في المتجر ثم فعّل المظهر من تبويب المظهر.</li>
+        </ol>`;
+  }
 
   const mythicTitle=document.getElementById('mythicThemesTitle');
   const mythicDesc=document.getElementById('mythicThemesDesc');
@@ -4029,8 +4090,43 @@ function showToast(msg,ms=3500,type='ok'){
   t.textContent=msg;
   const cls={warn:' toast-warn',qada:' toast-qada',late:' toast-late',gold:' toast-gold',ok:''}[type]||'';
   t.className='show'+cls;
+  t.style.zIndex='10350';
   clearTimeout(toastT);toastT=setTimeout(()=>{if(t)t.className='';},ms);
 }
+
+function appDialog({title, message, value, mode}){
+  const overlay=document.getElementById('appDialog');
+  const titleEl=document.getElementById('appDialogTitle');
+  const msgEl=document.getElementById('appDialogMsg');
+  const input=document.getElementById('appDialogInput');
+  const okBtn=document.getElementById('appDialogOk');
+  const cancelBtn=document.getElementById('appDialogCancel');
+  const en=(USER_SETTINGS&&USER_SETTINGS.lang)==='en';
+  if(!overlay) return Promise.resolve(mode==='prompt'?null:false);
+  titleEl.textContent=title||'';
+  msgEl.textContent=message||'';
+  msgEl.style.display=message?'block':'none';
+  const isPrompt=mode==='prompt';
+  input.style.display=isPrompt?'block':'none';
+  if(isPrompt){ input.value=value==null?'':String(value); }
+  okBtn.textContent=en?'OK':'موافق';
+  cancelBtn.textContent=en?'Cancel':'إلغاء';
+  overlay.classList.add('open');
+  setTimeout(()=>{ try{ if(isPrompt) input.focus(); input.select?.(); }catch(e){} },40);
+  return new Promise(resolve=>{
+    const finish=(result)=>{
+      overlay.classList.remove('open');
+      okBtn.onclick=null; cancelBtn.onclick=null; overlay.onclick=null; input.onkeydown=null;
+      resolve(result);
+    };
+    okBtn.onclick=(ev)=>{ ev.stopPropagation(); finish(isPrompt?input.value:true); };
+    cancelBtn.onclick=(ev)=>{ ev.stopPropagation(); finish(isPrompt?null:false); };
+    overlay.onclick=(ev)=>{ if(ev.target===overlay) finish(isPrompt?null:false); };
+    input.onkeydown=(ev)=>{ if(ev.key==='Enter'){ ev.preventDefault(); finish(input.value); } if(ev.key==='Escape'){ finish(null); } };
+  });
+}
+function appPrompt(title, value){ return appDialog({title, value, mode:'prompt'}); }
+function appConfirm(title, message){ return appDialog({title, message, mode:'confirm'}); }
 
 function flashPenalty(){const bar=document.getElementById('sbar');if(!bar)return;bar.classList.add('penalty-flash');setTimeout(()=>bar.classList.remove('penalty-flash'),1000);}
 function pulseStreakWin(){const el=document.getElementById('sv1');if(!el)return;el.classList.add('streak-win');setTimeout(()=>el.classList.remove('streak-win'),800);}
@@ -4827,7 +4923,7 @@ const I18N={
     trends_btn_settings:'📊 اتجاهات النقاط والإنجاز',
     fitness_tracking_enable:'تفعيل تتبع اللياقة والماكروز',
     open_fitness_wizard:'🧙‍♂️ فتح معالج اللياقة',
-    sec_appearance:'المظهر', sec_appearance_desc:'أيقونة التطبيق وألوان الجدول.',
+    sec_appearance:'المظهر', sec_appearance_desc:'ألوان الجدول والمظاهر النادرة.',
     icon_hint:'بعد الاختيار، احذف التطبيق من الشاشة الرئيسية وأضفه من جديد لتحديث الأيقونة.',
     sec_language:'اللغة', sec_language_desc:'واجهة التطبيق.',
     sec_account:'الحساب', sec_account_desc:'إدارة جلسة الدخول.',
@@ -4865,7 +4961,7 @@ const I18N={
     trends_btn_settings:'📊 Points & completion trends',
     fitness_tracking_enable:'Enable fitness & macro tracking',
     open_fitness_wizard:'🧙‍♂️ Open fitness wizard',
-    sec_appearance:'Appearance', sec_appearance_desc:'App icon and schedule colors.',
+    sec_appearance:'Appearance', sec_appearance_desc:'Schedule colors and rare themes.',
     icon_hint:'After choosing, remove the app from the home screen and add it again to refresh the icon.',
     sec_language:'Language', sec_language_desc:'App interface language.',
     sec_account:'Account', sec_account_desc:'Session management.',
@@ -5093,6 +5189,83 @@ function applyI18n(){
   if(prayerLocTitle) prayerLocTitle.textContent=isEn?'Prayer locations':'أماكن الصلاة';
   const prayerLocDesc=document.getElementById('prayerLocDesc');
   if(prayerLocDesc) prayerLocDesc.textContent=isEn?'Mosque is fixed at max points. Add your own places below (points capped at Mosque).':'المسجد ثابت بأعلى النقاط. أضف أماكنك بالأسفل (بحد أقصى نقاط المسجد).';
+  const prayerLocAdd=document.getElementById('prayerLocAddBtn');
+  if(prayerLocAdd) prayerLocAdd.textContent=isEn?'Add':'إضافة';
+  const slotHeading=document.getElementById('slotHeading');
+  if(slotHeading) slotHeading.textContent=isEn?'Schedule slots':'خانات الجدول';
+  const slotHelp=document.getElementById('slotHelp');
+  if(slotHelp) slotHelp.textContent=isEn?'Switch between independent schedules (Work, Vacation, Gym Focus…). Points & streak stay shared.':'بدّل بين جداول مستقلة (عمل، إجازة…). النقاط والاستريك مشتركة.';
+  const slotSwitch=document.getElementById('slotSwitchBtn');
+  if(slotSwitch) slotSwitch.textContent=isEn?'Switch':'تبديل';
+  const slotCreate=document.getElementById('slotCreateBtn');
+  if(slotCreate) slotCreate.textContent=isEn?'+ New slot':'+ خانة جديدة';
+  const slotRename=document.getElementById('slotRenameBtn');
+  if(slotRename) slotRename.textContent=isEn?'Rename':'إعادة تسمية';
+  const slotDelete=document.getElementById('slotDeleteBtn');
+  if(slotDelete) slotDelete.textContent=isEn?'Delete':'حذف';
+  const setFtLbl=document.getElementById('setFtEnabledLbl');
+  if(setFtLbl) setFtLbl.textContent=isEn?'Enable fitness tracking':'تفعيل تتبع اللياقة';
+  const setElText2=(id,en,ar)=>{ const el=document.getElementById(id); if(el) el.textContent=isEn?en:ar; };
+  setElText2('setGenderLbl','Gender','الجنس');
+  setElText2('setGenderMale','Male','ذكر');
+  setElText2('setGenderFemale','Female','أنثى');
+  setElText2('setAgeLbl','Age','العمر');
+  setElText2('setWeightLbl','Weight (kg)','الوزن (كجم)');
+  setElText2('setHeightLbl','Height (cm)','الطول (سم)');
+  setElText2('setActivityLbl','Activity level','مستوى النشاط');
+  setElText2('setGoalLbl','Primary goal','الهدف الأساسي');
+  setElText2('setBodyFatLbl','Body fat % (optional)','نسبة الدهون % (اختياري)');
+  const actSel=document.getElementById('setActivity');
+  if(actSel){
+    const cur=actSel.value;
+    const opts=isEn?[
+      ['1.2','Sedentary — little or no exercise'],
+      ['1.375','Lightly active — 1–3 days/week'],
+      ['1.55','Moderately active — 4–5 days/week'],
+      ['1.725','Very active — 6–7 days/week'],
+      ['1.9','Extremely active — hard daily training']
+    ]:[
+      ['1.2','خامل — بدون تمرين تقريباً'],
+      ['1.375','نشاط خفيف — ١–٣ أيام/أسبوع'],
+      ['1.55','نشاط متوسط — ٤–٥ أيام/أسبوع'],
+      ['1.725','نشاط عالٍ — ٦–٧ أيام/أسبوع'],
+      ['1.9','نشاط شديد — تدريب يومي شاق']
+    ];
+    actSel.innerHTML=opts.map(([v,l])=>`<option value="${v}">${l}</option>`).join('');
+    actSel.value=cur||'1.55';
+  }
+  const gm=document.getElementById('setGoalMuscle');
+  if(gm) gm.innerHTML=isEn?'Build muscle<br><span style="font-size:.64rem;opacity:.8">+250 kcal</span>':'بناء عضل<br><span style="font-size:.64rem;opacity:.8">+٢٥٠ سعرة</span>';
+  const gr=document.getElementById('setGoalRecomp');
+  if(gr) gr.innerHTML=isEn?'Recomp<br><span style="font-size:.64rem;opacity:.8">10% deficit</span>':'إعادة تركيب<br><span style="font-size:.64rem;opacity:.8">عجز ١٠٪</span>';
+  const gf=document.getElementById('setGoalFatLoss');
+  if(gf) gf.innerHTML=isEn?'Lose fat<br><span style="font-size:.64rem;opacity:.8">15% deficit</span>':'حرق دهون<br><span style="font-size:.64rem;opacity:.8">عجز ١٥٪</span>';
+  const saveFit=document.getElementById('setSaveFitnessBtn');
+  if(saveFit) saveFit.textContent=isEn?'Save targets':'حفظ الأهداف';
+  const fwTitle2=document.getElementById('fwTitle');
+  if(fwTitle2) fwTitle2.textContent=isEn?'Fitness & macros':'اللياقة والماكروز';
+  const setClose=document.getElementById('setCloseBtn');
+  if(setClose) setClose.textContent=isEn?'Close':'إغلاق';
+  const setTitleEl=document.getElementById('setTitle');
+  if(setTitleEl) setTitleEl.textContent=isEn?'⚙️ Settings':'⚙️ الإعدادات';
+  const mobileBack=document.getElementById('setMobileBack');
+  if(mobileBack) mobileBack.textContent=isEn?'← Back':'← رجوع';
+  // Reports section labels
+  const secReports=document.querySelector('#setsec-reports h3');
+  if(secReports) secReports.textContent=isEn?'Reports':'التقارير';
+  const secReportsDesc=document.querySelector('#setsec-reports .desc');
+  if(secReportsDesc) secReportsDesc.textContent=isEn?'Past weekly report history.':'سجل التقارير الأسبوعية السابقة.';
+  const reportHistBtn=document.getElementById('btn-report-history');
+  if(reportHistBtn) reportHistBtn.textContent=isEn?'🗂️ Report history':'🗂️ سجل التقارير';
+  // Notifications section heading
+  const secNotif=document.querySelector('#setsec-notifications h3');
+  if(secNotif) secNotif.textContent=isEn?'Reminders':'التذكيرات';
+  const secNotifDesc=document.querySelector('#setsec-notifications > .desc');
+  if(secNotifDesc) secNotifDesc.textContent=isEn
+    ?'Reminders sync to the cloud for the next 14 days automatically.'
+    :'تعمل التذكيرات وتتزامن سحابياً لمدة ١٤ يوماً قادمة بشكل تلقائي.';
+  try{ updatePrestigeUI(); }catch(e){}
+  try{ renderTaskNotifList(); }catch(e){}
 
   // Fitness Wizard Bilingual UI
   const setElText = (id, en, ar) => { const el = document.getElementById(id); if(el) el.textContent = isEn ? en : ar; };
@@ -6378,11 +6551,33 @@ function aiLoadSessionsFromRaw(raw){
 }
 
 async function saveAiChat(){
-  await sSet(LS.aiChat,{sessions:AI_SESSIONS,activeId:AI_ACTIVE_SESSION_ID});
+  // Strip undefined / non-JSON values so Firestore setDoc never rejects the whole write.
+  const cleanSessions=(AI_SESSIONS||[]).map(s=>{
+    if(!s||typeof s!=='object') return null;
+    const msgs=(s.messages||[]).map(m=>{
+      if(!m||typeof m!=='object') return null;
+      return {
+        role: m.role==null?'assistant':String(m.role),
+        content: m.content==null?'':String(m.content),
+        ts: typeof m.ts==='number'?m.ts:Date.now()
+      };
+    }).filter(Boolean);
+    return {
+      id: s.id==null?aiGenSessionId():String(s.id),
+      title: s.title==null?'Chat':String(s.title),
+      startedAt: typeof s.startedAt==='number'?s.startedAt:Date.now(),
+      lastMsgAt: typeof s.lastMsgAt==='number'?s.lastMsgAt:Date.now(),
+      messages: msgs
+    };
+  }).filter(Boolean);
+  await sSet(LS.aiChat,{sessions:cleanSessions,activeId:AI_ACTIVE_SESSION_ID||null});
   const user=fbAuth.currentUser;
   if(!user)return;
   try{
-    await setDoc(doc(fbDb,'users',user.uid),{aiChat:AI_SESSIONS,aiActiveSessionId:AI_ACTIVE_SESSION_ID},{merge:true});
+    await setDoc(doc(fbDb,'users',user.uid),{
+      aiChat:cleanSessions,
+      aiActiveSessionId:AI_ACTIVE_SESSION_ID||null
+    },{merge:true});
   }catch(e){console.warn('aiChat cloud save failed',e);}
 }
 
@@ -6913,7 +7108,12 @@ async function fetchPrayers(){
 // "must stay open" requirement once permission is granted. isIOS()/isStandalonePWA()
 // below are therefore still load-bearing, not legacy leftovers.
 const LS_NOTIF_PREF='sc:notifPref1';
-AI_WORKER_URL = window.AI_WORKER_URL || window.location.origin;
+// Keep the real Worker URL; never fall back to GitHub Pages origin (returns HTML → parse errors).
+if (!window.AI_WORKER_URL || window.AI_WORKER_URL === window.location.origin || window.AI_WORKER_URL === 'REPLACE_WITH_YOUR_WORKER_URL') {
+  window.AI_WORKER_URL = 'https://falling-frost-7656.ashafei1905.workers.dev';
+}
+// AI_WORKER_URL is const above; runtime callers use window.AI_WORKER_URL
+try { /* reaffirm */ } catch (e) {}
 const VAPID_PUBLIC_KEY='BKgn0lwYCrrfdSIX6PSaaR34nEO1g9FkZ9V3mlZmBAWY_fE7LcbI4osZ9CP8tQsfU1R5vLbg4S0GhNL3QiIOSnQ'; // matches wrangler.toml [vars] VAPID_PUBLIC_KEY — regenerated 2026-07-21 after the old keypair produced "DataError: Invalid EC key in JSON Web Key" on every push send, both sides of this pair MUST always match exactly or subscriptions silently fail
 let NOTIF_ENABLED=true;
 let PUSH_SUBSCRIPTION=null;
@@ -7169,22 +7369,27 @@ function renderTaskNotifList(){
   list.innerHTML=tasks.map(t=>{
     const id=t[0];
     const cfg=getTaskNotifConfig(id);
-    const open=list.querySelector(`[data-notif-expand="${id}"]`)?.open;
-    return `<div class="mythic-card" style="flex-direction:column;align-items:stretch;padding:12px" data-notif-row="${id}">
-      <div style="display:flex;justify-content:space-between;align-items:center;gap:10px">
-        <div style="font-weight:800;font-size:.85rem">${(t[3]||'')} ${tn(t[4])||t[4]}</div>
-        <label style="display:flex;align-items:center;gap:6px;font-size:.75rem;cursor:pointer">
-          <input type="checkbox" data-notif-enabled="${id}" ${cfg.enabled?'checked':''}>
-          ${en?'On':'تشغيل'}
-        </label>
+    const timeStr=t[1]||'';
+    return `<div class="tn-row" data-notif-row="${id}">
+      <div class="tn-head">
+        <div style="min-width:0">
+          <div class="tn-name">${(t[3]||'')} ${tn(t[4])||t[4]}</div>
+          <div class="tn-time">${timeStr}</div>
+        </div>
+        <label class="tn-switch"><input type="checkbox" data-notif-enabled="${id}" ${cfg.enabled?'checked':''}> ${en?'On':'تشغيل'}</label>
       </div>
-      <button type="button" class="altbtn" style="margin-top:8px;align-self:flex-start" data-notif-toggle-detail="${id}">${en?'Details ▾':'التفاصيل ▾'}</button>
-      <div data-notif-detail="${id}" style="display:none;margin-top:10px;padding-top:10px;border-top:1px solid var(--br);font-size:.75rem">
-        <label style="display:flex;align-items:center;gap:8px;margin-bottom:8px"><input type="checkbox" data-notif-lead="${id}" ${cfg.leadEnabled?'checked':''}> ${en?'Notify before start':'قبل البداية'}
-          <input type="number" min="1" max="180" value="${cfg.leadMin}" data-notif-lead-min="${id}" style="width:56px;padding:4px;border-radius:6px;border:1px solid var(--br);background:var(--c);color:var(--tx)"> ${en?'min':'د'}</label>
-        <label style="display:flex;align-items:center;gap:8px;margin-bottom:8px"><input type="checkbox" data-notif-start="${id}" ${cfg.startEnabled?'checked':''}> ${en?'Notify at start':'عند البداية'}</label>
-        <label style="display:flex;align-items:center;gap:8px"><input type="checkbox" data-notif-end="${id}" ${cfg.endLeadEnabled?'checked':''}> ${en?'Notify before end':'قبل النهاية'}
-          <input type="number" min="1" max="180" value="${cfg.endLeadMin}" data-notif-end-min="${id}" style="width:56px;padding:4px;border-radius:6px;border:1px solid var(--br);background:var(--c);color:var(--tx)"> ${en?'min':'د'}</label>
+      <div class="tn-grid">
+        <label class="tn-field">${en?'Before start':'قبل البداية'}
+          <span class="tn-field-row"><input type="checkbox" data-notif-lead="${id}" ${cfg.leadEnabled?'checked':''}>
+          <input type="number" min="1" max="180" value="${cfg.leadMin}" data-notif-lead-min="${id}"> ${en?'min':'د'}</span>
+        </label>
+        <label class="tn-field">${en?'At start':'عند البداية'}
+          <span class="tn-field-row"><input type="checkbox" data-notif-start="${id}" ${cfg.startEnabled?'checked':''}></span>
+        </label>
+        <label class="tn-field">${en?'Before end':'قبل النهاية'}
+          <span class="tn-field-row"><input type="checkbox" data-notif-end="${id}" ${cfg.endLeadEnabled?'checked':''}>
+          <input type="number" min="1" max="180" value="${cfg.endLeadMin}" data-notif-end-min="${id}"> ${en?'min':'د'}</span>
+        </label>
       </div>
     </div>`;
   }).join('');
@@ -7274,7 +7479,9 @@ async function syncPushSchedule(forceRenew = false, silent = true){
   }
 
   const reminders = buildUpcomingReminderPayload(14);
-  const workerUrl = (typeof AI_WORKER_URL === 'string' && AI_WORKER_URL) ? AI_WORKER_URL.replace(/\/$/, '') : window.location.origin;
+  const workerUrl = (typeof window.AI_WORKER_URL === 'string' && window.AI_WORKER_URL)
+  ? window.AI_WORKER_URL.replace(/\/$/, '')
+  : 'https://falling-frost-7656.ashafei1905.workers.dev';
 
   try{
     const res = await fetch(workerUrl + '/api/save-subscription',{
@@ -7312,7 +7519,9 @@ async function testPushNotification(){
   // 1. Ensure service worker and subscription
   await syncPushSchedule(false, false);
 
-  const workerUrl = (typeof AI_WORKER_URL === 'string' && AI_WORKER_URL) ? AI_WORKER_URL.replace(/\/$/, '') : window.location.origin;
+  const workerUrl = (typeof window.AI_WORKER_URL === 'string' && window.AI_WORKER_URL)
+  ? window.AI_WORKER_URL.replace(/\/$/, '')
+  : 'https://falling-frost-7656.ashafei1905.workers.dev';
   const uid = getNotificationUid();
 
   let cloudSuccess = false;
@@ -7899,22 +8108,26 @@ function showReportHistoryList(){
   const titleEl=document.getElementById('reportTitle');
   const rangeEl=document.getElementById('reportRange');
   if(!el) return;
-  if(titleEl) titleEl.textContent='🗂️ سجل كل التقارير الأسبوعية';
+  const en=(USER_SETTINGS&&USER_SETTINGS.lang)==='en';
+  if(titleEl) titleEl.textContent=en?'Weekly report history':'سجل كل التقارير الأسبوعية';
   
-  // Clean up any duplicates before rendering
   migrateSavedReports();
 
-  if(rangeEl) rangeEl.textContent=savedReports.length?`${savedReports.length} تقرير محفوظ`:'';
+  if(rangeEl) rangeEl.textContent=savedReports.length
+    ?(en?`${savedReports.length} saved report${savedReports.length===1?'':'s'}`:`${savedReports.length} تقرير محفوظ`)
+    :'';
 
   if(!savedReports.length){
-    el.innerHTML='<div class="history-empty">لا يوجد أي تقرير أسبوعي محفوظ بعد — أول تقرير يُحفظ تلقائياً أول مرة تفتح "تقرير الأسبوع" يوم السبت.</div>';
+    el.innerHTML=en
+      ?'<div class="history-empty">No weekly reports saved yet. The first one is stored automatically the first Saturday you open Weekly report.</div>'
+      :'<div class="history-empty">لا يوجد أي تقرير أسبوعي محفوظ بعد — أول تقرير يُحفظ تلقائياً أول مرة تفتح "تقرير الأسبوع" يوم السبت.</div>';
   }else{
     el.innerHTML=savedReports.map((r,i)=>`
       <div class="report-history-item" data-hist-idx="${i}">
         <span style="color:var(--so);font-weight:700">${r.weekStart} → ${r.weekEnd||''}</span>
         <span style="display:flex;align-items:center;gap:10px">
           <span><b>${r.totalPts}⭐</b> <span style="color:var(--mu);font-weight:800">(${r.pct||0}%)</span></span>
-          <button class="report-close" data-action="delreport" data-hist-idx="${i}" style="padding:4px 10px;font-size:.75rem" type="button">🗑️ حذف</button>
+          <button class="report-close" data-action="delreport" data-hist-idx="${i}" style="padding:4px 10px;font-size:.75rem" type="button">${en?'Delete':'حذف'}</button>
         </span>
       </div>
     `).join('');
@@ -7931,14 +8144,15 @@ function showReportHistoryDetail(idx){
   const titleEl=document.getElementById('reportTitle');
   const rangeEl=document.getElementById('reportRange');
   if(!el) return;
-  if(titleEl) titleEl.textContent=`📊 تقرير ${r.weekStart}`;
-  if(rangeEl) rangeEl.textContent=`من ${r.weekStart} إلى ${r.weekEnd||''}`;
+  const en=(USER_SETTINGS&&USER_SETTINGS.lang)==='en';
+  if(titleEl) titleEl.textContent=en?`Report ${r.weekStart}`:`تقرير ${r.weekStart}`;
+  if(rangeEl) rangeEl.textContent=en?`${r.weekStart} → ${r.weekEnd||''}`:`من ${r.weekStart} إلى ${r.weekEnd||''}`;
   el.innerHTML=`
     <div style="display:flex;gap:8px;margin-bottom:16px">
-      <button class="report-back-btn" id="btn-back-to-history-list" type="button">← رجوع للسجل</button>
-      <button class="report-close" data-action="delreport" data-hist-idx="${idx}" type="button">🗑️ حذف هذا التقرير</button>
+      <button class="report-back-btn" id="btn-back-to-history-list" type="button">${en?'← Back to list':'← رجوع للسجل'}</button>
+      <button class="report-close" data-action="delreport" data-hist-idx="${idx}" type="button">${en?'Delete this report':'حذف هذا التقرير'}</button>
     </div>
-    ${r.snapshotHtml||'<div style="color:var(--mu)">لا توجد تفاصيل محفوظة لهذا التقرير القديم</div>'}`;
+    ${r.snapshotHtml||(en?'<div style="color:var(--mu)">No details saved for this older report.</div>':'<div style="color:var(--mu)">لا توجد تفاصيل محفوظة لهذا التقرير القديم</div>')}`;
   setTimeout(()=>{
     if(typeof renderReportD3MiniChart==='function' && r.dayStatsList){
       renderReportD3MiniChart('reportD3Chart', r.dayStatsList, (USER_SETTINGS&&USER_SETTINGS.lang)==='en');
@@ -7957,7 +8171,7 @@ async function deleteSavedReport(idx){
   if(idx<0||idx>=savedReports.length)return;
   savedReports.splice(idx,1);
   await saveAll();
-  showToast('🗑️ تم حذف التقرير',2200);
+  showToast((USER_SETTINGS&&USER_SETTINGS.lang)==='en'?'Report deleted':'تم حذف التقرير',2200);
   showReportHistoryList();
 }
 
@@ -9821,7 +10035,7 @@ async function handleFitnessWizardSave(){
     try{ await saveUserSettings(); }catch(e){}
     updateUI();
     renderFitnessSettingsStats();
-    showToast(USER_SETTINGS.lang==='en' ? 'Fitness targets calculated & applied in USER_SETTINGS ✅' : 'تم حساب وتطبيق أهداف اللياقة في الإعدادات ✅', 2500);
+    showToast(USER_SETTINGS.lang==='en' ? 'Fitness targets saved' : 'تم حفظ أهداف اللياقة', 2200);
   } finally {
     handleFitnessWizardSave._saving = false;
   }
@@ -9874,7 +10088,7 @@ async function handleSettingsFitnessSave(){
   try{ await saveUserSettings(); }catch(e){}
   updateUI();
   renderFitnessSettingsStats();
-  showToast(USER_SETTINGS.lang==='en' ? 'Fitness targets saved in USER_SETTINGS ✅' : 'تم حفظ بيانات وأهداف اللياقة في الإعدادات ✅', 2200);
+  showToast(USER_SETTINGS.lang==='en' ? 'Fitness targets saved' : 'تم حفظ أهداف اللياقة', 2200);
 }
 
 function openSettingsScreen(){
@@ -9930,9 +10144,9 @@ function openSettingsScreen(){
   if(b) b.value=USER_SETTINGS.themeBg||THEME_DEFAULTS.themeBg;
   try{ renderRoutinesUI(); }catch(e){ console.warn('renderRoutinesUI failed',e); }
   applyI18n();
-  renderIconPresets();
   renderThemeSwatches();
   try{ renderSlotsUI(); }catch(e){}
+  try{ renderTaskNotifList(); renderPrayerLocList(); updatePrestigeUI(); }catch(e){}
   // Always raise above leftover overlays (landing / toast stacking)
   const ss=document.getElementById('settingsScreen');
   if(ss){ ss.style.zIndex='10150'; ss.classList.add('open'); }
@@ -10687,7 +10901,12 @@ function aiMemoryBlock(){
 // The Worker holds the real Anthropic API key server-side — this file never contains
 // it, so it's safe to be in a public GitHub repo. Replace WORKER_URL below with your
 // deployed Worker's URL once you've completed the Cloudflare setup.
-AI_WORKER_URL = window.AI_WORKER_URL || window.location.origin;
+// Keep the real Worker URL; never fall back to GitHub Pages origin (returns HTML → parse errors).
+if (!window.AI_WORKER_URL || window.AI_WORKER_URL === window.location.origin || window.AI_WORKER_URL === 'REPLACE_WITH_YOUR_WORKER_URL') {
+  window.AI_WORKER_URL = 'https://falling-frost-7656.ashafei1905.workers.dev';
+}
+// AI_WORKER_URL is const above; runtime callers use window.AI_WORKER_URL
+try { /* reaffirm */ } catch (e) {}
 
 // Chaos Coordinator AI: Elite Personal Assistant, Sports Nutritionist & Behavioral Habit Coach.
 function calculateFitnessTargets(m){
@@ -12444,7 +12663,11 @@ function aiToggleFullScreen(){
 
 document.body.addEventListener('click',async e=>{
   const tgt=e.target;
-  const closest=sel=>tgt.closest(sel);
+  const closest=sel=>tgt.closest?tgt.closest(sel):null;
+  if(closest && closest('#appDialog .modal-box')){
+    // Handled by appDialog buttons; don't let settings click-routing steal it
+    if(tgt.id==='appDialogOk'||tgt.id==='appDialogCancel') return;
+  }
 
   // ===== Food Log Modal wiring =====
   const flOpt=closest('.fl-opt');
@@ -12527,27 +12750,26 @@ document.body.addEventListener('click',async e=>{
   }
 
   if(tgt.id==='btn-notif-toggle'){
+    const enLang=(USER_SETTINGS&&USER_SETTINGS.lang)==='en';
     if(!NOTIF_ENABLED){
       const granted=await requestNotifPermission(false);
       if(!granted)return;
       NOTIF_ENABLED=true;
       await saveNotifPref();
       await syncPushSchedule(false, false);
-      showToast('🔔 التذكيرات تعمل تلقائياً — هتوصلك إشعارات حتى لو التطبيق مقفول',3000);
+      showToast(enLang
+        ?'🔔 Reminders are on — you will get notifications even if the app is closed'
+        :'🔔 التذكيرات تعمل تلقائياً — هتوصلك إشعارات حتى لو التطبيق مقفول',3000);
     }else{
       NOTIF_ENABLED=false;
       await saveNotifPref();
-      // Unsubscribe the browser's push manager so the OS/browser stops holding this
-      // endpoint alive — the Worker-side row will naturally stop being useful too
-      // once no new reminders are synced, but explicitly unsubscribing is cleaner
-      // than leaving a dangling subscription the user thinks is off.
       try{
         const reg=await navigator.serviceWorker?.getRegistration?.();
         const sub=await reg?.pushManager?.getSubscription?.();
         if(sub) await sub.unsubscribe();
       }catch(e){console.warn('push unsubscribe failed',e);}
       PUSH_SUBSCRIPTION=null;
-      showToast('🔕 التذكيرات اتقفلت',2200);
+      showToast(enLang?'🔕 Reminders turned off':'🔕 التذكيرات اتقفلت',2200);
     }
     updateAuthUI(fbAuth.currentUser);
     return;
@@ -12559,9 +12781,10 @@ document.body.addEventListener('click',async e=>{
   }
 
   if(tgt.id==='btn-notif-renew'){
-    showToast('🔄 جاري تجديد الاشتراك ومزامنة التذكيرات لـ ١٤ يوماً...', 2500);
+    const enLang=(USER_SETTINGS&&USER_SETTINGS.lang)==='en';
+    showToast(enLang?'🔄 Renewing subscription and scheduling 14 days…':'🔄 جاري تجديد الاشتراك ومزامنة التذكيرات لـ ١٤ يوماً...', 2500);
     await syncPushSchedule(true, false);
-    showToast('✅ تم تجديد الاشتراك السحابي ومزامنة الجدول بنجاح!', 3500);
+    showToast(enLang?'✅ Cloud subscription renewed and schedule synced':'✅ تم تجديد الاشتراك السحابي ومزامنة الجدول بنجاح!', 3500);
     return;
   }
 
@@ -12665,7 +12888,6 @@ document.body.addEventListener('click',async e=>{
     return;
   }
   if(tgt.id==='btn-open-macro-trends-settings' || (tgt.closest && tgt.closest('#btn-open-macro-trends-settings'))){
-    document.getElementById('settingsScreen')?.classList.remove('open');
     showMacroTrendsModal(typeof SELECTED_DATE !== 'undefined' ? SELECTED_DATE : TODAY);
     return;
   }
@@ -12675,7 +12897,6 @@ document.body.addEventListener('click',async e=>{
     return;
   }
   if(tgt.id==='btn-trends-from-settings'){
-    document.getElementById('settingsScreen')?.classList.remove('open');
     showTrendsModal('current_week');
     return;
   }
@@ -12725,7 +12946,6 @@ document.body.addEventListener('click',async e=>{
   if(tgt.closest && (tgt.closest('#btnCloseFitnessWizard') || tgt.closest('#btnCancelFitnessWizard'))){ closeFitnessWizardModal(); return; }
   if(tgt.id==='fitnessWizardModal'){ closeFitnessWizardModal(); return; }
   if(tgt.closest && tgt.closest('#btnSaveFitnessWizard')){ await handleFitnessWizardSave(); return; }
-  if(tgt.closest && (tgt.closest('#btnOpenFitnessWizardFromTracking') || tgt.closest('#btnLaunchFitnessWizard'))){ openFitnessWizardModal(); return; }
   if(tgt.closest && (tgt.closest('#wizTabConfig') || tgt.closest('#btnBackToConfig'))){ switchFitnessWizardView('config', 'left'); return; }
   if(tgt.closest && (tgt.closest('#wizTabResult') || tgt.closest('#btnCalcAndShowResults'))){ switchFitnessWizardView('result', 'right'); return; }
   if(tgt.id==='setSaveFitnessBtn'){ await handleSettingsFitnessSave(); return; }
@@ -12833,29 +13053,34 @@ document.body.addEventListener('click',async e=>{
   if(tgt.id==='slotSwitchBtn'){
     const id=document.getElementById('slotSelect')?.value;
     if(!id) return;
+    const en=(USER_SETTINGS.lang==='en');
     switchActiveSchedule(id).then(ok=>{
-      if(ok) showToast('Switched schedule slot',1800);
+      if(ok) showToast(en?'Switched schedule':'تم تبديل الجدول',1800);
     });
     return;
   }
   if(tgt.id==='slotCreateBtn'){
-    const name=prompt('New schedule slot name (e.g. Work, Vacation, Gym Focus):','');
+    const en=(USER_SETTINGS.lang==='en');
+    const name=await appPrompt(en?'New schedule name':'اسم الجدول الجديد', en?'Work':'عمل');
     if(name==null) return;
-    createScheduleSlot(name).then(()=>showToast('New schedule slot created',2000));
+    createScheduleSlot(name).then(()=>showToast(en?'New schedule created':'تم إنشاء جدول جديد',2000));
     return;
   }
   if(tgt.id==='slotRenameBtn'){
     const id=document.getElementById('slotSelect')?.value||ACTIVE_SCHEDULE_ID;
     const cur=(USER_SCHEDULES[id]&&USER_SCHEDULES[id].name)||'';
-    const name=prompt('Rename schedule slot:',cur);
+    const en=(USER_SETTINGS.lang==='en');
+    const name=await appPrompt(en?'Rename schedule':'إعادة تسمية الجدول',cur);
     if(name==null) return;
-    renameScheduleSlot(id,name).then(ok=>{ if(ok) showToast('Renamed',1600); });
+    renameScheduleSlot(id,name).then(ok=>{ if(ok) showToast(en?'Renamed':'تمت إعادة التسمية',1600); });
     return;
   }
   if(tgt.id==='slotDeleteBtn'){
     const id=document.getElementById('slotSelect')?.value||ACTIVE_SCHEDULE_ID;
-    if(!confirm('Delete this schedule slot? Tasks in it will be removed. Points & streak are kept.')) return;
-    deleteScheduleSlot(id).then(ok=>{ if(ok) showToast('Slot deleted',1800); });
+    const en=(USER_SETTINGS.lang==='en');
+    const ok=await appConfirm(en?'Delete this schedule?':'حذف هذا الجدول؟', en?'Tasks in it will be removed. Points & streak stay.':'المهام داخله ستُحذف. النقاط والاستريك تبقى.');
+    if(!ok) return;
+    deleteScheduleSlot(id).then(ok2=>{ if(ok2) showToast(en?'Schedule deleted':'تم حذف الجدول',1800); });
     return;
   }
   const routineSwitch=closest('[data-routine-switch]');
@@ -12870,7 +13095,7 @@ document.body.addEventListener('click',async e=>{
   if(routineRename){
     const id=routineRename.getAttribute('data-routine-rename');
     const cur=(USER_SCHEDULES[id]&&USER_SCHEDULES[id].name)||'';
-    const name=prompt((USER_SETTINGS.lang==='en')?'Rename workspace:':'إعادة تسمية مساحة العمل:',cur);
+    const name=await appPrompt((USER_SETTINGS.lang==='en')?'Rename workspace':'إعادة تسمية مساحة العمل',cur);
     if(name==null) return;
     renameScheduleSlot(id,name).then(ok=>{ if(ok){ try{ renderRoutinesUI(); renderSlotsUI(); }catch(e){} showToast((USER_SETTINGS.lang==='en')?'Renamed':'تمت إعادة التسمية',1600); } });
     return;
@@ -12878,7 +13103,11 @@ document.body.addEventListener('click',async e=>{
   const routineDelete=closest('[data-routine-delete]');
   if(routineDelete){
     const id=routineDelete.getAttribute('data-routine-delete');
-    if(!confirm((USER_SETTINGS.lang==='en')?'Delete this workspace? Tasks in it will be removed. Points & streak are kept.':'حذف مساحة العمل؟ المهام داخلها ستُحذف. النقاط والاستريك محفوظة.')) return;
+    const okDel=await appConfirm(
+      (USER_SETTINGS.lang==='en')?'Delete this workspace?':'حذف مساحة العمل؟',
+      (USER_SETTINGS.lang==='en')?'Tasks in it will be removed. Points & streak stay.':'المهام داخلها ستُحذف. النقاط والاستريك محفوظة.'
+    );
+    if(!okDel) return;
     deleteScheduleSlot(id).then(ok=>{ if(ok){ try{ renderRoutinesUI(); renderSlotsUI(); }catch(e){} showToast((USER_SETTINGS.lang==='en')?'Workspace deleted':'تم حذف مساحة العمل',1800); } });
     return;
   }
@@ -13857,4 +14086,4 @@ setTimeout(()=>{
 }, 2200);
 try{ setupAutoNotificationTriggers(); }catch(e){}
 </script>
-</html> 
+</html>
