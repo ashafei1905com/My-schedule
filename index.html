@@ -148,26 +148,29 @@ html[dir="ltr"] .tc[data-c="sunrise"]{border-left:3px solid var(--or)}
   100%{transform:scale(1);background:var(--gr);border-color:var(--gr);box-shadow:0 0 6px rgba(16,185,129,.4)}
 }
 @keyframes checkmarkBtnMorph{
-  0%{transform:scale(0.94);background:rgba(16,185,129,.2);border-color:var(--gr)}
-  40%{transform:scale(1.12);background:rgba(16,185,129,.25);border-color:var(--gr);box-shadow:0 0 14px rgba(16,185,129,.4)}
-  100%{transform:scale(1);background:rgba(16,185,129,.08);border-color:rgba(16,185,129,.25)}
+  0%{transform:scale(0.92);background:rgba(16,185,129,.22);border-color:var(--gr);box-shadow:0 0 0 rgba(16,185,129,0)}
+  35%{transform:scale(1.18);background:rgba(16,185,129,.32);border-color:#34d399;box-shadow:0 0 18px 3px rgba(16,185,129,.55)}
+  65%{transform:scale(0.96);background:rgba(16,185,129,.14);border-color:var(--gr);box-shadow:0 0 8px rgba(16,185,129,.3)}
+  100%{transform:scale(1);background:rgba(16,185,129,.08);border-color:rgba(16,185,129,.25);box-shadow:0 0 0 rgba(16,185,129,0)}
 }
 @keyframes checkmarkCirclePop{
-  0%{transform:scale(0.3) rotate(-25deg);opacity:0;background:rgba(16,185,129,.45)}
-  50%{transform:scale(1.3) rotate(5deg);opacity:1;background:rgba(16,185,129,.28)}
-  100%{transform:scale(1) rotate(0deg);opacity:1;background:rgba(16,185,129,.18)}
+  0%{transform:scale(0.15) rotate(-40deg);opacity:0;background:rgba(16,185,129,.6);box-shadow:0 0 0 rgba(52,211,153,0)}
+  45%{transform:scale(1.38) rotate(8deg);opacity:1;background:rgba(52,211,153,.4);box-shadow:0 0 14px 2px rgba(52,211,153,.55)}
+  75%{transform:scale(0.92) rotate(-3deg);background:rgba(16,185,129,.25)}
+  100%{transform:scale(1) rotate(0deg);opacity:1;background:rgba(16,185,129,.18);box-shadow:0 0 0 rgba(52,211,153,0)}
 }
 @keyframes checkmarkStrokeDraw{
-  0%{stroke-dashoffset:24}
-  100%{stroke-dashoffset:0}
+  0%{stroke-dashoffset:24;filter:drop-shadow(0 0 0 rgba(52,211,153,0))}
+  70%{stroke-dashoffset:0;filter:drop-shadow(0 0 4px rgba(52,211,153,.9))}
+  100%{stroke-dashoffset:0;filter:drop-shadow(0 0 0 rgba(52,211,153,0))}
 }
 @keyframes checkmarkRipple{
-  0%{opacity:0.85;transform:scale(0.9)}
-  100%{opacity:0;transform:scale(1.4)}
+  0%{opacity:0.95;transform:scale(0.85);border-color:rgba(52,211,153,.9)}
+  100%{opacity:0;transform:scale(1.55);border-color:rgba(16,185,129,0)}
 }
 @keyframes fadeInUpSubtle{
-  from{opacity:0;transform:translateY(3px)}
-  to{opacity:1;transform:translateY(0)}
+  from{opacity:0;transform:translateY(4px) scale(0.92)}
+  to{opacity:1;transform:translateY(0) scale(1)}
 }
 #sbar{position:sticky;top:0;z-index:100;background-color:var(--bg-main);border-bottom:1px solid rgba(255,255,255,0.05);color:var(--text-main);backdrop-filter:blur(12px);padding:12px 16px;display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;min-height:64px}
 #sbar .sbar-stats{display:flex;gap:14px;align-items:center;flex:1;justify-content:center}
@@ -282,10 +285,10 @@ html[dir="ltr"] .tc[data-c="sunrise"]{border-left:3px solid var(--or)}
 .cbtn-check-svg{width:13px;height:13px;display:block}
 .cbtn-check-path{stroke-dasharray:24;stroke-dashoffset:0;stroke:currentColor}
 .cbtn.done{background:rgba(16,185,129,.08);border-color:rgba(16,185,129,.25);color:var(--gr);cursor:default;min-width:44px;padding:5px 9px}
-.cbtn.cbtn-transforming{animation:checkmarkBtnMorph .5s cubic-bezier(0.34,1.56,0.64,1) forwards;pointer-events:none}
-.cbtn.cbtn-transforming .cbtn-check-badge{animation:checkmarkCirclePop .5s cubic-bezier(0.34,1.56,0.64,1) forwards}
-.cbtn.cbtn-transforming .cbtn-check-path{animation:checkmarkStrokeDraw .38s cubic-bezier(0.65,0,0.45,1) forwards .06s;stroke-dashoffset:24}
-.cbtn.cbtn-transforming::after{content:'';position:absolute;inset:-4px;border-radius:12px;border:2px solid var(--gr);opacity:0;animation:checkmarkRipple .55s ease-out forwards}
+.cbtn.cbtn-transforming{animation:checkmarkBtnMorph .55s cubic-bezier(0.34,1.7,0.64,1) forwards;pointer-events:none}
+.cbtn.cbtn-transforming .cbtn-check-badge{animation:checkmarkCirclePop .55s cubic-bezier(0.34,1.7,0.64,1) forwards}
+.cbtn.cbtn-transforming .cbtn-check-path{animation:checkmarkStrokeDraw .42s cubic-bezier(0.65,0,0.35,1) forwards .05s;stroke-dashoffset:24}
+.cbtn.cbtn-transforming::after{content:'';position:absolute;inset:-5px;border-radius:13px;border:2px solid #34d399;opacity:0;animation:checkmarkRipple .6s ease-out forwards;pointer-events:none}
 .cbtn.exp{background:rgba(100,116,139,.08);border-color:rgba(100,116,139,.4);color:var(--mu);cursor:not-allowed}
 .cbtn.qada{background:rgba(245,158,11,.08);border-color:rgba(245,158,11,.35);color:var(--or)}
 .cbtn.qada:hover{background:rgba(245,158,11,.15)}
@@ -322,7 +325,7 @@ html[dir="ltr"] .tc[data-c="sunrise"]{border-left:3px solid var(--or)}
 .profile-menu button:hover{background:rgba(59,130,246,.1)}
 .profile-menu .pm-danger{color:#f87171}
 .profile-menu .pm-sep{height:1px;background:var(--br);margin:4px 0}
-#settingsScreen{position:fixed;inset:0;background:var(--bg);z-index:10040;display:none;flex-direction:column}
+#settingsScreen{position:fixed;inset:0;background:var(--bg);z-index:10150;display:none;flex-direction:column}
 #settingsScreen.open{display:flex}
 .set-header{display:flex;align-items:center;justify-content:space-between;padding:16px 20px;border-bottom:1px solid var(--br);flex-shrink:0}
 .set-header h2{font-size:1.15rem;font-weight:900;margin:0}
@@ -2179,10 +2182,21 @@ body.theme-matrix .tctime{
       <div class="set-content">
         <button type="button" class="set-mobile-back" id="setMobileBack">← Back</button>
         <div class="set-section act" id="setsec-general">
-          <h3 data-i18n="sec_general">عام</h3>
-          <p class="desc" data-i18n="sec_general_desc">إدارة مهامك اليومية من هنا.</p>
+          <h3 data-i18n="sec_general">General</h3>
+          <p class="desc" data-i18n="sec_general_desc">Manage daily tasks and schedule slots from here.</p>
+          <div style="margin-bottom:18px;padding:14px;background:var(--c);border:1px solid var(--br);border-radius:12px">
+            <div style="font-size:.78rem;font-weight:800;color:var(--so);margin-bottom:8px">Schedule slots</div>
+            <p style="font-size:.72rem;color:var(--mu);margin:0 0 10px;line-height:1.45">Switch between independent schedules (Work, Vacation, Gym Focus…). Points & streak stay shared.</p>
+            <select id="slotSelect" style="width:100%;padding:10px 12px;border-radius:10px;border:1px solid var(--br);background:var(--c2);color:var(--tx);font-family:inherit;font-weight:700;margin-bottom:10px"></select>
+            <div style="display:flex;flex-wrap:wrap;gap:8px">
+              <button type="button" id="slotSwitchBtn" class="altbtn" style="flex:1;min-width:110px">Switch</button>
+              <button type="button" id="slotCreateBtn" class="altbtn" style="flex:1;min-width:110px">+ New slot</button>
+              <button type="button" id="slotRenameBtn" class="altbtn" style="flex:1;min-width:110px">Rename</button>
+              <button type="button" id="slotDeleteBtn" class="altbtn" style="flex:1;min-width:110px;background:rgba(239,68,68,.1);border-color:rgba(239,68,68,.4);color:#f87171">Delete</button>
+            </div>
+          </div>
           <div class="set-actions">
-            <button type="button" id="setAddTaskBtn" class="altbtn" data-i18n="add_task">➕ إضافة مهمة لليوم الحالي</button>
+            <button type="button" id="setAddTaskBtn" class="altbtn" data-i18n="add_task">➕ Add task for today</button>
           </div>
         </div>
         <div class="set-section" id="setsec-tracking">
@@ -4024,6 +4038,8 @@ function hitMilestone(){const el=document.getElementById('sv1');if(!el)return;el
 function shakeStreakBroken(){const el=document.getElementById('sv1');if(!el)return;el.classList.add('streak-broke');setTimeout(()=>el.classList.remove('streak-broke'),600);}
 function cardEffect(id,kind){const el=document.getElementById(`c-${id}`);if(!el)return;const cls=kind==='ontime'?'card-ontime':kind==='late'?'card-late':'card-qada';el.classList.add(cls);setTimeout(()=>el.classList.remove(cls),1100);}
 function barGoldFlash(){const el=document.getElementById('progBox');if(!el)return;el.classList.add('bar-gold');setTimeout(()=>el.classList.remove('bar-gold'),1000);}
+// Short haptic "tick" on task complete — ignored on desktop / unsupported browsers.
+function hapticComplete(){try{if(navigator.vibrate)navigator.vibrate([12,30,18]);}catch(e){}}
 
 const ENCOURAGE_WIN=['🎉 يوم كامل! أنت وحش اليوم','💪 استمرار رهيب، كمّل كذا','🔥 كل يوم بتقوى أكثر','⚡ الانضباط ده هو الفرق','🏅 يوم موثق بالكامل، فخور فيك'];
 const ENCOURAGE_MISS=['بكرة نرجع أقوى، ما تستسلمش 💪','يوم واحد مش نهاية الطريق، كمّل 🔥','خصم اليوم مش نهاية الاستريك، ثبّت بكرة ✊','خد نفس وابدأ من جديد النهاردة 🌱'];
@@ -4248,6 +4264,99 @@ async function saveUserSchedule(){
       activeScheduleId:ACTIVE_SCHEDULE_ID
     },{merge:true});
   }catch(e){console.warn('userSchedule cloud save failed',e);}
+}
+
+function ensureScheduleSlots(){
+  if(!USER_SCHEDULES || typeof USER_SCHEDULES!=='object') USER_SCHEDULES={};
+  if(!ACTIVE_SCHEDULE_ID) ACTIVE_SCHEDULE_ID='default';
+  if(!USER_SCHEDULES[ACTIVE_SCHEDULE_ID]){
+    const name=(USER_SETTINGS&&USER_SETTINGS.workspaceName)||'My Workspace';
+    USER_SCHEDULES[ACTIVE_SCHEDULE_ID]={id:ACTIVE_SCHEDULE_ID,name,sched:(USER_SCHEDULE&&Object.keys(USER_SCHEDULE).length)?USER_SCHEDULE:{}};
+  }else if(USER_SCHEDULE && Object.keys(USER_SCHEDULE).length){
+    USER_SCHEDULES[ACTIVE_SCHEDULE_ID].sched=USER_SCHEDULE;
+  }
+  if(USER_SCHEDULES[ACTIVE_SCHEDULE_ID] && USER_SCHEDULES[ACTIVE_SCHEDULE_ID].sched){
+    USER_SCHEDULE=USER_SCHEDULES[ACTIVE_SCHEDULE_ID].sched;
+  }
+}
+
+function makeEmptyWeekSchedule(){
+  const empty={};
+  for(let jd=0;jd<7;jd++){
+    empty[jd]={
+      n:(typeof DSHORT!=='undefined'?DSHORT[jd]:['Sun','Mon','Tue','Wed','Thu','Fri','Sat'][jd]),
+      wk:'8:00 AM',bd:'11:00 PM',gm:null,ts:[]
+    };
+  }
+  return empty;
+}
+
+async function switchActiveSchedule(id){
+  if(!id || !USER_SCHEDULES[id]) return false;
+  if(USER_SCHEDULES[ACTIVE_SCHEDULE_ID]) USER_SCHEDULES[ACTIVE_SCHEDULE_ID].sched=USER_SCHEDULE;
+  ACTIVE_SCHEDULE_ID=id;
+  USER_SCHEDULE=USER_SCHEDULES[id].sched||makeEmptyWeekSchedule();
+  USER_SCHEDULES[id].sched=USER_SCHEDULE;
+  if(USER_SETTINGS) USER_SETTINGS.workspaceName=USER_SCHEDULES[id].name||USER_SETTINGS.workspaceName;
+  try{ await saveUserSchedule(); }catch(e){ console.warn('switch slot save failed',e); }
+  try{ renderTabs();renderPanels();switchDay(typeof SELECTED_DATE!=='undefined'?getJDfromISO(SELECTED_DATE):todayJD());updateUI(); }catch(e){}
+  try{ renderSlotsUI(); }catch(e){}
+  return true;
+}
+
+async function createScheduleSlot(name){
+  const nm=String(name||'').trim()||'New schedule';
+  const id='ws_'+Date.now();
+  if(USER_SCHEDULES[ACTIVE_SCHEDULE_ID]) USER_SCHEDULES[ACTIVE_SCHEDULE_ID].sched=USER_SCHEDULE;
+  USER_SCHEDULES[id]={id,name:nm,sched:makeEmptyWeekSchedule()};
+  ACTIVE_SCHEDULE_ID=id;
+  USER_SCHEDULE=USER_SCHEDULES[id].sched;
+  if(USER_SETTINGS) USER_SETTINGS.workspaceName=nm;
+  try{ await saveUserSchedule(); if(typeof saveUserSettings==='function') await saveUserSettings(); }catch(e){ console.warn('create slot save failed',e); }
+  try{ renderTabs();renderPanels();switchDay(typeof SELECTED_DATE!=='undefined'?getJDfromISO(SELECTED_DATE):todayJD());updateUI(); }catch(e){}
+  try{ renderSlotsUI(); }catch(e){}
+  return id;
+}
+
+async function renameScheduleSlot(id,name){
+  if(!id || !USER_SCHEDULES[id]) return false;
+  const nm=String(name||'').trim();
+  if(!nm) return false;
+  USER_SCHEDULES[id].name=nm;
+  if(id===ACTIVE_SCHEDULE_ID && USER_SETTINGS) USER_SETTINGS.workspaceName=nm;
+  try{ await saveUserSchedule(); if(id===ACTIVE_SCHEDULE_ID && typeof saveUserSettings==='function') await saveUserSettings(); }catch(e){}
+  try{ renderSlotsUI(); }catch(e){}
+  return true;
+}
+
+async function deleteScheduleSlot(id){
+  if(!id || !USER_SCHEDULES[id]) return false;
+  const keys=Object.keys(USER_SCHEDULES);
+  if(keys.length<=1){ showToast('Keep at least one schedule slot',2800,'warn'); return false; }
+  delete USER_SCHEDULES[id];
+  if(ACTIVE_SCHEDULE_ID===id){
+    const next=Object.keys(USER_SCHEDULES)[0];
+    ACTIVE_SCHEDULE_ID=next;
+    USER_SCHEDULE=USER_SCHEDULES[next].sched||makeEmptyWeekSchedule();
+    if(USER_SETTINGS) USER_SETTINGS.workspaceName=USER_SCHEDULES[next].name;
+  }
+  try{ await saveUserSchedule(); }catch(e){}
+  try{ renderTabs();renderPanels();switchDay(typeof SELECTED_DATE!=='undefined'?getJDfromISO(SELECTED_DATE):todayJD());updateUI(); }catch(e){}
+  try{ renderSlotsUI(); }catch(e){}
+  return true;
+}
+
+function renderSlotsUI(){
+  ensureScheduleSlots();
+  const sel=document.getElementById('slotSelect');
+  if(!sel) return;
+  const ids=Object.keys(USER_SCHEDULES);
+  sel.innerHTML=ids.map(id=>{
+    const s=USER_SCHEDULES[id];
+    const label=(s&&s.name)||id;
+    const active=id===ACTIVE_SCHEDULE_ID?' ★':'';
+    return `<option value="${id}" ${id===ACTIVE_SCHEDULE_ID?'selected':''}>${label}${active}</option>`;
+  }).join('');
 }
 
 // One-time, idempotent migration: copies every task out of the static SCHED object
@@ -5147,8 +5256,8 @@ async function saveUserSettings(){
 // until Stage 3 exists. This is an intentional, explicit scope boundary, not an
 // oversight — flagged in the finish handler below too.
 let OB_STEP=0;
-let OB_ANSWERS={name:'',trackPrayers:null,messyTasks:'',workspaceName:'',weeklySchedule:{Sat:'',Sun:'',Mon:'',Tue:'',Wed:'',Thu:'',Fri:''},builtSchedule:null,scheduleConfirmed:false,chatHistory:[]};
-const OB_TOTAL_STEPS=6;
+let OB_ANSWERS={name:'',trackPrayers:null,fitnessTracking:null,messyTasks:'',workspaceName:'',weeklySchedule:{Sat:'',Sun:'',Mon:'',Tue:'',Wed:'',Thu:'',Fri:''},builtSchedule:null,scheduleConfirmed:false,chatHistory:[]};
+const OB_TOTAL_STEPS=7;
 
 // Step definitions: each step is either type 'text' (free text input, Next enabled
 // once non-empty) or 'chips' (2-column selectable cards, Next enabled once one is
@@ -5176,6 +5285,16 @@ const OB_STEPS=[
     chips:[
       {value:true, label:'Yes, add them', desc:'Five prayers with real times on your daily timeline'},
       {value:false, label:'No, normal schedule', desc:'No prayer tracking — enable later from Settings'}
+    ]
+  },
+  {
+    key:'fitnessTracking',
+    type:'chips',
+    title:'Do you want to track your fitness here?',
+    sub:'Calories, protein, carbs, and fat targets on your daily board. You can fine-tune macros later in Settings.',
+    chips:[
+      {value:true, label:'Yes, track fitness', desc:'Show macro goals and food logging helpers'},
+      {value:false, label:'Not now', desc:'Hide fitness tracking — enable anytime in Settings'}
     ]
   },
   {
@@ -5734,10 +5853,12 @@ async function obFinish(){
     ...USER_SETTINGS,
     lang: 'en',
     trackPrayers: !!OB_ANSWERS.trackPrayers,
+    fitness_tracking_enabled: OB_ANSWERS.fitnessTracking===true,
     displayNameChosen: (OB_ANSWERS.name||'').trim(),
     workspaceName: (OB_ANSWERS.workspaceName||'').trim(),
     onboardingComplete: true
   };
+  try{ lsSet('fitness_prompt_shown','true'); }catch(e){}
 
   
   const emptySchedule={};
@@ -5879,7 +6000,8 @@ async function obFinish(){
     updateUI();
     revealApp();
     showToast('Your schedule is ready',2400);
-    if(lsGet('fitness_prompt_shown')!=='true' && USER_SETTINGS.fitness_tracking_enabled===undefined){
+    // Fitness preference is collected inside onboarding — only show the legacy modal for older accounts that never answered.
+    if(lsGet('fitness_prompt_shown')!=='true' && USER_SETTINGS.fitness_tracking_enabled===undefined && !USER_SETTINGS.onboardingComplete){
       setTimeout(()=>{ openFitnessPromptModal(); }, 750);
     }
   }catch(e){
@@ -9735,7 +9857,10 @@ function openSettingsScreen(){
   applyI18n();
   renderIconPresets();
   renderThemeSwatches();
-  document.getElementById('settingsScreen')?.classList.add('open');
+  try{ renderSlotsUI(); }catch(e){}
+  // Always raise above leftover overlays (landing / toast stacking)
+  const ss=document.getElementById('settingsScreen');
+  if(ss){ ss.style.zIndex='10150'; ss.classList.add('open'); }
   updateAuthUI(fbAuth?.currentUser||null);
 }
 function closeSettingsScreen(){
@@ -10880,15 +11005,17 @@ const AI_TOOL_DEFS = `Available tools (respond with EXACTLY ONE of these as a JS
 {"tool":"restoreTask","taskId":"<id — must currently be deleted>"}
 {"tool":"editPoints","taskId":"<id>","points":<integer>}
 {"tool":"addCustomTask","date":"YYYY-MM-DD","time":"H:MM AM" or "H:MM PM" or "H:MM ص" or "H:MM م","name":"<short name>","points":<integer, default 5>}
+{"tool":"replaceWeeklySchedule","blocks":[{"task":"<name>","start":"HH:MM","end":"HH:MM","category":"Deep Work|Routine/Admin|Meeting|Rest/Break|Food|Gym|Other"}],"days":["Mon","Tue","Wed","Thu","Fri"] }
 {"tool":"setStreak","value":<integer>}
 {"tool":"setBestStreak","value":<integer>}
 {"tool":"setWeeklyPoints","value":<integer>}
 {"tool":"setPunishRate","value":<number between 0 and 1, e.g. 0.15 for 15%>}
 {"tool":"rememberFact","fact":"<durable personal fact, stated plainly in third person>"}
-{"tool":"none","reason":"<short Arabic explanation of why no tool applies — e.g. this is a question, not a command>"}
+{"tool":"none","reason":"<short English explanation of why no tool applies — e.g. this is a question, not a command>"}
 
 Rules:
 - ONLY use a taskId that appears in the provided task list. NEVER invent one.
+- Use "replaceWeeklySchedule" when the user wants to REPLACE the whole day/week plan with a new set of blocks they describe (e.g. "change my entire schedule to…", "rebuild my week as…"). Prefer weekday list Mon–Fri unless they name other days. Include start/end as 24h HH:MM when possible.
 - "logFood" is for ANY food/snack completion, however phrased — "أكلت", "اكلت", "خلصت الغدا", "ate", casual or formal, doesn't matter. Never use markDone for a food/snack task; always use logFood so nutrition gets tracked properly.
 - If the message clearly refers to something ALREADY missing from the task list (e.g. asking to restore something not currently deleted, or edit a task that doesn't exist), still pick the closest tool and let validation reject it — do not use "none" just because you're not 100% certain, only use "none" for messages that are genuinely not instructions at all (questions, small talk, opinions).
 - If a date/day isn't stated, assume he means the currently selected/viewed date given below.
@@ -10960,6 +11087,21 @@ function aiValidateToolCall(parsed, allTasksFlat){
       if(!parsed.name || !String(parsed.name).trim()) return{ok:false,reply:(USER_SETTINGS.lang==='en'?'⚠️ New task name is not clear.':'⚠️ مش واضح اسم المهمة الجديدة.')};
       const pts=Number.isFinite(parseInt(parsed.points,10))?Math.max(0,Math.min(500,parseInt(parsed.points,10))):5;
       return{ok:true,tool,date:parsed.date,time:parsed.time,name:String(parsed.name).trim(),points:pts};
+    }
+    case 'replaceWeeklySchedule': {
+      const blocks=Array.isArray(parsed.blocks)?parsed.blocks:[];
+      if(!blocks.length) return{ok:false,reply:(USER_SETTINGS.lang==='en'?'⚠️ Describe the new schedule blocks (task + start/end times).':'⚠️ وصف جدول المهام الجديد (مهمة + وقت البداية والنهاية).')};
+      const dayMap={sun:0,sunday:0,mon:1,monday:1,tue:2,tuesday:2,wed:3,wednesday:3,thu:4,thursday:4,fri:5,friday:5,sat:6,saturday:6};
+      let days=Array.isArray(parsed.days)&&parsed.days.length?parsed.days:['Mon','Tue','Wed','Thu','Fri'];
+      const jds=[];
+      for(const d of days){
+        const k=String(d).toLowerCase().slice(0,3);
+        const full=String(d).toLowerCase();
+        const jd=dayMap[full]??dayMap[k];
+        if(jd!=null && !jds.includes(jd)) jds.push(jd);
+      }
+      if(!jds.length) jds.push(1,2,3,4,5);
+      return{ok:true,tool,blocks,jds};
     }
     case 'setStreak':
     case 'setBestStreak':
@@ -11142,6 +11284,16 @@ async function aiExecuteToolCall(v){
     case 'addCustomTask': {
       USER_EDITS.customTasks.push({id:aiGenId('custom'),date:v.date,time:v.time,cat:'free',ico:'✨',name:v.name,desc:'أُضيفت بواسطة المساعد',pts:v.points,createdAt:Date.now()});
       await saveUserEdits();
+      break;
+    }
+    case 'replaceWeeklySchedule': {
+      ensureScheduleSlots();
+      if(!USER_SCHEDULE || !Object.keys(USER_SCHEDULE).length) USER_SCHEDULE=makeEmptyWeekSchedule();
+      for(const jd of (v.jds||[])){
+        applyBuiltBlocksToSchedule(v.blocks, (typeof TODAY!=='undefined'?TODAY:new Date().toISOString().slice(0,10)), jd);
+      }
+      if(USER_SCHEDULES[ACTIVE_SCHEDULE_ID]) USER_SCHEDULES[ACTIVE_SCHEDULE_ID].sched=USER_SCHEDULE;
+      await saveUserSchedule();
       break;
     }
     case 'setStreak': { STATS.cur=v.value; await saveAll(); break; }
@@ -11986,7 +12138,7 @@ async function aiProcessClause(clauseText){
   if(['markDone','skipTask','moveTask','deleteTask','restoreTask','unmarkDone','editPoints','addCustomTask','rememberFact','openPrayerModal','openFoodLogModal','setCurStreak','setBestStreak','setWeeklyPoints','setPunishRate','alreadyDone','unrecognizedTask','needMoreInfo'].includes(intent.action)){
     let tone='ok';
     let snapshot=null;
-    const mutatingActions=['markDone','skipTask','moveTask','deleteTask','restoreTask','unmarkDone','editPoints','addCustomTask','rememberFact','setCurStreak','setBestStreak','setWeeklyPoints','setPunishRate'];
+    const mutatingActions=['markDone','skipTask','moveTask','deleteTask','restoreTask','unmarkDone','editPoints','addCustomTask','replaceWeeklySchedule','rememberFact','setCurStreak','setBestStreak','setWeeklyPoints','setPunishRate'];
     try{
       if(mutatingActions.includes(intent.action)){
         snapshot=aiSnapshotState(); // taken BEFORE execution so undo restores the true prior state
@@ -12138,6 +12290,9 @@ function aiToolCallReplyText(v){
     case 'restoreTask': return `تم إرجاع "${v.taskName}" ✅`;
     case 'editPoints': return `تم تغيير نقاط "${v.taskName}" إلى ${v.points}⭐ ✅`;
     case 'addCustomTask': return `تم إضافة "${v.name}" يوم ${v.date} الساعة ${v.time} بـ ${v.points}⭐ ✅`;
+    case 'replaceWeeklySchedule': return (USER_SETTINGS&&USER_SETTINGS.lang)==='en'
+      ? `Updated the weekly schedule with ${Array.isArray(v.blocks)?v.blocks.length:0} blocks ✅`
+      : `تم تحديث الجدول الأسبوعي بـ ${Array.isArray(v.blocks)?v.blocks.length:0} مهمة ✅`;
     case 'setStreak': return `تم تغيير الاستريك الحالي إلى ${v.value} 🔥`;
     case 'setBestStreak': return `تم تغيير أعلى استريك إلى ${v.value} 🏆`;
     case 'setWeeklyPoints': return `تم تغيير نقاط الأسبوع إلى ${v.value}⭐`;
@@ -12592,6 +12747,34 @@ document.body.addEventListener('click',async e=>{
     openScheduleTaskEditor(todayJD(),null,{fromSettings:true});
     return;
   }
+  if(tgt.id==='slotSwitchBtn'){
+    const id=document.getElementById('slotSelect')?.value;
+    if(!id) return;
+    switchActiveSchedule(id).then(ok=>{
+      if(ok) showToast('Switched schedule slot',1800);
+    });
+    return;
+  }
+  if(tgt.id==='slotCreateBtn'){
+    const name=prompt('New schedule slot name (e.g. Work, Vacation, Gym Focus):','');
+    if(name==null) return;
+    createScheduleSlot(name).then(()=>showToast('New schedule slot created',2000));
+    return;
+  }
+  if(tgt.id==='slotRenameBtn'){
+    const id=document.getElementById('slotSelect')?.value||ACTIVE_SCHEDULE_ID;
+    const cur=(USER_SCHEDULES[id]&&USER_SCHEDULES[id].name)||'';
+    const name=prompt('Rename schedule slot:',cur);
+    if(name==null) return;
+    renameScheduleSlot(id,name).then(ok=>{ if(ok) showToast('Renamed',1600); });
+    return;
+  }
+  if(tgt.id==='slotDeleteBtn'){
+    const id=document.getElementById('slotSelect')?.value||ACTIVE_SCHEDULE_ID;
+    if(!confirm('Delete this schedule slot? Tasks in it will be removed. Points & streak are kept.')) return;
+    deleteScheduleSlot(id).then(ok=>{ if(ok) showToast('Slot deleted',1800); });
+    return;
+  }
   if(tgt.id==='setLangAr'){ setAppLang('ar'); return; }
   if(tgt.id==='setLangEn'){ setAppLang('en'); return; }
   if(tgt.id==='setMobileBack'){
@@ -12606,9 +12789,12 @@ document.body.addEventListener('click',async e=>{
     OB_ANSWERS = {
       name: USER_SETTINGS.displayNameChosen || '',
       trackPrayers: USER_SETTINGS.trackPrayers || false,
+      fitnessTracking: USER_SETTINGS.fitness_tracking_enabled===true,
       messyTasks: '',
       workspaceName: '',
       weeklySchedule: {Sat:'',Sun:'',Mon:'',Tue:'',Wed:'',Thu:'',Fri:''},
+      builtSchedule:null,
+      scheduleConfirmed:false,
       chatHistory: []
     };
     try { document.getElementById('obWizard')?.classList.add('open'); } catch(e){}
@@ -12741,6 +12927,7 @@ document.body.addEventListener('click',async e=>{
     const late=taskObj?isLateNonPrayer(taskObj):false;
     const awarded=awardTaskPoints(pts,{x:e.clientX,y:e.clientY});
     DONE[id]=awarded;
+    hapticComplete();
 
     // Smooth checkmark transformation and card fade-out animation
     const cardEl=document.getElementById(`c-${id}`) || actionEl.closest('.tc');
@@ -12768,7 +12955,7 @@ document.body.addEventListener('click',async e=>{
       showToast(enConfirm?'⚠️ Save failed — try again or reload':'⚠️ حصل خطأ أثناء الحفظ — جرب تاني أو أعد تحميل الصفحة',4000,'warn');
     }
     // Smooth delay allows the checkmark morph & card fade animation to complete seamlessly
-    await new Promise(r=>setTimeout(r,420));
+    await new Promise(r=>setTimeout(r,480));
     try{
       renderPanels();switchDay(getJDfromISO(SELECTED_DATE));updateUI();
       window.scrollTo(0,scrollYBefore);
@@ -12782,6 +12969,7 @@ document.body.addEventListener('click',async e=>{
     const half=Math.floor(pts/2);
     const awarded=awardTaskPoints(half,{x:e.clientX,y:e.clientY});
     DONE[id]='qada';
+    hapticComplete();
 
     const cardEl=document.getElementById(`c-${id}`) || actionEl.closest('.tc');
     if(cardEl){
@@ -12804,7 +12992,7 @@ document.body.addEventListener('click',async e=>{
       console.error('saveAll failed after qada:',err);
       showToast('⚠️ حصل خطأ أثناء الحفظ — جرب تاني أو أعد تحميل الصفحة',4000,'warn');
     }
-    await new Promise(r=>setTimeout(r,420));
+    await new Promise(r=>setTimeout(r,480));
     try{ renderPanels();switchDay(getJDfromISO(SELECTED_DATE));updateUI(); window.scrollTo(0,scrollYBefore); }catch(err){ console.error('re-render failed:',err); }
     showToast((USER_SETTINGS&&USER_SETTINGS.lang)==='en'
       ?'Make-up (Qada) logged — try to pray on time tomorrow 🌙'
@@ -13277,7 +13465,8 @@ function initAppFlow(user){
       obShowStep();
     }else{
       try{ document.getElementById('obWizard')?.classList.remove('open'); }catch(e){}
-      if(lsGet('fitness_prompt_shown')!=='true' && USER_SETTINGS.fitness_tracking_enabled===undefined){
+      // Only for legacy accounts that never answered fitness during onboarding.
+      if(lsGet('fitness_prompt_shown')!=='true' && USER_SETTINGS.fitness_tracking_enabled===undefined && USER_SETTINGS.onboardingComplete){
         setTimeout(()=>{ openFitnessPromptModal(); }, 600);
       }
     }
@@ -13467,8 +13656,14 @@ if (typeof onAuthStateChanged !== 'undefined' && typeof fbAuth !== 'undefined') 
             }
           } else if(d.userSchedule) {
             USER_SCHEDULE=deserializeScheduleFromFirestore(d.userSchedule);
+            // Legacy single-schedule accounts: wrap into the slots map once.
+            if(!USER_SCHEDULES || !Object.keys(USER_SCHEDULES).length){
+              USER_SCHEDULES={default:{id:'default',name:(USER_SETTINGS&&USER_SETTINGS.workspaceName)||'My Workspace',sched:USER_SCHEDULE}};
+              ACTIVE_SCHEDULE_ID='default';
+            }
           }
-          if(d.userSettings) USER_SETTINGS={trackPrayers:true,...d.userSettings};
+          try{ ensureScheduleSlots(); }catch(e){}
+          if(d.userSettings) USER_SETTINGS={trackPrayers:true,lang:'en',...d.userSettings};
           // One-time migration trigger — see migrateAbdullahScheduleIfNeeded's own
           // comments for the full idempotency/safety reasoning. Called here, AFTER
           // the cloud USER_SCHEDULE merge above, specifically so it never fires
