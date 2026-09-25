@@ -36,15 +36,8 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;700;900&display=swap" rel="stylesheet">
-<script src="/node_modules/d3/dist/d3.min.js"></script>
-<script>
-  if (typeof window.d3 === 'undefined') {
-    const s = document.createElement('script');
-    s.src = 'https://cdn.jsdelivr.net/npm/d3@7/dist/d3.min.js';
-    document.head.appendChild(s);
-  }
-</script>
-<script src="/macro-trends.bundle.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/d3@7/dist/d3.min.js"></script>
+<script src="macro-trends.bundle.js"></script>
 <style>
 :root{--bg:#0a0e1a;--bg-main:#0a0e1a;--c:#111827;--c2:#1a2235;--br:#1e2d45;--ac:#3b82f6;--accent-color:#3b82f6;--accent-glow:rgba(59,130,246,0.4);--text-main:#f1f5f9;--text-on-accent:#ffffff;--gr:#10b981;--or:#f59e0b;--rd:#ef4444;--pu:#8b5cf6;--ye:#fbbf24;--cy:#06b6d4;--pk:#ec4899;--tx:#f1f5f9;--mu:#64748b;--so:#94a3b8;--scrollbar-size:8px;--scrollbar-track:transparent;--scrollbar-thumb:var(--br);--scrollbar-thumb-hover:var(--ac)}
 *{margin:0;padding:0;box-sizing:border-box}
@@ -7786,6 +7779,21 @@ function getReportRangeDates() {
     return wantedDates;
 }
 
+function getReportCatMeta(){
+  const en=(USER_SETTINGS&&USER_SETTINGS.lang)==='en';
+  return {
+    prayer:{label:en?'🕌 Prayers':'🕌 الصلوات',order:1},
+    food:{label:en?'🍽️ Meals':'🍽️ الوجبات',order:2},
+    gym:{label:en?'🏋️ Gym / Fitness':'🏋️ الجيم',order:3},
+    swim:{label:en?'🏊 Swimming':'🏊 السباحة',order:4},
+    recovery:{label:en?'♨️ Recovery':'♨️ الريكفري',order:5},
+    quran:{label:en?'📿 Quran':'📿 القرآن',order:6},
+    prog:{label:en?'💻 Focus / Coding':'💻 البرمجة',order:7},
+    sleep:{label:en?'🌙 Sleep':'🌙 النوم',order:8},
+    free:{label:en?'🎮 Free time':'🎮 وقت حر',order:9},
+    snack:{label:en?'🍎 Snacks (optional)':'🍎 سناكس (اختياري)',order:10}
+  };
+}
 const REPORT_CAT_META={
   prayer:{label:'🕌 الصلوات',order:1},
   food:{label:'🍽️ الوجبات',order:2},
@@ -7915,9 +7923,10 @@ function buildWeekReportData(){
     // Render grouped-by-category sections, in a fixed logical order (prayers first,
     // then food, then activity types) rather than raw chronological order — this is
     // what actually makes the report scannable instead of a wall of mixed rows.
-    const catKeys=Object.keys(byCat).sort((a,b)=>(REPORT_CAT_META[a]?.order||99)-(REPORT_CAT_META[b]?.order||99));
+    const catMeta=getReportCatMeta();
+    const catKeys=Object.keys(byCat).sort((a,b)=>(catMeta[a]?.order||99)-(catMeta[b]?.order||99));
     const catSections=catKeys.map(cat=>{
-      const meta=REPORT_CAT_META[cat]||{label:cat};
+      const meta=catMeta[cat]||{label:cat};
       return`<div style="margin-bottom:10px">
         <div style="font-size:.72rem;font-weight:800;color:var(--so);margin-bottom:4px;padding-bottom:3px;border-bottom:1px solid rgba(255,255,255,.06)">${meta.label}</div>
         ${byCat[cat].join('')}
@@ -8202,14 +8211,15 @@ function getDayStatsForISO(iso){
   let missedCount = 0;
   let qadaCount = 0;
 
+  const enCat = (USER_SETTINGS && USER_SETTINGS.lang) === 'en';
   const catMap = {
-    prayer: { req: 0, done: 0, label: '🕌 الصلوات' },
-    food: { req: 0, done: 0, label: '🍽️ الوجبات' },
-    gym: { req: 0, done: 0, label: '🏋️ اللياقة' },
-    prog: { req: 0, done: 0, label: '💻 البرمجة والتركيز' },
-    quran: { req: 0, done: 0, label: '📿 القرآن' },
-    recovery: { req: 0, done: 0, label: '♨️ الاستشفاء' },
-    other: { req: 0, done: 0, label: '✨ عادات أخرى' }
+    prayer: { req: 0, done: 0, label: enCat ? '🕌 Prayers' : '🕌 الصلوات' },
+    food: { req: 0, done: 0, label: enCat ? '🍽️ Meals' : '🍽️ الوجبات' },
+    gym: { req: 0, done: 0, label: enCat ? '🏋️ Fitness' : '🏋️ اللياقة' },
+    prog: { req: 0, done: 0, label: enCat ? '💻 Focus / Coding' : '💻 البرمجة والتركيز' },
+    quran: { req: 0, done: 0, label: enCat ? '📿 Quran' : '📿 القرآن' },
+    recovery: { req: 0, done: 0, label: enCat ? '♨️ Recovery' : '♨️ الاستشفاء' },
+    other: { req: 0, done: 0, label: enCat ? '✨ Other habits' : '✨ عادات أخرى' }
   };
 
   for(const t of tasks){
@@ -8974,6 +8984,14 @@ function showTrendsModal(defaultRange = 'current_week'){
   if(catTitle) catTitle.textContent = en ? 'Habit Category Adherence Breakdown' : 'نسبة التزام العادات حسب المجال';
   if(catSub) catSub.textContent = en ? 'Actual completion rate' : 'معدل الإنجاز الفعلي';
 
+  // Metric filter buttons (were stuck in Arabic)
+  const btnComb = document.getElementById('btnMetricCombined');
+  const btnPts = document.getElementById('btnMetricPoints');
+  const btnPct = document.getElementById('btnMetricPct');
+  if(btnComb) btnComb.textContent = en ? '⚡ Combined' : '⚡ مدمج';
+  if(btnPts) btnPts.textContent = en ? '⭐ Points' : '⭐ النقاط';
+  if(btnPct) btnPct.textContent = en ? '📈 Completion %' : '📈 نسبة الإنجاز';
+
   document.querySelectorAll('#trendsRangeTabs .trends-tab-btn').forEach(btn => {
     const r = btn.getAttribute('data-range');
     btn.classList.toggle('act', r === currentTrendsRange);
@@ -9085,13 +9103,60 @@ function showMacroTrendsModal(date){
 
   const targetDate = date || (typeof SELECTED_DATE !== 'undefined' ? SELECTED_DATE : (typeof TODAY !== 'undefined' ? TODAY : new Date().toISOString().slice(0, 10)));
   const mount = document.getElementById('macroTrendsModalMount');
-  if(mount && window.MacroTrends && typeof window.MacroTrends.mount === 'function'){
-    window.MacroTrends.mount(mount, {
-      userSettings: USER_SETTINGS,
-      selectedDate: targetDate,
-      onClose: closeMacroTrendsModal,
-      lang: (USER_SETTINGS && USER_SETTINGS.lang) === 'en' ? 'en' : 'ar'
-    });
+  const en = (USER_SETTINGS && USER_SETTINGS.lang) === 'en';
+
+  const doMount = ()=>{
+    if(mount && window.MacroTrends && typeof window.MacroTrends.mount === 'function'){
+      window.MacroTrends.mount(mount, {
+        userSettings: USER_SETTINGS,
+        selectedDate: targetDate,
+        onClose: closeMacroTrendsModal,
+        lang: en ? 'en' : 'ar'
+      });
+      return true;
+    }
+    return false;
+  };
+
+  if(doMount()) return;
+
+  // Bundle missing on Pages — try relative path once, then show clear message
+  if(mount){
+    mount.innerHTML = `<div style="padding:24px;text-align:center;color:var(--so);font-weight:700">
+      ${en ? 'Loading macro chart…' : 'جاري تحميل مخطط الماكروز…'}
+    </div>`;
+  }
+  if(!document.getElementById('macroTrendsBundleRetry')){
+    const s = document.createElement('script');
+    s.id = 'macroTrendsBundleRetry';
+    s.src = 'macro-trends.bundle.js';
+    s.onload = ()=>{ if(!doMount() && mount){
+      mount.innerHTML = `<div style="padding:28px;text-align:center">
+        <div style="font-size:1.1rem;font-weight:900;margin-bottom:8px">${en?'Macro Trends unavailable':'مخطط الماكروز غير متاح'}</div>
+        <div style="color:var(--so);font-size:.9rem;line-height:1.5;margin-bottom:16px">${en
+          ? 'The chart file (macro-trends.bundle.js) is missing from the site deploy. Push that file to the repo next to index.html, then hard-refresh.'
+          : 'ملف المخطط غير موجود على الموقع. ارفع macro-trends.bundle.js بجانب index.html ثم حدّث الصفحة.'}</div>
+        <button type="button" class="altbtn" onclick="closeMacroTrendsModal()">${en?'Close':'إغلاق'}</button>
+      </div>`;
+    }};
+    s.onerror = ()=>{ if(mount){
+      mount.innerHTML = `<div style="padding:28px;text-align:center">
+        <div style="font-size:1.1rem;font-weight:900;margin-bottom:8px">${en?'Macro Trends unavailable':'مخطط الماكروز غير متاح'}</div>
+        <div style="color:var(--so);font-size:.9rem;line-height:1.5;margin-bottom:16px">${en
+          ? 'Could not load macro-trends.bundle.js. Add it to the GitHub repo (same folder as index.html) and redeploy Pages.'
+          : 'تعذّر تحميل macro-trends.bundle.js. ضعه في نفس مجلد index.html على GitHub.'}</div>
+        <button type="button" class="altbtn" onclick="closeMacroTrendsModal()">${en?'Close':'إغلاق'}</button>
+      </div>`;
+    }};
+    document.head.appendChild(s);
+  } else if(mount){
+    mount.innerHTML = `<div style="padding:28px;text-align:center">
+      <div style="font-size:1.1rem;font-weight:900;margin-bottom:8px">${en?'Macro Trends unavailable':'مخطط الماكروز غير متاح'}</div>
+      <div style="color:var(--so);font-size:.9rem;margin-bottom:16px">${en
+        ? 'Chart module not loaded. Ensure macro-trends.bundle.js is deployed next to index.html.'
+        : 'وحدة المخطط غير محمّلة. تأكد أن macro-trends.bundle.js منشور بجانب index.html.'}</div>
+      <button type="button" class="altbtn" onclick="closeMacroTrendsModal()">${en?'Close':'إغلاق'}</button>
+    </div>`;
   }
 }
 
