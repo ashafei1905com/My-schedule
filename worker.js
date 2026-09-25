@@ -127,60 +127,93 @@ export default {
       }
       const { GoogleGenAI } = await import('@google/genai');
       const ai = new GoogleGenAI({ apiKey: env.GEMINI_API_KEY });
-      const geminiContents = trimmedMessages.map(m => {
+
+      // Build Gemini contents. Gemini requires:
+      //  - roles only "user" | "model"
+      //  - history must NOT end on a model turn
+      //  - no empty parts
+      const rawContents = [];
+      for (const m of trimmedMessages) {
         const parts = [];
-        // Optional vision: client may send imageBase64 + mimeType (in-memory only, not stored)
         if (m.imageBase64 && typeof m.imageBase64 === 'string') {
           const mime = (m.mimeType && String(m.mimeType).startsWith('image/'))
             ? String(m.mimeType)
             : 'image/jpeg';
-          // Strip data-URL prefix if the client included it
-          const data = m.imageBase64.replace(/^data:image\/[a-zA-Z0-9.+-]+;base64,/, '');
-          parts.push({ inlineData: { mimeType: mime, data } });
+          const data = String(m.imageBase64).replace(/^data:image\/[a-zA-Z0-9.+-]+;base64,/, '');
+          if (data) parts.push({ inlineData: { mimeType: mime, data } });
         }
-        const text = (m.content != null && String(m.content).length) ? String(m.content) : (parts.length ? 'Describe and act on this image for the user schedule.' : '');
+        const text = (m.content != null && String(m.content).trim().length)
+          ? String(m.content)
+          : (parts.length ? 'Describe and act on this image for the user schedule.' : '');
+        // Skip pure typing / empty bubbles
+        if (!text && !parts.length) continue;
+        if (text === '...' || text === '…') continue;
         if (text) parts.push({ text });
-        if (!parts.length) parts.push({ text: '' });
-        return {
+        if (!parts.length) continue;
+        rawContents.push({
           role: m.role === 'user' ? 'user' : 'model',
           parts
-        };
-      });
+        });
+      }
+
+      // Merge consecutive same-role turns (Gemini is strict about alternation)
+      const geminiContents = [];
+      for (const turn of rawContents) {
+        const prev = geminiContents[geminiContents.length - 1];
+        if (prev && prev.role === turn.role) {
+          prev.parts = prev.parts.concat(turn.parts);
+        } else {
+          geminiContents.push({ role: turn.role, parts: turn.parts.slice() });
+        }
+      }
+
+      // Must end with a user turn — drop trailing model messages
+      while (geminiContents.length && geminiContents[geminiContents.length - 1].role === 'model') {
+        geminiContents.pop();
+      }
+      if (!geminiContents.length) {
+        return json({ error: 'No valid user message to send' }, 400);
+      }
+
       const config = {};
       if (system) config.systemInstruction = system;
-
-      // Add search grounding for general chat when requested or when informative
       if (body.useSearch) {
         config.tools = [{ googleSearch: {} }];
       }
 
+      // Real, currently available Flash models (3.x names were invalid → 400/high-demand noise)
       let response;
-      const modelsToTry = ['gemini-3.6-flash', 'gemini-3.5-flash', 'gemini-3.8-flash'];
+      const modelsToTry = [
+        'gemini-2.0-flash',
+        'gemini-2.5-flash',
+        'gemini-2.0-flash-lite',
+        'gemini-1.5-flash'
+      ];
       let lastErr = null;
-      for (const m of modelsToTry) {
+      for (const modelName of modelsToTry) {
         try {
           response = await ai.models.generateContent({
-            model: m,
+            model: modelName,
             contents: geminiContents,
             config
           });
-          if (response && response.text) break;
+          if (response && (response.text || response.candidates?.length)) break;
         } catch (err) {
           lastErr = err;
-          console.warn(`Model ${m} failed in worker proxy, falling back to next:`, err.message);
+          console.warn(`Model ${modelName} failed in worker proxy, falling back:`, err?.message || err);
         }
       }
       if (!response && lastErr) {
         throw lastErr;
       }
 
-      const replyText = response?.text || '';
+      const replyText = response?.text || response?.candidates?.[0]?.content?.parts?.map(p => p.text || '').join('') || '';
       const groundingChunks = response?.candidates?.[0]?.groundingMetadata?.groundingChunks;
       const webSearchSources = groundingChunks ? groundingChunks.map(c => c.web).filter(Boolean) : undefined;
 
       return json({ text: replyText, sources: webSearchSources });
     } catch (e) {
-      return json({ error: 'Upstream request failed: ' + e.message }, 502);
+      return json({ error: 'Upstream request failed: ' + (e?.message || String(e)) }, 502);
     }
   },
 
