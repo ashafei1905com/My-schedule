@@ -127,10 +127,25 @@ export default {
       }
       const { GoogleGenAI } = await import('@google/genai');
       const ai = new GoogleGenAI({ apiKey: env.GEMINI_API_KEY });
-      const geminiContents = trimmedMessages.map(m => ({
-        role: m.role === 'user' ? 'user' : 'model',
-        parts: [{ text: m.content }]
-      }));
+      const geminiContents = trimmedMessages.map(m => {
+        const parts = [];
+        // Optional vision: client may send imageBase64 + mimeType (in-memory only, not stored)
+        if (m.imageBase64 && typeof m.imageBase64 === 'string') {
+          const mime = (m.mimeType && String(m.mimeType).startsWith('image/'))
+            ? String(m.mimeType)
+            : 'image/jpeg';
+          // Strip data-URL prefix if the client included it
+          const data = m.imageBase64.replace(/^data:image\/[a-zA-Z0-9.+-]+;base64,/, '');
+          parts.push({ inlineData: { mimeType: mime, data } });
+        }
+        const text = (m.content != null && String(m.content).length) ? String(m.content) : (parts.length ? 'Describe and act on this image for the user schedule.' : '');
+        if (text) parts.push({ text });
+        if (!parts.length) parts.push({ text: '' });
+        return {
+          role: m.role === 'user' ? 'user' : 'model',
+          parts
+        };
+      });
       const config = {};
       if (system) config.systemInstruction = system;
 

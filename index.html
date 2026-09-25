@@ -1,6 +1,6 @@
 <!DOCTYPE html>
 <html lang="en" dir="ltr">
-<!-- cache-bust: 2026-09-25 -->
+<!-- cache-bust: 2026-09-25b -->
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1.0,maximum-scale=1.0,user-scalable=no">
@@ -3174,7 +3174,10 @@ body.theme-matrix .tctime{
     </div>
   </div>
   <div class="ai-body" id="aiBody"></div>
-  <div class="ai-inputrow">
+  <div id="aiAttachPreview" style="display:none;padding:8px 12px 0;gap:8px;align-items:center;flex-wrap:wrap"></div>
+  <div class="ai-inputrow" style="align-items:flex-end">
+    <input type="file" id="aiPhotoInput" accept="image/*" capture="environment" style="display:none">
+    <button class="ai-iconbtn" id="aiPhotoBtn" type="button" title="Photo / Camera" style="flex-shrink:0;width:42px;height:42px;border-radius:10px">📷</button>
     <textarea class="ai-input" id="aiInput" rows="1" placeholder="اكتب أمرك... مثال: انقل الجيم لبكرة الساعة ٨"></textarea>
     <button class="ai-send" id="aiSendBtn" type="button">إرسال</button>
   </div>
@@ -5029,6 +5032,8 @@ function arEn(ar,en){ return (USER_SETTINGS&&USER_SETTINGS.lang)==='en'?en:ar; }
 // Auto-translate AI bot replies when language is English.
 function translateAiReply(text){
   // Reply language follows the USER MESSAGE language (not the UI language setting).
+  if(text==null||text===undefined) return '';
+  text=String(text);
   if(!text || AI_REPLY_LANG!=='en') return text;
   const pairs=[
     [/مش لاقي صلاة (.+) في جدول يوم (.+)\./g,"Can't find prayer $1 on $2."],
@@ -11323,7 +11328,8 @@ const AI_TOOL_DEFS = `Available tools (respond with EXACTLY ONE of these as a JS
 
 Rules:
 - ONLY use a taskId that appears in the provided task list. NEVER invent one.
-- Use "replaceWeeklySchedule" when the user wants to REPLACE the whole day/week plan with a new set of blocks they describe (e.g. "change my entire schedule to…", "rebuild my week as…"). Prefer weekday list Mon–Fri unless they name other days. Include start/end as 24h HH:MM when possible.
+- Use "replaceWeeklySchedule" when the user wants to REPLACE / BUILD the whole day or week plan — including NEW schedule slots / empty workspaces — from a verbal description OR from a photo of a timetable. Prefer weekday list Mon–Tue–Wed–Thu–Fri–Sat–Sun as needed. Include start/end as 24h HH:MM when possible. You may also use addCustomTask repeatedly for single tasks.
+- If the user attaches a photo of a schedule, extract every readable block and return replaceWeeklySchedule (or addCustomTask for one-off items).
 - "logFood" is for ANY food/snack completion, however phrased — "أكلت", "اكلت", "خلصت الغدا", "ate", casual or formal, doesn't matter. Never use markDone for a food/snack task; always use logFood so nutrition gets tracked properly.
 - If the message clearly refers to something ALREADY missing from the task list (e.g. asking to restore something not currently deleted, or edit a task that doesn't exist), still pick the closest tool and let validation reject it — do not use "none" just because you're not 100% certain, only use "none" for messages that are genuinely not instructions at all (questions, small talk, opinions).
 - If a date/day isn't stated, assume he means the currently selected/viewed date given below.
@@ -11471,12 +11477,23 @@ async function aiResolveToolCall(msg){
     return{ok:true,tool:'none'};
   }
   const context=aiBuildFullToolContext();
-  const sys=aiBuildToolCallSystemPrompt(context, SELECTED_DATE);
+  const sys=aiBuildToolCallSystemPrompt(context, SELECTED_DATE)+
+    '\nIf the user attached a photo of a schedule/timetable/plan, extract tasks and prefer replaceWeeklySchedule or addCustomTask. Always return JSON only.';
   try{
+    const userPayload={role:'user',content:msg||'Use the attached photo.'};
+    // Attach in-memory photo from the latest user message if present
+    try{
+      const sess=aiGetActiveSession();
+      const lastUser=[...(sess.messages||[])].reverse().find(m=>m.role==='user'&&m._imageBase64);
+      if(lastUser&&lastUser._imageBase64){
+        userPayload.imageBase64=lastUser._imageBase64;
+        userPayload.mimeType=lastUser._imageMime||'image/jpeg';
+      }
+    }catch(e){}
     const res=await fetch(workerUrl,{
       method:'POST',
       headers:{'Content-Type':'application/json'},
-      body:JSON.stringify({system:sys,messages:[{role:'user',content:msg}]})
+      body:JSON.stringify({system:sys,messages:[userPayload]})
     });
     const data=await res.json().catch(()=>({}));
     if(!res.ok || data.error){
@@ -12222,16 +12239,23 @@ async function aiCallLiveModel(){
   // regardless of session, so personal facts persist across every chat, old and new.
   const session=aiGetActiveSession();
   // Messages use `.text` in-session; older/cloud payloads may use `.content`.
+  // Optional in-memory photos ride along as imageBase64 (never persisted to cloud).
   const recentMsgs=session.messages.slice(-20).map(m=>{
     const role=(m.role==='user')?'user':'assistant';
     const content=(m.text!=null&&m.text!=='')?String(m.text):(m.content!=null?String(m.content):'');
-    return {role, content};
-  }).filter(m=>m.content);
+    const out={role, content};
+    if(m._imageBase64&&m._imageMime){
+      out.imageBase64=m._imageBase64;
+      out.mimeType=m._imageMime;
+    }
+    return out;
+  }).filter(m=>m.content||m.imageBase64);
   // Never send an empty messages array — Gemini/Worker reject it.
   if(!recentMsgs.length){
     recentMsgs.push({role:'user',content:(session.messages.slice(-1)[0]?.text)||'hello'});
   }
-  const systemWithMemory=getChaosCoordinatorSystemPrompt()+aiMemoryBlock();
+  const systemWithMemory=getChaosCoordinatorSystemPrompt()+aiMemoryBlock()+
+    '\n\nYou can see photos the user attaches. If they send a handwritten schedule, timetable, meal photo, or gym plan, extract structured tasks and use tools (especially replaceWeeklySchedule / addCustomTask) when they want the schedule updated. Photos are session-only and not stored on their device by the app.';
   const lastUserMsg=recentMsgs.filter(m=>m.role==='user').pop()?.content||'';
   const workerUrl=(typeof window.AI_WORKER_URL==='string'&&window.AI_WORKER_URL)
     ?window.AI_WORKER_URL
@@ -12317,14 +12341,19 @@ function aiRenderMessages(){
     const undoBtns=(m.undoIds&&m.undoIds.length)
       ?`<div style="margin-top:6px;display:flex;gap:6px;flex-wrap:wrap">${m.undoIds.map((uid,i)=>`<button class="ai-undo-btn" data-undo-id="${uid}" type="button">↩️ ${en?'Undo':'تراجع'}${m.undoIds.length>1?' #'+(i+1):''}</button>`).join('')}</div>`
       :'';
-    const shown=m.role==='user'?m.text:translateAiReply(m.text);
+    const rawText=(m.text!=null&&m.text!=='')?String(m.text):(m.content!=null?String(m.content):'');
+    const shown=m.role==='user'?rawText:translateAiReply(rawText);
+    const safeShown=String(shown||'').replace(/</g,'&lt;');
+    const imgHtml=m.imagePreview
+      ?`<div style="margin-bottom:6px"><img src="${String(m.imagePreview).replace(/"/g,'&quot;')}" alt="attach" style="max-width:100%;max-height:160px;border-radius:10px;border:1px solid var(--br)"></div>`
+      :'';
     const sourceLinks=(m.sources&&m.sources.length)
       ?`<div style="margin-top:8px;font-size:11px;opacity:0.8;border-top:1px solid rgba(255,255,255,0.1);padding-top:4px;display:flex;flex-direction:column;gap:2px;">
          <span style="font-weight:600;">🔗 ${en?'Sources:':'المصادر:'}</span>
          ${m.sources.slice(0,3).map(s=>`<a href="${(s.uri||'').replace(/"/g,'&quot;')}" target="_blank" rel="noopener noreferrer" style="color:var(--brand, #38bdf8);text-decoration:underline;text-overflow:ellipsis;overflow:hidden;white-space:nowrap;">${(s.title||s.uri||'').replace(/</g,'&lt;')}</a>`).join('')}
        </div>`
       :'';
-    return`<div class="ai-msg ${cls}">${shown.replace(/</g,'&lt;')}${sourceLinks}${undoBtns}</div>`;
+    return`<div class="ai-msg ${cls}">${imgHtml}${safeShown}${sourceLinks}${undoBtns}</div>`;
   }).join('');
   body.scrollTop=body.scrollHeight;
 }
@@ -12505,19 +12534,100 @@ async function aiProcessClause(clauseText){
   return{handled:false}; // not a recognized structured command
 }
 
+// In-memory photo for the next AI message only (never written to disk / gallery).
+let AI_PENDING_IMAGE=null; // { dataBase64, mimeType, previewUrl }
+
+function aiClearPendingImage(){
+  if(AI_PENDING_IMAGE&&AI_PENDING_IMAGE.previewUrl){
+    try{ URL.revokeObjectURL(AI_PENDING_IMAGE.previewUrl); }catch(e){}
+  }
+  AI_PENDING_IMAGE=null;
+  const wrap=document.getElementById('aiAttachPreview');
+  if(wrap){ wrap.style.display='none'; wrap.innerHTML=''; }
+  const inp=document.getElementById('aiPhotoInput');
+  if(inp) inp.value='';
+}
+
+function aiRenderPendingImage(){
+  const wrap=document.getElementById('aiAttachPreview');
+  if(!wrap) return;
+  if(!AI_PENDING_IMAGE){ wrap.style.display='none'; wrap.innerHTML=''; return; }
+  const en=(USER_SETTINGS&&USER_SETTINGS.lang)==='en';
+  wrap.style.display='flex';
+  wrap.innerHTML=`<img src="${AI_PENDING_IMAGE.previewUrl}" alt="preview" style="height:64px;width:auto;border-radius:8px;border:1px solid var(--br)">
+    <span style="font-size:.75rem;color:var(--so);font-weight:700">${en?'Photo attached (not saved on device)':'صورة مرفقة (لن تُحفظ على الجهاز)'}</span>
+    <button type="button" class="altbtn" id="aiPhotoClearBtn" style="padding:4px 10px;font-size:.75rem">${en?'Remove':'إزالة'}</button>`;
+}
+
+function aiBindPhotoControls(){
+  const btn=document.getElementById('aiPhotoBtn');
+  const inp=document.getElementById('aiPhotoInput');
+  if(btn&&!btn._bound){
+    btn._bound=true;
+    btn.addEventListener('click',()=>inp?.click());
+  }
+  if(inp&&!inp._bound){
+    inp._bound=true;
+    inp.addEventListener('change',async()=>{
+      const file=inp.files&&inp.files[0];
+      if(!file) return;
+      if(!file.type.startsWith('image/')){
+        showToast((USER_SETTINGS&&USER_SETTINGS.lang)==='en'?'Please choose an image':'اختَر صورة من فضلك',2200,'warn');
+        return;
+      }
+      // Cap ~4MB raw to keep Worker/Gemini payloads reasonable
+      if(file.size>4.5*1024*1024){
+        showToast((USER_SETTINGS&&USER_SETTINGS.lang)==='en'?'Image too large (max ~4MB)':'الصورة كبيرة جداً (حد أقصى ~٤ ميجا)',2800,'warn');
+        return;
+      }
+      const previewUrl=URL.createObjectURL(file);
+      const buf=await file.arrayBuffer();
+      const bytes=new Uint8Array(buf);
+      let binary='';
+      const chunk=0x8000;
+      for(let i=0;i<bytes.length;i+=chunk){
+        binary+=String.fromCharCode.apply(null, bytes.subarray(i,i+chunk));
+      }
+      const dataBase64=btoa(binary);
+      if(AI_PENDING_IMAGE&&AI_PENDING_IMAGE.previewUrl){
+        try{ URL.revokeObjectURL(AI_PENDING_IMAGE.previewUrl); }catch(e){}
+      }
+      AI_PENDING_IMAGE={ dataBase64, mimeType:file.type||'image/jpeg', previewUrl };
+      aiRenderPendingImage();
+    });
+  }
+  document.addEventListener('click',(ev)=>{
+    if(ev.target&&ev.target.id==='aiPhotoClearBtn'){ aiClearPendingImage(); }
+  });
+}
+try{ if(typeof document!=='undefined'){ if(document.readyState==='loading') document.addEventListener('DOMContentLoaded',aiBindPhotoControls); else aiBindPhotoControls(); } }catch(e){}
+
 async function aiHandleSend(){
   const input=document.getElementById('aiInput');
   if(!input) return;
   const text=input.value.trim();
-  if(!text) return;
+  const pendingImg=AI_PENDING_IMAGE;
+  if(!text && !pendingImg) return;
   input.value='';
   input.style.height='auto';
-  AI_REPLY_LANG=detectTextLang(text);
+  AI_REPLY_LANG=detectTextLang(text||'photo');
 
   const user=fbAuth.currentUser;
   const session=aiGetActiveSession();
-  session.messages.push({role:'user',text,ts:Date.now()});
+  const userMsg={role:'user',text:text||((USER_SETTINGS&&USER_SETTINGS.lang)==='en'?'[Photo]':'[صورة]'),ts:Date.now()};
+  if(pendingImg){
+    userMsg.imagePreview=pendingImg.previewUrl;
+    userMsg._imageBase64=pendingImg.dataBase64;
+    userMsg._imageMime=pendingImg.mimeType;
+  }
+  session.messages.push(userMsg);
   session.lastMsgAt=Date.now();
+  // Clear pending attach UI (preview URL kept on the message bubble only for this session)
+  AI_PENDING_IMAGE=null;
+  const wrap=document.getElementById('aiAttachPreview');
+  if(wrap){ wrap.style.display='none'; wrap.innerHTML=''; }
+  const pinp=document.getElementById('aiPhotoInput');
+  if(pinp) pinp.value='';
   aiRenderMessages();
 
   if(!user){
@@ -12534,7 +12644,8 @@ async function aiHandleSend(){
   // Split into individual command clauses so a single message with multiple
   // instructions ("انقل الجيم لبكرة واحذف السباحة النهاردة") executes ALL of them,
   // not just whichever pattern matched first.
-  const clauses=aiSplitCommands(text);
+  // Photo-only messages skip the regex/tool loop and go straight to the vision model.
+  const clauses=(text?aiSplitCommands(text):[]);
   const results=[]; // each entry: {tone, reply, undoSnapshot?, _opensModal?}
   let anyHandled=false;
   let anyMutated=false;
