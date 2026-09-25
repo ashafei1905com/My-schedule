@@ -128,10 +128,7 @@ export default {
       const { GoogleGenAI } = await import('@google/genai');
       const ai = new GoogleGenAI({ apiKey: env.GEMINI_API_KEY });
 
-      // Build Gemini contents. Gemini requires:
-      //  - roles only "user" | "model"
-      //  - history must NOT end on a model turn
-      //  - no empty parts
+      // Build Gemini contents: roles "user"|"model", no empties, end on user turn.
       const rawContents = [];
       for (const m of trimmedMessages) {
         const parts = [];
@@ -145,9 +142,10 @@ export default {
         const text = (m.content != null && String(m.content).trim().length)
           ? String(m.content)
           : (parts.length ? 'Describe and act on this image for the user schedule.' : '');
-        // Skip pure typing / empty bubbles
         if (!text && !parts.length) continue;
         if (text === '...' || text === '…') continue;
+        // Drop prior server-error bubbles so they don't poison multi-turn history
+        if (/Server error|GEMINI_API_KEY|Upstream request failed|مش قادر أوصل|حصل خطأ من السيرفر/i.test(text)) continue;
         if (text) parts.push({ text });
         if (!parts.length) continue;
         rawContents.push({
@@ -156,7 +154,6 @@ export default {
         });
       }
 
-      // Merge consecutive same-role turns (Gemini is strict about alternation)
       const geminiContents = [];
       for (const turn of rawContents) {
         const prev = geminiContents[geminiContents.length - 1];
@@ -166,14 +163,20 @@ export default {
           geminiContents.push({ role: turn.role, parts: turn.parts.slice() });
         }
       }
-
-      // Must end with a user turn — drop trailing model messages
       while (geminiContents.length && geminiContents[geminiContents.length - 1].role === 'model') {
         geminiContents.pop();
+      }
+      while (geminiContents.length && geminiContents[0].role !== 'user') {
+        geminiContents.shift();
       }
       if (!geminiContents.length) {
         return json({ error: 'No valid user message to send' }, 400);
       }
+
+      // Single text-only turn → string contents (avoids role-ordering edge cases)
+      const contentsPayload = (geminiContents.length === 1 && !geminiContents[0].parts.some(p => p.inlineData))
+        ? (geminiContents[0].parts.map(p => p.text || '').join('\n') || 'hi')
+        : geminiContents;
 
       const config = {};
       if (system) config.systemInstruction = system;
@@ -181,20 +184,21 @@ export default {
         config.tools = [{ googleSearch: {} }];
       }
 
-      // Real, currently available Flash models (3.x names were invalid → 400/high-demand noise)
+      // Current model IDs (Sept 2026) + stable aliases
       let response;
       const modelsToTry = [
-        'gemini-2.0-flash',
+        'gemini-3.8-flash',
+        'gemini-3.6-flash',
+        'gemini-flash-latest',
         'gemini-2.5-flash',
-        'gemini-2.0-flash-lite',
-        'gemini-1.5-flash'
+        'gemini-2.0-flash'
       ];
       let lastErr = null;
       for (const modelName of modelsToTry) {
         try {
           response = await ai.models.generateContent({
             model: modelName,
-            contents: geminiContents,
+            contents: contentsPayload,
             config
           });
           if (response && (response.text || response.candidates?.length)) break;

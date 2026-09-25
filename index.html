@@ -12243,13 +12243,16 @@ async function aiCallLiveModel(){
   const recentMsgs=session.messages.slice(-20).map(m=>{
     const role=(m.role==='user')?'user':'assistant';
     const content=(m.text!=null&&m.text!=='')?String(m.text):(m.content!=null?String(m.content):'');
+    // Don't feed prior error/typing bubbles back into Gemini history
+    if(m.tone==='typing'||m.tone==='err') return null;
+    if(/Server error|GEMINI_API_KEY|Upstream request failed|مش قادر أوصل|حصل خطأ من السيرفر/i.test(content)) return null;
     const out={role, content};
     if(m._imageBase64&&m._imageMime){
       out.imageBase64=m._imageBase64;
       out.mimeType=m._imageMime;
     }
     return out;
-  }).filter(m=>m.content||m.imageBase64);
+  }).filter(m=>m&&(m.content||m.imageBase64));
   // Never send an empty messages array — Gemini/Worker reject it.
   if(!recentMsgs.length){
     recentMsgs.push({role:'user',content:(session.messages.slice(-1)[0]?.text)||'hello'});
