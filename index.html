@@ -1,6 +1,6 @@
 <!DOCTYPE html>
 <html lang="en" dir="ltr">
-<!-- cache-bust: 2026-09-24 -->
+<!-- cache-bust: 2026-09-25 -->
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1.0,maximum-scale=1.0,user-scalable=no">
@@ -6556,11 +6556,17 @@ async function saveAiChat(){
     if(!s||typeof s!=='object') return null;
     const msgs=(s.messages||[]).map(m=>{
       if(!m||typeof m!=='object') return null;
-      return {
-        role: m.role==null?'assistant':String(m.role),
-        content: m.content==null?'':String(m.content),
+      // In-app messages use `text`; some older payloads used `content`.
+      const text=(m.text!=null&&m.text!=='')?String(m.text):(m.content!=null?String(m.content):'');
+      if(!text) return null;
+      const out={
+        role: m.role==null?'bot':String(m.role),
+        text,
         ts: typeof m.ts==='number'?m.ts:Date.now()
       };
+      if(m.tone!=null) out.tone=String(m.tone);
+      if(m.hasUndo===true) out.hasUndo=true;
+      return out;
     }).filter(Boolean);
     return {
       id: s.id==null?aiGenSessionId():String(s.id),
@@ -11456,28 +11462,50 @@ function aiBuildFullToolContext(){
 // anything itself, execution stays in aiExecuteToolCall so there's exactly one path
 // that ever mutates state, same discipline as every other action in this file.
 async function aiResolveToolCall(msg){
-  if(!AI_WORKER_URL || AI_WORKER_URL==='REPLACE_WITH_YOUR_WORKER_URL'){
-    return{ok:false,reply:(USER_SETTINGS&&USER_SETTINGS.lang)==='en'
-      ?'⚠️ AI is not connected to the server. Set GEMINI_API_KEY and run the worker/server.'
-      :'⚠️ المساعد الذكي لسه مش متوصل بالسيرفر.'};
+  const en=(USER_SETTINGS&&USER_SETTINGS.lang)==='en';
+  const workerUrl=(typeof window.AI_WORKER_URL==='string'&&window.AI_WORKER_URL)
+    ?window.AI_WORKER_URL
+    :(typeof AI_WORKER_URL==='string'?AI_WORKER_URL:'');
+  if(!workerUrl || workerUrl==='REPLACE_WITH_YOUR_WORKER_URL'){
+    // Not a hard failure for chat — caller will fall through to conversation / offline message.
+    return{ok:true,tool:'none'};
   }
   const context=aiBuildFullToolContext();
   const sys=aiBuildToolCallSystemPrompt(context, SELECTED_DATE);
   try{
-    const res=await fetch(AI_WORKER_URL,{
+    const res=await fetch(workerUrl,{
       method:'POST',
       headers:{'Content-Type':'application/json'},
       body:JSON.stringify({system:sys,messages:[{role:'user',content:msg}]})
     });
-    const data=await res.json();
-    if(!res.ok || data.error) return{ok:false,reply:'⚠️ حصل خطأ من السيرفر — جرب تاني.'};
-    let raw=(data.text||'').trim().replace(/^```json\s*|```$/g,'').trim();
+    const data=await res.json().catch(()=>({}));
+    if(!res.ok || data.error){
+      // Network/API failure on the *tool router* must NOT kill normal chat.
+      // Fall through so aiCallLiveModel can still answer questions.
+      console.warn('tool call resolve non-OK, falling through to chat', res.status, data.error||'');
+      return{ok:true,tool:'none',_routerFailed:true};
+    }
+    let raw=(data.text||'').trim()
+      .replace(/^```(?:json)?\s*/i,'')
+      .replace(/\s*```$/,'')
+      .trim();
+    // Model sometimes wraps JSON in prose — pull the first {...} block.
+    if(raw[0]!=='{'){
+      const brace=raw.match(/\{[\s\S]*\}/);
+      if(brace) raw=brace[0];
+    }
     let parsed;
-    try{ parsed=JSON.parse(raw); }catch{ return{ok:false,reply:'⚠️ مش فاهم الطلب ده كويس — جرب تصيغه بشكل أوضح.'}; }
+    try{ parsed=JSON.parse(raw); }
+    catch{
+      // Not a tool call → treat as normal conversation.
+      return{ok:true,tool:'none'};
+    }
+    if(!parsed || typeof parsed!=='object') return{ok:true,tool:'none'};
+    if(!parsed.tool || parsed.tool==='none') return{ok:true,tool:'none'};
     return aiValidateToolCall(parsed, context);
   }catch(e){
-    console.error('tool call resolve failed',e);
-    return{ok:false,reply:'⚠️ مش قادر أوصل للسيرفر دلوقتي.'};
+    console.warn('tool call resolve failed, falling through to chat',e);
+    return{ok:true,tool:'none',_routerFailed:true};
   }
 }
 
@@ -12193,18 +12221,30 @@ async function aiCallLiveModel(){
   // memory of ABDULLAH HIMSELF (USER_MEMORY) is injected into the system prompt below
   // regardless of session, so personal facts persist across every chat, old and new.
   const session=aiGetActiveSession();
-  const recentMsgs=session.messages.slice(-20).map(m=>({role:m.role==='user'?'user':'assistant',content:m.text}));
+  // Messages use `.text` in-session; older/cloud payloads may use `.content`.
+  const recentMsgs=session.messages.slice(-20).map(m=>{
+    const role=(m.role==='user')?'user':'assistant';
+    const content=(m.text!=null&&m.text!=='')?String(m.text):(m.content!=null?String(m.content):'');
+    return {role, content};
+  }).filter(m=>m.content);
+  // Never send an empty messages array — Gemini/Worker reject it.
+  if(!recentMsgs.length){
+    recentMsgs.push({role:'user',content:(session.messages.slice(-1)[0]?.text)||'hello'});
+  }
   const systemWithMemory=getChaosCoordinatorSystemPrompt()+aiMemoryBlock();
   const lastUserMsg=recentMsgs.filter(m=>m.role==='user').pop()?.content||'';
+  const workerUrl=(typeof window.AI_WORKER_URL==='string'&&window.AI_WORKER_URL)
+    ?window.AI_WORKER_URL
+    :(typeof AI_WORKER_URL==='string'?AI_WORKER_URL:'');
   try{
-    const res=await fetch(AI_WORKER_URL,{
+    const res=await fetch(workerUrl,{
       method:'POST',
       headers:{'Content-Type':'application/json'},
       body:JSON.stringify({system:systemWithMemory,messages:recentMsgs})
     });
     const data=await res.json().catch(()=>({}));
     if(!res.ok || data.error){
-      console.error('AI worker error:',data.error||res.status);
+      console.error('AI worker error:',data.error||res.status, res.status);
       const localCoach=aiLocalCoachingFallback(lastUserMsg, en?'en':'ar');
       if(localCoach) return {ok:true,text:localCoach};
       const errStr=String(data.error||'');
@@ -12525,15 +12565,15 @@ async function aiHandleSend(){
     // aiValidateToolCall), and a full state snapshot is taken immediately before
     // execution so the chat bubble can carry a real, byte-exact undo button.
     const resolved=await aiResolveToolCall(clause);
+    // Router soft-fails (network / non-JSON) return tool:'none' so chat still works.
     if(!resolved.ok){
-      results.push({tone:'err',reply:resolved.reply,handled:true});
+      // Only hard-fail when a real tool was attempted and validation rejected it.
+      results.push({tone:'err',reply:resolved.reply||((USER_SETTINGS&&USER_SETTINGS.lang)==='en'?'⚠️ Could not run that command.':'⚠️ مش قادر أنفّذ الأمر ده.'),handled:true});
       anyHandled=true;
       continue;
     }
-    if(resolved.tool==='none'){
-      // Genuinely not a command (a question, small talk, etc.) — don't mark as
-      // handled, let it fall through to the normal conversational reply below so the
-      // user still gets a real answer instead of an empty confirmation.
+    if(!resolved.tool || resolved.tool==='none'){
+      // Question / small talk / router miss → conversational model below.
       continue;
     }
     const snapshot=await aiExecuteToolCall(resolved);
