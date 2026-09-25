@@ -904,6 +904,125 @@ html[dir="ltr"] .tc[data-c="sunrise"]{border-left:3px solid var(--or)}
 }
 
 /* 1) SUPERNOVA NEBULA CORE */
+/* Living app shell — same motion language as starter/landing page */
+body.theme-living,
+body.app-alive{
+  --app-glow-1:rgba(56,189,248,.85);
+  --app-glow-2:rgba(168,85,247,.8);
+  --app-glow-3:rgba(16,185,129,.75);
+  --app-glow-4:rgba(59,130,246,.7);
+  background:radial-gradient(circle at 50% 12%, var(--app-base-bg1,#0e1d3e) 0%, var(--app-base-bg2,#091228) 48%, var(--app-base-bg3,#060a18) 100%) fixed !important;
+  transition:background 1.2s cubic-bezier(.4,0,.2,1);
+}
+body.theme-living #app,
+body.app-alive #app{background:transparent!important;position:relative;z-index:1}
+body.theme-living #panels,
+body.theme-living .pan,
+body.app-alive #panels,
+body.app-alive .pan{background:transparent!important}
+
+.app-dynamic-bg{
+  position:fixed;inset:0;pointer-events:none;z-index:0;overflow:hidden;
+  animation:landingDynamicColorCycle 24s ease-in-out infinite alternate;
+}
+.app-mesh-gradient{
+  position:absolute;inset:-30%;
+  background:
+    radial-gradient(circle at 18% 12%, var(--app-glow-1,rgba(56,189,248,.85)) 0%, transparent 42%),
+    radial-gradient(circle at 82% 16%, var(--app-glow-2,rgba(168,85,247,.8)) 0%, transparent 45%),
+    radial-gradient(circle at 50% 38%, var(--app-glow-4,rgba(59,130,246,.7)) 0%, transparent 50%),
+    radial-gradient(circle at 15% 65%, var(--app-glow-3,rgba(16,185,129,.75)) 0%, transparent 45%),
+    radial-gradient(circle at 85% 72%, var(--accent-glow,rgba(56,189,248,.45)) 0%, transparent 45%);
+  animation:meshFlowDrift 24s ease-in-out infinite alternate;
+  filter:blur(55px);opacity:.82;will-change:transform,filter;
+  transition:background 1.2s ease;
+}
+.app-glow-orb{
+  position:absolute;border-radius:50%;filter:blur(100px);opacity:.55;
+  mix-blend-mode:screen;pointer-events:none;will-change:transform;
+}
+.app-orb-1{
+  width:520px;height:520px;top:-100px;left:-80px;
+  background:radial-gradient(circle, var(--app-glow-1,rgba(56,189,248,.85)) 0%, transparent 70%);
+  animation:floatOrbA 16s ease-in-out infinite alternate;
+}
+.app-orb-2{
+  width:560px;height:560px;top:10%;right:-120px;
+  background:radial-gradient(circle, var(--app-glow-2,rgba(168,85,247,.8)) 0%, transparent 70%);
+  animation:floatOrbB 20s ease-in-out infinite alternate;
+}
+.app-orb-3{
+  width:480px;height:480px;bottom:5%;left:-60px;
+  background:radial-gradient(circle, var(--app-glow-3,rgba(16,185,129,.75)) 0%, transparent 70%);
+  animation:floatOrbC 18s ease-in-out infinite alternate;
+}
+.app-orb-4{
+  width:500px;height:500px;bottom:15%;right:-40px;
+  background:radial-gradient(circle, var(--app-glow-4,rgba(59,130,246,.7)) 0%, transparent 70%);
+  animation:floatOrbD 22s ease-in-out infinite alternate;
+}
+.app-grid-overlay{
+  position:absolute;inset:0;pointer-events:none;opacity:.07;
+  background-image:linear-gradient(rgba(255,255,255,.35) 1px,transparent 1px),linear-gradient(90deg,rgba(255,255,255,.35) 1px,transparent 1px);
+  background-size:42px 42px;
+}
+
+body.theme-living #sbar,
+body.theme-living #topNav,
+body.theme-living .header,
+body.theme-living .tc,
+body.theme-living .dh,
+body.theme-living .pb,
+body.theme-living #aiPanel,
+body.theme-living .tab,
+body.theme-living .report-box,
+body.app-alive #sbar,
+body.app-alive .tc,
+body.app-alive .dh,
+body.app-alive .pb,
+body.app-alive .tab,
+body.app-alive #aiPanel{
+  background:rgba(15,23,42,.58)!important;
+  backdrop-filter:blur(14px) saturate(1.25);
+  -webkit-backdrop-filter:blur(14px) saturate(1.25);
+  border-color:color-mix(in srgb, var(--accent-color,#38bdf8) 28%, transparent)!important;
+}
+body.theme-living .tc,
+body.app-alive .tc{
+  box-shadow:0 10px 30px -8px rgba(0,0,0,.45),0 0 24px -8px color-mix(in srgb, var(--accent-color,#38bdf8) 22%, transparent);
+  transition:transform .35s ease, box-shadow .35s ease, border-color .35s ease, background .35s ease;
+  position:relative;overflow:hidden;
+}
+body.theme-living .tc::before,
+body.app-alive .tc::before{
+  content:'';position:absolute;top:0;left:0;right:0;height:2px;
+  background:linear-gradient(90deg,transparent,var(--accent-color,#38bdf8),transparent);
+  opacity:0;transition:opacity .3s;
+}
+body.theme-living .tc:hover,
+body.app-alive .tc:hover{
+  transform:translateY(-4px) scale(1.01);
+  border-color:color-mix(in srgb, var(--accent-color,#38bdf8) 55%, transparent)!important;
+  box-shadow:0 18px 40px -10px rgba(0,0,0,.55),0 0 32px color-mix(in srgb, var(--accent-color,#38bdf8) 28%, transparent);
+  background:rgba(20,32,60,.78)!important;
+}
+body.theme-living .tc:hover::before,
+body.app-alive .tc:hover::before{opacity:1}
+body.theme-living .tab.act,
+body.app-alive .tab.act{
+  background:color-mix(in srgb, var(--accent-color,#38bdf8) 28%, transparent)!important;
+  border-color:var(--accent-color,#38bdf8)!important;
+  box-shadow:0 0 16px color-mix(in srgb, var(--accent-color,#38bdf8) 35%, transparent);
+}
+body.theme-living #aiFab,
+body.app-alive #aiFab{
+  box-shadow:0 4px 24px color-mix(in srgb, var(--accent-color,#38bdf8) 45%, transparent);
+  animation:fabPulse 3.2s ease-in-out infinite;
+}
+@keyframes fabPulse{
+  0%,100%{box-shadow:0 4px 20px color-mix(in srgb, var(--accent-color,#38bdf8) 40%, transparent)}
+  50%{box-shadow:0 6px 32px color-mix(in srgb, var(--accent-color,#38bdf8) 65%, transparent)}
+}
 body.theme-nebula{
   --bg-main:#030206;
   --bg-card:rgba(255,255,255,0.03);
@@ -3074,10 +3193,8 @@ body.theme-matrix .tctime{
   try{
     var settings={};
     try{ settings=JSON.parse(localStorage.getItem('sc:userSettings1')||'{}')||{}; }catch(e){}
-    // Do NOT set documentElement.dir here — that RTL-reorders the public landing
-    // and login pages (periods jump to the front of English sentences).
-    // Dir is applied only when the signed-in app shell is revealed.
-    var lang=(settings.lang==='en')?'en':'ar';
+    // English is default; only Arabic when explicitly saved as ar
+    var lang=(settings.lang==='ar')?'ar':'en';
     try{ document.documentElement.dataset.prefLang=lang; }catch(e){}
 
     var themeId=null;
@@ -3096,16 +3213,21 @@ body.theme-matrix .tctime{
         }catch(e){}
       }
     }
-    if(themeId==='gold') themeId='chrono';
+    // Normalize legacy → landing theme ids
+    var alias={gold:'chrono',nebula:'aurora',cyberpunk:'cyber',matrix:'emerald'};
+    if(themeId&&alias[themeId]) themeId=alias[themeId];
+    var known=['aurora','cyber','emerald','sunset','amethyst','ocean','chrono','nebula','cyberpunk','matrix'];
     var activeThemeClass='';
-    if(themeId==='nebula'||themeId==='cyberpunk'||themeId==='matrix'||themeId==='chrono'){
+    if(themeId&&known.indexOf(themeId)>=0){
       activeThemeClass='theme-'+themeId;
-      document.documentElement.classList.add(activeThemeClass);
+      document.documentElement.classList.add('app-alive', activeThemeClass, 'theme-living');
+      if(themeId==='aurora') document.documentElement.classList.add('theme-nebula');
+      if(themeId==='cyber') document.documentElement.classList.add('theme-cyberpunk');
+      if(themeId==='emerald') document.documentElement.classList.add('theme-matrix');
     }
 
-    // Apply palette colors immediately (custom + defaults) so spinner matches workspace
     var root=document.documentElement.style;
-    var accent=settings.themeAccent||settings.mythicColorOverrides&&themeId&&settings.mythicColorOverrides[themeId]&&settings.mythicColorOverrides[themeId].accent;
+    var accent=settings.themeAccent;
     var card=settings.themeCard;
     var bg=settings.themeBg;
     if(settings.mythicColorOverrides&&themeId&&settings.mythicColorOverrides[themeId]){
@@ -3113,8 +3235,18 @@ body.theme-matrix .tctime{
       if(ov.accent) accent=ov.accent;
       if(ov.glow) root.setProperty('--accent-glow', ov.glow);
     }
-    // Mythic theme defaults when no custom override
-    var MYTHIC_DEF={nebula:{accent:'#7c3aed',bg:'#030206'},cyberpunk:{accent:'#ff00aa',bg:'#050508'},matrix:{accent:'#00ff66',bg:'#000000'},chrono:{accent:'#d4af37',bg:'#0a0907'}};
+    var MYTHIC_DEF={
+      aurora:{accent:'#38bdf8',bg:'#060a18'},
+      cyber:{accent:'#818cf8',bg:'#080618'},
+      emerald:{accent:'#34d399',bg:'#040f0c'},
+      sunset:{accent:'#fbbf24',bg:'#12070c'},
+      amethyst:{accent:'#c084fc',bg:'#0d0618'},
+      ocean:{accent:'#06b6d4',bg:'#040c14'},
+      chrono:{accent:'#d4af37',bg:'#0a0804'},
+      nebula:{accent:'#38bdf8',bg:'#060a18'},
+      cyberpunk:{accent:'#818cf8',bg:'#080618'},
+      matrix:{accent:'#34d399',bg:'#040f0c'}
+    };
     if(themeId&&MYTHIC_DEF[themeId]){
       if(!accent) accent=MYTHIC_DEF[themeId].accent;
       if(!bg) bg=MYTHIC_DEF[themeId].bg;
@@ -3124,13 +3256,20 @@ body.theme-matrix .tctime{
     if(bg){ root.setProperty('--bg',bg); root.setProperty('--bg-main',bg); }
 
     document.addEventListener('DOMContentLoaded',function(){
-      if(activeThemeClass) document.body.classList.add(activeThemeClass);
+      if(activeThemeClass){
+        document.body.classList.add('app-alive','theme-living',activeThemeClass);
+        if(themeId==='aurora') document.body.classList.add('theme-nebula');
+        if(themeId==='cyber') document.body.classList.add('theme-cyberpunk');
+        if(themeId==='emerald') document.body.classList.add('theme-matrix');
+      } else {
+        document.body.classList.add('app-alive');
+      }
       var ld=document.getElementById('ld');
       if(ld){
         if(activeThemeClass) ld.classList.add(activeThemeClass);
         if(bg) ld.style.background=bg;
         var label=ld.querySelector('.ld-label');
-        if(label) label.textContent=lang==='en'?'Loading your schedule...':'جارٍ تحميل جدولك...';
+        if(label) label.textContent=lang==='ar'?'جارٍ تحميل جدولك...':'Loading your schedule...';
       }
     });
   }catch(e){}
@@ -3138,10 +3277,18 @@ body.theme-matrix .tctime{
 </script>
 <div id="ld">
   <div class="ld-spinner" id="ldSpinner"></div>
-  <span class="ld-label" id="ldText">جارٍ تحميل جدولك...</span>
+  <span class="ld-label" id="ldText">Loading your schedule...</span>
 </div>
 
 <main id="app" style="display:none">
+  <div id="appAmbient" class="app-dynamic-bg" aria-hidden="true">
+    <div class="app-mesh-gradient"></div>
+    <div class="app-glow-orb app-orb-1"></div>
+    <div class="app-glow-orb app-orb-2"></div>
+    <div class="app-glow-orb app-orb-3"></div>
+    <div class="app-glow-orb app-orb-4"></div>
+    <div class="app-grid-overlay"></div>
+  </div>
   <div id="sbar">
     <div class="sbar-stats">
       <div class="st"><div class="sv" id="sv1">0</div><div class="sl">🔥 Streak</div></div>
@@ -4904,21 +5051,39 @@ async function doRebirth(){
     :`اكتملت ترقية الامتياز — الرتبة ${STATS.prestige_level} · رمز +1 · +${Math.round(STATS.prestige_level*10)}٪ نقاط`,4200);
   try{ updatePrestigeUI(); updateAuthUI(fbAuth?.currentUser||null); updateUI(); }catch(e){}
 }
+// Secret / mythic themes = same vibes as the starter (landing) page
 const MYTHIC_THEME_DEFAULTS={
-  nebula:{accent:'#7c3aed',glow:'#a78bfa'},
-  cyberpunk:{accent:'#ff00aa',glow:'#00ffff'},
-  matrix:{accent:'#00ff66',glow:'#39ff14'},
-  chrono:{accent:'#d4af37',glow:'#f5e6b8'},
-  gold:{accent:'#d4af37',glow:'#f5e6b8'}
+  aurora:{accent:'#38bdf8',glow:'#a855f7',bg1:'#0e1d3e',bg2:'#091228',bg3:'#060a18'},
+  cyber:{accent:'#818cf8',glow:'#ec4899',bg1:'#18123d',bg2:'#100c2a',bg3:'#080618'},
+  emerald:{accent:'#34d399',glow:'#06b6d4',bg1:'#09261f',bg2:'#061a15',bg3:'#040f0c'},
+  sunset:{accent:'#fbbf24',glow:'#ef4444',bg1:'#2c141d',bg2:'#1f0d14',bg3:'#12070c'},
+  amethyst:{accent:'#c084fc',glow:'#a855f7',bg1:'#241038',bg2:'#180b28',bg3:'#0d0618'},
+  ocean:{accent:'#06b6d4',glow:'#3b82f6',bg1:'#0a1f2e',bg2:'#07151f',bg3:'#040c14'},
+  // legacy aliases → map to new ids
+  nebula:{accent:'#38bdf8',glow:'#a855f7',bg1:'#0e1d3e',bg2:'#091228',bg3:'#060a18'},
+  cyberpunk:{accent:'#818cf8',glow:'#ec4899',bg1:'#18123d',bg2:'#100c2a',bg3:'#080618'},
+  matrix:{accent:'#34d399',glow:'#06b6d4',bg1:'#09261f',bg2:'#061a15',bg3:'#040f0c'},
+  chrono:{accent:'#d4af37',glow:'#f5e6b8',bg1:'#1a1408',bg2:'#120e06',bg3:'#0a0804'},
+  gold:{accent:'#d4af37',glow:'#f5e6b8',bg1:'#1a1408',bg2:'#120e06',bg3:'#0a0804'}
 };
+function normalizeMythicId(themeId){
+  const map={nebula:'aurora',cyberpunk:'cyber',matrix:'emerald',gold:'chrono'};
+  return map[themeId]||themeId;
+}
 function applyMythicThemeClass(themeId){
-  document.body.classList.remove('theme-nebula','theme-cyberpunk','theme-matrix','theme-chrono','theme-gold');
-  if(themeId==='nebula') document.body.classList.add('theme-nebula');
-  else if(themeId==='cyberpunk') document.body.classList.add('theme-cyberpunk');
-  else if(themeId==='matrix') document.body.classList.add('theme-matrix');
-  else if(themeId==='chrono' || themeId==='gold') document.body.classList.add('theme-chrono','theme-gold');
-  applyMythicColorOverrides(themeId);
-  updateThemeColorCustomizerVisibility(themeId);
+  const id=normalizeMythicId(themeId);
+  document.body.classList.remove('theme-nebula','theme-cyberpunk','theme-matrix','theme-chrono','theme-gold','theme-aurora','theme-cyber','theme-emerald','theme-sunset','theme-amethyst','theme-ocean','theme-living');
+  if(id&&MYTHIC_THEME_DEFAULTS[id]){
+    document.body.classList.add('theme-living','theme-'+id);
+    // legacy class aliases for older CSS hooks
+    if(id==='aurora') document.body.classList.add('theme-nebula');
+    if(id==='cyber') document.body.classList.add('theme-cyberpunk');
+    if(id==='emerald') document.body.classList.add('theme-matrix');
+    if(id==='chrono') document.body.classList.add('theme-chrono','theme-gold');
+  }
+  applyMythicColorOverrides(id||themeId);
+  updateThemeColorCustomizerVisibility(id||themeId);
+  applyAppAmbient(id||themeId);
 }
 function applyMythicColorOverrides(themeId){
   const root=document.documentElement;
@@ -4953,10 +5118,49 @@ function applyMythicColorOverrides(themeId){
   if(ap) ap.value=accent;
   if(gp) gp.value=(custom.glow||defs.glow);
 }
+function applyAppAmbient(themeId){
+  const id=themeId?normalizeMythicId(themeId):null;
+  const defs=(id&&MYTHIC_THEME_DEFAULTS[id])||MYTHIC_THEME_DEFAULTS.aurora;
+  const root=document.documentElement;
+  const ambient=document.getElementById('appAmbient');
+  // Always keep the signed-in shell alive (starter-page energy). Mythic themes intensify colors.
+  document.body.classList.add('app-alive');
+  if(id&&MYTHIC_THEME_DEFAULTS[id]) document.body.classList.add('theme-living');
+  else document.body.classList.remove('theme-living');
+
+  const bg1=defs.bg1,bg2=defs.bg2,bg3=defs.bg3;
+  root.style.setProperty('--app-base-bg1',bg1);
+  root.style.setProperty('--app-base-bg2',bg2);
+  root.style.setProperty('--app-base-bg3',bg3);
+  root.style.setProperty('--bg',bg3);
+  root.style.setProperty('--bg-main',bg3);
+
+  // Map accent glows like landing orbs
+  const accent=getComputedStyle(root).getPropertyValue('--accent-color').trim()||defs.accent||'#38bdf8';
+  const glow=getComputedStyle(root).getPropertyValue('--accent-glow').trim()||defs.glow||'#a855f7';
+  root.style.setProperty('--app-glow-1', accent.startsWith('#')?hexToRgba(accent,.85):accent);
+  root.style.setProperty('--app-glow-2', (typeof glow==='string'&&glow.startsWith('#')?hexToRgba(glow,.8):glow)||'rgba(168,85,247,.8)');
+  root.style.setProperty('--app-glow-3','rgba(16,185,129,.75)');
+  root.style.setProperty('--app-glow-4','rgba(59,130,246,.7)');
+
+  document.body.style.background=`radial-gradient(circle at 50% 12%, ${bg1} 0%, ${bg2} 48%, ${bg3} 100%)`;
+  if(ambient) ambient.style.display='block';
+  const app=document.getElementById('app');
+  if(app) app.style.background='transparent';
+}
+function hexToRgba(hex,a){
+  try{
+    const h=String(hex).replace('#','');
+    const full=h.length===3?h.split('').map(c=>c+c).join(''):h;
+    const r=parseInt(full.slice(0,2),16)||0,g=parseInt(full.slice(2,4),16)||0,b=parseInt(full.slice(4,6),16)||0;
+    return `rgba(${r},${g},${b},${a})`;
+  }catch(e){ return hex; }
+}
 function updateThemeColorCustomizerVisibility(themeId){
   const box=document.getElementById('themeColorCustomizer');
   if(!box) return;
-  const show=themeId==='nebula'||themeId==='cyberpunk'||themeId==='matrix'||themeId==='chrono'||themeId==='gold';
+  const id=normalizeMythicId(themeId);
+  const show=!!MYTHIC_THEME_DEFAULTS[id];
   box.style.display=show?'block':'none';
   const en=(USER_SETTINGS&&USER_SETTINGS.lang)==='en';
   const title=document.getElementById('themeCustomizerTitle');
@@ -5027,16 +5231,23 @@ async function unlockMythicTheme(themeId, cost){
   showMythicUnlockModal(themeId);
 }
 function getMythicThemeCatalog(en){
+  // Exact same theme set as the starter / landing page (plus Golden Chrono)
   return en?[
-    {id:'nebula',name:'Cosmic Nebula',cost:1,desc:'Living mesh nebula across the full dashboard with glass navigation and soft depth'},
-    {id:'cyberpunk',name:'Cyberpunk Pulse',cost:2,desc:'Neon terminal atmosphere, laser FAB scanlines, and high-contrast signal edges'},
-    {id:'matrix',name:'Deep Space Matrix',cost:1,desc:'Digital rain grid field with signal-card geometry and code-field motion'},
-    {id:'chrono',name:'Golden Chrono Luxury',cost:2,desc:'Editorial serif type, refined borders, and completion star-spark effects'}
+    {id:'aurora',name:'🌌 Aurora Borealis',cost:1,desc:'Same living aurora mesh as the starter page — circadian harmony & glass depth'},
+    {id:'cyber',name:'⚡ Cyber Neon',cost:2,desc:'Starter Cyber vibe: hyper-focused neon edges and high-energy contrast'},
+    {id:'emerald',name:'🌿 Emerald Matrix',cost:1,desc:'Starter Emerald: vitality greens, clean habits, macro-mastery glow'},
+    {id:'sunset',name:'🌅 Sunset Amber',cost:1,desc:'Starter Sunset: warm performance drive and relentless execution energy'},
+    {id:'amethyst',name:'🔮 Cosmic Amethyst',cost:2,desc:'Starter Amethyst: deep purple focus field and cosmic calm'},
+    {id:'ocean',name:'🌊 Oceanic Clarity',cost:1,desc:'Starter Ocean: calm teal flow for seamless fluid routines'},
+    {id:'chrono',name:'👑 Golden Chrono Luxury',cost:2,desc:'Editorial gold luxury with completion star-spark effects'}
   ]:[
-    {id:'nebula',name:'🌌 سديم السوبرنوفا المتحرك',cost:1,desc:'شبكة سديم متحركة فاخرة عبر لوحة التحكم مع شريط تنقل زجاجي وعمق ناعم'},
-    {id:'cyberpunk',name:'⚡ نبض النيون السيبراني',cost:2,desc:'طرفية داكنة، مسح ليزري على زر المساعد، وحواف إشارة عالية التباين'},
-    {id:'matrix',name:'🟢 مصفوفة كود الفضاء الرقمي',cost:1,desc:'شبكة رقمية متوهجة مع هندسة بطاقات الإشارة وحركة حقل الكود'},
-    {id:'chrono',name:'👑 فخامة الكرونو الذهبي',cost:2,desc:'خطوط تحريرية فاخرة، حدود رفيعة، وشرارات نجمية عند الإنجاز'}
+    {id:'aurora',name:'🌌 شفق الشمال',cost:1,desc:'نفس شبكة الشفق المتحركة من صفحة البداية — انسجام وإيقاع'},
+    {id:'cyber',name:'⚡ سايبر نيون',cost:2,desc:'نفس أجواء السايبر من صفحة البداية — تركيز عالي وحدود نيون'},
+    {id:'emerald',name:'🌿 زمرد الحيوية',cost:1,desc:'نفس الزمرد من صفحة البداية — عادات نظيفة وتوهج حيوي'},
+    {id:'sunset',name:'🌅 غروب كهرماني',cost:1,desc:'نفس الغروب من صفحة البداية — طاقة تنفيذ دافئة'},
+    {id:'amethyst',name:'🔮 أميثيست كوني',cost:2,desc:'نفس البنفسج الكوني من صفحة البداية'},
+    {id:'ocean',name:'🌊 صفاء المحيط',cost:1,desc:'نفس المحيط من صفحة البداية — تدفق هادئ للروتين'},
+    {id:'chrono',name:'👑 كرونو ذهبي',cost:2,desc:'فخامة ذهبية مع شرارات عند الإنجاز'}
   ];
 }
 function updatePrestigeUI(){
@@ -5315,6 +5526,92 @@ let IS_NEW_WORKSPACE_FLOW = false;
 let USER_SCHEDULES={};
 let ACTIVE_SCHEDULE_ID='default';
 
+// Lightweight centralized store for schedule slots (Zustand-style API, vanilla JS).
+// Slot switch / create / rename / delete go through here so UI + persistence stay synced.
+const ScheduleStore=(function(){
+  const listeners=new Set();
+  function getState(){
+    return {
+      slots:USER_SCHEDULES,
+      activeId:ACTIVE_SCHEDULE_ID,
+      schedule:USER_SCHEDULE,
+      activeName:(USER_SCHEDULES[ACTIVE_SCHEDULE_ID]&&USER_SCHEDULES[ACTIVE_SCHEDULE_ID].name)||(USER_SETTINGS&&USER_SETTINGS.workspaceName)||'My Workspace'
+    };
+  }
+  function emit(){
+    const snap=getState();
+    listeners.forEach(fn=>{ try{ fn(snap); }catch(e){ console.warn('ScheduleStore listener',e); } });
+  }
+  function subscribe(fn){
+    if(typeof fn!=='function') return ()=>{};
+    listeners.add(fn);
+    return ()=>listeners.delete(fn);
+  }
+  async function setActive(id,{persist=true,render=true}={}){
+    if(!id||!USER_SCHEDULES[id]) return false;
+    if(USER_SCHEDULES[ACTIVE_SCHEDULE_ID]) USER_SCHEDULES[ACTIVE_SCHEDULE_ID].sched=USER_SCHEDULE;
+    ACTIVE_SCHEDULE_ID=id;
+    USER_SCHEDULE=USER_SCHEDULES[id].sched||makeEmptyWeekSchedule();
+    USER_SCHEDULES[id].sched=USER_SCHEDULE;
+    if(USER_SETTINGS) USER_SETTINGS.workspaceName=USER_SCHEDULES[id].name||USER_SETTINGS.workspaceName;
+    emit();
+    if(persist){ try{ await saveUserSchedule(); if(typeof saveUserSettings==='function') await saveUserSettings(); }catch(e){ console.warn('ScheduleStore persist',e); } }
+    if(render){
+      try{ renderTabs(); renderPanels(); switchDay(typeof SELECTED_DATE!=='undefined'?getJDfromISO(SELECTED_DATE):todayJD()); updateUI(); renderSlotsUI(); }catch(e){}
+    }
+    return true;
+  }
+  async function create(name,{persist=true,render=true}={}){
+    const nm=String(name||'').trim()||'New schedule';
+    const id='ws_'+Date.now();
+    if(USER_SCHEDULES[ACTIVE_SCHEDULE_ID]) USER_SCHEDULES[ACTIVE_SCHEDULE_ID].sched=USER_SCHEDULE;
+    USER_SCHEDULES[id]={id,name:nm,sched:makeEmptyWeekSchedule()};
+    ACTIVE_SCHEDULE_ID=id;
+    USER_SCHEDULE=USER_SCHEDULES[id].sched;
+    if(USER_SETTINGS) USER_SETTINGS.workspaceName=nm;
+    emit();
+    if(persist){ try{ await saveUserSchedule(); if(typeof saveUserSettings==='function') await saveUserSettings(); }catch(e){} }
+    if(render){
+      try{ renderTabs(); renderPanels(); switchDay(typeof SELECTED_DATE!=='undefined'?getJDfromISO(SELECTED_DATE):todayJD()); updateUI(); renderSlotsUI(); }catch(e){}
+    }
+    return id;
+  }
+  async function rename(id,name,{persist=true,render=true}={}){
+    if(!id||!USER_SCHEDULES[id]) return false;
+    const nm=String(name||'').trim();
+    if(!nm) return false;
+    USER_SCHEDULES[id].name=nm;
+    if(id===ACTIVE_SCHEDULE_ID&&USER_SETTINGS) USER_SETTINGS.workspaceName=nm;
+    emit();
+    if(persist){ try{ await saveUserSchedule(); if(id===ACTIVE_SCHEDULE_ID&&typeof saveUserSettings==='function') await saveUserSettings(); }catch(e){} }
+    if(render){ try{ renderSlotsUI(); }catch(e){} }
+    return true;
+  }
+  async function remove(id,{persist=true,render=true}={}){
+    if(!id||!USER_SCHEDULES[id]) return false;
+    const keys=Object.keys(USER_SCHEDULES);
+    if(keys.length<=1){
+      showToast((USER_SETTINGS&&USER_SETTINGS.lang)==='en'?'Keep at least one schedule slot':'احتفظ بخانة جدول واحدة على الأقل',2800,'warn');
+      return false;
+    }
+    delete USER_SCHEDULES[id];
+    if(ACTIVE_SCHEDULE_ID===id){
+      const next=Object.keys(USER_SCHEDULES)[0];
+      ACTIVE_SCHEDULE_ID=next;
+      USER_SCHEDULE=USER_SCHEDULES[next].sched||makeEmptyWeekSchedule();
+      if(USER_SETTINGS) USER_SETTINGS.workspaceName=USER_SCHEDULES[next].name;
+    }
+    emit();
+    if(persist){ try{ await saveUserSchedule(); }catch(e){} }
+    if(render){
+      try{ renderTabs(); renderPanels(); switchDay(typeof SELECTED_DATE!=='undefined'?getJDfromISO(SELECTED_DATE):todayJD()); updateUI(); renderSlotsUI(); }catch(e){}
+    }
+    return true;
+  }
+  return { getState, subscribe, setActive, create, rename, remove, emit };
+})();
+window.ScheduleStore=ScheduleStore;
+
 // ===== Firestore array-of-arrays boundary fix =====
 // ROOT CAUSE of "FirebaseError: Nested arrays are not supported": every task in this
 // app is a plain JS ARRAY (tuple) — [id,time,cat,ico,name,desc,pts,...] — and
@@ -5448,58 +5745,19 @@ function makeEmptyWeekSchedule(){
 }
 
 async function switchActiveSchedule(id){
-  if(!id || !USER_SCHEDULES[id]) return false;
-  if(USER_SCHEDULES[ACTIVE_SCHEDULE_ID]) USER_SCHEDULES[ACTIVE_SCHEDULE_ID].sched=USER_SCHEDULE;
-  ACTIVE_SCHEDULE_ID=id;
-  USER_SCHEDULE=USER_SCHEDULES[id].sched||makeEmptyWeekSchedule();
-  USER_SCHEDULES[id].sched=USER_SCHEDULE;
-  if(USER_SETTINGS) USER_SETTINGS.workspaceName=USER_SCHEDULES[id].name||USER_SETTINGS.workspaceName;
-  try{ await saveUserSchedule(); }catch(e){ console.warn('switch slot save failed',e); }
-  try{ renderTabs();renderPanels();switchDay(typeof SELECTED_DATE!=='undefined'?getJDfromISO(SELECTED_DATE):todayJD());updateUI(); }catch(e){}
-  try{ renderSlotsUI(); }catch(e){}
-  return true;
+  return ScheduleStore.setActive(id);
 }
 
 async function createScheduleSlot(name){
-  const nm=String(name||'').trim()||'New schedule';
-  const id='ws_'+Date.now();
-  if(USER_SCHEDULES[ACTIVE_SCHEDULE_ID]) USER_SCHEDULES[ACTIVE_SCHEDULE_ID].sched=USER_SCHEDULE;
-  USER_SCHEDULES[id]={id,name:nm,sched:makeEmptyWeekSchedule()};
-  ACTIVE_SCHEDULE_ID=id;
-  USER_SCHEDULE=USER_SCHEDULES[id].sched;
-  if(USER_SETTINGS) USER_SETTINGS.workspaceName=nm;
-  try{ await saveUserSchedule(); if(typeof saveUserSettings==='function') await saveUserSettings(); }catch(e){ console.warn('create slot save failed',e); }
-  try{ renderTabs();renderPanels();switchDay(typeof SELECTED_DATE!=='undefined'?getJDfromISO(SELECTED_DATE):todayJD());updateUI(); }catch(e){}
-  try{ renderSlotsUI(); }catch(e){}
-  return id;
+  return ScheduleStore.create(name);
 }
 
 async function renameScheduleSlot(id,name){
-  if(!id || !USER_SCHEDULES[id]) return false;
-  const nm=String(name||'').trim();
-  if(!nm) return false;
-  USER_SCHEDULES[id].name=nm;
-  if(id===ACTIVE_SCHEDULE_ID && USER_SETTINGS) USER_SETTINGS.workspaceName=nm;
-  try{ await saveUserSchedule(); if(id===ACTIVE_SCHEDULE_ID && typeof saveUserSettings==='function') await saveUserSettings(); }catch(e){}
-  try{ renderSlotsUI(); }catch(e){}
-  return true;
+  return ScheduleStore.rename(id,name);
 }
 
 async function deleteScheduleSlot(id){
-  if(!id || !USER_SCHEDULES[id]) return false;
-  const keys=Object.keys(USER_SCHEDULES);
-  if(keys.length<=1){ showToast('Keep at least one schedule slot',2800,'warn'); return false; }
-  delete USER_SCHEDULES[id];
-  if(ACTIVE_SCHEDULE_ID===id){
-    const next=Object.keys(USER_SCHEDULES)[0];
-    ACTIVE_SCHEDULE_ID=next;
-    USER_SCHEDULE=USER_SCHEDULES[next].sched||makeEmptyWeekSchedule();
-    if(USER_SETTINGS) USER_SETTINGS.workspaceName=USER_SCHEDULES[next].name;
-  }
-  try{ await saveUserSchedule(); }catch(e){}
-  try{ renderTabs();renderPanels();switchDay(typeof SELECTED_DATE!=='undefined'?getJDfromISO(SELECTED_DATE):todayJD());updateUI(); }catch(e){}
-  try{ renderSlotsUI(); }catch(e){}
-  return true;
+  return ScheduleStore.remove(id);
 }
 
 function renderSlotsUI(){
@@ -6310,15 +6568,55 @@ function applyTheme(){
     r.style.setProperty('--ac',USER_SETTINGS.themeAccent);
     r.style.setProperty('--accent-color',USER_SETTINGS.themeAccent);
     r.style.setProperty('--scrollbar-thumb-hover',USER_SETTINGS.themeAccent);
+    try{
+      const hex=String(USER_SETTINGS.themeAccent).replace('#','');
+      const full=hex.length===3?hex.split('').map(c=>c+c).join(''):hex;
+      const rr=parseInt(full.slice(0,2),16)||0,gg=parseInt(full.slice(2,4),16)||0,bb=parseInt(full.slice(4,6),16)||0;
+      r.style.setProperty('--accent-glow',`rgba(${rr},${gg},${bb},0.45)`);
+      const lum=(0.299*rr+0.587*gg+0.114*bb)/255;
+      r.style.setProperty('--text-on-accent', lum>0.62?'#0b1220':'#ffffff');
+    }catch(e){}
   }
   if(USER_SETTINGS.themeCard){
     r.style.setProperty('--c',USER_SETTINGS.themeCard);
     r.style.setProperty('--scrollbar-thumb',USER_SETTINGS.themeCard);
   }
-  if(USER_SETTINGS.themeBg){ r.style.setProperty('--bg',USER_SETTINGS.themeBg); r.style.setProperty('--bg-main',USER_SETTINGS.themeBg); document.body.style.background=USER_SETTINGS.themeBg; }
-  // Keep track transparent so thumbs float over any themed panel/page background
+  if(USER_SETTINGS.themeBg){
+    r.style.setProperty('--bg',USER_SETTINGS.themeBg);
+    r.style.setProperty('--bg-main',USER_SETTINGS.themeBg);
+  }
   r.style.setProperty('--scrollbar-track','transparent');
-  if(STATS&&STATS.activeMythicTheme) applyMythicColorOverrides(STATS.activeMythicTheme);
+  // Full theme class + ambient so schedule matches the chosen look
+  if(STATS&&STATS.activeMythicTheme){
+    applyMythicThemeClass(STATS.activeMythicTheme);
+  } else {
+    applyMythicThemeClass(null);
+    // Soft living shell from basic palette
+    try{
+      const bg=USER_SETTINGS.themeBg||'#0a0e1a';
+      const accent=USER_SETTINGS.themeAccent||'#3b82f6';
+      r.style.setProperty('--app-base-bg1', accentToBg(accent, 0.22, bg));
+      r.style.setProperty('--app-base-bg2', bg);
+      r.style.setProperty('--app-base-bg3', bg);
+      applyAppAmbient(null);
+      document.body.style.background=`radial-gradient(circle at 50% 10%, ${accentToBg(accent,0.28,bg)} 0%, ${bg} 55%, ${bg} 100%)`;
+    }catch(e){
+      if(USER_SETTINGS.themeBg) document.body.style.background=USER_SETTINGS.themeBg;
+    }
+  }
+}
+function accentToBg(accent, mix, base){
+  try{
+    const hex=String(accent).replace('#','');
+    const full=hex.length===3?hex.split('').map(c=>c+c).join(''):hex;
+    const r=parseInt(full.slice(0,2),16)||10,g=parseInt(full.slice(2,4),16)||14,b=parseInt(full.slice(4,6),16)||26;
+    const br=parseInt(String(base).replace('#','').slice(0,2),16)||10;
+    const bg=parseInt(String(base).replace('#','').slice(2,4),16)||14;
+    const bb=parseInt(String(base).replace('#','').slice(4,6),16)||26;
+    const m=Math.max(0,Math.min(1,mix));
+    const nr=Math.round(r*m+br*(1-m)), ng=Math.round(g*m+bg*(1-m)), nb=Math.round(b*m+bb*(1-m));
+    return `#${nr.toString(16).padStart(2,'0')}${ng.toString(16).padStart(2,'0')}${nb.toString(16).padStart(2,'0')}`;
+  }catch(e){ return base||'#0a0e1a'; }
 }
 function wireMythicColorCustomizer(){
   const ap=document.getElementById('primaryColorPicker')||document.getElementById('mythicAccentPick');
@@ -6527,15 +6825,17 @@ function applyI18n(){
 }
 const APP_ICON_PRESETS=['🏋️','📅','✅','🎯','💪','📖','⭐','🔥','🧠','🌙'];
 const TASK_ICON_PRESETS=['✨','📚','💻','🏋️','🍽️','🥤','🏃','🧘','📝','🎵','💤','🎯','🧠','🕌','🏊','📖','⭐','🔥','💪','🎮'];
-const THEME_DEFAULTS={themeAccent:'#3b82f6',themeCard:'#111827',themeBg:'#0a0e1a'};
-// Samsung-style curated palettes — each sets accent + card + background together.
+const THEME_DEFAULTS={themeAccent:'#38bdf8',themeCard:'#111827',themeBg:'#060a18'};
+// Free basic palettes — richer, closer to starter-page energy (no rebirth required)
 const THEME_PRESETS=[
-  {id:'default', name:{en:'Default',ar:'افتراضي'}, accent:'#3b82f6', card:'#111827', bg:'#0a0e1a'},
-  {id:'ocean', name:{en:'Ocean',ar:'محيط'}, accent:'#06b6d4', card:'#0f172a', bg:'#020617'},
-  {id:'sunset', name:{en:'Sunset',ar:'غروب'}, accent:'#f97316', card:'#1c1917', bg:'#0c0a09'},
-  {id:'amoled', name:{en:'AMOLED',ar:'أسود'}, accent:'#a855f7', card:'#000000', bg:'#000000'},
-  {id:'forest', name:{en:'Forest',ar:'غابة'}, accent:'#10b981', card:'#14532d', bg:'#0a1a12'},
-  {id:'rose', name:{en:'Rose',ar:'وردي'}, accent:'#ec4899', card:'#1a1025', bg:'#0f0a14'}
+  {id:'default', name:{en:'Aurora Blue',ar:'شفق أزرق'}, accent:'#38bdf8', card:'#111827', bg:'#060a18'},
+  {id:'ocean', name:{en:'Ocean',ar:'محيط'}, accent:'#06b6d4', card:'#0c1a24', bg:'#040c14'},
+  {id:'sunset', name:{en:'Sunset',ar:'غروب'}, accent:'#f59e0b', card:'#1c1210', bg:'#12070c'},
+  {id:'violet', name:{en:'Violet',ar:'بنفسجي'}, accent:'#a855f7', card:'#161022', bg:'#0c0618'},
+  {id:'forest', name:{en:'Forest',ar:'غابة'}, accent:'#34d399', card:'#0f1f18', bg:'#06140e'},
+  {id:'rose', name:{en:'Rose',ar:'وردي'}, accent:'#f472b6', card:'#1a1020', bg:'#100814'},
+  {id:'slate', name:{en:'Slate',ar:'رمادي'}, accent:'#94a3b8', card:'#111827', bg:'#0b1220'},
+  {id:'amoled', name:{en:'AMOLED',ar:'أسود'}, accent:'#818cf8', card:'#050508', bg:'#000000'}
 ];
 function themePresetCircleStyle(p){
   // Tri-split circle: accent / card / background (like Samsung palette previews)
@@ -6599,8 +6899,11 @@ function renderThemeSwatches(){
       USER_SETTINGS.themeCard=p.card;
       USER_SETTINGS.themeBg=p.bg;
       USER_SETTINGS.themePresetId=p.id;
+      // Basic palette wins over mythic until user re-activates a secret theme
+      if(STATS){ STATS.activeMythicTheme=null; try{ await saveAll(); }catch(e){} }
       try{ await saveUserSettings(); }catch(e){}
       applyTheme();
+      try{ renderAppearanceMythicActivator(); updatePrestigeUI(); }catch(e){}
       renderThemeSwatches();
       showToast(t('saved'),1400);
     };
@@ -7972,6 +8275,18 @@ async function loadAll() {
     
     // Perform migration immediately after loading from storage
     migrateSavedReports();
+
+    // Migrate legacy mythic theme ids → landing-page theme ids
+    if(Array.isArray(STATS.unlockedThemes)){
+      const map={nebula:'aurora',cyberpunk:'cyber',matrix:'emerald',gold:'chrono'};
+      STATS.unlockedThemes=[...new Set(STATS.unlockedThemes.map(t=>map[t]||t))];
+    }
+    if(STATS.activeMythicTheme){
+      const map={nebula:'aurora',cyberpunk:'cyber',matrix:'emerald',gold:'chrono'};
+      STATS.activeMythicTheme=map[STATS.activeMythicTheme]||STATS.activeMythicTheme;
+    }
+    try{ if(typeof restoreScheduleViewPrefs==='function') restoreScheduleViewPrefs(); }catch(e){}
+    try{ if(typeof ScheduleStore!=='undefined') ScheduleStore.emit(); }catch(e){}
     
     loadDay();
 }
@@ -10096,23 +10411,35 @@ function renderReportD3MiniChart(containerId, dayStatsList, en = false){
   if(!container) return;
 
   if(typeof window.d3 === 'undefined'){
-    container.innerHTML = '<div style="text-align:center;padding:20px;color:var(--mu);font-size:.75rem">جاري تحميل المخطط...</div>';
+    container.innerHTML = `<div style="text-align:center;padding:20px;color:var(--mu);font-size:.75rem">${en?'Loading chart…':'جاري تحميل المخطط...'}</div>`;
+    const s=document.createElement('script');
+    s.src='https://cdn.jsdelivr.net/npm/d3@7/dist/d3.min.js';
+    s.onload=()=>renderReportD3MiniChart(containerId, dayStatsList, en);
+    document.head.appendChild(s);
     return;
   }
 
   const d3 = window.d3;
   d3.select('#' + containerId).selectAll('*').remove();
 
-  const days = (dayStatsList && dayStatsList.length) ? dayStatsList : [];
+  const days = (dayStatsList && dayStatsList.length) ? dayStatsList.map((d,i)=>{
+    const pts=d.pts!=null?d.pts:(d.pointsEarned!=null?d.pointsEarned:0);
+    const pct=d.pct!=null?d.pct:(d.completionRate!=null?d.completionRate:0);
+    return Object.assign({}, d, { pts, pct, iso:d.iso||('d'+i) });
+  }) : [];
   if(!days.length){
-    container.innerHTML = '<div style="text-align:center;padding:20px;color:var(--mu);font-size:.75rem">لا توجد إحصائيات يومية لهذا التقرير</div>';
+    container.innerHTML = `<div style="text-align:center;padding:20px;color:var(--mu);font-size:.75rem">${en?'No daily stats for this report':'لا توجد إحصائيات يومية لهذا التقرير'}</div>`;
     return;
   }
 
+  // Cumulative point accumulation for trend readability
+  let running=0;
+  days.forEach(d=>{ running+=(d.pts||0); d.cumPts=running; });
+
   const rect = container.getBoundingClientRect();
   const width = Math.max(300, rect.width || 560);
-  const height = 210;
-  const margin = { top: 20, right: 35, bottom: 32, left: 35 };
+  const height = 240;
+  const margin = { top: 28, right: 44, bottom: 36, left: 40 };
 
   const svg = d3.select('#' + containerId)
     .append('svg')
@@ -10121,12 +10448,17 @@ function renderReportD3MiniChart(containerId, dayStatsList, en = false){
     .style('width', '100%')
     .style('height', 'auto');
 
+  const defs=svg.append('defs');
+  const areaGrad=defs.append('linearGradient').attr('id','repCumGrad').attr('x1','0%').attr('y1','0%').attr('x2','0%').attr('y2','100%');
+  areaGrad.append('stop').attr('offset','0%').attr('stop-color','#fbbf24').attr('stop-opacity',0.35);
+  areaGrad.append('stop').attr('offset','100%').attr('stop-color','#fbbf24').attr('stop-opacity',0);
+
   const xScale = d3.scaleBand()
     .domain(days.map(d => d.iso))
     .range([margin.left, width - margin.right])
     .padding(0.35);
 
-  const maxPts = Math.max(40, (d3.max(days, d => d.pts || 0) || 0) * 1.15);
+  const maxPts = Math.max(40, (d3.max(days, d => Math.max(d.pts||0, d.cumPts||0)) || 0) * 1.12);
   const yPtsScale = d3.scaleLinear()
     .domain([0, maxPts])
     .range([height - margin.bottom, margin.top]);
@@ -10135,6 +10467,7 @@ function renderReportD3MiniChart(containerId, dayStatsList, en = false){
     .domain([0, 100])
     .range([height - margin.bottom, margin.top]);
 
+  // Daily points bars
   svg.append('g')
     .selectAll('.mini-bar')
     .data(days)
@@ -10146,9 +10479,23 @@ function renderReportD3MiniChart(containerId, dayStatsList, en = false){
     .attr('width', xScale.bandwidth())
     .attr('height', d => Math.max(0, yPtsScale(0) - yPtsScale(d.pts || 0)))
     .attr('fill', '#fbbf24')
-    .attr('opacity', 0.85)
-    .attr('rx', 3);
+    .attr('opacity', 0.8)
+    .attr('rx', 4);
 
+  // Cumulative points area + line
+  const areaGen=d3.area()
+    .x(d=>xScale(d.iso)+xScale.bandwidth()/2)
+    .y0(yPtsScale(0))
+    .y1(d=>yPtsScale(d.cumPts||0))
+    .curve(d3.curveMonotoneX);
+  svg.append('path').datum(days).attr('d',areaGen).attr('fill','url(#repCumGrad)');
+  const cumLine=d3.line()
+    .x(d=>xScale(d.iso)+xScale.bandwidth()/2)
+    .y(d=>yPtsScale(d.cumPts||0))
+    .curve(d3.curveMonotoneX);
+  svg.append('path').datum(days).attr('d',cumLine).attr('fill','none').attr('stroke','#f59e0b').attr('stroke-width',2).attr('stroke-dasharray','4 3');
+
+  // Completion % line
   const lineGen = d3.line()
     .x(d => xScale(d.iso) + xScale.bandwidth() / 2)
     .y(d => yPctScale(d.pct || 0))
@@ -10172,6 +10519,14 @@ function renderReportD3MiniChart(containerId, dayStatsList, en = false){
     .attr('fill', '#10b981')
     .attr('stroke', '#0a0e1a')
     .attr('stroke-width', 1.5);
+
+  // Legend
+  svg.append('text').attr('x',margin.left).attr('y',16).attr('fill','#fbbf24').attr('font-size',10).attr('font-weight',700)
+    .text(en?'▮ Daily pts':'▮ نقاط يومية');
+  svg.append('text').attr('x',margin.left+90).attr('y',16).attr('fill','#f59e0b').attr('font-size',10).attr('font-weight',700)
+    .text(en?'— Cumulative':'— تراكمي');
+  svg.append('text').attr('x',margin.left+180).attr('y',16).attr('fill','#10b981').attr('font-size',10).attr('font-weight',700)
+    .text(en?'● Completion %':'● نسبة الإنجاز');
 
   days.forEach(d => {
     const xCenter = xScale(d.iso) + xScale.bandwidth() / 2;
@@ -10534,14 +10889,32 @@ window.SCHEDULE_CAT_GROUPED = window.SCHEDULE_CAT_GROUPED || {};
 
 window.setScheduleCategoryFilter = function(jd, catId){
   window.SCHEDULE_CAT_FILTER[jd] = catId;
+  if(USER_SETTINGS){ USER_SETTINGS.scheduleCatFilter = USER_SETTINGS.scheduleCatFilter || {}; USER_SETTINGS.scheduleCatFilter[jd]=catId; }
   renderPanels();
   switchDay(jd);
 };
 
 window.toggleScheduleGrouping = function(jd){
-  window.SCHEDULE_CAT_GROUPED[jd] = !window.SCHEDULE_CAT_GROUPED[jd];
+  const next = !window.SCHEDULE_CAT_GROUPED[jd];
+  // Global preference: chronological vs category-grouped (reduces cognitive load on busy days)
+  for(let i=0;i<7;i++) window.SCHEDULE_CAT_GROUPED[i] = next;
+  if(USER_SETTINGS){
+    USER_SETTINGS.scheduleGrouped = next;
+    try{ if(typeof saveUserSettings==='function') saveUserSettings(); }catch(e){}
+  }
   renderPanels();
   switchDay(jd);
+};
+
+// Restore saved view mode after settings load
+window.restoreScheduleViewPrefs = function(){
+  if(!USER_SETTINGS) return;
+  if(USER_SETTINGS.scheduleGrouped){
+    for(let i=0;i<7;i++) window.SCHEDULE_CAT_GROUPED[i] = true;
+  }
+  if(USER_SETTINGS.scheduleCatFilter && typeof USER_SETTINGS.scheduleCatFilter==='object'){
+    window.SCHEDULE_CAT_FILTER = Object.assign({}, USER_SETTINGS.scheduleCatFilter);
+  }
 };
 
 window.toggleDailySummaryBreakdown = function(){
@@ -15547,6 +15920,8 @@ function revealApp(){
 
   updateNetworkBadge();
   try{ applyTheme(); }catch(e){}
+  // Bring the starter-page ambient energy into the signed-in shell
+  try{ applyAppAmbient(STATS&&STATS.activeMythicTheme); }catch(e){}
   try{
     const en=(USER_SETTINGS&&USER_SETTINGS.lang)==='en';
     document.documentElement.lang=en?'en':'ar';
@@ -16135,11 +16510,20 @@ document.addEventListener('click',e=>{
     const tid=actMyth.getAttribute('data-activate-mythic');
     if(tid && (STATS.unlockedThemes||[]).includes(tid)){
       STATS.activeMythicTheme=tid;
+      const defs=MYTHIC_THEME_DEFAULTS[normalizeMythicId(tid)]||MYTHIC_THEME_DEFAULTS[tid];
+      if(defs&&USER_SETTINGS){
+        USER_SETTINGS.themeAccent=defs.accent;
+        USER_SETTINGS.themeBg=defs.bg3||defs.bg1||USER_SETTINGS.themeBg;
+        USER_SETTINGS.themePresetId='mythic_'+tid;
+      }
       applyMythicThemeClass(tid);
-      try{ saveAll(); }catch(err){}
+      try{ applyTheme(); }catch(err){}
+      try{ saveAll(); if(typeof saveUserSettings==='function') saveUserSettings(); }catch(err){}
       updatePrestigeUI();
+      renderAppearanceMythicActivator();
+      try{ renderThemeSwatches(); }catch(err){}
       const enAct=(USER_SETTINGS&&USER_SETTINGS.lang)==='en';
-      showToast(enAct?'Theme activated':'تم تفعيل المظهر',1800);
+      showToast(enAct?'Theme activated — schedule updated':'تم تفعيل المظهر — تم تحديث الجدول',2000);
     }
     return;
   }
