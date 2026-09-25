@@ -11106,22 +11106,28 @@ SCIENTIFIC STANDARDS:
 `;
   }
 
-  return `You are "Chaos Coordinator AI", an elite Personal Assistant, Sports Nutritionist, and Behavioral Habit Coach.
-Your primary role is to guide the user toward their fitness and habit goals (Muscle Building, Fat Loss, Body Recomposition, Habit Optimization) using evidence-based sports nutrition and exercise science.
-Your purpose is to sharpen the user's thinking, eliminate procrastination, and help them stick to a realistic, scientifically verified plan — not to flatter them.
+  return `You are "Chaos Coordinator" — a smart schedule + habit buddy inside the user's phone.
+Talk like a real person: casual, clear, helpful. Match the user's vibe (chill, slangy, short, long — whatever they use).
+Do NOT sound like a corporate bot or require magic command words. Understand messy, incomplete, informal messages.
 
-### 1. USER PREFERENCES & STATE CONTROL
-- Language: Default English. If the user messages in Arabic or if USER_SETTINGS.lang is "ar", respond strictly in natural, encouraging, and authoritative Modern/Egyptian Arabic.
+### 1. LANGUAGE & STYLE
+- Reply in the same language the user is using right now (English, Arabic dialect, mixed — fine).
+- Egyptian / Gulf / Levantine Arabic are all OK. Typos and voice-to-text mess are OK.
+- Keep answers short unless they ask for detail. No stiff "How may I assist you today?".
 ${fitnessContext}
 
-### 2. TONE & RESPONSE STYLE
-- Concise, clear, data-driven, and highly actionable.
-- No generic pleasantries (no "Hello, how can I help you today?"). Jump directly into the solution.
-- Grounded in exercise science and sports nutrition. Correct misconceptions directly and briefly with scientific facts.
+### 2. WHAT YOU CAN DO (through the app tools)
+- Create schedule slots (e.g. "Studying"), fill/rebuild a week, add/move/delete tasks, log food, mark done, remember facts.
+- Users may ramble: "bro make me a studying slot and I'll send my school table" — understand the intent.
 
-### 3. PERSISTENT MEMORY
-- If the user shares a durable personal fact worth remembering, append ONE line at the very end of your reply in this exact format: [REMEMBER: the fact stated plainly in third person].
-- The tag is stripped automatically before the user sees the reply.`;
+### 3. MEMORY
+- If they share something durable (school end time, preferred study hours, subjects), end with: [REMEMBER: fact in third person]
+- Tag is stripped before they see the reply.
+
+### 4. STUDY / SCHOOL PLANNING
+- New slot if they want one named (Studying, School, etc.).
+- From photo or text of lessons + home time → build after-school study blocks on the active slot.
+- Harder subjects earlier; leave room for food, rest, sleep, prayers.`;
 }
 
 const AI_SYSTEM_PROMPT = getChaosCoordinatorSystemPrompt();
@@ -11318,7 +11324,8 @@ const AI_TOOL_DEFS = `Available tools (respond with EXACTLY ONE of these as a JS
 {"tool":"restoreTask","taskId":"<id — must currently be deleted>"}
 {"tool":"editPoints","taskId":"<id>","points":<integer>}
 {"tool":"addCustomTask","date":"YYYY-MM-DD","time":"H:MM AM" or "H:MM PM" or "H:MM ص" or "H:MM م","name":"<short name>","points":<integer, default 5>}
-{"tool":"replaceWeeklySchedule","blocks":[{"task":"<name>","start":"HH:MM","end":"HH:MM","category":"Deep Work|Routine/Admin|Meeting|Rest/Break|Food|Gym|Other"}],"days":["Mon","Tue","Wed","Thu","Fri"] }
+{"tool":"createScheduleSlot","name":"<slot name e.g. Studying / School / Vacation>"}
+{"tool":"replaceWeeklySchedule","blocks":[{"task":"<name>","start":"HH:MM","end":"HH:MM","category":"Deep Work|Routine/Admin|Meeting|Rest/Break|Food|Gym|Other"}],"days":["Mon","Tue","Wed","Thu","Fri","Sat","Sun"] }
 {"tool":"setStreak","value":<integer>}
 {"tool":"setBestStreak","value":<integer>}
 {"tool":"setWeeklyPoints","value":<integer>}
@@ -11328,7 +11335,9 @@ const AI_TOOL_DEFS = `Available tools (respond with EXACTLY ONE of these as a JS
 
 Rules:
 - ONLY use a taskId that appears in the provided task list. NEVER invent one.
-- Use "replaceWeeklySchedule" when the user wants to REPLACE / BUILD the whole day or week plan — including NEW schedule slots / empty workspaces — from a verbal description OR from a photo of a timetable. Prefer weekday list Mon–Tue–Wed–Thu–Fri–Sat–Sun as needed. Include start/end as 24h HH:MM when possible. You may also use addCustomTask repeatedly for single tasks.
+- Use "createScheduleSlot" when the user asks for a NEW independent schedule/workspace/slot (e.g. "make a new slot called Studying"). This switches the active schedule to the new empty slot.
+- Use "replaceWeeklySchedule" when the user wants to REPLACE / BUILD the whole day or week plan on the *current active* slot — from a verbal description OR from a photo of a school timetable. Prefer full weekday list as needed. Include start/end as 24h HH:MM when possible. You may also use addCustomTask for single tasks.
+- STUDY PLAN FLOW: If the user wants a studying schedule: (1) createScheduleSlot if they asked for a new slot name, (2) read school lesson times from their text/photo, (3) build after-school study blocks for subjects that appear in the timetable (harder/exam subjects get longer focus blocks; protect meals, rest, sleep, prayers if tracked). Prefer Deep Work for study blocks.
 - If the user attaches a photo of a schedule, extract every readable block and return replaceWeeklySchedule (or addCustomTask for one-off items).
 - "logFood" is for ANY food/snack completion, however phrased — "أكلت", "اكلت", "خلصت الغدا", "ate", casual or formal, doesn't matter. Never use markDone for a food/snack task; always use logFood so nutrition gets tracked properly.
 - If the message clearly refers to something ALREADY missing from the task list (e.g. asking to restore something not currently deleted, or edit a task that doesn't exist), still pick the closest tool and let validation reject it — do not use "none" just because you're not 100% certain, only use "none" for messages that are genuinely not instructions at all (questions, small talk, opinions).
@@ -11336,7 +11345,12 @@ Rules:
 - Understand ANY phrasing — formal Arabic, Egyptian/Gulf/any dialect, English, mixed, typos, casual shorthand. The regex-based fast path already handles the most common exact phrasings before you're even called; you are specifically here for everything that ISN'T an exact common phrasing, so err toward actually resolving intent rather than deferring.`;
 
 function aiBuildToolCallSystemPrompt(context, selectedDate){
-  return `You translate Abdullah's natural-language message into exactly one structured tool call against his real schedule data.
+  return `You map the user's casual message into exactly ONE JSON tool call for their real schedule.
+They talk informally — slang, dialect Arabic, English, mixed, typos, voice-to-text. Figure out intent; do not require fixed phrases.
+If they are only chatting (hi, thanks, question with no schedule change), use {"tool":"none","reason":"..."}.
+If they want a new workspace/slot ("make a studying one", "خانة مذاكرة", etc.) → createScheduleSlot.
+If they describe or attach a full day/week plan → replaceWeeklySchedule.
+Prefer acting when intent is clear enough.
 
 ${AI_TOOL_DEFS}
 
@@ -11401,6 +11415,11 @@ function aiValidateToolCall(parsed, allTasksFlat){
       if(!parsed.name || !String(parsed.name).trim()) return{ok:false,reply:(USER_SETTINGS.lang==='en'?'⚠️ New task name is not clear.':'⚠️ مش واضح اسم المهمة الجديدة.')};
       const pts=Number.isFinite(parseInt(parsed.points,10))?Math.max(0,Math.min(500,parseInt(parsed.points,10))):5;
       return{ok:true,tool,date:parsed.date,time:parsed.time,name:String(parsed.name).trim(),points:pts};
+    }
+    case 'createScheduleSlot': {
+      const nm=String(parsed.name||'').trim();
+      if(!nm) return{ok:false,reply:(USER_SETTINGS.lang==='en'?'⚠️ Give the new slot a name (e.g. Studying).':'⚠️ قول اسم الخانة الجديدة (مثلاً: مذاكرة).')};
+      return{ok:true,tool,name:nm.slice(0,40)};
     }
     case 'replaceWeeklySchedule': {
       const blocks=Array.isArray(parsed.blocks)?parsed.blocks:[];
@@ -11631,6 +11650,11 @@ async function aiExecuteToolCall(v){
     case 'addCustomTask': {
       USER_EDITS.customTasks.push({id:aiGenId('custom'),date:v.date,time:v.time,cat:'free',ico:'✨',name:v.name,desc:'أُضيفت بواسطة المساعد',pts:v.points,createdAt:Date.now()});
       await saveUserEdits();
+      break;
+    }
+    case 'createScheduleSlot': {
+      await createScheduleSlot(v.name);
+      try{ renderSlotsUI(); }catch(e){}
       break;
     }
     case 'replaceWeeklySchedule': {
@@ -12333,8 +12357,8 @@ function aiRenderMessages(){
   if(!session.messages.length){
     const en=USER_SETTINGS.lang==='en';
     body.innerHTML=en
-      ?`<div class="ai-empty">${t('ai_welcome')}<br><br>Example: "I did gym" or "Move lunch tomorrow to 2pm" or "Remove swimming today".<br><br>Every change gets an ↩️ Undo under the reply. Changes sync to your account only.</div>`
-      :`<div class="ai-empty">👋 أهلاً! قولّي أي حاجة عايز تعملها في جدولك بأي طريقة عايزها — رسمي، عامي، عربي، إنجليزي، مفيش فرق. مثال: "عملت الجيم" أو "ممكن تنقلّي الغدا بكرة الساعة ٢؟" أو "شيل السباحة النهاردة".<br><br>كل تغيير بيعمله المساعد بييجيله زرار ↩️ تراجع تحت الرد، تقدر تستخدمه لو حصل غلط.<br><br>التغييرات دي خاصة بحسابك بس، ومتزامنة على كل أجهزتك.</div>`;
+      ?`<div class="ai-empty">Hey — talk normally. No special commands needed.<br><br>Examples: "make a studying slot", "I finished gym", "move lunch tomorrow to 2", or send a photo of your school timetable and say "organize my study time".<br><br>Every change gets ↩️ Undo under the reply.</div>`
+      :`<div class="ai-empty">👋 كلّمني عادي — مش لازم أوامر محفوظة.<br><br>مثال: "اعمل خانة مذاكرة"، "خلصت الجيم"، "انقل الغدا بكرة للاتنين"، أو ابعت صورة جدول المدرسة وقول "رتّبلي المذاكرة".<br><br>أي تغيير عليه زرار ↩️ تراجع.</div>`;
     return;
   }
   body.innerHTML=session.messages.map(m=>{
@@ -12512,7 +12536,7 @@ async function aiProcessClause(clauseText){
   if(['markDone','skipTask','moveTask','deleteTask','restoreTask','unmarkDone','editPoints','addCustomTask','rememberFact','openPrayerModal','openFoodLogModal','setCurStreak','setBestStreak','setWeeklyPoints','setPunishRate','alreadyDone','unrecognizedTask','needMoreInfo'].includes(intent.action)){
     let tone='ok';
     let snapshot=null;
-    const mutatingActions=['markDone','skipTask','moveTask','deleteTask','restoreTask','unmarkDone','editPoints','addCustomTask','replaceWeeklySchedule','rememberFact','setCurStreak','setBestStreak','setWeeklyPoints','setPunishRate'];
+    const mutatingActions=['markDone','skipTask','moveTask','deleteTask','restoreTask','unmarkDone','editPoints','addCustomTask','createScheduleSlot','replaceWeeklySchedule','rememberFact','setCurStreak','setBestStreak','setWeeklyPoints','setPunishRate'];
     try{
       if(mutatingActions.includes(intent.action)){
         snapshot=aiSnapshotState(); // taken BEFORE execution so undo restores the true prior state
@@ -12746,6 +12770,9 @@ function aiToolCallReplyText(v){
     case 'restoreTask': return `تم إرجاع "${v.taskName}" ✅`;
     case 'editPoints': return `تم تغيير نقاط "${v.taskName}" إلى ${v.points}⭐ ✅`;
     case 'addCustomTask': return `تم إضافة "${v.name}" يوم ${v.date} الساعة ${v.time} بـ ${v.points}⭐ ✅`;
+    case 'createScheduleSlot': return (USER_SETTINGS&&USER_SETTINGS.lang)==='en'
+      ? `Created schedule slot "${v.name}" and switched to it ✅ — send your school timetable (photo or text) and I’ll build the study plan.`
+      : `تم إنشاء خانة "${v.name}" والتبديل إليها ✅ — ابعت جدول المدرسة (صورة أو نص) وأرتّب لك خطة المذاكرة.`;
     case 'replaceWeeklySchedule': return (USER_SETTINGS&&USER_SETTINGS.lang)==='en'
       ? `Updated the weekly schedule with ${Array.isArray(v.blocks)?v.blocks.length:0} blocks ✅`
       : `تم تحديث الجدول الأسبوعي بـ ${Array.isArray(v.blocks)?v.blocks.length:0} مهمة ✅`;
