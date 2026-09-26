@@ -3785,11 +3785,10 @@ body.theme-matrix .tctime{
         </div>
         <div class="set-section" id="setsec-notifications">
           <h3 data-i18n="sec_notif">التذكيرات (تعمل تلقائياً)</h3>
-          <p class="desc" data-i18n="sec_notif_desc">تعمل التذكيرات وتتزامن سحابياً لمدة ١٤ يوماً قادمة بشكل تلقائي دون الحاجة لأي خطوات يدوية.</p>
+          <p class="desc" data-i18n="sec_notif_desc">Reminders stay always-on. Once permission is granted, the next 30 days are stored in the cloud and the server keeps sending them even if you stop opening the app. Open the app occasionally so the next window can refresh.</p>
           <div class="set-actions" style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">
             <button type="button" id="btn-notif-toggle" class="topbtn" style="background:rgba(16,185,129,.18);border:1px solid var(--br);color:var(--gr)">🔔 التذكيرات (تلقائية)</button>
             <button type="button" id="btn-notif-test" class="altbtn" style="padding:8px 12px;font-size:0.85rem">🔔 تجربة الإشعار</button>
-            <button type="button" id="btn-notif-renew" class="altbtn" style="padding:8px 12px;font-size:0.85rem">🔄 تجديد وجدولة ١٤ يوم</button>
           </div>
           <div id="notif-sync-badge" style="font-size:0.8rem;margin-top:8px;color:var(--gr);font-weight:600">✅ التذكيرات تعمل تلقائياً في الخلفية</div>
           <p class="desc" style="margin-top:16px;font-weight:800" id="taskNotifListTitle">Per-task notifications</p>
@@ -7516,7 +7515,7 @@ function applyI18n(){
   if(secNotif) secNotif.textContent=isEn?'Reminders':'التذكيرات';
   const secNotifDesc=document.querySelector('#setsec-notifications > .desc');
   if(secNotifDesc) secNotifDesc.textContent=isEn
-    ?'Reminders are pushed to the cloud for the next 14 days so they still fire when the app is closed. Use Renew to refresh that 14-day window.'
+    ?'Reminders stay always-on via cloud push for the next 30 days — they keep firing after you leave the app. Open the app occasionally to refresh the next window.'
     :'تعمل التذكيرات وتتزامن سحابياً لمدة ١٤ يوماً قادمة بشكل تلقائي.';
   try{ updatePrestigeUI(); }catch(e){}
   try{ renderTaskNotifList(); }catch(e){}
@@ -8657,6 +8656,13 @@ const DND_DISABLED=true; // drag-reorder removed by design (time-ordered schedul
 //   - Point overrides replace task[6] (the point value) via a shallow tuple copy.
 //   - Custom tasks for this date are appended as synthetic task tuples.
 function applyUserEditsToTasks(baseTasks, iso){
+  if(!USER_EDITS || typeof USER_EDITS!=='object') USER_EDITS=emptyUserEdits();
+  if(!USER_EDITS.moves) USER_EDITS.moves={};
+  if(!USER_EDITS.deletes) USER_EDITS.deletes={};
+  if(!USER_EDITS.dayDeletes) USER_EDITS.dayDeletes={};
+  if(!USER_EDITS.dayOverrides) USER_EDITS.dayOverrides={};
+  if(!USER_EDITS.pointOverrides) USER_EDITS.pointOverrides={};
+  if(!Array.isArray(USER_EDITS.customTasks)) USER_EDITS.customTasks=[];
   let out=[];
   for(const t of baseTasks){
     const id=t[0];
@@ -9032,7 +9038,14 @@ async function loadAll() {
     savedReports = (await sGet(LS.reports)) || [];
     penalizedDates = (await sGet(LS.penalized)) || {};
     FIRST_SEEN = await sGet(LS.firstSeen);
-    USER_EDITS = (await sGet(LS.userEdits)) || emptyUserEdits();
+    USER_EDITS = { ...emptyUserEdits(), ...((await sGet(LS.userEdits)) || {}) };
+    if(!USER_EDITS.dayDeletes) USER_EDITS.dayDeletes={};
+    if(!USER_EDITS.dayOverrides) USER_EDITS.dayOverrides={};
+    if(!USER_EDITS.deletes) USER_EDITS.deletes={};
+    if(!USER_EDITS.moves) USER_EDITS.moves={};
+    if(!USER_EDITS.pointOverrides) USER_EDITS.pointOverrides={};
+    if(!Array.isArray(USER_EDITS.customTasks)) USER_EDITS.customTasks=[];
+    if(!USER_EDITS.order) USER_EDITS.order={};
     USER_SCHEDULE = (await sGet(LS.userSchedule)) || {};
     USER_SCHEDULES = (await sGet(LS.userSchedules)) || {};
     ACTIVE_SCHEDULE_ID = (await sGet(LS.activeScheduleId)) || 'default';
@@ -9609,6 +9622,47 @@ async function autoInitNotifications(userGesture = false){
   return false;
 }
 
+
+// Always-on reminders: whenever the user returns (or the tab wakes), re-upload the next 30 days to the cloud.
+// Cloudflare's cron then fires Web Push even if the app stays closed.
+if(typeof window.__alwaysOnNotifBound==='undefined'){
+  window.__alwaysOnNotifBound=true;
+  const resyncCloudReminders=()=>{
+    try{
+      if(typeof NOTIF_ENABLED!=='undefined' && NOTIF_ENABLED && typeof Notification!=='undefined' && Notification.permission==='granted'){
+        if(typeof syncPushSchedule==='function') syncPushSchedule(false, true).catch(()=>{});
+      }
+    }catch(e){}
+  };
+  document.addEventListener('visibilitychange', ()=>{ if(document.visibilityState==='visible') resyncCloudReminders(); });
+  window.addEventListener('focus', resyncCloudReminders);
+  window.addEventListener('pageshow', resyncCloudReminders);
+  // Register periodic background sync when the browser supports it (Chrome/Android)
+  (async()=>{
+    try{
+      const reg=await navigator.serviceWorker?.ready;
+      if(reg && 'periodicSync' in reg){
+        const tags=await reg.periodicSync.getTags();
+        if(!tags.includes('sync-reminders')){
+          await reg.periodicSync.register('sync-reminders',{minInterval:12*60*60*1000});
+        }
+      }
+    }catch(e){ /* not supported or permission denied — cloud cron still covers delivery */ }
+  })();
+}
+
+
+if(typeof navigator!=='undefined' && navigator.serviceWorker){
+  navigator.serviceWorker.addEventListener('message', (event)=>{
+    try{
+      if(event.data && event.data.type==='SYNC_REMINDERS'){
+        if(typeof NOTIF_ENABLED!=='undefined' && NOTIF_ENABLED && typeof syncPushSchedule==='function'){
+          syncPushSchedule(false, true).catch(()=>{});
+        }
+      }
+    }catch(e){}
+  });
+}
 function setupAutoNotificationTriggers(){
   // 1. Immediate auto-init on load if permission is already granted
   if(typeof Notification !== 'undefined' && Notification.permission === 'granted'){
@@ -9663,7 +9717,7 @@ function getTaskNotifConfig(taskId){
     endLeadMin:Math.max(1,parseInt(raw.endLeadMin,10)||30)
   };
 }
-function buildUpcomingReminderPayload(daysAhead = 14){
+function buildUpcomingReminderPayload(daysAhead = 30){
   const reminders=[];
   const minToHHMM=m=>{
     m=((m%1440)+1440)%1440;
@@ -9671,7 +9725,7 @@ function buildUpcomingReminderPayload(daysAhead = 14){
     return `${String(h).padStart(2,'0')}:${String(mm).padStart(2,'0')}`;
   };
 
-  const days = Math.max(1, Math.min(30, daysAhead || 14));
+  const days = Math.max(1, Math.min(30, daysAhead || 30));
   for(let offset = 0; offset < days; offset++){
     const targetDate = dateOff(offset, TODAY);
     const jd = getJDfromISO(targetDate);
@@ -9791,6 +9845,18 @@ function triggerAutoPushSync(delay = 1500){
 // Sends the subscription (if we have one) + this reminder payload to the Worker,
 // which stores it in D1. Called automatically after enabling notifications, on task changes,
 // on visibility change, and on startup.
+
+// Keep cloud reminders fresh automatically (no manual renew button)
+if(typeof window.__autoPushInterval==='undefined'){
+  window.__autoPushInterval=setInterval(()=>{
+    try{
+      if(typeof NOTIF_ENABLED!=='undefined' && NOTIF_ENABLED && typeof syncPushSchedule==='function'){
+        syncPushSchedule(false, true).catch(()=>{});
+      }
+    }catch(e){}
+  }, 6*60*60*1000); // every 6 hours while page is open
+}
+
 async function syncPushSchedule(forceRenew = false, silent = true){
   if(!NOTIF_ENABLED) return;
   const uid = getNotificationUid();
@@ -9825,16 +9891,22 @@ async function syncPushSchedule(forceRenew = false, silent = true){
     }
   }catch(e){
     console.warn('push subscription recovery failed',e);
-    if(!silent) showToast('⚠️ تعذر استعادة اشتراك الإشعارات — جرب زرار تجديد التذكيرات',4000,'warn');
+    if(!silent){
+      const en=(USER_SETTINGS&&USER_SETTINGS.lang)==='en';
+      showToast(en?'⚠️ Could not restore push subscription — open the app once and allow notifications':'⚠️ تعذر استعادة اشتراك الإشعارات — افتح التطبيق مرة وفعّل الإشعارات',4000,'warn');
+    }
     return;
   }
 
   if(!PUSH_SUBSCRIPTION){
-    if(!silent) showToast('⚠️ التذكيرات مش متسجلة فعلياً — اضغط على زرار تجديد الإشعارات',4000,'warn');
+    if(!silent){
+      const en=(USER_SETTINGS&&USER_SETTINGS.lang)==='en';
+      showToast(en?'⚠️ Push not registered yet — leave reminders On and keep the app open a few seconds':'⚠️ التذكيرات مش متسجلة بعد — سيّبها شغالة وخلّي التطبيق مفتوح ثواني',4000,'warn');
+    }
     return;
   }
 
-  const reminders = buildUpcomingReminderPayload(14);
+  const reminders = buildUpcomingReminderPayload(30); // 30-day cloud window so reminders keep firing while the app is closed
   const workerUrl = (typeof window.AI_WORKER_URL === 'string' && window.AI_WORKER_URL)
   ? window.AI_WORKER_URL.replace(/\/$/, '')
   : 'https://falling-frost-7656.ashafei1905.workers.dev';
@@ -9853,7 +9925,12 @@ async function syncPushSchedule(forceRenew = false, silent = true){
       }
     } else {
       const badge = document.getElementById('notif-sync-badge');
-      if(badge) badge.textContent = '✅ التذكيرات تعمل تلقائياً · مجدول ١٤ يوم سحابياً (' + reminders.length + ' تذكير)';
+      if(badge){
+        const en=(USER_SETTINGS&&USER_SETTINGS.lang)==='en';
+        badge.textContent = en
+          ? ('✅ Always-on cloud reminders · next 30 days queued (' + reminders.length + ')')
+          : ('✅ التذكيرات شغالة في الخلفية · مجدول ٣٠ يوم (' + reminders.length + ' تذكير)');
+      }
     }
   }catch(e){
     console.warn('push schedule sync failed',e);
@@ -13327,6 +13404,23 @@ function openSettingsScreen(){
   try{ renderSlotsUI(); }catch(e){}
   try{ renderCategoryManager(); }catch(e){}
   try{ renderTaskNotifList(); renderPrayerLocList(); updatePrestigeUI(); }catch(e){}
+  try{
+    const prayOn=!!(USER_SETTINGS&&USER_SETTINGS.trackPrayers);
+    const hidePray=['prayerLocTitle','prayerLocDesc','prayerLocList','prayerLocName','prayerLocIcon','prayerLocPts','prayerLocAddBtn'];
+    hidePray.forEach(id=>{
+      const el=document.getElementById(id);
+      if(!el) return;
+      const wrap=el.closest('div')||el;
+      if(id==='prayerLocTitle' || id==='prayerLocDesc') el.style.display=prayOn?'':'none';
+      else if(id==='prayerLocList') el.style.display=prayOn?'':'none';
+      else el.style.display=prayOn?'':'none';
+    });
+    // Hide the whole "Prayer locations" cluster parent if possible
+    const plTitle=document.getElementById('prayerLocTitle');
+    if(plTitle && plTitle.parentElement){
+      // keep other notif content; only toggle prayer loc controls already handled
+    }
+  }catch(e){}
   // Always raise above leftover overlays (landing / toast stacking)
   const ss=document.getElementById('settingsScreen');
   if(ss){ ss.style.zIndex='10150'; ss.classList.add('open'); }
@@ -17044,7 +17138,7 @@ function getProductTourSteps(){
     },
     {
       id:'tasks',
-      selector:'.tc:not(.excx), #panels .panel.act .tc',
+      selector:'.pan.act .tc, .tc:not(.excx)',
       requireClick:false,
       openSettings:false,
       title:en?'✅ Task cards & points':'✅ كروت المهام والنقاط',
@@ -17054,7 +17148,7 @@ function getProductTourSteps(){
     },
     {
       id:'filters',
-      selector:'.tc-cat-bar, .cat-filter-row, #catFilterRow, #dsCategoryChips',
+      selector:'.pan.act .tc-cat-bar, .tc-cat-bar, #dsCategoryChips',
       requireClick:false,
       openSettings:false,
       title:en?'🏷️ Quick Category Filters':'🏷️ فلترة المهام حسب الفئة',
@@ -17066,13 +17160,13 @@ function getProductTourSteps(){
   if(trackPrayers){
     steps.push({
       id:'prayers',
-      selector:'.ppill, .tc[data-c="prayer"], .tc[data-cat="prayer"]',
+      selector:'.prow, .ppill, .tc[data-c="prayer"], .tc[data-cat="prayer"]',
       requireClick:false,
       openSettings:false,
       title:en?'🕌 Precise Prayer Tracking':'🕌 مواقيت الصلاة وتتبعها',
       text:en
-        ?'Prayer times are calculated for your city. Confirm a prayer to log on-time, congregation, mosque, dhikr, and sunnah for bonus points.'
-        :'مواقيت الصلاة حسب موقعك. عند التأكيد تقدر تسجّل الجماعة والمسجد والأذكار والسنة لنقاط إضافية.'
+        ?'Prayer times depend on your location (city). Confirm a prayer to log on-time, congregation, mosque, dhikr, and sunnah for bonus points. This whole feature only appears if you enabled prayer tracking.'
+        :'مواقيت الصلاة حسب موقعك (المدينة). عند التأكيد تقدر تسجّل الجماعة والمسجد والأذكار والسنة. الميزة دي بتظهر فقط لو فعّلت تتبع الصلاة.'
     });
   }
   steps.push(
@@ -17093,23 +17187,23 @@ function getProductTourSteps(){
       openSettings:false,
       title:en?'🤖 AI Assistant Co-Pilot':'🤖 المساعد الذكي',
       text:en
-        ?'Tap the robot anytime. Chat in Arabic or English — move tasks, add study blocks, skip meetings, or snap a timetable photo.'
-        :'اضغط الروبوت في أي وقت. اتكلم عربي أو إنجليزي — انقل مهام، ضيف مذاكرة، أو صوّر جدولك.'
+        ?'Tap the robot (bottom). This is your in-app schedule AI assistant (cloud-backed — not Google Gemini in the chat UI). Ask in Arabic or English to move tasks, add blocks, skip items, or plan the day.'
+        :'اضغط الروبوت. ده مساعد الجدول الذكي داخل التطبيق (سحابي — مش واجهة Gemini). اطلب بالعربي أو الإنجليزي تنقل مهام أو تضيف بلوكات.'
     },
     {
       id:'settings_reminders',
-      selector:'#setsec-notifications, #notifMainToggle, [data-set-nav="notifications"]',
+      selector:'#setsec-notifications, #btn-notif-toggle, #taskNotifList',
       requireClick:false,
       openSettings:true,
       settingsSection:'notifications',
-      title:en?'🔔 Reminders (14-day cloud sync)':'🔔 التذكيرات (مزامنة ١٤ يوم)',
+      title:en?'🔔 Automatic reminders':'🔔 تذكيرات تلقائية',
       text:en
-        ?'Open Settings → Reminders. Cloud push schedules the next 14 days so alerts still fire when the tab is closed. "Renew & schedule 14 days" refreshes that window. Test notification checks the device channel.'
-        :'افتح الإعدادات → التذكيرات. السحابة بتحجز التذكيرات لـ ١٤ يوم قادمين حتى لو التطبيق مقفول. "تجديد وجدولة ١٤ يوم" بيجدّد النافذة. جرّب الإشعار للتأكد.'
+        ?'Settings → Reminders. Keep them On: the cloud queues ~30 days of alerts and the server sends them even after you leave the app. Open the app once in a while so the next month can be queued. Use Test to verify.'
+        :'الإعدادات → التذكيرات. سيّبها شغالة: السحابة بتحجز حوالي ٣٠ يوم والسيرفر بيبعت حتى لو قفلت التطبيق. افتح التطبيق من وقت للتاني عشان يتجدد الشهر الجاي. جرّب الإشعار للتأكد.'
     },
     {
       id:'settings_appearance',
-      selector:'#setsec-appearance, [data-set-nav="appearance"]',
+      selector:'#setsec-appearance, #themePaletteRow',
       requireClick:false,
       openSettings:true,
       settingsSection:'appearance',
@@ -17120,7 +17214,7 @@ function getProductTourSteps(){
     },
     {
       id:'settings_slots',
-      selector:'#setsec-general, [data-set-nav="general"], #slotPickerBtn',
+      selector:'#slotPickerBtn, #setsec-general',
       requireClick:false,
       openSettings:true,
       settingsSection:'general',
@@ -17131,7 +17225,7 @@ function getProductTourSteps(){
     },
     {
       id:'settings_prestige',
-      selector:'#setsec-prestige, [data-set-nav="prestige"], #prestigeCenterContainer',
+      selector:'#setsec-prestige, #prestigeCenterContainer',
       requireClick:false,
       openSettings:true,
       settingsSection:'prestige',
@@ -17292,40 +17386,68 @@ function ptourShowStep(i){
   }
   if(skipBtn) skipBtn.textContent=en?'Skip tour':'تخطي الجولة';
 
-  // Settings-bound steps: open the right section so selectors resolve
+  // Settings-bound steps: open Settings + the exact nav section (data-setsec)
   try{
     if(step.openSettings){
       if(typeof openSettingsScreen==='function') openSettingsScreen();
-      if(step.settingsSection){
-        const nav=document.querySelector(`[data-set-nav="${step.settingsSection}"]`);
-        if(nav) nav.click();
-        else if(typeof switchSettingsSection==='function') switchSettingsSection(step.settingsSection);
+      const sec=step.settingsSection;
+      if(sec){
+        const nav=document.querySelector(`#setNav button[data-setsec="${sec}"]`);
+        if(nav){
+          document.querySelectorAll('#setNav button').forEach(b=>b.classList.toggle('act',b===nav));
+          document.querySelectorAll('.set-section').forEach(s=>s.classList.toggle('act',s.id==='setsec-'+sec));
+          if(window.matchMedia && window.matchMedia('(max-width:700px)').matches){
+            document.getElementById('settingsScreen')?.classList.add('mobile-sec-open');
+          }
+          if(sec==='notifications'){ try{ renderTaskNotifList(); }catch(e){} }
+        }
       }
     }else if(document.getElementById('settingsScreen')?.classList.contains('open')){
-      // Close settings for non-settings steps so main UI targets are visible
-      try{ document.getElementById('settingsScreen')?.classList.remove('open'); }catch(e){}
+      try{
+        document.getElementById('settingsScreen')?.classList.remove('open');
+        document.getElementById('settingsScreen')?.classList.remove('mobile-sec-open');
+      }catch(e){}
     }
   }catch(e){ console.warn('ptour settings toggle',e); }
 
   let el=null;
   const resolveEl=()=>{
     if(!step.selector) return null;
-    let found=document.querySelector(step.selector);
-    if(found && (found.offsetParent===null || found.getBoundingClientRect().width===0)) found=null;
-    if(!found && step.selector.includes(',')){
-      for(const sel of step.selector.split(',')){
-        const cand=document.querySelector(sel.trim());
-        if(cand && cand.offsetParent!==null && cand.getBoundingClientRect().width>0){ found=cand; break; }
+    // Prefer first visible match across comma selectors
+    const sels=step.selector.split(',').map(s=>s.trim()).filter(Boolean);
+    for(const sel of sels){
+      let candidates=[];
+      try{ candidates=Array.from(document.querySelectorAll(sel)); }catch(e){ continue; }
+      for(const cand of candidates){
+        if(!cand) continue;
+        const r=cand.getBoundingClientRect();
+        // offsetParent null can still be visible inside fixed settings screen — check size + style
+        const st=window.getComputedStyle(cand);
+        if(st.display==='none' || st.visibility==='hidden') continue;
+        if(r.width<2 && r.height<2) continue;
+        return cand;
       }
     }
-    return found;
+    return null;
   };
   el=resolveEl();
 
-  // Always scroll the page so the target (or top) is in view — fixes broken layout when tour starts while scrolled down
+  // Bring target near the top of the viewport so the tip + highlight are readable
   try{
-    if(el) el.scrollIntoView({block:'center',inline:'nearest',behavior:'smooth'});
-    else window.scrollTo({top:0,behavior:'smooth'});
+    if(el){
+      el.scrollIntoView({block:'start',inline:'nearest',behavior:'smooth'});
+      // Also scroll parent containers (settings content)
+      const scroller=el.closest('.set-content, .set-body, #settingsScreen, .pan, #app');
+      if(scroller && scroller!==el){
+        try{
+          const top=el.offsetTop - 12;
+          if(typeof scroller.scrollTo==='function') scroller.scrollTo({top:Math.max(0,top),behavior:'smooth'});
+          else scroller.scrollTop=Math.max(0,top);
+        }catch(e){}
+      }
+    }else{
+      window.scrollTo({top:0,behavior:'smooth'});
+    }
   }catch(e){}
 
   const apply=()=>{
@@ -17342,8 +17464,9 @@ function ptourShowStep(i){
       ptourUpdateSpotlight(null, step);
     }
   };
-  setTimeout(apply, 320);
-  setTimeout(apply, 700);
+  setTimeout(apply, 120);
+  setTimeout(apply, 380);
+  setTimeout(apply, 750);
 }
 
 function startProductTour(force){
@@ -18072,13 +18195,18 @@ document.addEventListener('DOMContentLoaded', async ()=>{
   if(cur){
     try{
       await loadAll();
-      initAppFlow({ email: cur, displayName: cur });
     }catch(e){
       console.warn('Initial loadAll error', e);
-      showLandingIfNeeded();
+    }
+    try{
+      initAppFlow({ email: cur, displayName: cur });
+    }catch(e){
+      console.warn('Initial initAppFlow error', e);
+      try{ revealApp(); }catch(err){}
     }
   }else{
-    showLandingIfNeeded();
+    try{ showLandingIfNeeded(); }catch(e){}
+    try{ const ld=document.getElementById('ld'); if(ld) ld.style.display='none'; }catch(e){}
   }
   try{ updatePrestigeUI(); applyMythicThemeClass(STATS.activeMythicTheme); }catch(e){}
   try{ initTaskDragAndDrop(); }catch(e){}
@@ -18406,16 +18534,41 @@ if (typeof onAuthStateChanged !== 'undefined' && typeof fbAuth !== 'undefined') 
   });
 }
 
-setTimeout(()=>{
-  const ldEl=document.getElementById('ld');
-  if(ldEl && ldEl.style.display !== 'none'){
-    try{
-      const cur=lsGet('current_user');
-      if(cur) initAppFlow({ email: cur, displayName: cur });
-    }catch(e){}
-    revealApp();
-  }
-}, 2200);
+function __forceRevealFromLoader(reason){
+  try{
+    console.warn('force reveal loader', reason||'');
+    const ldEl=document.getElementById('ld');
+    if(ldEl) ldEl.style.display='none';
+    const appEl=document.getElementById('app');
+    const cur= (typeof lsGet==='function' ? lsGet('current_user') : null);
+    if(cur){
+      if(appEl) appEl.style.display='block';
+      try{ if(typeof initAppFlow==='function') initAppFlow({ email: cur, displayName: cur }); }catch(e){}
+      try{ if(typeof revealApp==='function') revealApp(); }catch(e){}
+    }else{
+      try{ if(typeof showLandingIfNeeded==='function') showLandingIfNeeded(); }catch(e){}
+      if(ldEl) ldEl.style.display='none';
+    }
+  }catch(e){ console.warn('force reveal failed', e); }
+}
+[1200, 2500, 5000, 8000].forEach(ms=>{
+  setTimeout(()=>{
+    const ldEl=document.getElementById('ld');
+    if(ldEl && ldEl.style.display !== 'none') __forceRevealFromLoader('timeout-'+ms);
+  }, ms);
+});
+window.addEventListener('error', function(ev){
+  try{
+    const ldEl=document.getElementById('ld');
+    if(ldEl && ldEl.style.display !== 'none') __forceRevealFromLoader('window.error');
+  }catch(e){}
+});
+window.addEventListener('unhandledrejection', function(){
+  try{
+    const ldEl=document.getElementById('ld');
+    if(ldEl && ldEl.style.display !== 'none') __forceRevealFromLoader('unhandledrejection');
+  }catch(e){}
+});
 try{ setupAutoNotificationTriggers(); }catch(e){}
 </script>
 </html> 
