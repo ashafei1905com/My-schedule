@@ -707,6 +707,34 @@ html[dir="ltr"] .tc[data-c="sunrise"]{border-left:3px solid var(--or)}
 @keyframes aiPopIn{0%{opacity:0;transform:scale(.85) translateY(30px)}100%{opacity:1;transform:scale(1) translateY(0)}}
 @keyframes aiFullIn{0%{opacity:0;transform:scale(.96)}100%{opacity:1;transform:scale(1)}}
 @keyframes fabPop{0%{transform:scale(0);opacity:0}70%{transform:scale(1.15)}100%{transform:scale(1);opacity:1}}
+/* FC Mobile–style product tour */
+.product-tour{position:fixed;inset:0;z-index:12050;display:none;pointer-events:none}
+.product-tour.open{display:block}
+.ptour-shade{position:absolute;inset:0;background:rgba(2,6,16,.72);pointer-events:auto}
+.ptour-spotlight{
+  position:absolute;border-radius:16px;pointer-events:none;
+  box-shadow:0 0 0 9999px rgba(2,6,16,.72),0 0 0 3px var(--accent-color,var(--ac)),0 0 28px color-mix(in srgb, var(--accent-color,var(--ac)) 45%, transparent);
+  transition:top .25s ease,left .25s ease,width .25s ease,height .25s ease;
+  outline:2px solid rgba(255,255,255,.35);
+}
+.ptour-card{
+  position:absolute;max-width:min(340px,calc(100vw - 28px));padding:16px 16px 14px;
+  background:var(--c2, #111827);color:var(--tx,#f1f5f9);
+  border:1.5px solid color-mix(in srgb, var(--accent-color,var(--ac)) 50%, var(--br,#334155));
+  border-radius:16px;box-shadow:0 16px 40px rgba(0,0,0,.55),0 0 24px color-mix(in srgb, var(--accent-color,var(--ac)) 18%, transparent);
+  pointer-events:auto;z-index:2;
+}
+.ptour-step{font-size:.68rem;font-weight:900;color:var(--accent-color,var(--ac));letter-spacing:.04em;margin-bottom:6px}
+.ptour-title{font-size:1.05rem;font-weight:900;margin-bottom:6px;line-height:1.25}
+.ptour-text{font-size:.84rem;line-height:1.55;color:var(--so,#94a3b8);margin-bottom:14px}
+.ptour-actions{display:flex;gap:8px;justify-content:flex-end;align-items:center}
+.ptour-btn{font-family:inherit;font-weight:800;font-size:.8rem;padding:9px 14px;border-radius:10px;cursor:pointer;border:1px solid var(--br)}
+.ptour-skip{background:transparent;color:var(--mu,#94a3b8)}
+.ptour-next{background:var(--accent-color,var(--ac));color:var(--text-on-accent,#fff);border-color:var(--accent-color,var(--ac));box-shadow:0 4px 14px color-mix(in srgb, var(--accent-color,var(--ac)) 35%, transparent)}
+body.ptour-active{overflow:hidden}
+.ptour-target-live{position:relative!important;z-index:12060!important;pointer-events:auto!important;animation:ptourPulse 1.4s ease-in-out infinite}
+@keyframes ptourPulse{0%,100%{filter:brightness(1)}50%{filter:brightness(1.15)}}
+
 #aiFab{position:fixed;bottom:22px;left:22px;width:58px;height:58px;border-radius:50%;background:var(--accent-color,var(--ac));display:flex;align-items:center;justify-content:center;font-size:1.6rem;cursor:pointer;z-index:9998;box-shadow:0 4px 20px rgba(139,92,246,.5);border:none;transition:transform .2s;animation:fabPop .4s ease}
 #aiFab:hover{transform:scale(1.08)}
 #aiFab:active{transform:scale(.94)}
@@ -2675,9 +2703,47 @@ body.theme-matrix .tctime{
 </div>
 
 <style>
-#ld{display:flex;align-items:center;justify-content:center;height:100vh;flex-direction:column;gap:16px;background:var(--bg-main,var(--bg,#0a0e1a));color:var(--text-main,var(--tx,#f1f5f9))}
-#ld .ld-spinner{width:40px;height:40px;border:3px solid rgba(255,255,255,.08);border-top-color:var(--accent-color,var(--ac,#3b82f6));border-radius:50%;animation:spin .8s linear infinite}
-#ld .ld-label{color:var(--so,var(--text-muted,#64748b));font-family:Cairo,sans-serif;font-size:.9rem}
+#ld{
+  position:fixed;inset:0;z-index:10050;display:flex;align-items:center;justify-content:center;
+  flex-direction:column;gap:18px;padding:24px;
+  background:
+    radial-gradient(ellipse 80% 50% at 50% 0%, color-mix(in srgb, var(--accent-color, var(--ac,#3b82f6)) 22%, transparent), transparent 55%),
+    radial-gradient(circle at 20% 80%, color-mix(in srgb, var(--accent-color, var(--ac,#3b82f6)) 12%, transparent), transparent 45%),
+    var(--bg-main, var(--bg, #0a0e1a));
+  color:var(--text-main,var(--tx,#f1f5f9));
+  font-family:'Cairo',system-ui,sans-serif;
+}
+#ld::before{
+  content:'';position:absolute;inset:0;pointer-events:none;opacity:.35;
+  background-image:
+    linear-gradient(color-mix(in srgb, var(--accent-color, var(--ac)) 12%, transparent) 1px, transparent 1px),
+    linear-gradient(90deg, color-mix(in srgb, var(--accent-color, var(--ac)) 12%, transparent) 1px, transparent 1px);
+  background-size:48px 48px;mask-image:radial-gradient(ellipse 70% 60% at 50% 45%, #000 20%, transparent 75%);
+}
+#ld .ld-brand{
+  position:relative;display:flex;align-items:center;gap:10px;margin-bottom:6px;
+  font-weight:900;font-size:1.15rem;letter-spacing:-.02em;color:var(--tx,#f1f5f9);
+}
+#ld .ld-brand-ico{
+  width:40px;height:40px;border-radius:12px;display:flex;align-items:center;justify-content:center;
+  background:linear-gradient(135deg, var(--accent-color, var(--ac,#3b82f6)), color-mix(in srgb, var(--accent-color, var(--ac)) 60%, #a855f7));
+  box-shadow:0 0 24px color-mix(in srgb, var(--accent-color, var(--ac)) 40%, transparent);
+  font-size:1.2rem;
+}
+#ld .ld-spinner{
+  position:relative;width:44px;height:44px;border-radius:50%;
+  border:3px solid color-mix(in srgb, var(--accent-color, var(--ac,#3b82f6)) 18%, transparent);
+  border-top-color:var(--accent-color, var(--ac,#3b82f6));
+  animation:spin .75s linear infinite;
+  box-shadow:0 0 20px color-mix(in srgb, var(--accent-color, var(--ac)) 25%, transparent);
+}
+#ld .ld-label{
+  position:relative;color:var(--so,var(--text-muted,#94a3b8));
+  font-family:Cairo,sans-serif;font-size:.92rem;font-weight:700;
+}
+#ld .ld-sub{
+  position:relative;font-size:.72rem;font-weight:600;color:var(--mu,#64748b);opacity:.9;
+}
 @media (max-width:768px){
   #sbar{
     flex-direction:column!important;
@@ -3459,8 +3525,10 @@ body.theme-matrix .tctime{
 })();
 </script>
 <div id="ld">
+  <div class="ld-brand"><span class="ld-brand-ico">⚡</span><span>Your Schedule</span></div>
   <div class="ld-spinner" id="ldSpinner"></div>
   <span class="ld-label" id="ldText">Loading your schedule...</span>
+  <span class="ld-sub" id="ldSub">Preparing your day…</span>
 </div>
 
 <main id="app" style="display:none">
@@ -3522,6 +3590,7 @@ body.theme-matrix .tctime{
           </div>
           <div class="set-actions">
             <button type="button" id="setAddTaskBtn" class="altbtn" data-i18n="add_task">➕ Add task for today</button>
+            <button type="button" id="setReplayTourBtn" class="altbtn" style="margin-top:8px">🎮 Replay app tour</button>
           </div>
         </div>
         <div class="set-section" id="setsec-tracking">
@@ -4559,6 +4628,21 @@ body.theme-matrix .tctime{
 <div id="macroTrendsModal" class="report-overlay" style="display:none;z-index:10002;">
   <div class="trends-modal-box" style="max-width:860px;width:96%;padding:0;background:transparent;border:none;box-shadow:none;">
     <div id="macroTrendsModalMount"></div>
+  </div>
+</div>
+
+<!-- Product tour (FC Mobile–style coach marks) -->
+<div id="productTour" class="product-tour" aria-hidden="true">
+  <div class="ptour-shade" id="ptourShade"></div>
+  <div class="ptour-spotlight" id="ptourSpotlight"></div>
+  <div class="ptour-card" id="ptourCard">
+    <div class="ptour-step" id="ptourStep">1 / 8</div>
+    <div class="ptour-title" id="ptourTitle">Welcome</div>
+    <div class="ptour-text" id="ptourText"></div>
+    <div class="ptour-actions">
+      <button type="button" class="ptour-btn ptour-skip" id="ptourSkip">Skip</button>
+      <button type="button" class="ptour-btn ptour-next" id="ptourNext">Next</button>
+    </div>
   </div>
 </div>
 
@@ -8220,6 +8304,10 @@ async function obFinish(){
     updateUI();
     revealApp();
     showToast('Your schedule is ready',2400);
+    // Interactive FC Mobile–style tour right after first setup
+    try{
+      if(!isProductTourDone()) setTimeout(()=>startProductTour(false), 900);
+    }catch(e){}
     // Fitness preference is collected inside onboarding — only show the legacy modal for older accounts that never answered.
     if(lsGet('fitness_prompt_shown')!=='true' && USER_SETTINGS.fitness_tracking_enabled===undefined && !USER_SETTINGS.onboardingComplete){
       setTimeout(()=>{ openFitnessPromptModal(); }, 750);
@@ -13914,7 +14002,14 @@ SCIENTIFIC STANDARDS:
 
   return `You are "Chaos Coordinator" — a smart schedule + habit buddy inside the user's phone.
 Talk like a real person: casual, clear, helpful. Match the user's vibe (chill, slangy, short, long — whatever they use).
-Do NOT sound like a corporate bot or require magic command words. Understand messy, incomplete, informal messages.
+Do NOT sound like a corporate bot. NEVER require magic command words or fixed phrases.
+
+### 0. NATURAL LANGUAGE (MOST IMPORTANT)
+- Understand the user NO MATTER how they type: formal, slang, dialect, mixed Arabic+English, typos, voice-to-text, incomplete sentences, emoji-only clues.
+- There is NO required phrasing. "الدرس اتلغى النهاردة" / "lesson cancelled today" / "no math 2day" / "المث مش هيحصل" are all the same intent.
+- Infer intent from meaning, not keywords. If unclear on ONE detail, ask a short question — otherwise act.
+- Scope matters: "today only" / "النهاردة بس" / "just this once" = one-day change (skip). "every week" / "من دلوقتي" / "from now on" = permanent schedule change.
+- Time changes: "moved to 4:30" / "بقى الساعة ٤ ونص" → move/update that task's time for the scope they imply.
 
 ### 1. LANGUAGE & STYLE
 - Reply in the same language the user is using right now (English, Arabic dialect, mixed — fine).
@@ -13923,8 +14018,8 @@ Do NOT sound like a corporate bot or require magic command words. Understand mes
 ${fitnessContext}
 
 ### 2. WHAT YOU CAN DO (through the app tools)
-- Create schedule slots (e.g. "Studying"), fill/rebuild a week, add/move/delete tasks, log food, mark done, remember facts.
-- Users may ramble: "bro make me a studying slot and I'll send my school table" — understand the intent.
+- Full control: slots, week rebuild, add/move/delete/skip tasks, categories, food log, mark done, points, remember facts.
+- Users may ramble: "bro make me a studying slot and I'll send my school table" — understand the intent and do it.
 
 ### 3. MEMORY
 - If they share something durable (school end time, preferred study hours, subjects), end with: [REMEMBER: fact in third person]
@@ -14124,6 +14219,7 @@ const AI_TOOL_DEFS = `Available tools (respond with EXACTLY ONE of these as a JS
 
 {"tool":"markDone","taskId":"<id from the task list>"}
 {"tool":"unmarkDone","taskId":"<id>"}
+{"tool":"skipTask","taskId":"<id>","date":"YYYY-MM-DD optional — defaults to selected/viewed day — ONE DAY ONLY, does not remove from weekly schedule"}
 {"tool":"logFood","taskId":"<id — must be a food or snack task>","description":"<what was eaten, in his own words>"}
 {"tool":"moveTask","taskId":"<id>","toDate":"YYYY-MM-DD","toTime":"H:MM AM" or "H:MM PM" or "H:MM ص" or "H:MM م"}
 {"tool":"deleteTask","taskId":"<id>"}
@@ -14164,13 +14260,23 @@ function aiBuildToolCallSystemPrompt(context, selectedDate){
     color:c.color,
     custom:!!c.isCustom
   }));
-  return `You map the user's casual message into exactly ONE JSON tool call for their real schedule.
-They talk informally — slang, dialect Arabic, English, mixed, typos, voice-to-text. Figure out intent; do not require fixed phrases.
-If they are only chatting (hi, thanks, question with no schedule change), use {"tool":"none","reason":"..."}.
-If they want a new workspace/slot ("make a studying one", "خانة مذاكرة", etc.) → createScheduleSlot.
+  return `You map the user's message into exactly ONE JSON tool call for their real schedule.
+
+CRITICAL — NATURAL LANGUAGE ONLY:
+- Accept ANY way of writing. No required phrases, keywords, or command format.
+- Arabic only, English only, mixed, dialect, slang, typos, short messages — all valid.
+- Infer meaning. Examples of the SAME intents in different words are all OK:
+  • skip today only: "cancelled today", "الدرس مش هيحصل النهاردة", "skip math 2day", "شيله النهارده بس"
+  • permanent remove: "delete math from my schedule", "شيل الماث من الجدول خالص", "remove it every week"
+  • time change: "math is at 4:30 now", "المث بقى ٤ ونص", "move gym to 6pm"
+- If they mean TODAY ONLY → prefer skipTask (not deleteTask).
+- If they mean forever / every week → deleteTask or replaceWeeklySchedule / move on the base schedule.
+- If they only chat with no schedule change → {"tool":"none","reason":"..."}.
+- Prefer acting when intent is clear enough; ask only if the task or day is truly ambiguous.
+
+If they want a new workspace/slot → createScheduleSlot.
 If they describe or attach a full day/week plan → replaceWeeklySchedule.
-If they want a new/edited category (emoji/color/name) → createCategory / editCategory / deleteCategory.
-Prefer acting when intent is clear enough.
+If they want a new/edited category → createCategory / editCategory / deleteCategory.
 
 ${AI_TOOL_DEFS}
 
@@ -14430,6 +14536,15 @@ async function aiExecuteToolCall(v){
         if(v.iso===TODAY) STATS.pts=(STATS.pts||0)+(typeof pts==='number'?pts:0);
         try{ checkStreak(); }catch(e){ console.error(e); }
       }
+      await saveAll();
+      break;
+    }
+    case 'skipTask': {
+      // One-day only — does NOT delete from weekly schedule
+      if(!historyData[v.iso]) historyData[v.iso]={};
+      if(!historyData[v.iso].done) historyData[v.iso].done={};
+      historyData[v.iso].done[v.taskId]={skipped:true,pts:0};
+      if(v.iso===SELECTED_DATE) DONE[v.taskId]={skipped:true,pts:0};
       await saveAll();
       break;
     }
@@ -16129,6 +16244,13 @@ document.body.addEventListener('click',async e=>{
     openScheduleTaskEditor(todayJD(),null,{fromSettings:true});
     return;
   }
+  if(tgt.id==='setReplayTourBtn'){
+    try{ document.getElementById('settingsScreen')?.classList.remove('open'); }catch(e){}
+    try{ lsSet('product_tour_done','false'); }catch(e){}
+    if(USER_SETTINGS) USER_SETTINGS.productTourDone=false;
+    setTimeout(()=>startProductTour(true), 200);
+    return;
+  }
   if(tgt.id==='slotPickerBtn'||tgt.id==='slotSwitchBtn'){
     openSlotPicker();
     return;
@@ -16517,7 +16639,237 @@ function revealApp(){
       window.__didInitialScroll=true;
     },200);
   }
+  // First-time interactive tour (FC Mobile style)
+  try{
+    setTimeout(()=>{ maybeStartProductTour(); }, 700);
+  }catch(e){}
 }
+// ===== Product Tour (coach marks) =====
+let PTOUR_STEP=0;
+let PTOUR_ACTIVE=false;
+let PTOUR_TARGET_EL=null;
+function isProductTourDone(){
+  try{
+    if(USER_SETTINGS && USER_SETTINGS.productTourDone) return true;
+    if(lsGet('product_tour_done')==='true') return true;
+  }catch(e){}
+  return false;
+}
+async function markProductTourDone(){
+  try{ lsSet('product_tour_done','true'); }catch(e){}
+  try{
+    if(USER_SETTINGS){
+      USER_SETTINGS.productTourDone=true;
+      await saveUserSettings();
+    }
+  }catch(e){}
+}
+function getProductTourSteps(){
+  const en=(USER_SETTINGS&&USER_SETTINGS.lang)==='en';
+  return [
+    {
+      id:'welcome',
+      selector:null,
+      requireClick:false,
+      title:en?'Welcome to Your Schedule':'أهلاً بيك في جدولك',
+      text:en
+        ?'Quick tour — we highlight each control. You can only use the glowing area (or Next). Learn what the schedule can do in under a minute.'
+        :'جولة سريعة — هنور على كل زر. تقدر تضغط المنطقة المضيئة فقط (أو التالي). هتفهم الجدول في أقل من دقيقة.'
+    },
+    {
+      id:'days',
+      selector:'#tabrow .tab, #tabrow > *',
+      requireClick:false,
+      title:en?'Switch days':'بدّل بين الأيام',
+      text:en
+        ?'These tabs are your week. Tap any day to see its tasks, prayers, and meals. Today is marked for you.'
+        :'التبويبات دي أيام أسبوعك. اضغط أي يوم عشان تشوف مهامه وصلواته ووجباته. يومك الحالي مميز.'
+    },
+    {
+      id:'task',
+      selector:'.tc:not(.excx)',
+      requireClick:false,
+      title:en?'Your tasks':'مهامك',
+      text:en
+        ?'Each card is a block in your day. Complete it for points, drag the ⋮⋮ handle to reorder, or open it to edit. Categories color the left edge.'
+        :'كل كارت = مهمة في يومك. كمّلها عشان نقاط، اسحب ⋮⋮ لإعادة الترتيب، أو افتحها للتعديل. الألوان = التصنيفات.'
+    },
+    {
+      id:'filters',
+      selector:'.cat-filter-row, #catFilterRow, .filter-pills, [data-cat-filter]',
+      requireClick:false,
+      title:en?'Filter by category':'تصفية حسب الفئة',
+      text:en
+        ?'Use category chips (Prayer, Food, Fitness…) to focus on one type of task on busy days.'
+        :'استخدم شرائح الفئات (صلاة، طعام، رياضة…) عشان تركز على نوع واحد من المهام في الأيام المزدحمة.'
+    },
+    {
+      id:'nutrition',
+      selector:'#macroTrendsPillText, #btn-macro-trends, .macro-bar, [id*="macro"]',
+      requireClick:false,
+      title:en?'Daily nutrition':'التغذية اليومية',
+      text:en
+        ?'Track calories and macros here. Log meals from food tasks — the AI can help estimate what you ate.'
+        :'هنا السعرات والماكروز. سجّل الوجبات من مهام الأكل — والذكاء الاصطناعي يقدر يساعدك تحسب اللي كلته.'
+    },
+    {
+      id:'ai',
+      selector:'#aiFab',
+      requireClick:true,
+      title:en?'Your AI assistant':'مساعدك الذكي',
+      text:en
+        ?'Tap the robot. Talk naturally (Arabic, English, or both). Ask it to add tasks, skip a lesson today only, change times, or build a study plan from a photo.'
+        :'اضغط على الروبوت. اتكلم بشكل طبيعي (عربي أو إنجليزي أو الاتنين). يطلب إضافة مهام، تخطي درس النهاردة بس، تغيير وقت، أو بناء خطة مذاكرة من صورة.'
+    },
+    {
+      id:'settings',
+      selector:'#profileChip, .profile-chip, #btn-profile, [id*="profile"]',
+      requireClick:false,
+      title:en?'Settings & themes':'الإعدادات والثيمات',
+      text:en
+        ?'Open your profile menu for Settings: schedule slots, categories (emoji + color), reminders, appearance, and the Prestige / rebirth system.'
+        :'من القائمة: الإعدادات — خانات الجدول، الفئات (إيموجي ولون)، التذكيرات، المظهر، ونظام التميّز / إعادة الميلاد.'
+    },
+    {
+      id:'done',
+      selector:null,
+      requireClick:false,
+      title:en?'You\'re ready':'جاهز تبدأ',
+      text:en
+        ?'Build your day, complete tasks, talk to the AI anytime. You can replay this tour later from Settings if we add a shortcut — for now, enjoy your schedule.'
+        :'ابنِ يومك، كمّل المهام، واتكلم مع الذكاء في أي وقت. استمتع بجدولك ✨'
+    }
+  ];
+}
+function ptourClearTarget(){
+  if(PTOUR_TARGET_EL){
+    PTOUR_TARGET_EL.classList.remove('ptour-target-live');
+    PTOUR_TARGET_EL=null;
+  }
+}
+function ptourPlaceCard(rect){
+  const card=document.getElementById('ptourCard');
+  if(!card) return;
+  const pad=12;
+  const cw=card.offsetWidth||320;
+  const ch=card.offsetHeight||160;
+  let top, left;
+  if(!rect){
+    top=Math.max(pad,(window.innerHeight-ch)/2);
+    left=Math.max(pad,(window.innerWidth-cw)/2);
+  }else{
+    const below=rect.bottom+14;
+    const above=rect.top-ch-14;
+    top=below+ch+pad<window.innerHeight?below:Math.max(pad,above);
+    left=Math.min(Math.max(pad,rect.left+rect.width/2-cw/2), window.innerWidth-cw-pad);
+  }
+  card.style.top=top+'px';
+  card.style.left=left+'px';
+}
+function ptourShowStep(i){
+  const steps=getProductTourSteps();
+  if(i<0||i>=steps.length){ endProductTour(true); return; }
+  PTOUR_STEP=i;
+  const step=steps[i];
+  const en=(USER_SETTINGS&&USER_SETTINGS.lang)==='en';
+  const root=document.getElementById('productTour');
+  const spot=document.getElementById('ptourSpotlight');
+  const shade=document.getElementById('ptourShade');
+  const title=document.getElementById('ptourTitle');
+  const text=document.getElementById('ptourText');
+  const stepEl=document.getElementById('ptourStep');
+  const nextBtn=document.getElementById('ptourNext');
+  if(!root||!spot) return;
+
+  ptourClearTarget();
+  if(title) title.textContent=step.title;
+  if(text) text.textContent=step.text;
+  if(stepEl) stepEl.textContent=`${i+1} / ${steps.length}`;
+  if(nextBtn){
+    if(i===steps.length-1) nextBtn.textContent=en?'Finish':'إنهاء';
+    else if(step.requireClick) nextBtn.textContent=en?'Next (or tap the glow)':'التالي (أو اضغط التوهج)';
+    else nextBtn.textContent=en?'Next':'التالي';
+  }
+  const skipBtn=document.getElementById('ptourSkip');
+  if(skipBtn) skipBtn.textContent=en?'Skip tour':'تخطي الجولة';
+
+  let el=null;
+  if(step.selector){
+    el=document.querySelector(step.selector);
+    // Prefer visible elements
+    if(el && el.offsetParent===null && step.selector.includes(',')){
+      for(const sel of step.selector.split(',')){
+        const cand=document.querySelector(sel.trim());
+        if(cand && cand.offsetParent!==null){ el=cand; break; }
+      }
+    }
+  }
+  if(el){
+    try{ el.scrollIntoView({block:'center',behavior:'smooth'}); }catch(e){}
+    setTimeout(()=>{
+      const r=el.getBoundingClientRect();
+      const m=8;
+      spot.style.display='block';
+      spot.style.top=(r.top-m)+'px';
+      spot.style.left=(r.left-m)+'px';
+      spot.style.width=(r.width+m*2)+'px';
+      spot.style.height=(r.height+m*2)+'px';
+      if(shade) shade.style.background='transparent';
+      el.classList.add('ptour-target-live');
+      PTOUR_TARGET_EL=el;
+      ptourPlaceCard(r);
+      if(step.requireClick){
+        const advance=()=>{ el.removeEventListener('click',advance,true); ptourShowStep(i+1); };
+        el.addEventListener('click',advance,true);
+      }
+    },280);
+  }else{
+    spot.style.display='none';
+    if(shade) shade.style.background='rgba(2,6,16,.72)';
+    ptourPlaceCard(null);
+  }
+}
+function startProductTour(force){
+  if(PTOUR_ACTIVE) return;
+  if(!force && isProductTourDone()) return;
+  const app=document.getElementById('app');
+  if(!app || app.style.display==='none') return;
+  PTOUR_ACTIVE=true;
+  document.body.classList.add('ptour-active');
+  const root=document.getElementById('productTour');
+  if(root){ root.classList.add('open'); root.setAttribute('aria-hidden','false'); }
+  const nextBtn=document.getElementById('ptourNext');
+  const skipBtn=document.getElementById('ptourSkip');
+  if(nextBtn && !nextBtn._wired){
+    nextBtn._wired=true;
+    nextBtn.onclick=()=>{
+      const steps=getProductTourSteps();
+      if(PTOUR_STEP>=steps.length-1) endProductTour(true);
+      else ptourShowStep(PTOUR_STEP+1);
+    };
+  }
+  if(skipBtn && !skipBtn._wired){
+    skipBtn._wired=true;
+    skipBtn.onclick=()=>endProductTour(true);
+  }
+  ptourShowStep(0);
+}
+function endProductTour(markDone){
+  PTOUR_ACTIVE=false;
+  document.body.classList.remove('ptour-active');
+  ptourClearTarget();
+  const root=document.getElementById('productTour');
+  if(root){ root.classList.remove('open'); root.setAttribute('aria-hidden','true'); }
+  if(markDone) markProductTourDone();
+}
+function maybeStartProductTour(){
+  if(isProductTourDone()) return;
+  if(document.getElementById('obWizard')?.classList.contains('open')) return;
+  if(document.getElementById('landingPage')?.style.display==='block') return;
+  startProductTour(false);
+}
+// expose for settings / debug
+window.startProductTour=startProductTour;
 
 
 // ===== Public landing + Morgen-style login canvas =====
