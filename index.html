@@ -240,12 +240,14 @@ html[dir="ltr"] .tc[data-c="sunrise"]{border-left:3px solid var(--or)}
 .tl{position:relative;padding-right:20px}
 .tl::before{content:'';position:absolute;right:7px;top:0;bottom:0;width:2px;background:linear-gradient(to bottom,var(--ac),transparent);border-radius:2px}
 .tc{position:relative;margin-bottom:8px;padding:12px 14px;background:var(--c);border:1px solid var(--br);border-radius:12px;display:flex;align-items:flex-start;gap:10px;transition:opacity .45s cubic-bezier(0.4,0,0.2,1),background .35s ease,border-color .35s ease,filter .45s ease,transform .25s ease,box-shadow .25s ease}
-.tc-drag-handle{display:inline-flex;align-items:center;justify-content:center;width:18px;height:26px;cursor:grab;color:var(--mu);opacity:.28;transition:opacity .2s ease,color .2s ease,transform .2s ease;user-select:none;-webkit-user-select:none;touch-action:none;flex-shrink:0;margin-top:2px}
-.tc-drag-handle:hover{opacity:.9;color:var(--ac);transform:scale(1.1)}
-.tc-drag-handle:active{cursor:grabbing}
-.tc:hover .tc-drag-handle{opacity:.65}
-.tc.is-dragging{opacity:.35!important;transform:scale(0.97)!important;border-style:dashed!important;border-color:var(--ac)!important;box-shadow:0 8px 24px rgba(0,0,0,.35)!important;pointer-events:none}
-.tc.drag-over-above{border-top:3px solid var(--ac)!important;box-shadow:0 -5px 12px rgba(59,130,246,.35)!important;transform:translateY(2px)}
+.tc-drag-handle{display:inline-flex;align-items:center;justify-content:center;width:22px;height:32px;cursor:grab;color:var(--mu);opacity:.45;transition:opacity .2s ease,color .2s ease,transform .2s ease,background .2s;user-select:none;-webkit-user-select:none;touch-action:none;flex-shrink:0;margin-top:2px;border-radius:8px}
+.tc-drag-handle:hover{opacity:1;color:var(--ac);transform:scale(1.08);background:color-mix(in srgb, var(--ac) 12%, transparent)}
+.tc-drag-handle:active{cursor:grabbing;background:color-mix(in srgb, var(--ac) 18%, transparent)}
+.tc:hover .tc-drag-handle{opacity:.85}
+.tc.is-dragging{opacity:.4!important;transform:scale(0.98)!important;border-style:dashed!important;border-color:var(--ac)!important;box-shadow:0 12px 28px rgba(0,0,0,.4)!important;pointer-events:none;filter:saturate(.7)}
+.tc.drag-over-above{border-top:3px solid var(--ac)!important;box-shadow:0 -6px 14px color-mix(in srgb, var(--ac) 35%, transparent)!important}
+.tc.drag-over-below{border-bottom:3px solid var(--ac)!important;box-shadow:0 6px 14px color-mix(in srgb, var(--ac) 35%, transparent)!important}
+.tc-dnd-ghost{position:fixed;z-index:12000;pointer-events:none;opacity:.92;transform:scale(1.02) rotate(1deg);box-shadow:0 16px 40px rgba(0,0,0,.55),0 0 20px color-mix(in srgb, var(--ac) 25%, transparent);border:2px solid var(--ac)!important;border-radius:12px;max-width:min(92vw,420px)}
 .tc.drag-over-below{border-bottom:3px solid var(--ac)!important;box-shadow:0 5px 12px rgba(59,130,246,.35)!important;transform:translateY(-2px)}
 .tc-touch-ghost{position:fixed;pointer-events:none;z-index:10050;opacity:.92;transform:scale(1.03) rotate(1deg);box-shadow:0 16px 36px rgba(0,0,0,.45);border:2px solid var(--ac);border-radius:12px;background:var(--c);backdrop-filter:blur(8px);transition:transform .1s ease}
 .tc::before{content:'';position:absolute;right:-24px;top:16px;width:10px;height:10px;border-radius:50%;background:var(--c2);border:2px solid var(--br);transition:transform .35s cubic-bezier(0.34,1.56,0.64,1),background .35s ease,border-color .35s ease,box-shadow .35s ease}
@@ -1915,32 +1917,85 @@ body.theme-matrix .tctime{
   transform:scale(1.26) rotate(360deg);
 }
 
-/* Responsive Scaling: Keep all views colorful and vibrant */
+/* Responsive: keep demo readable on phones (don't hide the product) */
 @media(max-width:1200px){
-  .landing-floating-card{
-    transform:scale(0.9);
-  }
+  .landing-floating-card{transform:scale(0.92)}
 }
 @media(max-width:960px){
-  .landing-floating-layer{
-    opacity:.75;
-    transform:scale(0.85);
-    transform-origin:top center;
-  }
-  .lfc-3,.lfc-4,.lfc-7,.lfc-8,.lfc-11,.lfc-12{display:none}
-  .lfp-3,.lfp-4,.lfp-5,.lfp-6{display:none}
-  .lfg-3,.lfg-4{display:none}
+  .landing-floating-layer{opacity:.55;pointer-events:none}
+  .lfc-3,.lfc-4,.lfc-7,.lfc-8,.lfc-11,.lfc-12,.lfp-3,.lfp-4,.lfp-5,.lfp-6,.lfg-3,.lfg-4{display:none}
 }
 @media(max-width:640px){
-  .landing-floating-layer{
-    opacity:.6;
-    transform:scale(0.72);
-  }
-  .lfc-5,.lfc-6,.lfc-9,.lfc-10{display:none}
-  .lfc-1{top:45px;left:-5px}
-  .lfc-2{top:35px;right:-5px}
-  .lfp-1{top:140px;left:4px}
-  .lfp-2{top:135px;right:4px}
+  .landing-floating-layer{display:none} /* phone mock is the real demo on mobile */
+  #landingNav{padding:12px 14px!important}
+  #landingNav a{display:none}
+  .landing-palette-bar{gap:6px}
+  .landing-palette-chip{font-size:.65rem;padding:5px 8px}
+}
+
+/* Interactive phone mock — works on every device */
+.landing-phone-wrap{
+  position:relative;z-index:12;max-width:360px;margin:28px auto 8px;
+  filter:drop-shadow(0 24px 50px rgba(0,0,0,.55));
+}
+.landing-phone{
+  background:linear-gradient(160deg,rgba(15,23,42,.95),rgba(8,12,24,.98));
+  border:1px solid var(--landing-card-border,rgba(56,189,248,.35));
+  border-radius:28px;padding:14px 12px 16px;overflow:hidden;
+  box-shadow:0 0 0 1px rgba(255,255,255,.04),0 0 40px -8px var(--landing-accent-glow,rgba(56,189,248,.35));
+}
+.landing-phone-notch{
+  width:96px;height:8px;border-radius:99px;background:rgba(255,255,255,.08);margin:0 auto 12px;
+}
+.landing-phone-head{
+  display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:10px;padding:0 4px;
+}
+.landing-phone-head strong{font-size:.88rem;font-weight:900;color:#f8fafc}
+.landing-phone-head span{font-size:.68rem;font-weight:800;color:var(--landing-accent,#38bdf8)}
+.landing-demo-task{
+  display:flex;align-items:center;gap:10px;padding:10px 10px;margin-bottom:8px;
+  border-radius:14px;border:1px solid rgba(255,255,255,.08);
+  background:rgba(255,255,255,.03);cursor:pointer;transition:all .25s ease;
+  user-select:none;-webkit-tap-highlight-color:transparent;
+}
+.landing-demo-task:active{transform:scale(.98)}
+.landing-demo-task:hover{border-color:var(--landing-card-border);background:rgba(255,255,255,.05)}
+.landing-demo-task.done{opacity:.72;border-color:rgba(16,185,129,.4);background:rgba(16,185,129,.08)}
+.landing-demo-check{
+  width:26px;height:26px;border-radius:50%;border:2px solid rgba(255,255,255,.25);
+  display:flex;align-items:center;justify-content:center;font-size:.72rem;font-weight:900;
+  color:transparent;flex-shrink:0;transition:all .2s;
+}
+.landing-demo-task.done .landing-demo-check{
+  background:#10b981;border-color:#10b981;color:#fff;box-shadow:0 0 12px rgba(16,185,129,.5);
+}
+.landing-demo-body{min-width:0;flex:1}
+.landing-demo-title{font-size:.8rem;font-weight:800;color:#f1f5f9;line-height:1.2}
+.landing-demo-sub{font-size:.66rem;color:#94a3b8;margin-top:2px}
+.landing-demo-pts{font-size:.68rem;font-weight:900;color:var(--landing-accent,#38bdf8);flex-shrink:0}
+.landing-demo-bar{
+  height:6px;border-radius:99px;background:rgba(255,255,255,.06);overflow:hidden;margin:10px 4px 4px;
+}
+.landing-demo-bar > i{
+  display:block;height:100%;width:0%;border-radius:99px;
+  background:linear-gradient(90deg,var(--landing-accent,#38bdf8),#10b981);
+  transition:width .4s ease;
+}
+.landing-demo-foot{
+  display:flex;justify-content:space-between;align-items:center;padding:6px 4px 0;
+  font-size:.68rem;font-weight:700;color:#94a3b8;
+}
+.landing-demo-hint{
+  text-align:center;margin-top:10px;font-size:.72rem;font-weight:700;color:#64748b;
+}
+.landing-demo-cursor{
+  position:absolute;width:22px;height:22px;border-radius:50%;
+  border:2px solid #fff;background:rgba(255,255,255,.15);
+  box-shadow:0 0 0 4px rgba(56,189,248,.2);pointer-events:none;
+  opacity:0;z-index:5;transition:left .6s ease,top .6s ease,opacity .3s;
+}
+@keyframes landingCursorTap{
+  0%,100%{transform:scale(1)} 40%{transform:scale(.75)} 70%{transform:scale(1.1)}
 }
 
 .landing-feat-card{
@@ -2204,6 +2259,66 @@ body.theme-matrix .tctime{
         <span>📊 Real-Time Daily Summary</span>
         <span>•</span>
         <span>🌙 Fajr &amp; Sleep Circadian Lock</span>
+      </div>
+
+      <!-- Interactive schedule preview — visible on phone + desktop -->
+      <div class="landing-phone-wrap" id="landingPhoneWrap">
+        <div class="landing-phone" id="landingPhone">
+          <div class="landing-phone-notch"></div>
+          <div class="landing-phone-head">
+            <strong>Today · Saturday</strong>
+            <span id="landingDemoPts">0⭐ earned</span>
+          </div>
+          <div id="landingDemoList">
+            <div class="landing-demo-task" data-pts="10" data-demo="fajr">
+              <div class="landing-demo-check">✓</div>
+              <div class="landing-demo-body">
+                <div class="landing-demo-title">🌙 Fajr</div>
+                <div class="landing-demo-sub">4:19 AM · Prayer</div>
+              </div>
+              <div class="landing-demo-pts">+10</div>
+            </div>
+            <div class="landing-demo-task" data-pts="15" data-demo="deep">
+              <div class="landing-demo-check">✓</div>
+              <div class="landing-demo-body">
+                <div class="landing-demo-title">💻 Deep Work</div>
+                <div class="landing-demo-sub">9:00 – 11:00 AM · Focus</div>
+              </div>
+              <div class="landing-demo-pts">+15</div>
+            </div>
+            <div class="landing-demo-task" data-pts="8" data-demo="lunch">
+              <div class="landing-demo-check">✓</div>
+              <div class="landing-demo-body">
+                <div class="landing-demo-title">🍽️ Lunch + macros</div>
+                <div class="landing-demo-sub">1:00 PM · Nutrition</div>
+              </div>
+              <div class="landing-demo-pts">+8</div>
+            </div>
+            <div class="landing-demo-task" data-pts="12" data-demo="gym">
+              <div class="landing-demo-check">✓</div>
+              <div class="landing-demo-body">
+                <div class="landing-demo-title">🏋️ Upper Body</div>
+                <div class="landing-demo-sub">5:30 PM · Gym</div>
+              </div>
+              <div class="landing-demo-pts">+12</div>
+            </div>
+            <div class="landing-demo-task" data-pts="10" data-demo="sleep">
+              <div class="landing-demo-check">✓</div>
+              <div class="landing-demo-body">
+                <div class="landing-demo-title">😴 Sleep on time</div>
+                <div class="landing-demo-sub">11:00 PM · Recovery</div>
+              </div>
+              <div class="landing-demo-pts">+10</div>
+            </div>
+          </div>
+          <div class="landing-demo-bar"><i id="landingDemoBar"></i></div>
+          <div class="landing-demo-foot">
+            <span id="landingDemoCount">0 / 5 complete</span>
+            <span id="landingDemoEncourage">Tap tasks to complete →</span>
+          </div>
+        </div>
+        <div class="landing-demo-hint">Try it — complete tasks and watch points climb. Your real day works the same way.</div>
+        <div class="landing-demo-cursor" id="landingDemoCursor" aria-hidden="true"></div>
       </div>
     </div>
   </section>
@@ -16608,6 +16723,69 @@ function initLandingDynamicEffects(){
       }
     });
   });
+
+  // 4. Interactive phone mock — tap tasks, earn points (works on mobile)
+  const demoList = document.getElementById('landingDemoList');
+  if(demoList && !demoList._wired){
+    demoList._wired = true;
+    const updateDemoStats = ()=>{
+      const tasks = [...demoList.querySelectorAll('.landing-demo-task')];
+      const done = tasks.filter(t => t.classList.contains('done'));
+      let pts = 0;
+      done.forEach(t => pts += parseInt(t.getAttribute('data-pts')||'0',10));
+      const ptsEl = document.getElementById('landingDemoPts');
+      const countEl = document.getElementById('landingDemoCount');
+      const bar = document.getElementById('landingDemoBar');
+      const enc = document.getElementById('landingDemoEncourage');
+      if(ptsEl) ptsEl.textContent = pts + '⭐ earned';
+      if(countEl) countEl.textContent = done.length + ' / ' + tasks.length + ' complete';
+      if(bar) bar.style.width = Math.round((done.length/tasks.length)*100) + '%';
+      if(enc){
+        if(done.length === 0) enc.textContent = 'Tap tasks to complete →';
+        else if(done.length < tasks.length) enc.textContent = 'Keep going — build the streak 🔥';
+        else enc.textContent = 'Perfect day unlocked 🏆';
+      }
+    };
+    demoList.addEventListener('click', e => {
+      const task = e.target.closest?.('.landing-demo-task');
+      if(!task) return;
+      const nowDone = task.classList.toggle('done');
+      const title = task.querySelector('.landing-demo-title')?.textContent || 'Task';
+      const pts = task.getAttribute('data-pts') || '0';
+      updateDemoStats();
+      if(nowDone) showToast(`✓ ${title} · +${pts}⭐`, 1600, 'gold');
+    });
+    updateDemoStats();
+
+    // Auto demo cursor: walk through tasks once so the page doesn't feel empty
+    const cursor = document.getElementById('landingDemoCursor');
+    const wrap = document.getElementById('landingPhoneWrap');
+    if(cursor && wrap && !window.matchMedia('(prefers-reduced-motion: reduce)').matches){
+      const tasks = [...demoList.querySelectorAll('.landing-demo-task')];
+      let step = 0;
+      const runStep = ()=>{
+        if(!document.getElementById('landingPage') || document.getElementById('landingPage').style.display==='none') return;
+        if(step >= tasks.length){
+          cursor.style.opacity = '0';
+          return;
+        }
+        const t = tasks[step];
+        const wr = wrap.getBoundingClientRect();
+        const tr = t.getBoundingClientRect();
+        cursor.style.opacity = '1';
+        cursor.style.left = (tr.left - wr.left + 18) + 'px';
+        cursor.style.top = (tr.top - wr.top + 14) + 'px';
+        cursor.style.animation = 'landingCursorTap .5s ease';
+        setTimeout(()=>{
+          if(!t.classList.contains('done')) t.click();
+          cursor.style.animation = '';
+          step++;
+          setTimeout(runStep, 900);
+        }, 450);
+      };
+      setTimeout(runStep, 1400);
+    }
+  }
 }
 
 function userHasExistingWorkspace(){
