@@ -396,11 +396,29 @@ html[dir="ltr"] .tc[data-c="sunrise"]{border-left:3px solid var(--or)}
 .profile-menu .pm-sep{height:1px;background:var(--br);margin:4px 0}
 #settingsScreen{position:fixed;inset:0;background:var(--bg);z-index:10150;display:none;flex-direction:column}
 #settingsScreen.open{display:flex}
+#settingsScreen .set-nav,
+#settingsScreen .set-content{background:transparent}
+#settingsScreen .set-section{border-color:color-mix(in srgb, var(--ac) 15%, var(--br))}
+#settingsScreen .altbtn{border-color:color-mix(in srgb, var(--ac) 30%, var(--br));background:color-mix(in srgb, var(--ac) 8%, var(--c))}
+#settingsScreen .altbtn:hover{border-color:var(--ac);box-shadow:0 0 12px color-mix(in srgb, var(--ac) 18%, transparent)}
+#settingsScreen input[type="text"],
+#settingsScreen input[type="number"],
+#settingsScreen input[type="color"],
+#settingsScreen select,
+#settingsScreen textarea{border-color:color-mix(in srgb, var(--ac) 25%, var(--br))!important;caret-color:var(--ac)}
+#settingsScreen input:focus,
+#settingsScreen select:focus,
+#settingsScreen textarea:focus{outline:none;border-color:var(--ac)!important;box-shadow:0 0 0 3px color-mix(in srgb, var(--ac) 20%, transparent)}
 .set-header{display:flex;align-items:center;justify-content:space-between;padding:16px 20px;border-bottom:1px solid color-mix(in srgb, var(--ac) 25%, var(--br));flex-shrink:0;background:color-mix(in srgb, var(--c) 88%, var(--ac))}
 .set-header h2{font-size:1.15rem;font-weight:900;margin:0}
 .set-nav button.act{background:color-mix(in srgb, var(--ac) 22%, transparent)!important;border-color:var(--ac)!important;color:var(--tx)!important;box-shadow:0 0 12px color-mix(in srgb, var(--ac) 20%, transparent)}
-.fl-submit-btn,.topbtn-report{background:var(--ac)!important;border-color:var(--ac)!important;color:var(--text-on-accent,#fff)!important}
+.fl-submit-btn,.topbtn-report,#btn-report{background:var(--ac)!important;border-color:var(--ac)!important;color:var(--text-on-accent,#fff)!important}
 .report-box,.report-day{border-color:color-mix(in srgb, var(--ac) 22%, var(--br))!important}
+.theme-preset.sel{border-color:var(--ac)!important;box-shadow:0 0 0 2px color-mix(in srgb, var(--ac) 40%, transparent)}
+.mythic-card{border-color:color-mix(in srgb, var(--ac) 20%, var(--br))!important}
+.mythic-card.active,.mythic-card.owned{border-color:var(--ac)!important;box-shadow:0 0 18px color-mix(in srgb, var(--ac) 18%, transparent)}
+.tn-row{border-color:color-mix(in srgb, var(--ac) 18%, var(--br))!important}
+.tn-switch input:checked{accent-color:var(--ac)}
 .set-body{flex:1;display:flex;overflow:hidden}
 .set-nav{width:200px;border-left:1px solid var(--br);padding:16px 10px;overflow-y:auto;flex-shrink:0}
 .set-nav button{width:100%;text-align:right;padding:12px 14px;margin-bottom:4px;background:transparent;border:none;border-radius:10px;color:var(--so);font-family:'Cairo',sans-serif;font-size:.85rem;font-weight:700;cursor:pointer}
@@ -3336,12 +3354,15 @@ body.theme-matrix .tctime{
         <div class="set-section act" id="setsec-general">
           <h3 data-i18n="sec_general">General</h3>
           <p class="desc" data-i18n="sec_general_desc">Manage daily tasks and schedule slots from here.</p>
-          <div style="margin-bottom:18px;padding:14px;background:var(--c);border:1px solid var(--br);border-radius:12px">
+          <div style="margin-bottom:18px;padding:14px;background:var(--c);border:1px solid color-mix(in srgb, var(--ac) 22%, var(--br));border-radius:12px">
             <div style="font-size:.78rem;font-weight:800;color:var(--so);margin-bottom:8px" id="slotHeading">Schedule slots</div>
-            <p style="font-size:.72rem;color:var(--mu);margin:0 0 10px;line-height:1.45" id="slotHelp">Switch between independent schedules (Work, Vacation, Gym Focus…). Points & streak stay shared.</p>
-            <select id="slotSelect" style="width:100%;padding:10px 12px;border-radius:10px;border:1px solid var(--br);background:var(--c2);color:var(--tx);font-family:inherit;font-weight:700;margin-bottom:10px"></select>
+            <p style="font-size:.72rem;color:var(--mu);margin:0 0 10px;line-height:1.45" id="slotHelp">Tap the workspace to switch. Points & streak stay shared across slots.</p>
+            <button type="button" id="slotPickerBtn" class="altbtn" style="width:100%;padding:12px 14px;border-radius:10px;border:1.5px solid var(--ac);background:color-mix(in srgb, var(--ac) 12%, var(--c2));color:var(--tx);font-family:inherit;font-weight:800;margin-bottom:10px;text-align:start;display:flex;align-items:center;justify-content:space-between;gap:8px">
+              <span id="slotPickerLabel">My Workspace ★</span>
+              <span style="opacity:.7;font-size:.85rem">▾</span>
+            </button>
+            <select id="slotSelect" style="display:none" aria-hidden="true"></select>
             <div style="display:flex;flex-wrap:wrap;gap:8px">
-              <button type="button" id="slotSwitchBtn" class="altbtn" style="flex:1;min-width:110px">Switch</button>
               <button type="button" id="slotCreateBtn" class="altbtn" style="flex:1;min-width:110px">+ New slot</button>
               <button type="button" id="slotRenameBtn" class="altbtn" style="flex:1;min-width:110px">Rename</button>
               <button type="button" id="slotDeleteBtn" class="altbtn" style="flex:1;min-width:110px;background:rgba(239,68,68,.1);border-color:rgba(239,68,68,.4);color:#f87171">Delete</button>
@@ -5822,14 +5843,78 @@ async function deleteScheduleSlot(id){
 function renderSlotsUI(){
   ensureScheduleSlots();
   const sel=document.getElementById('slotSelect');
-  if(!sel) return;
   const ids=Object.keys(USER_SCHEDULES);
-  sel.innerHTML=ids.map(id=>{
-    const s=USER_SCHEDULES[id];
-    const label=(s&&s.name)||id;
-    const active=id===ACTIVE_SCHEDULE_ID?' ★':'';
-    return `<option value="${id}" ${id===ACTIVE_SCHEDULE_ID?'selected':''}>${label}${active}</option>`;
-  }).join('');
+  if(sel){
+    sel.innerHTML=ids.map(id=>{
+      const s=USER_SCHEDULES[id];
+      const label=(s&&s.name)||id;
+      const active=id===ACTIVE_SCHEDULE_ID?' ★':'';
+      return `<option value="${id}" ${id===ACTIVE_SCHEDULE_ID?'selected':''}>${label}${active}</option>`;
+    }).join('');
+  }
+  const lbl=document.getElementById('slotPickerLabel');
+  if(lbl){
+    const s=USER_SCHEDULES[ACTIVE_SCHEDULE_ID];
+    lbl.textContent=((s&&s.name)||'My Workspace')+' ★';
+  }
+}
+async function openSlotPicker(){
+  ensureScheduleSlots();
+  const en=(USER_SETTINGS&&USER_SETTINGS.lang)==='en';
+  const ids=Object.keys(USER_SCHEDULES||{});
+  if(!ids.length){
+    showToast(en?'No schedule slots yet':'لا توجد خانات بعد',2000,'warn');
+    return;
+  }
+  // Build a themed picker using the existing modal overlay pattern
+  let overlay=document.getElementById('slotPickerOverlay');
+  if(!overlay){
+    overlay=document.createElement('div');
+    overlay.id='slotPickerOverlay';
+    overlay.className='modal-overlay';
+    overlay.innerHTML=`<div class="modal-box" style="text-align:start;max-width:400px">
+      <div class="modal-step-ind" id="slotPickerInd">SCHEDULE SLOT</div>
+      <div class="modal-title" id="slotPickerTitle">Switch workspace</div>
+      <div class="modal-sub" id="slotPickerSub">Choose a schedule. Points & streak stay shared.</div>
+      <div class="modal-opts" id="slotPickerOpts"></div>
+      <button type="button" class="modal-back-btn" id="slotPickerClose">Close</button>
+    </div>`;
+    document.body.appendChild(overlay);
+    overlay.addEventListener('click',e=>{ if(e.target===overlay) overlay.classList.remove('open'); });
+    overlay.querySelector('#slotPickerClose')?.addEventListener('click',()=>overlay.classList.remove('open'));
+  }
+  const title=document.getElementById('slotPickerTitle');
+  const sub=document.getElementById('slotPickerSub');
+  const ind=document.getElementById('slotPickerInd');
+  if(title) title.textContent=en?'Switch workspace':'تبديل مساحة العمل';
+  if(sub) sub.textContent=en?'Tap a slot to switch instantly.':'اضغط على خانة للتبديل فوراً.';
+  if(ind) ind.textContent=en?'SCHEDULE SLOT':'خانة الجدول';
+  const opts=document.getElementById('slotPickerOpts');
+  if(opts){
+    opts.innerHTML=ids.map(id=>{
+      const s=USER_SCHEDULES[id]||{};
+      const name=s.name||id;
+      const isOn=id===ACTIVE_SCHEDULE_ID;
+      return `<button type="button" class="modal-opt${isOn?' gold':''}" data-slot-pick="${id}" style="text-align:start">
+        <span>${name}${isOn?(en?' · Active':' · نشط'):''}</span>
+        <span class="opt-pts">${isOn?'★':en?'Switch':'تبديل'}</span>
+      </button>`;
+    }).join('');
+    opts.querySelectorAll('[data-slot-pick]').forEach(btn=>{
+      btn.onclick=async()=>{
+        const id=btn.getAttribute('data-slot-pick');
+        overlay.classList.remove('open');
+        if(!id||id===ACTIVE_SCHEDULE_ID) return;
+        const ok=await switchActiveSchedule(id);
+        if(ok){
+          renderSlotsUI();
+          try{ renderRoutinesUI(); }catch(e){}
+          showToast(en?'Switched schedule':'تم تبديل الجدول',1800);
+        }
+      };
+    });
+  }
+  overlay.classList.add('open');
 }
 
 // Populates Settings → Workspaces (Routines) list (#routineList). Called from
@@ -6524,7 +6609,7 @@ function dayLabel(jd){
 // Built-in schedule strings → English when lang=en. Custom user text stays as typed.
 const TASK_EN={
   'الفجر':'Fajr','الشروق':'Sunrise','الظهر':'Dhuhr','العصر':'Asr','المغرب':'Maghrib','العشاء':'Isha',
-  'صلاة الجمعة':'Friday prayer','الفطار':'Breakfast','الفطور':'Breakfast','الغدا':'Lunch','الغداء':'Lunch','العشا':'Dinner','العشاء':'Isha / Dinner',
+  'صلاة الجمعة':'Friday prayer','الفطار':'Breakfast','الفطور':'Breakfast','الغدا':'Lunch','الغداء':'Lunch','العشا':'Dinner',
   'سناك منتصف النهار':'Midday snack','سناك':'Snack',
   'الورد اليومي':'Daily Quran','الورد القرآني':'Daily Quran','الورد':'Daily Quran','ورد يومي':'Daily Quran',
   'تحضير درس الاثنين':'Prep Monday lesson','تحضير درس الأربعاء':'Prep Wednesday lesson',
@@ -6764,10 +6849,8 @@ function applyI18n(){
   if(prayerLocAdd) prayerLocAdd.textContent=isEn?'Add':'إضافة';
   const slotHeading=document.getElementById('slotHeading');
   if(slotHeading) slotHeading.textContent=isEn?'Schedule slots':'خانات الجدول';
-  const slotHelp=document.getElementById('slotHelp');
-  if(slotHelp) slotHelp.textContent=isEn?'Switch between independent schedules (Work, Vacation, Gym Focus…). Points & streak stay shared.':'بدّل بين جداول مستقلة (عمل، إجازة…). النقاط والاستريك مشتركة.';
-  const slotSwitch=document.getElementById('slotSwitchBtn');
-  if(slotSwitch) slotSwitch.textContent=isEn?'Switch':'تبديل';
+  const slotHelpEl=document.getElementById('slotHelp');
+  if(slotHelpEl) slotHelpEl.textContent=isEn?'Tap the workspace to switch. Points & streak stay shared across slots.':'اضغط على مساحة العمل للتبديل. النقاط والاستريك مشتركة.';
   const slotCreate=document.getElementById('slotCreateBtn');
   if(slotCreate) slotCreate.textContent=isEn?'+ New slot':'+ خانة جديدة';
   const slotRename=document.getElementById('slotRenameBtn');
@@ -8684,20 +8767,41 @@ async function getPrayerCoords(){
 // A hard 7s cap here means a bad connection now correctly falls through to the cached
 // FALLBK prayer times within seconds — exactly the same safe fallback the try/catch
 // already existed for — instead of hanging the whole app indefinitely.
-async function fetchPrayers(){
+function stripTimeSec(s){
+  if(!s) return s;
+  const m=String(s).match(/(\d{1,2}:\d{2})/);
+  return m?m[1]:String(s);
+}
+async function fetchPrayers(forIso){
   const withTimeout=(promise,ms)=>Promise.race([
     promise,
     new Promise((_,rej)=>setTimeout(()=>rej(new Error('timeout')),ms))
   ]);
   try{
     const {lat,lon}=await withTimeout(getPrayerCoords(),7000);
-    const res=await withTimeout(
-      fetch(`https://api.aladhan.com/v1/timings?latitude=${lat}&longitude=${lon}&method=9&tune=${PRAYER_TUNE}`),
-      7000
-    );
+    // Date-specific timings so each day shows its own prayer times
+    let datePart='';
+    try{
+      const iso=forIso||SELECTED_DATE||TODAY;
+      const [y,m,d]=String(iso).split('-');
+      if(y&&m&&d) datePart=`/${d}-${m}-${y}`;
+    }catch(e){}
+    const url=datePart
+      ?`https://api.aladhan.com/v1/timings${datePart}?latitude=${lat}&longitude=${lon}&method=9&tune=${PRAYER_TUNE}`
+      :`https://api.aladhan.com/v1/timings?latitude=${lat}&longitude=${lon}&method=9&tune=${PRAYER_TUNE}`;
+    const res=await withTimeout(fetch(url),7000);
     const json=await res.json();
-    if(json&&json.code===200){const t=json.data.timings;PRYT={Fajr:t.Fajr,Sunrise:t.Sunrise,Dhuhr:t.Dhuhr,Asr:t.Asr,Maghrib:t.Maghrib,Isha:t.Isha};}
-    else throw new Error();
+    if(json&&json.code===200){
+      const t=json.data.timings;
+      PRYT={
+        Fajr:stripTimeSec(t.Fajr),
+        Sunrise:stripTimeSec(t.Sunrise),
+        Dhuhr:stripTimeSec(t.Dhuhr),
+        Asr:stripTimeSec(t.Asr),
+        Maghrib:stripTimeSec(t.Maghrib),
+        Isha:stripTimeSec(t.Isha)
+      };
+    } else throw new Error();
   }catch{PRYT={...FALLBK};}
 }
 
@@ -11135,12 +11239,13 @@ function renderTabs(){
     b.className=`tab${isT?' act':''}${j===todayJD()?' tod':''}`;
     b.dataset.jd=j;
     b.innerHTML=`<div>${dayLabel(j)}</div>${isG?'<div class="gdot"></div>':''}`;
-    b.onclick=()=>{
+    b.onclick=async()=>{
       saveDay();
       // Use the single canonical Sat->Fri week function so tab dates and report
       // dates can never disagree with each other.
       SELECTED_DATE = dateForWeekday(j, TODAY);
       loadDay();
+      try{ await fetchPrayers(SELECTED_DATE); }catch(e){}
       renderTabs();renderPanels();switchDay(j);updateUI();
     };
     c.appendChild(b);
@@ -15615,13 +15720,8 @@ document.body.addEventListener('click',async e=>{
     openScheduleTaskEditor(todayJD(),null,{fromSettings:true});
     return;
   }
-  if(tgt.id==='slotSwitchBtn'){
-    const id=document.getElementById('slotSelect')?.value;
-    if(!id) return;
-    const en=(USER_SETTINGS.lang==='en');
-    switchActiveSchedule(id).then(ok=>{
-      if(ok) showToast(en?'Switched schedule':'تم تبديل الجدول',1800);
-    });
+  if(tgt.id==='slotPickerBtn'||tgt.id==='slotSwitchBtn'){
+    openSlotPicker();
     return;
   }
   if(tgt.id==='slotCreateBtn'){
@@ -15632,16 +15732,16 @@ document.body.addEventListener('click',async e=>{
     return;
   }
   if(tgt.id==='slotRenameBtn'){
-    const id=document.getElementById('slotSelect')?.value||ACTIVE_SCHEDULE_ID;
+    const id=ACTIVE_SCHEDULE_ID;
     const cur=(USER_SCHEDULES[id]&&USER_SCHEDULES[id].name)||'';
     const en=(USER_SETTINGS.lang==='en');
     const name=await appPrompt(en?'Rename schedule':'إعادة تسمية الجدول',cur);
     if(name==null) return;
-    renameScheduleSlot(id,name).then(ok=>{ if(ok) showToast(en?'Renamed':'تمت إعادة التسمية',1600); });
+    renameScheduleSlot(id,name).then(ok=>{ if(ok){ renderSlotsUI(); showToast(en?'Renamed':'تمت إعادة التسمية',1600); } });
     return;
   }
   if(tgt.id==='slotDeleteBtn'){
-    const id=document.getElementById('slotSelect')?.value||ACTIVE_SCHEDULE_ID;
+    const id=ACTIVE_SCHEDULE_ID;
     const en=(USER_SETTINGS.lang==='en');
     const ok=await appConfirm(en?'Delete this schedule?':'حذف هذا الجدول؟', en?'Tasks in it will be removed. Points & streak stay.':'المهام داخله ستُحذف. النقاط والاستريك تبقى.');
     if(!ok) return;
