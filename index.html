@@ -707,6 +707,21 @@ html[dir="ltr"] .tc[data-c="sunrise"]{border-left:3px solid var(--or)}
 @keyframes aiPopIn{0%{opacity:0;transform:scale(.85) translateY(30px)}100%{opacity:1;transform:scale(1) translateY(0)}}
 @keyframes aiFullIn{0%{opacity:0;transform:scale(.96)}100%{opacity:1;transform:scale(1)}}
 @keyframes fabPop{0%{transform:scale(0);opacity:0}70%{transform:scale(1.15)}100%{transform:scale(1);opacity:1}}
+
+/* Mobile: keep action buttons from crushing the card; time-first stack */
+@media (max-width:700px){
+  .tc{flex-wrap:wrap;gap:8px;padding:12px 12px}
+  .tctime{min-width:52px;font-size:.72rem}
+  .tcbody{flex:1 1 140px;min-width:0}
+  .tc .cbtn,.tc .ptsbdg{margin-inline-start:auto}
+  .tc > div[style*="display:flex"]{width:100%;justify-content:flex-end;margin-top:4px}
+  .dh{flex-wrap:wrap;gap:8px}
+  .dhm{font-size:.65rem;line-height:1.4}
+  #sbar{padding:10px 12px;min-height:56px}
+  .sbar-stats{gap:10px}
+  .sv{font-size:1.25rem}
+  .ptour-card{left:12px!important;right:12px!important;width:auto!important;max-width:none!important;transform:none!important}
+}
 /* FC Mobile–style product tour */
 .product-tour{position:fixed;inset:0;z-index:12050;display:none;pointer-events:none;overflow:hidden}
 .product-tour.open{display:block}
@@ -3594,6 +3609,10 @@ body.theme-matrix .tctime{
               <button type="button" id="slotDeleteBtn" class="altbtn" style="flex:1;min-width:110px;background:rgba(239,68,68,.1);border-color:rgba(239,68,68,.4);color:#f87171">Delete</button>
             </div>
           </div>
+          <div class="set-row" style="margin-top:12px;align-items:center">
+            <label for="setScheduleEditMode" style="flex:1">🛠️ Edit mode <span style="display:block;font-size:.72rem;color:var(--so);font-weight:600;margin-top:2px">Show edit &amp; delete on task cards (and allow drag reorder)</span></label>
+            <input type="checkbox" id="setScheduleEditMode">
+          </div>
           <div class="set-actions">
             <button type="button" id="setAddTaskBtn" class="altbtn" data-i18n="add_task">➕ Add task for today</button>
             <button type="button" id="setReplayTourBtn" class="altbtn" style="margin-top:8px">🎮 Replay app tour</button>
@@ -5405,6 +5424,7 @@ function applyMythicThemeClass(themeId){
   applyMythicColorOverrides(id||themeId);
   updateThemeColorCustomizerVisibility(id||themeId);
   applyAppAmbient(id||themeId);
+  try{ updateBrowserTabIcon(); }catch(e){}
 }
 function applyMythicColorOverrides(themeId){
   const root=document.documentElement;
@@ -6897,15 +6917,19 @@ async function stHandleSave(){
 }
 
 async function stHandleDelete(jd,taskId){
+  const en=(USER_SETTINGS&&USER_SETTINGS.lang)==='en';
+  const taskName=((USER_SCHEDULE[jd]&&USER_SCHEDULE[jd].ts)||[]).find(t=>t[0]===taskId)?.[4]||taskId;
+  const ok = window.confirm(en?`Delete "${taskName}" from this day?`:`حذف "${taskName}" من هذا اليوم؟`);
+  if(!ok) return;
   try{
     await deleteScheduleTask(jd,taskId);
   }catch(e){
     console.error('deleteScheduleTask failed',e);
-    showToast('⚠️ حصل خطأ أثناء الحذف — جرب تاني',3500,'warn');
+    showToast(en?'⚠️ Delete failed — try again':'⚠️ حصل خطأ أثناء الحذف — جرب تاني',3500,'warn');
     return;
   }
   try{ renderTabs();renderPanels();switchDay(getJDfromISO(SELECTED_DATE));updateUI(); }catch(e){ console.warn('re-render after schedule delete failed',e); }
-  showToast('🗑️ اتشالت المهمة',2000);
+  showToast(en?'🗑️ Task deleted':'🗑️ اتشالت المهمة',2000);
 }
 
 // ===== USER_SETTINGS — per-account feature toggles (trackPrayers, future settings) =====
@@ -7116,6 +7140,67 @@ function translateAiReply(text){
   for(const [re,en] of pairs){ out=out.replace(re,en); }
   return out;
 }
+function updateBrowserTabIcon(){
+  try{
+    const mythicId = (typeof STATS!=='undefined' && STATS && STATS.activeMythicTheme)
+      ? (typeof normalizeMythicId==='function' ? normalizeMythicId(STATS.activeMythicTheme) : STATS.activeMythicTheme)
+      : null;
+    const MYTHIC_EMOJI = {
+      aurora:'🌌', cyber:'⚡', emerald:'🌿', sunset:'🌅',
+      amethyst:'🔮', ocean:'🌊', chrono:'👑', gold:'👑',
+      nebula:'🌌', cyberpunk:'⚡', matrix:'🌿'
+    };
+    // Prefer user-chosen app icon; fall back to mythic emoji; then default
+    let emoji = (USER_SETTINGS && USER_SETTINGS.appIcon) || '🏋️';
+    if(mythicId && MYTHIC_EMOJI[mythicId] && (!USER_SETTINGS || !USER_SETTINGS.appIcon || USER_SETTINGS.appIcon==='🏋️')){
+      // When a mythic is active and the user still has the default gym icon,
+      // reflect the mythic identity in the tab icon.
+      emoji = MYTHIC_EMOJI[mythicId];
+    }
+    // Color: mythic accent → themeAccent → CSS --ac → dark navy
+    let fill = '#0a0e1a';
+    try{
+      if(mythicId && typeof MYTHIC_THEME_DEFAULTS!=='undefined' && MYTHIC_THEME_DEFAULTS[mythicId]){
+        const custom = (USER_SETTINGS && USER_SETTINGS.mythicColorOverrides && USER_SETTINGS.mythicColorOverrides[mythicId]) || {};
+        fill = custom.accent || MYTHIC_THEME_DEFAULTS[mythicId].accent || fill;
+      } else if(USER_SETTINGS && USER_SETTINGS.themeAccent){
+        fill = USER_SETTINGS.themeAccent;
+      } else {
+        const cssAc = getComputedStyle(document.documentElement).getPropertyValue('--ac').trim();
+        if(cssAc) fill = cssAc;
+      }
+    }catch(e){}
+    // Slightly darken pure neon accents so the tab stays readable on light browser chrome
+    const fillSafe = String(fill).startsWith('#') ? fill : '#0a0e1a';
+    const svg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><rect width="100" height="100" rx="22" fill="${fillSafe}"/><text x="50" y="68" font-size="58" text-anchor="middle">${emoji}</text></svg>`;
+    const href = 'data:image/svg+xml,' + encodeURIComponent(svg);
+
+    let fav = document.querySelector('link[rel="icon"]');
+    if(!fav){
+      fav = document.createElement('link');
+      fav.rel = 'icon';
+      document.head.appendChild(fav);
+    }
+    fav.type = 'image/svg+xml';
+    fav.href = href;
+
+    let apple = document.querySelector('link[rel="apple-touch-icon"]');
+    if(!apple){
+      apple = document.createElement('link');
+      apple.rel = 'apple-touch-icon';
+      document.head.appendChild(apple);
+    }
+    apple.href = href;
+
+    let themeMeta = document.querySelector('meta[name="theme-color"]');
+    if(!themeMeta){
+      themeMeta = document.createElement('meta');
+      themeMeta.name = 'theme-color';
+      document.head.appendChild(themeMeta);
+    }
+    themeMeta.content = fillSafe;
+  }catch(e){ console.warn('updateBrowserTabIcon failed', e); }
+}
 function applyTheme(){
   const r=document.documentElement;
   if(USER_SETTINGS.themeAccent){
@@ -7158,6 +7243,7 @@ function applyTheme(){
       if(USER_SETTINGS.themeBg) document.body.style.background=USER_SETTINGS.themeBg;
     }
   }
+  try{ updateBrowserTabIcon(); }catch(e){}
 }
 function accentToBg(accent, mix, base){
   try{
@@ -7515,6 +7601,26 @@ function stRenderIconRow(){
     b.onclick=()=>{ ST_SELECTED_ICON=ic; stRenderIconRow(); };
     row.appendChild(b);
   });
+  // Free-form emoji: any emoji the user pastes/types, not only presets
+  const wrap=document.createElement('div');
+  wrap.style.cssText='display:flex;align-items:center;gap:6px;width:100%;margin-top:8px;flex-wrap:wrap';
+  const lab=document.createElement('span');
+  lab.style.cssText='font-size:.7rem;color:var(--so);font-weight:700';
+  lab.textContent=(USER_SETTINGS&&USER_SETTINGS.lang)==='en'?'Custom emoji:':'إيموجي مخصص:';
+  const inp=document.createElement('input');
+  inp.type='text';
+  inp.id='stCustomEmojiInput';
+  inp.maxLength=8;
+  inp.placeholder='🎯';
+  inp.value=TASK_ICON_PRESETS.includes(ST_SELECTED_ICON)?'':(ST_SELECTED_ICON||'');
+  inp.style.cssText='width:72px;padding:8px 10px;border-radius:10px;border:1.5px solid var(--br);background:var(--c);color:var(--tx);font-size:1.2rem;text-align:center;font-family:inherit';
+  inp.oninput=()=>{
+    const v=String(inp.value||'').trim();
+    if(v){ ST_SELECTED_ICON=v; }
+  };
+  wrap.appendChild(lab);
+  wrap.appendChild(inp);
+  row.appendChild(wrap);
 }
 function renderIconPresets(){
   const row=document.getElementById('iconPresets');
@@ -7529,10 +7635,7 @@ function renderIconPresets(){
     b.onclick=()=>{
       USER_SETTINGS.appIcon=ic;
       try{ saveUserSettings(); }catch(e){}
-      // Update apple-touch-icon / manifest icon via DOM when possible
-      const href=`data:image/svg+xml,${encodeURIComponent(`<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='20' fill='#0a0e1a'/><text x='50' y='68' font-size='60' text-anchor='middle'>${ic}</text></svg>`)}`;
-      let link=document.querySelector('link[rel="apple-touch-icon"]');
-      if(link) link.href=href;
+      try{ updateBrowserTabIcon(); }catch(e){}
       renderIconPresets();
       showToast(t('saved'),1800);
     };
@@ -8352,11 +8455,15 @@ function getTaskSortTimeMinutes(t){
   return toMin(t[1]);
 }
 function sortKey(t, iso, jd){
-  const effIso = iso || (typeof SELECTED_DATE!=='undefined'?SELECTED_DATE:todayStr());
-  const dayOrder = (USER_EDITS?.order && (USER_EDITS.order[effIso] || (jd!=null && USER_EDITS.order['jd_'+jd]))) || null;
-  if(dayOrder && Array.isArray(dayOrder)){
-    const idx = dayOrder.indexOf(t[0]);
-    if(idx !== -1) return idx;
+  // Always chronological by start time. Drag-order is only used while edit mode is on
+  // so the timeline never appears shuffled after accidental reorders.
+  if(window.SCHEDULE_EDIT_MODE){
+    const effIso = iso || (typeof SELECTED_DATE!=='undefined'?SELECTED_DATE:todayStr());
+    const dayOrder = (USER_EDITS?.order && (USER_EDITS.order[effIso] || (jd!=null && USER_EDITS.order['jd_'+jd]))) || null;
+    if(dayOrder && Array.isArray(dayOrder)){
+      const idx = dayOrder.indexOf(t[0]);
+      if(idx !== -1) return idx;
+    }
   }
   const base = getTaskSortTimeMinutes(t);
   return t[2]==='sleep'?base+1440:base;
@@ -8433,6 +8540,7 @@ let FIRST_SEEN=null; // 'YYYY-MM-DD' — the first day this account/browser ever
 let USER_EDITS={moves:{},deletes:{},pointOverrides:{},customTasks:[],order:{}};
 
 function emptyUserEdits(){return{moves:{},deletes:{},pointOverrides:{},customTasks:[],order:{}};}
+window.SCHEDULE_EDIT_MODE=false;
 
 // Applies USER_EDITS to a list of base tasks that were generated for weekday `jd` on
 // date `iso`. Returns a NEW array — never mutates SCHED-derived task tuples in place.
@@ -11385,14 +11493,15 @@ function renderCard(task,isToday,jd){
   const state=getState(task);
   const isFoodLoggable=cat==='food'||cat==='snack';
   const en=(USER_SETTINGS.lang==='en');
-  const dragHandleHtml=`<div class="tc-drag-handle" data-drag-handle="true" data-id="${id}" data-jd="${jd}" title="${en?'Drag to reorder':'اسحب لإعادة الترتيب'}" aria-label="Drag to reorder"><svg class="tc-drag-svg" viewBox="0 0 24 24" width="13" height="13" fill="currentColor"><circle cx="8" cy="5" r="1.6"/><circle cx="16" cy="5" r="1.6"/><circle cx="8" cy="12" r="1.6"/><circle cx="16" cy="12" r="1.6"/><circle cx="8" cy="19" r="1.6"/><circle cx="16" cy="19" r="1.6"/></svg></div>`;
+  const dragHandleHtml=window.SCHEDULE_EDIT_MODE?`<div class="tc-drag-handle" data-drag-handle="true" data-id="${id}" data-jd="${jd}" title="${en?'Drag to reorder':'اسحب لإعادة الترتيب'}" aria-label="Drag to reorder"><svg class="tc-drag-svg" viewBox="0 0 24 24" width="13" height="13" fill="currentColor"><circle cx="8" cy="5" r="1.6"/><circle cx="16" cy="5" r="1.6"/><circle cx="8" cy="12" r="1.6"/><circle cx="16" cy="12" r="1.6"/><circle cx="8" cy="19" r="1.6"/><circle cx="16" cy="19" r="1.6"/></svg></div>`:'';
 
   // Custom Category Resolution (distinct icon, color & label)
   const catInfo=getTaskCategory(cat,task);
   const cardColor=color || task[10] || catInfo.color;
   const cardIcon=ico || task[3] || catInfo.icon;
   const catName=catInfo.name;
-  const isCustom=String(id).startsWith('custom-') || String(id).startsWith('fr-') || !!task._custom;
+  const isInUserSched = !!(USER_SCHEDULE && USER_SCHEDULE[jd] && Array.isArray(USER_SCHEDULE[jd].ts) && USER_SCHEDULE[jd].ts.some(t=>t&&t[0]===id));
+  const isCustom=String(id).startsWith('custom-') || String(id).startsWith('fr-') || !!task._custom || isInUserSched;
 
   const isSnack=cat==='snack';
   let act='';
@@ -11426,14 +11535,14 @@ function renderCard(task,isToday,jd){
     act=isDone? (doneMap[id] && doneMap[id].skipped ? `<div class="cbtn exp" style="opacity:0.7">⏩ ${en?'Skipped':'تم التخطي'}</div>` : renderDoneCheckBtn(done,en)) : (isSnack?`<div class="ptsbdg">🍎 ${pts}⭐ ${en?'optional':'اختياري'}</div>`:`<div class="ptsbdg">${pts}⭐</div>`);
   }
 
-  // Action buttons for custom tasks (editing & deleting)
-  if(isCustom){
+  // Edit/delete only in Settings → Edit mode (keeps the timeline clean day-to-day)
+  if(isCustom && window.SCHEDULE_EDIT_MODE){
     let customAct=act;
     if(cat==='free' && isToday && pts>0){
       if(isDone) customAct=renderDoneCheckBtn(done,en);
       else customAct=`<button class="cbtn" data-action="confirm" data-id="${id}" data-pts="${pts}">✓<span class="ptslbl">+${pts}⭐</span></button>`;
     }
-    act=`<div style="display:flex;gap:4px;flex-shrink:0;align-items:center">
+    act=`<div style="display:flex;gap:4px;flex-shrink:0;align-items:center;flex-wrap:wrap">
       ${customAct}
       <button class="cbtn" data-action="editSchedTask" data-id="${id}" data-jd="${jd}" style="padding:5px 9px;font-size:.68rem" title="${en?'Edit':'تعديل'}">✏️</button>
       <button class="cbtn" data-action="deleteSchedTask" data-id="${id}" data-jd="${jd}" style="padding:5px 9px;font-size:.68rem;background:rgba(239,68,68,.1);border-color:rgba(239,68,68,.4);color:#ef4444" title="${en?'Delete':'حذف'}">🗑️</button>
@@ -11460,7 +11569,7 @@ function renderCard(task,isToday,jd){
 
   const catBadgeHtml=`<span class="tc-cat-badge" style="background:color-mix(in srgb, ${cardColor} 14%, transparent);color:${cardColor};border:1px solid color-mix(in srgb, ${cardColor} 30%, transparent)"><span class="tc-cat-badge-ico">${cardIcon}</span><span>${catName}</span></span>`;
 
-  return`<div class="tc${isDone?' done':''}${isEx?' excx':''}${isDeleted?' excx':''}" data-c="${catInfo.id}" data-cat="${catInfo.id}" id="c-${id}" data-task-id="${id}" data-jd="${jd}" draggable="true" style="border-inline-start:3.5px solid ${cardColor};${isDeleted?'opacity:.5':''}">
+  return`<div class="tc${isDone?' done':''}${isEx?' excx':''}${isDeleted?' excx':''}" data-c="${catInfo.id}" data-cat="${catInfo.id}" id="c-${id}" data-task-id="${id}" data-jd="${jd}" ${window.SCHEDULE_EDIT_MODE?'draggable="true"':''} style="border-inline-start:3.5px solid ${cardColor};${isDeleted?'opacity:.5':''}">
     ${dragHandleHtml}<div class="tctime">${arTime}</div>
     <div class="tcico" style="background:color-mix(in srgb, ${cardColor} 12%, transparent);border-color:color-mix(in srgb, ${cardColor} 28%, transparent);color:${cardColor}">${cardIcon}</div>
     <div class="tcbody">
@@ -13012,6 +13121,19 @@ function openSettingsScreen(){
   const prayEl=document.getElementById('setTrackPrayers');
   if(showEl) showEl.checked=USER_SETTINGS.showTracking!==false;
   if(prayEl) prayEl.checked=!!USER_SETTINGS.trackPrayers;
+  const editModeEl=document.getElementById('setScheduleEditMode');
+  if(editModeEl){
+    editModeEl.checked=!!window.SCHEDULE_EDIT_MODE;
+    if(!editModeEl._wired){
+      editModeEl._wired=true;
+      editModeEl.addEventListener('change',()=>{
+        window.SCHEDULE_EDIT_MODE=!!editModeEl.checked;
+        try{ renderTabs();renderPanels();switchDay(getJDfromISO(SELECTED_DATE));updateUI(); }catch(e){}
+        const en=(USER_SETTINGS&&USER_SETTINGS.lang)==='en';
+        showToast(window.SCHEDULE_EDIT_MODE?(en?'Edit mode on — edit/delete visible':'وضع التعديل مفعّل'):(en?'Edit mode off':'وضع التعديل متوقف'),1600);
+      });
+    }
+  }
 
   const ftTrackEl=document.getElementById('setFitnessTrackingEnabled');
   if(ftTrackEl) ftTrackEl.checked=USER_SETTINGS.fitness_tracking_enabled===true;
@@ -15774,46 +15896,46 @@ async function aiHandleSend(){
 // the reply strings the old regex intents produced, so the chat feel stays identical
 // regardless of which path (fast regex or full tool-calling) actually handled it.
 function aiToolCallReplyText(v){
+  const en=(USER_SETTINGS&&USER_SETTINGS.lang)==='en';
   switch(v.tool){
-    case 'markDone': return `تمام، سجلت "${v.taskName}" بتاريخ ${v.iso} كمُنجزة ✅`;
-    case 'unmarkDone': return `تم إلغاء تسجيل "${v.taskName}" كمُنجزة في ${v.iso} ✅`;
-    case 'skipTask': return `تم تخطي "${v.taskName}" لليوم فقط (لن يتم حذفها من الجدول الأساسي) ⏩`;
-    case 'logFood': return v._chatReplyOverride?`🍽️ ${v._chatReplyOverride}`:`تم تسجيل "${v.description}" في "${v.taskName}" ✅${v._nutritionWarning?`\n\n${v._nutritionWarning}`:''}`;
-    case 'moveTask': return `تم نقل "${v.taskName}" إلى ${v.toDate} الساعة ${v.toTime} ✅`;
-    case 'deleteTask': return `تم حذف "${v.taskName}" (لسه ظاهرة بس معلّم عليها كمحذوفة) 🗑️`;
-    case 'restoreTask': return `تم إرجاع "${v.taskName}" ✅`;
-    case 'editPoints': return `تم تغيير نقاط "${v.taskName}" إلى ${v.points}⭐ ✅`;
-    case 'addCustomTask': return (USER_SETTINGS&&USER_SETTINGS.lang)==='en'
+    case 'markDone': return en?`Marked "${v.taskName}" done on ${v.iso} ✅`:`تمام، سجلت "${v.taskName}" بتاريخ ${v.iso} كمُنجزة ✅`;
+    case 'unmarkDone': return en?`Unmarked "${v.taskName}" on ${v.iso} ✅`:`تم إلغاء تسجيل "${v.taskName}" كمُنجزة في ${v.iso} ✅`;
+    case 'skipTask': return en?`Skipped "${v.taskName}" for today only (still on the base schedule) ⏩`:`تم تخطي "${v.taskName}" لليوم فقط (لن يتم حذفها من الجدول الأساسي) ⏩`;
+    case 'logFood': return v._chatReplyOverride?`🍽️ ${v._chatReplyOverride}`:(en?`Logged "${v.description}" under "${v.taskName}" ✅${v._nutritionWarning?`\n\n${v._nutritionWarning}`:''}`:`تم تسجيل "${v.description}" في "${v.taskName}" ✅${v._nutritionWarning?`\n\n${v._nutritionWarning}`:''}`);
+    case 'moveTask': return en?`Moved "${v.taskName}" to ${v.toDate} at ${v.toTime} ✅`:`تم نقل "${v.taskName}" إلى ${v.toDate} الساعة ${v.toTime} ✅`;
+    case 'deleteTask': return en?`Deleted "${v.taskName}" ✅`:`تم حذف "${v.taskName}" 🗑️`;
+    case 'restoreTask': return en?`Restored "${v.taskName}" ✅`:`تم إرجاع "${v.taskName}" ✅`;
+    case 'editPoints': return en?`Set "${v.taskName}" to ${v.points}⭐ ✅`:`تم تغيير نقاط "${v.taskName}" إلى ${v.points}⭐ ✅`;
+    case 'addCustomTask': return en
       ? `Added "${v.name}" on ${v.date} at ${v.time} · ${v.points}⭐ ✅`
       : `تم إضافة "${v.name}" يوم ${v.date} الساعة ${v.time} بـ ${v.points}⭐ ✅`;
-    case 'createCategory': return (USER_SETTINGS&&USER_SETTINGS.lang)==='en'
+    case 'createCategory': return en
       ? `Created category "${v.name}" ${v.icon||''} ✅`
       : `تم إنشاء فئة "${v.name}" ${v.icon||''} ✅`;
-    case 'editCategory': return (USER_SETTINGS&&USER_SETTINGS.lang)==='en'
-      ? `Updated category ✅`
-      : `تم تحديث الفئة ✅`;
-    case 'deleteCategory': return (USER_SETTINGS&&USER_SETTINGS.lang)==='en'
-      ? `Deleted category ✅`
-      : `تم حذف الفئة ✅`;
-    case 'createScheduleSlot': return (USER_SETTINGS&&USER_SETTINGS.lang)==='en'
+    case 'editCategory': return en ? `Updated category ✅` : `تم تحديث الفئة ✅`;
+    case 'deleteCategory': return en ? `Deleted category ✅` : `تم حذف الفئة ✅`;
+    case 'createScheduleSlot': return en
       ? `Created schedule slot "${v.name}" and switched to it ✅ — send your school timetable (photo or text) and I’ll build the study plan.`
       : `تم إنشاء خانة "${v.name}" والتبديل إليها ✅ — ابعت جدول المدرسة (صورة أو نص) وأرتّب لك خطة المذاكرة.`;
-    case 'replaceWeeklySchedule': return (USER_SETTINGS&&USER_SETTINGS.lang)==='en'
+    case 'replaceWeeklySchedule': return en
       ? `Updated the weekly schedule with ${Array.isArray(v.blocks)?v.blocks.length:0} blocks ✅`
       : `تم تحديث الجدول الأسبوعي بـ ${Array.isArray(v.blocks)?v.blocks.length:0} مهمة ✅`;
-    case 'setStreak': return `تم تغيير الاستريك الحالي إلى ${v.value} 🔥`;
-    case 'setBestStreak': return `تم تغيير أعلى استريك إلى ${v.value} 🏆`;
-    case 'setWeeklyPoints': return `تم تغيير نقاط الأسبوع إلى ${v.value}⭐`;
-    case 'setPunishRate': return `تم تغيير نسبة الخصم إلى ${Math.round(v.value*100)}٪`;
-    case 'rememberFact': return `تمام، هفتكر إن ${v.fact} ✅`;
-    default: return 'تم ✅';
+    case 'setStreak': return en?`Current streak set to ${v.value} 🔥`:`تم تغيير الاستريك الحالي إلى ${v.value} 🔥`;
+    case 'setBestStreak': return en?`Best streak set to ${v.value} 🏆`:`تم تغيير أعلى استريك إلى ${v.value} 🏆`;
+    case 'setWeeklyPoints': return en?`Weekly points set to ${v.value}⭐`:`تم تغيير نقاط الأسبوع إلى ${v.value}⭐`;
+    case 'setPunishRate': return en?`Penalty rate set to ${Math.round(v.value*100)}%`:`تم تغيير نسبة الخصم إلى ${Math.round(v.value*100)}٪`;
+    case 'rememberFact': return en?`Got it — I’ll remember: ${v.fact} ✅`:`تمام، هفتكر إن ${v.fact} ✅`;
+    default: return en?'Done ✅':'تم ✅';
   }
 }
 
 async function aiOpenPanel(){
   const panel=document.getElementById('aiPanel');
   const sub=document.getElementById('aiSubStatus');
-  if(sub) sub.textContent=fbAuth.currentUser?'جاهز للمساعدة':'سجل دخول عشان أقدر أحفظلك التغييرات';
+  if(sub){
+    const en=(USER_SETTINGS&&USER_SETTINGS.lang)==='en';
+    sub.textContent=fbAuth.currentUser?(en?'Ready to help':'جاهز للمساعدة'):(en?'Sign in so I can save your changes':'سجل دخول عشان أقدر أحفظلك التغييرات');
+  }
   // Auto-roll to a new session if the last one went idle 3+ hours ago, so reopening
   // the app after a long gap starts fresh instead of resuming a stale conversation —
   // the old one stays fully intact and reachable from 🗂️ history.
@@ -17060,12 +17182,12 @@ function endProductTour(markDone){
 }
 
 function maybeStartProductTour(){
+  // Hard rule: never auto-start for anyone who already has a schedule / points / prior onboarding.
   if(isProductTourDone()) return;
   if(isExistingUser()){
     markProductTourDone();
     return;
   }
-  // MUST only trigger if this session is an actual fresh signup finishing onboarding!
   if(!window.__isBrandNewUserOnboarding) return;
   window.__isBrandNewUserOnboarding = false;
   if(document.getElementById('obWizard')?.classList.contains('open')) return;
