@@ -3610,7 +3610,7 @@ body.theme-matrix .tctime{
             </div>
           </div>
           <div class="set-row" style="margin-top:12px;align-items:center">
-            <label for="setScheduleEditMode" style="flex:1">🛠️ Edit mode <span style="display:block;font-size:.72rem;color:var(--so);font-weight:600;margin-top:2px">Show edit &amp; delete on task cards (and allow drag reorder)</span></label>
+            <label for="setScheduleEditMode" style="flex:1">🛠️ Edit mode <span style="display:block;font-size:.72rem;color:var(--so);font-weight:600;margin-top:2px">Show edit &amp; delete on every task card</span></label>
             <input type="checkbox" id="setScheduleEditMode">
           </div>
           <div class="set-actions">
@@ -6897,8 +6897,57 @@ async function stHandleSave(){
   const foodLog=!!document.getElementById('stFoodLog')?.checked;
   const returnToSettings=ST_RETURN_TO_SETTINGS;
   const selectedCat = ST_SELECTED_CATEGORY || document.getElementById('stCategory')?.value || (foodLog ? 'food' : 'routine');
+  const enSave=(USER_SETTINGS&&USER_SETTINGS.lang)==='en';
+  let editScope='forever';
+  if(ST_ACTIVE_TASK_ID){
+    editScope = await new Promise(resolve=>{
+      const existing=document.getElementById('editScopeModal');
+      if(existing) existing.remove();
+      const modal=document.createElement('div');
+      modal.id='editScopeModal';
+      modal.style.cssText='position:fixed;inset:0;z-index:13000;background:rgba(2,6,16,.72);display:flex;align-items:center;justify-content:center;padding:16px;';
+      modal.innerHTML=`<div style="background:var(--c2,#111827);border:1px solid var(--br);border-radius:16px;max-width:360px;width:100%;padding:18px 16px;box-shadow:0 20px 50px rgba(0,0,0,.5)">
+        <div style="font-weight:900;font-size:1rem;margin-bottom:8px">${enSave?'Apply edit':'تطبيق التعديل'}</div>
+        <div style="font-size:.85rem;color:var(--so);margin-bottom:14px;line-height:1.5">${enSave?'Apply these changes for today only, or forever on the weekly schedule?':'تطبيق التعديل على اليوم فقط، ولا نهائياً على الجدول الأسبوعي؟'}</div>
+        <button type="button" data-scope="today" style="width:100%;margin-bottom:8px;padding:12px;border-radius:12px;border:1px solid rgba(245,158,11,.45);background:rgba(245,158,11,.12);color:#fbbf24;font-family:inherit;font-weight:800;cursor:pointer">${enSave?'Just for today':'اليوم فقط'}</button>
+        <button type="button" data-scope="forever" style="width:100%;margin-bottom:8px;padding:12px;border-radius:12px;border:1px solid rgba(59,130,246,.45);background:rgba(59,130,246,.12);color:#60a5fa;font-family:inherit;font-weight:800;cursor:pointer">${enSave?'Forever (every week)':'نهائياً (كل أسبوع)'}</button>
+        <button type="button" data-scope="cancel" style="width:100%;padding:10px;border-radius:12px;border:1px solid var(--br);background:transparent;color:var(--mu);font-family:inherit;font-weight:700;cursor:pointer">${enSave?'Cancel':'إلغاء'}</button>
+      </div>`;
+      document.body.appendChild(modal);
+      modal.addEventListener('click',e=>{
+        const btn=e.target.closest('[data-scope]');
+        if(!btn) return;
+        const s=btn.getAttribute('data-scope');
+        modal.remove();
+        resolve(s);
+      });
+    });
+    if(!editScope || editScope==='cancel') return;
+  }
   try{
-    await saveScheduleTask(ST_ACTIVE_JD,ST_ACTIVE_TASK_ID,{time:displayTime,name,desc,pts,color:ST_SELECTED_COLOR,foodLog,endTime:displayEnd,days,notify,cat:selectedCat,icon:ST_SELECTED_ICON});
+    if(editScope==='today' && ST_ACTIVE_TASK_ID){
+      // One-day override via USER_EDITS.moves style snapshot for this iso only
+      if(!USER_EDITS) USER_EDITS=emptyUserEdits();
+      if(!USER_EDITS.dayOverrides) USER_EDITS.dayOverrides={};
+      const iso=SELECTED_DATE||TODAY;
+      if(!USER_EDITS.dayOverrides[iso]) USER_EDITS.dayOverrides[iso]={};
+      USER_EDITS.dayOverrides[iso][ST_ACTIVE_TASK_ID]={
+        time:displayTime, name, desc, pts, color:ST_SELECTED_COLOR, foodLog, endTime:displayEnd,
+        cat:selectedCat, icon:ST_SELECTED_ICON
+      };
+      try{ if(typeof saveUserEdits==='function') await saveUserEdits(); }catch(e){}
+    }else{
+      await saveScheduleTask(ST_ACTIVE_JD,ST_ACTIVE_TASK_ID,{time:displayTime,name,desc,pts,color:ST_SELECTED_COLOR,foodLog,endTime:displayEnd,days,notify,cat:selectedCat,icon:ST_SELECTED_ICON});
+      // Clear any day-only override for this task if promoting to forever
+      if(ST_ACTIVE_TASK_ID && USER_EDITS && USER_EDITS.dayOverrides){
+        for(const iso of Object.keys(USER_EDITS.dayOverrides)){
+          if(USER_EDITS.dayOverrides[iso] && USER_EDITS.dayOverrides[iso][ST_ACTIVE_TASK_ID]){
+            delete USER_EDITS.dayOverrides[iso][ST_ACTIVE_TASK_ID];
+          }
+        }
+        try{ if(typeof saveUserEdits==='function') await saveUserEdits(); }catch(e){}
+      }
+    }
   }catch(e){
     console.error('saveScheduleTask failed',e);
     if(errEl){ errEl.textContent='⚠️ Save failed'; errEl.style.display='block'; }
@@ -6918,18 +6967,74 @@ async function stHandleSave(){
 
 async function stHandleDelete(jd,taskId){
   const en=(USER_SETTINGS&&USER_SETTINGS.lang)==='en';
-  const taskName=((USER_SCHEDULE[jd]&&USER_SCHEDULE[jd].ts)||[]).find(t=>t[0]===taskId)?.[4]||taskId;
-  const ok = window.confirm(en?`Delete "${taskName}" from this day?`:`حذف "${taskName}" من هذا اليوم؟`);
-  if(!ok) return;
+  const allTasks=typeof getAllTasks==='function'?getAllTasks(jd):[];
+  const found=allTasks.find(t=>t&&t[0]===taskId);
+  const inUserSched=((USER_SCHEDULE[jd]&&USER_SCHEDULE[jd].ts)||[]).find(t=>t&&t[0]===taskId);
+  const taskName=(found&&found[4])||(inUserSched&&inUserSched[4])||taskId;
+
+  // Scope chooser: today only vs forever
+  const scope = await new Promise(resolve=>{
+    const existing=document.getElementById('deleteScopeModal');
+    if(existing) existing.remove();
+    const modal=document.createElement('div');
+    modal.id='deleteScopeModal';
+    modal.style.cssText='position:fixed;inset:0;z-index:13000;background:rgba(2,6,16,.72);display:flex;align-items:center;justify-content:center;padding:16px;';
+    modal.innerHTML=`<div style="background:var(--c2,#111827);border:1px solid var(--br);border-radius:16px;max-width:360px;width:100%;padding:18px 16px;box-shadow:0 20px 50px rgba(0,0,0,.5)">
+      <div style="font-weight:900;font-size:1rem;margin-bottom:8px">${en?'Delete task':'حذف المهمة'}</div>
+      <div style="font-size:.85rem;color:var(--so);margin-bottom:14px;line-height:1.5">${en?`How do you want to remove "<b>${taskName}</b>"?`:`عايز تشيل "<b>${taskName}</b>" إزاي؟`}</div>
+      <button type="button" data-scope="today" style="width:100%;margin-bottom:8px;padding:12px;border-radius:12px;border:1px solid rgba(245,158,11,.45);background:rgba(245,158,11,.12);color:#fbbf24;font-family:inherit;font-weight:800;cursor:pointer">${en?'Just for today':'اليوم فقط'}</button>
+      <button type="button" data-scope="forever" style="width:100%;margin-bottom:8px;padding:12px;border-radius:12px;border:1px solid rgba(239,68,68,.45);background:rgba(239,68,68,.12);color:#f87171;font-family:inherit;font-weight:800;cursor:pointer">${en?'Forever (every week)':'نهائياً (كل أسبوع)'}</button>
+      <button type="button" data-scope="cancel" style="width:100%;padding:10px;border-radius:12px;border:1px solid var(--br);background:transparent;color:var(--mu);font-family:inherit;font-weight:700;cursor:pointer">${en?'Cancel':'إلغاء'}</button>
+    </div>`;
+    document.body.appendChild(modal);
+    modal.addEventListener('click',e=>{
+      const btn=e.target.closest('[data-scope]');
+      if(!btn) return;
+      const s=btn.getAttribute('data-scope');
+      modal.remove();
+      resolve(s);
+    });
+  });
+  if(!scope || scope==='cancel') return;
+
   try{
-    await deleteScheduleTask(jd,taskId);
+    if(scope==='today'){
+      // Today-only: soft-skip this occurrence so it vanishes from today's timeline without touching the weekly template
+      if(!USER_EDITS) USER_EDITS=emptyUserEdits();
+      if(!USER_EDITS.dayDeletes) USER_EDITS.dayDeletes={};
+      const iso=SELECTED_DATE||TODAY;
+      if(!USER_EDITS.dayDeletes[iso]) USER_EDITS.dayDeletes[iso]={};
+      USER_EDITS.dayDeletes[iso][taskId]=true;
+      try{ if(typeof saveUserEdits==='function') await saveUserEdits(); }catch(e){}
+      showToast(en?'🗑️ Hidden for today only':'🗑️ اتخفت لليوم فقط',2200);
+    }else{
+      // Forever: remove from weekly USER_SCHEDULE if present, else permanent soft-delete overlay
+      if(inUserSched){
+        await deleteScheduleTask(jd,taskId);
+      }
+      if(!USER_EDITS) USER_EDITS=emptyUserEdits();
+      if(!USER_EDITS.deletes) USER_EDITS.deletes={};
+      USER_EDITS.deletes[taskId]=true;
+      // Also wipe any same-id rows from other weekdays in USER_SCHEDULE
+      try{
+        for(let d=0;d<7;d++){
+          if(USER_SCHEDULE[d]&&Array.isArray(USER_SCHEDULE[d].ts)){
+            const before=USER_SCHEDULE[d].ts.length;
+            USER_SCHEDULE[d].ts=USER_SCHEDULE[d].ts.filter(t=>t&&t[0]!==taskId);
+            if(USER_SCHEDULE[d].ts.length!==before){ /* changed */ }
+          }
+        }
+        if(typeof saveUserSchedule==='function') await saveUserSchedule();
+      }catch(e){ console.warn('forever multi-day cleanup',e); }
+      try{ if(typeof saveUserEdits==='function') await saveUserEdits(); }catch(e){}
+      showToast(en?'🗑️ Deleted forever':'🗑️ اتشالت نهائياً',2200);
+    }
   }catch(e){
     console.error('deleteScheduleTask failed',e);
     showToast(en?'⚠️ Delete failed — try again':'⚠️ حصل خطأ أثناء الحذف — جرب تاني',3500,'warn');
     return;
   }
   try{ renderTabs();renderPanels();switchDay(getJDfromISO(SELECTED_DATE));updateUI(); }catch(e){ console.warn('re-render after schedule delete failed',e); }
-  showToast(en?'🗑️ Task deleted':'🗑️ اتشالت المهمة',2000);
 }
 
 // ===== USER_SETTINGS — per-account feature toggles (trackPrayers, future settings) =====
@@ -7411,7 +7516,7 @@ function applyI18n(){
   if(secNotif) secNotif.textContent=isEn?'Reminders':'التذكيرات';
   const secNotifDesc=document.querySelector('#setsec-notifications > .desc');
   if(secNotifDesc) secNotifDesc.textContent=isEn
-    ?'Reminders sync to the cloud for the next 14 days automatically.'
+    ?'Reminders are pushed to the cloud for the next 14 days so they still fire when the app is closed. Use Renew to refresh that 14-day window.'
     :'تعمل التذكيرات وتتزامن سحابياً لمدة ١٤ يوماً قادمة بشكل تلقائي.';
   try{ updatePrestigeUI(); }catch(e){}
   try{ renderTaskNotifList(); }catch(e){}
@@ -8537,10 +8642,11 @@ let FIRST_SEEN=null; // 'YYYY-MM-DD' — the first day this account/browser ever
 //   pointOverrides: { [taskId]: number }
 //   customTasks: [ { id, date, time, cat, ico, name, desc, pts, createdAt } ]
 //   order: { [dateIsoOrJd]: [taskId1, taskId2, ...] }
-let USER_EDITS={moves:{},deletes:{},pointOverrides:{},customTasks:[],order:{}};
+let USER_EDITS={moves:{},deletes:{},dayDeletes:{},dayOverrides:{},pointOverrides:{},customTasks:[],order:{}};
 
-function emptyUserEdits(){return{moves:{},deletes:{},pointOverrides:{},customTasks:[],order:{}};}
+function emptyUserEdits(){return{moves:{},deletes:{},dayDeletes:{},dayOverrides:{},pointOverrides:{},customTasks:[],order:{}};}
 window.SCHEDULE_EDIT_MODE=false;
+const DND_DISABLED=true; // drag-reorder removed by design (time-ordered schedule)
 
 // Applies USER_EDITS to a list of base tasks that were generated for weekday `jd` on
 // date `iso`. Returns a NEW array — never mutates SCHED-derived task tuples in place.
@@ -8562,6 +8668,20 @@ function applyUserEditsToTasks(baseTasks, iso){
     if(USER_EDITS.pointOverrides[id]!==undefined) tt[6]=USER_EDITS.pointOverrides[id];
     if(mv && mv.toTime) tt[1]=mv.toTime;
     if(USER_EDITS.deletes[id]) tt._deleted=true;
+    if(USER_EDITS.dayDeletes && USER_EDITS.dayDeletes[iso] && USER_EDITS.dayDeletes[iso][id]) tt._deleted=true;
+    const dayOv=USER_EDITS.dayOverrides && USER_EDITS.dayOverrides[iso] && USER_EDITS.dayOverrides[iso][id];
+    if(dayOv){
+      if(dayOv.time!=null) tt[1]=dayOv.time;
+      if(dayOv.cat!=null){ tt[2]=dayOv.cat; tt[14]=dayOv.cat; }
+      if(dayOv.icon!=null) tt[3]=dayOv.icon;
+      if(dayOv.name!=null) tt[4]=dayOv.name;
+      if(dayOv.desc!=null) tt[5]=dayOv.desc;
+      if(dayOv.pts!=null) tt[6]=dayOv.pts;
+      if(dayOv.color!=null) tt[10]=dayOv.color;
+      if(dayOv.endTime!=null) tt[13]=dayOv.endTime;
+      if(dayOv.foodLog){ tt[11]=tt[11]||{p:0,c:0,f:0,b:0,k:0}; }
+      tt._dayOverride=true;
+    }
     if(mv) tt._movedFrom=mv.fromDate;
     out.push(tt);
   }
@@ -9727,7 +9847,10 @@ async function syncPushSchedule(forceRenew = false, silent = true){
     });
     if(!res.ok){
       console.warn('push schedule sync: server rejected',res.status);
-      if(!silent) showToast(`⚠️ السيرفر رفض حفظ التذكيرات (${res.status})`,3000,'warn');
+      if(!silent){
+        const en=(USER_SETTINGS&&USER_SETTINGS.lang)==='en';
+        showToast(en?`⚠️ Server refused saving reminders (${res.status}). Try Renew again.`:`⚠️ السيرفر رفض حفظ التذكيرات (${res.status}) — جرب التجديد تاني`,3500,'warn');
+      }
     } else {
       const badge = document.getElementById('notif-sync-badge');
       if(badge) badge.textContent = '✅ التذكيرات تعمل تلقائياً · مجدول ١٤ يوم سحابياً (' + reminders.length + ' تذكير)';
@@ -10106,18 +10229,34 @@ function buildWeekReportData(){
 
       const loggedEntry=dayFoodLog[t[0]];
       let note='';
-      if(loggedEntry&&loggedEntry.description) note=loggedEntry.description;
-      else if(t[5]) note=tn(t[5])||t[5];
+      if(loggedEntry){
+        const bits=[];
+        if(loggedEntry.description) bits.push(loggedEntry.description);
+        if(Array.isArray(loggedEntry.items)&&loggedEntry.items.length){
+          bits.push(loggedEntry.items.map(it=>{
+            const nm=it.name||it.name_ar||'?';
+            const qty=it.qty?` ${Math.round(it.qty)}${it.unit||'g'}`:'';
+            const kcal=it.kcal!=null?` · ${Math.round(it.kcal)}kcal`:'';
+            return `${nm}${qty}${kcal}`;
+          }).join(' | '));
+        }
+        if(loggedEntry.macro){
+          const m=loggedEntry.macro;
+          bits.push(`P${Math.round(m.p||0)} C${Math.round(m.c||0)} F${Math.round(m.f||0)} · ${Math.round(m.k||0)}kcal`);
+        }
+        note=bits.join(' · ');
+      }else if(t[5]) note=tn(t[5])||t[5];
       if(isPrayer(t)&&prayerLogs[t[0]]&&prayerLogs[t[0]].log){
         const pl=prayerLogs[t[0]];
         const bits=(pl.log||[]).map(l=>{
           const key=enRep
-            ?(l.key==='location'?'Place':l.key==='style'?'Style':l.key==='dhikr'?'Dhikr':'Sunnah')
-            :(l.key==='location'?'المكان':l.key==='style'?'الأداء':l.key==='dhikr'?'الأذكار':'السنة');
-          return `${key}: ${tn(l.choice)||l.choice}${l.pts?` (+${l.pts}⭐)`:''}`;
+            ?(l.key==='location'?'Place':l.key==='style'?'Style':l.key==='dhikr'?'Dhikr':l.key==='sunnah'?'Sunnah':(l.key||'Detail'))
+            :(l.key==='location'?'المكان':l.key==='style'?'الأداء':l.key==='dhikr'?'الأذكار':l.key==='sunnah'?'السنة':(l.key||'تفاصيل'));
+          return `${key}: ${tn(l.label||l.choice)||l.label||l.choice}${l.pts?` (+${l.pts}⭐)`:''}`;
         });
         if(pl.late) bits.unshift(enRep?'Late':'متأخر');
         else bits.unshift(enRep?'On time':'في وقتها');
+        if(pl.total!=null) bits.push(enRep?`Total +${pl.total}⭐`:`المجموع +${pl.total}⭐`);
         note=bits.join(' · ');
       }
 
@@ -11493,7 +11632,7 @@ function renderCard(task,isToday,jd){
   const state=getState(task);
   const isFoodLoggable=cat==='food'||cat==='snack';
   const en=(USER_SETTINGS.lang==='en');
-  const dragHandleHtml=window.SCHEDULE_EDIT_MODE?`<div class="tc-drag-handle" data-drag-handle="true" data-id="${id}" data-jd="${jd}" title="${en?'Drag to reorder':'اسحب لإعادة الترتيب'}" aria-label="Drag to reorder"><svg class="tc-drag-svg" viewBox="0 0 24 24" width="13" height="13" fill="currentColor"><circle cx="8" cy="5" r="1.6"/><circle cx="16" cy="5" r="1.6"/><circle cx="8" cy="12" r="1.6"/><circle cx="16" cy="12" r="1.6"/><circle cx="8" cy="19" r="1.6"/><circle cx="16" cy="19" r="1.6"/></svg></div>`:'';
+  const dragHandleHtml=''; // drag-reorder removed — tasks stay time-ordered
 
   // Custom Category Resolution (distinct icon, color & label)
   const catInfo=getTaskCategory(cat,task);
@@ -11535,8 +11674,8 @@ function renderCard(task,isToday,jd){
     act=isDone? (doneMap[id] && doneMap[id].skipped ? `<div class="cbtn exp" style="opacity:0.7">⏩ ${en?'Skipped':'تم التخطي'}</div>` : renderDoneCheckBtn(done,en)) : (isSnack?`<div class="ptsbdg">🍎 ${pts}⭐ ${en?'optional':'اختياري'}</div>`:`<div class="ptsbdg">${pts}⭐</div>`);
   }
 
-  // Edit/delete only in Settings → Edit mode (keeps the timeline clean day-to-day)
-  if(isCustom && window.SCHEDULE_EDIT_MODE){
+  // Edit/delete in Settings → Edit mode for every task (custom + base schedule)
+  if(window.SCHEDULE_EDIT_MODE && !task._deleted){
     let customAct=act;
     if(cat==='free' && isToday && pts>0){
       if(isDone) customAct=renderDoneCheckBtn(done,en);
@@ -11569,8 +11708,8 @@ function renderCard(task,isToday,jd){
 
   const catBadgeHtml=`<span class="tc-cat-badge" style="background:color-mix(in srgb, ${cardColor} 14%, transparent);color:${cardColor};border:1px solid color-mix(in srgb, ${cardColor} 30%, transparent)"><span class="tc-cat-badge-ico">${cardIcon}</span><span>${catName}</span></span>`;
 
-  return`<div class="tc${isDone?' done':''}${isEx?' excx':''}${isDeleted?' excx':''}" data-c="${catInfo.id}" data-cat="${catInfo.id}" id="c-${id}" data-task-id="${id}" data-jd="${jd}" ${window.SCHEDULE_EDIT_MODE?'draggable="true"':''} style="border-inline-start:3.5px solid ${cardColor};${isDeleted?'opacity:.5':''}">
-    ${dragHandleHtml}<div class="tctime">${arTime}</div>
+  return`<div class="tc${isDone?' done':''}${isEx?' excx':''}${isDeleted?' excx':''}" data-c="${catInfo.id}" data-cat="${catInfo.id}" id="c-${id}" data-task-id="${id}" data-jd="${jd}" style="border-inline-start:3.5px solid ${cardColor};${isDeleted?'opacity:.5':''}">
+    <div class="tctime">${arTime}</div>
     <div class="tcico" style="background:color-mix(in srgb, ${cardColor} 12%, transparent);border-color:color-mix(in srgb, ${cardColor} 28%, transparent);color:${cardColor}">${cardIcon}</div>
     <div class="tcbody">
       <div class="tcname" ${isCustom?`style="color:${cardColor}"`:''}>${dispName}</div>
@@ -11965,8 +12104,9 @@ function initTaskDragAndDrop(){
   if(window.__dndInitialized) return;
   window.__dndInitialized = true;
 
-  // --- HTML5 Desktop Drag & Drop ---
+  // --- HTML5 Desktop Drag & Drop (disabled — tasks stay time-ordered) ---
   document.addEventListener('dragstart', e => {
+    if(typeof DND_DISABLED!=='undefined' && DND_DISABLED){ e.preventDefault(); return; }
     const card = e.target.closest?.('.tc');
     if(!card) return;
 
@@ -12067,6 +12207,7 @@ function initTaskDragAndDrop(){
   let touchStartTimer = null;
 
   document.addEventListener('touchstart', e => {
+    if(typeof DND_DISABLED!=='undefined' && DND_DISABLED) return;
     const handle = e.target.closest?.('[data-drag-handle="true"]');
     const card = e.target.closest?.('.tc');
     if(!card) return;
@@ -16535,8 +16676,14 @@ document.body.addEventListener('click',async e=>{
   if(editSchedBtn){
     const jd=parseInt(editSchedBtn.getAttribute('data-jd'),10);
     const taskId=editSchedBtn.getAttribute('data-id');
-    const existing=(USER_SCHEDULE[jd]?.ts||[]).find(t=>t[0]===taskId);
+    let existing=(USER_SCHEDULE[jd]?.ts||[]).find(t=>t&&t[0]===taskId);
+    if(!existing){
+      // Base/template task (or prayer/free) — open editor on a live copy so edits can materialize into USER_SCHEDULE
+      const live=(typeof getAllTasks==='function'?getAllTasks(jd):[]).find(t=>t&&t[0]===taskId);
+      if(live) existing=[...live];
+    }
     if(existing) openScheduleTaskEditor(jd,existing);
+    else showToast((USER_SETTINGS&&USER_SETTINGS.lang)==='en'?'Could not find that task to edit':'مفيش المهمة دي للتعديل',2800,'warn');
     return;
   }
   const delSchedBtn=closest('[data-action="deleteSchedTask"]');
@@ -16843,125 +16990,168 @@ async function markProductTourDone(){
 
 function getProductTourSteps(){
   const en=(USER_SETTINGS&&USER_SETTINGS.lang)==='en';
-  return [
+  const trackPrayers=!!(USER_SETTINGS&&USER_SETTINGS.trackPrayers);
+  const steps=[
     {
       id:'welcome',
       selector:null,
       requireClick:false,
+      openSettings:false,
       title:en?'Welcome to Your Schedule':'أهلاً بيك في جدولك',
       text:en
-        ?'Quick tour — we highlight each control. You can only use the glowing area (or Next). Learn what the schedule can do in under a minute.'
-        :'جولة سريعة — هنور على كل زر. تقدر تضغط المنطقة المضيئة فقط (أو التالي). هتفهم الجدول في أقل من دقيقة.'
+        ?'Quick tour — we highlight each control. Scroll follows the glow so the tip stays readable even if you started at the bottom of the page.'
+        :'جولة سريعة — هنور على كل جزء. الصفحة هتتحرك مع التوهج عشان الشرح يبان واضح حتى لو بدأت من أسفل الصفحة.'
     },
     {
       id:'gamification',
       selector:'#sbar .sbar-stats, #sbar',
       requireClick:false,
+      openSettings:false,
       title:en?'🔥 Streaks, Points & Gamification':'🔥 الستريك، النقاط ونظام الحماس',
       text:en
-        ?'Your daily motivation engine! Every task you finish earns XP points and fuels your Streak. Keep your streak alive day after day, beat your personal record, and level up your discipline.'
-        :'محرك الحماس اليومي! كل مهمة تنجزها بتكسبك نقاط خبرة ⭐ وتكبر الستريك 🔥 بتاعك. حافظ على استمرارية يومك، اكسر رقمك القياسي، وارتقِ بمستوى انضباطك.'
+        ?'Your daily motivation engine! Every task you finish earns XP points and fuels your Streak. Keep your streak alive day after day and beat your personal record.'
+        :'محرك الحماس اليومي! كل مهمة تنجزها بتكسبك نقاط ⭐ وتكبر الستريك 🔥. حافظ على استمرارية يومك واكسر رقمك القياسي.'
     },
     {
       id:'daily_summary',
       selector:'#dailySummaryCard, #dailySummaryWrapper',
       requireClick:false,
+      openSettings:false,
       title:en?'📊 Daily Progress & Category Analytics':'📊 تقدم اليوم وتفاصيل الفئات',
       text:en
-        ?'Your high-level dashboard. Watch your completion bar fill in real time as you complete tasks. Tap "Breakdown" to see exactly how your time is split between studies, fitness, and prayers, or open "Trends" for weekly charts.'
-        :'لوحة التحكم اليومية! شريط الإنجاز بيتحدث لحظة بلحظة مع كل مهمة. اضغط "تفاصيل" لترى توزيع وقتك بين المذاكرة والرياضة والعبادات، أو "المسار" لمتابعة تقدمك أسبوعياً.'
+        ?'Your high-level dashboard. Watch completion fill in real time. Open Breakdown for category split or Trends for weekly charts.'
+        :'لوحة التحكم اليومية. شريط الإنجاز بيتحدث لحظة بلحظة. افتح التفاصيل لتوزيع الفئات أو المسار لمتابعة الأسبوع.'
     },
     {
       id:'nutrition',
       selector:'#macroBox, #btn-macro-trends, .macrobox',
       requireClick:false,
+      openSettings:false,
       title:en?'🥗 Nutrition & Macro Targets':'🥗 التغذية وحساب السعرات والماكروز',
       text:en
-        ?'Fuel your body right. Track your daily Calories, Protein, Carbs, Fats, and Fiber with live visual progress bars. Log your meals directly or click "Trends" to review your nutritional history.'
-        :'غذّي جسمك بذكاء. تابع سعراتك الحرارية اليومية ونسب البروتين والكارب والدهون والألياف بأشرطة حية. سجّل وجباتك بلمسة، أو اضغط "المسار" لرؤية تاريخك الغذائي.'
+        ?'Track Calories, Protein, Carbs, Fats, and Fiber with live bars. Log meals from food tasks or ask the AI to estimate a plate.'
+        :'تابع السعرات والبروتين والكارب والدهون والألياف. سجّل وجباتك من مهام الأكل أو اطلب من الذكاء تقدير الوجبة.'
     },
     {
       id:'days',
       selector:'#tabrow',
       requireClick:false,
-      title:en?'📅 Seamless 7-Day Week Switcher':'📅 التنقل بين أيام الأسبوع بكل سهولة',
+      openSettings:false,
+      title:en?'📅 Seamless 7-Day Week Switcher':'📅 التنقل بين أيام الأسبوع',
       text:en
-        ?'Your entire week at your fingertips. Tap any day tab to review past accomplishments, organize today, or plan ahead for upcoming days. Today is always highlighted so you never lose your place.'
-        :'أسبوعك كامل بلمسة واحدة. بدّل بين الأيام لتراجع إنجازاتك السابقة، ترتّب يومك الحالي، أو تخطط للأيام الجاية. اليوم الحالي مميز دايماً عشان تكون في قلب الحدث.'
+        ?'Tap any day tab to review past days, organize today, or plan ahead. Today is always highlighted.'
+        :'بدّل بين الأيام لمراجعة الماضي أو ترتيب اليوم أو التخطيط للجاي. اليوم الحالي مميز دايماً.'
     },
     {
       id:'tasks',
-      selector:'.tc:not(.excx), #panels .panel.act .tc, .panel.act',
+      selector:'.tc:not(.excx), #panels .panel.act .tc',
       requireClick:false,
-      title:en?'✅ Task Cards, Points & Drag-and-Drop':'✅ كروت المهام، النقاط وإعادة الترتيب',
+      openSettings:false,
+      title:en?'✅ Task cards & points':'✅ كروت المهام والنقاط',
       text:en
-        ?'The heartbeat of your schedule! Tap the checkbox to check off tasks and collect points with celebration confetti. Drag the ⋮⋮ handle to rearrange your schedule in seconds, or tap the card itself to edit times, points, alarms, and notes.'
-        :'قلب جدولك النابض! اضغط علامة الصح لإتمام المهمة وجني النقاط مع احتفال حماسي. اسحب مقبض ⋮⋮ لإعادة ترتيب مهام يومك في ثوانٍ، أو اضغط على أي كارت لتعديل الوقت، النقاط، المنبهات والملاحظات.'
+        ?'Tasks are ordered by time. Tap Confirm / checkbox to finish and collect points with confetti. Tap a card (or use Edit mode in Settings) to change times, points, alarms, and notes.'
+        :'المهام مرتبة حسب الوقت. اضغط تأكيد عشان تكمّل وتاخد النقاط. عدّل الوقت والنقاط والمنبهات من وضع التعديل في الإعدادات.'
     },
     {
       id:'filters',
-      selector:'.cat-filter-row, #catFilterRow, .filter-pills, [data-cat-filter], #dsCategoryChips',
+      selector:'.tc-cat-bar, .cat-filter-row, #catFilterRow, #dsCategoryChips',
       requireClick:false,
+      openSettings:false,
       title:en?'🏷️ Quick Category Filters':'🏷️ فلترة المهام حسب الفئة',
       text:en
-        ?'Zero in on what matters right now. Filter your schedule with one tap by category—like Studies, Prayer, Work, Gym, or Meals—to clear mental clutter and focus during busy hours.'
-        :'ركّز في اللي يهمك في اللحظة دي. بنقرة واحدة على أي فئة (مذاكرة، صلاة، تمرين، وجبات…) هتعزل باقي المهام وتركز فقط على ما تريده بدون أي تشتيت.'
+        ?'Filter the day by category—Studies, Prayer, Gym, Meals—to cut clutter during busy hours.'
+        :'فلتر اليوم حسب الفئة (مذاكرة، صلاة، جيم، وجبات) عشان تركز بدون تشتيت.'
     },
-    {
+  ];
+  if(trackPrayers){
+    steps.push({
       id:'prayers',
-      selector:'.prayer-card, [data-is-prayer], #prayerModal, .tc[data-cat="prayer"], #tabrow',
+      selector:'.ppill, .tc[data-c="prayer"], .tc[data-cat="prayer"]',
       requireClick:false,
-      title:en?'🕌 Precise Prayer Tracking & Mosque Bonuses':'🕌 مواقيت الصلاة ونقاط الجماعة والمسجد',
+      openSettings:false,
+      title:en?'🕌 Precise Prayer Tracking':'🕌 مواقيت الصلاة وتتبعها',
       text:en
-        ?'Stay connected spiritually. Automatic prayer times calculated for your city. Log whether you prayed on time, in congregation, or at the mosque to earn special bonus multipliers and spiritual badges!'
-        :'حافظ على صلواتك في وقتها. مواقيت صلاة دقيقة حسب موقعك. سجّل صلاتك في المسجد أو جماعة لتحصل على مضاعفات نقاط ومكافآت تشجيعية خاصة!'
-    },
+        ?'Prayer times are calculated for your city. Confirm a prayer to log on-time, congregation, mosque, dhikr, and sunnah for bonus points.'
+        :'مواقيت الصلاة حسب موقعك. عند التأكيد تقدر تسجّل الجماعة والمسجد والأذكار والسنة لنقاط إضافية.'
+    });
+  }
+  steps.push(
     {
       id:'meals',
-      selector:'.tc[data-cat="food"], .tc[data-cat="meal"], #foodLogModal, #macroBox',
+      selector:'.tc[data-c="food"], .tc[data-cat="food"], #macroBox',
       requireClick:false,
+      openSettings:false,
       title:en?'🍽️ Smart Meal & Food Logging':'🍽️ تسجيل الوجبات والتقدير الذكي',
       text:en
-        ?'Food tasks let you log your breakfast, lunch, dinner, and snacks with a tap. Enter what you ate, track your macros instantly, or describe your plate to the AI for an automatic calorie breakdown!'
-        :'مهام الوجبات بتتيح لك تسجيل أكلك وسعراتك بلمسة. اكتب اللي أكلته أو اطلب من الذكاء الاصطناعي يقدّر لك سعرات الوجبة ومكوناتها بدقة وتلقائية!'
+        ?'Food tasks open a logger for what you ate. Macros update instantly — every item and estimate is saved with the meal.'
+        :'مهام الوجبات بتفتح تسجيل الأكل. الماكروز بتتحدث فوراً وكل التفاصيل بتتحفظ مع الوجبة.'
     },
     {
       id:'ai',
       selector:'#aiFab',
       requireClick:false,
-      title:en?'🤖 AI Assistant Co-Pilot (Voice & Image)':'🤖 المساعد الذكي الخارق (صوت وصورة)',
+      openSettings:false,
+      title:en?'🤖 AI Assistant Co-Pilot':'🤖 المساعد الذكي',
       text:en
-        ?'Tap the robot anytime! Chat in natural Arabic or English. Ask it to "move my gym to 6 PM", "add a 2-hour study session", "skip today\'s meeting", or even snap a photo of your school timetable and watch it generate your full plan!'
-        :'اضغط على الروبوت في أي وقت! اتكلم معاه براحتك بالعربي أو الإنجليزي. اطلب منه "أجّل الجيم للساعة 6"، "ضيف جلسة مذاكرة"، أو صوّر جدول مدرستك بالكاميرا وسيبه يبني لك جدول أسبوعك بالكامل!'
+        ?'Tap the robot anytime. Chat in Arabic or English — move tasks, add study blocks, skip meetings, or snap a timetable photo.'
+        :'اضغط الروبوت في أي وقت. اتكلم عربي أو إنجليزي — انقل مهام، ضيف مذاكرة، أو صوّر جدولك.'
     },
     {
-      id:'workspaces',
-      selector:'#slotPickerBtn, #slotSelect, #profileBtn, #authBtn',
+      id:'settings_reminders',
+      selector:'#setsec-notifications, #notifMainToggle, [data-set-nav="notifications"]',
       requireClick:false,
-      title:en?'🗂️ Multiple Schedule Slots & Workspaces':'🗂️ خانات وجداول متعددة لكل مجالات حياتك',
+      openSettings:true,
+      settingsSection:'notifications',
+      title:en?'🔔 Reminders (14-day cloud sync)':'🔔 التذكيرات (مزامنة ١٤ يوم)',
       text:en
-        ?'You are never limited to just one schedule! Create separate slots for University, Work, Vacation, or Ramadan. Switch between them instantly without losing any tasks or data.'
-        :'مش مقيّد بجدول واحد أبداً! تقدر تنشئ خانات منفصلة للدراسة، العمل، الإجازة أو رمضان، وتبدّل بينهم في لحظة مع الحفاظ على كامل مهامك وبياناتك.'
+        ?'Open Settings → Reminders. Cloud push schedules the next 14 days so alerts still fire when the tab is closed. "Renew & schedule 14 days" refreshes that window. Test notification checks the device channel.'
+        :'افتح الإعدادات → التذكيرات. السحابة بتحجز التذكيرات لـ ١٤ يوم قادمين حتى لو التطبيق مقفول. "تجديد وجدولة ١٤ يوم" بيجدّد النافذة. جرّب الإشعار للتأكد.'
     },
     {
-      id:'profile_settings',
-      selector:'#profileBtn, .profile-wrap, #pm-settings, .sbar-auth, #authBtn',
+      id:'settings_appearance',
+      selector:'#setsec-appearance, [data-set-nav="appearance"]',
       requireClick:false,
-      title:en?'⚡ Profile, Prestige Rebirth & Mythic Customization':'⚡ الملف الشخصي، التميّز والثيمات الأسطورية',
+      openSettings:true,
+      settingsSection:'appearance',
+      title:en?'🎨 Appearance & categories':'🎨 المظهر والفئات',
       text:en
-        ?'Your customization command center. Personalize color palettes and glow effects, create custom categories with your favorite icons, set up Push notifications, use the BMR/TDEE fitness wizard, or initiate a Prestige Rebirth to unlock legendary Mythic themes!'
-        :'مركز التحكم الشامل لكل تفاصيلك. خصص ألوان وثيمات التطبيق وتوهجه، أنشئ فئاتك الخاصة بإيموجياتك المفضلة، فعّل إشعارات الموبايل، احسب احتياجك العضلي، أو ادخل نظام "إعادة الميلاد" لفتح أروع الثيمات الأسطورية!'
+        ?'In Appearance: pick a palette, create custom categories (name + emoji + color), and activate unlocked mythic themes.'
+        :'في المظهر: اختار ثيم، أنشئ فئات مخصصة (اسم + إيموجي + لون)، وفعّل الثيمات الأسطورية المفتوحة.'
+    },
+    {
+      id:'settings_slots',
+      selector:'#setsec-general, [data-set-nav="general"], #slotPickerBtn',
+      requireClick:false,
+      openSettings:true,
+      settingsSection:'general',
+      title:en?'🗂️ Schedule slots & workspaces':'🗂️ خانات الجداول ومساحات العمل',
+      text:en
+        ?'In General you can keep separate schedules (University, Work, Ramadan…) and switch without losing data. Edit mode also lives here for full task edit/delete.'
+        :'في عام تقدر تحتفظ بجداول منفصلة (دراسة، شغل، رمضان…) وتبدّل بدون ما تخسر بيانات. وضع التعديل هنا كمان لتعديل/حذف المهام.'
+    },
+    {
+      id:'settings_prestige',
+      selector:'#setsec-prestige, [data-set-nav="prestige"], #prestigeCenterContainer',
+      requireClick:false,
+      openSettings:true,
+      settingsSection:'prestige',
+      title:en?'⚡ Prestige, rebirth & mythics':'⚡ التميّز وإعادة الميلاد',
+      text:en
+        ?'Prestige Center tracks rank, XP, rebirth tokens, and mythic unlocks. Rebirth resets prestige progress to unlock legendary looks.'
+        :'مركز التميّز فيه الرتبة والخبرة ورموز إعادة الميلاد والثيمات الأسطورية.'
     },
     {
       id:'done',
       selector:null,
       requireClick:false,
-      title:en?'You\'re ready':'جاهز تبدأ',
+      openSettings:false,
+      title:en?"You're ready":'جاهز تبدأ',
       text:en
-        ?'Build your day, complete tasks, talk to the AI anytime. You can replay this tour later from Settings if we add a shortcut — for now, enjoy your schedule.'
-        :'ابنِ يومك، كمّل المهام، واتكلم مع الذكاء في أي وقت. استمتع بجدولك ✨'
+        ?'Build your day, complete tasks, talk to the AI anytime. Replay this tour from Settings → General whenever you want.'
+        :'ابنِ يومك، كمّل المهام، واتكلم مع الذكاء في أي وقت. تقدر تعيد الجولة من الإعدادات → عام.'
     }
-  ];
+  );
+  return steps;
 }
 
 function ptourClearTarget(){
@@ -17102,23 +17292,45 @@ function ptourShowStep(i){
   }
   if(skipBtn) skipBtn.textContent=en?'Skip tour':'تخطي الجولة';
 
+  // Settings-bound steps: open the right section so selectors resolve
+  try{
+    if(step.openSettings){
+      if(typeof openSettingsScreen==='function') openSettingsScreen();
+      if(step.settingsSection){
+        const nav=document.querySelector(`[data-set-nav="${step.settingsSection}"]`);
+        if(nav) nav.click();
+        else if(typeof switchSettingsSection==='function') switchSettingsSection(step.settingsSection);
+      }
+    }else if(document.getElementById('settingsScreen')?.classList.contains('open')){
+      // Close settings for non-settings steps so main UI targets are visible
+      try{ document.getElementById('settingsScreen')?.classList.remove('open'); }catch(e){}
+    }
+  }catch(e){ console.warn('ptour settings toggle',e); }
+
   let el=null;
-  if(step.selector){
-    el=document.querySelector(step.selector);
-    if(el && (el.offsetParent===null || el.getBoundingClientRect().width===0)){
-      el=null;
-      if(step.selector.includes(',')){
-        for(const sel of step.selector.split(',')){
-          const cand=document.querySelector(sel.trim());
-          if(cand && cand.offsetParent!==null && cand.getBoundingClientRect().width>0){ el=cand; break; }
-        }
+  const resolveEl=()=>{
+    if(!step.selector) return null;
+    let found=document.querySelector(step.selector);
+    if(found && (found.offsetParent===null || found.getBoundingClientRect().width===0)) found=null;
+    if(!found && step.selector.includes(',')){
+      for(const sel of step.selector.split(',')){
+        const cand=document.querySelector(sel.trim());
+        if(cand && cand.offsetParent!==null && cand.getBoundingClientRect().width>0){ found=cand; break; }
       }
     }
-  }
+    return found;
+  };
+  el=resolveEl();
 
-  if(el){
-    try{ el.scrollIntoView({block:'center',inline:'center',behavior:'smooth'}); }catch(e){}
-    setTimeout(()=>{
+  // Always scroll the page so the target (or top) is in view — fixes broken layout when tour starts while scrolled down
+  try{
+    if(el) el.scrollIntoView({block:'center',inline:'nearest',behavior:'smooth'});
+    else window.scrollTo({top:0,behavior:'smooth'});
+  }catch(e){}
+
+  const apply=()=>{
+    el=resolveEl()||el;
+    if(el){
       el.classList.add('ptour-target-live');
       PTOUR_TARGET_EL=el;
       ptourUpdateSpotlight(el, step);
@@ -17126,10 +17338,12 @@ function ptourShowStep(i){
         _ptourClickListener=()=>{ ptourClearTarget(); ptourShowStep(i+1); };
         el.addEventListener('click', _ptourClickListener, true);
       }
-    }, 280);
-  }else{
-    ptourUpdateSpotlight(null, step);
-  }
+    }else{
+      ptourUpdateSpotlight(null, step);
+    }
+  };
+  setTimeout(apply, 320);
+  setTimeout(apply, 700);
 }
 
 function startProductTour(force){
@@ -18095,7 +18309,7 @@ if (typeof onAuthStateChanged !== 'undefined' && typeof fbAuth !== 'undefined') 
           // Cloud userEdits is authoritative once it exists — this is what makes an
           // edit made on your phone show up on your laptop. If the cloud doc has no
           // userEdits yet (brand-new account), keep whatever local value we have.
-          if(d.userEdits) USER_EDITS={...emptyUserEdits(),...d.userEdits};
+          if(d.userEdits) USER_EDITS={...emptyUserEdits(),...d.userEdits,dayDeletes:{...(emptyUserEdits().dayDeletes),...((d.userEdits&&d.userEdits.dayDeletes)||{})},dayOverrides:{...(emptyUserEdits().dayOverrides),...((d.userEdits&&d.userEdits.dayOverrides)||{})}};
           // Cloud userSchedule is authoritative once it exists — same reasoning as
           // userEdits above (an edit/migration on one device must show up on
           // another). If the cloud doc has none yet, keep whatever local value we
