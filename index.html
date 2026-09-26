@@ -708,28 +708,34 @@ html[dir="ltr"] .tc[data-c="sunrise"]{border-left:3px solid var(--or)}
 @keyframes aiFullIn{0%{opacity:0;transform:scale(.96)}100%{opacity:1;transform:scale(1)}}
 @keyframes fabPop{0%{transform:scale(0);opacity:0}70%{transform:scale(1.15)}100%{transform:scale(1);opacity:1}}
 /* FC Mobile–style product tour */
-.product-tour{position:fixed;inset:0;z-index:12050;display:none;pointer-events:none}
+.product-tour{position:fixed;inset:0;z-index:12050;display:none;pointer-events:none;overflow:hidden}
 .product-tour.open{display:block}
-.ptour-shade{position:absolute;inset:0;background:rgba(2,6,16,.72);pointer-events:auto}
+.ptour-shade{position:absolute;inset:0;background:rgba(2,6,16,.75);pointer-events:auto;transition:background .25s ease}
 .ptour-spotlight{
-  position:absolute;border-radius:16px;pointer-events:none;
-  box-shadow:0 0 0 9999px rgba(2,6,16,.72),0 0 0 3px var(--accent-color,var(--ac)),0 0 28px color-mix(in srgb, var(--accent-color,var(--ac)) 45%, transparent);
-  transition:top .25s ease,left .25s ease,width .25s ease,height .25s ease;
-  outline:2px solid rgba(255,255,255,.35);
+  position:fixed;border-radius:16px;pointer-events:none;
+  box-shadow:0 0 0 9999px rgba(2,6,16,.78),0 0 0 3.5px var(--accent-color,var(--ac)),0 0 32px color-mix(in srgb, var(--accent-color,var(--ac)) 50%, transparent);
+  transition:top .24s cubic-bezier(.2,.9,.3,1),left .24s cubic-bezier(.2,.9,.3,1),width .24s cubic-bezier(.2,.9,.3,1),height .24s cubic-bezier(.2,.9,.3,1);
+  outline:2px solid rgba(255,255,255,.45);z-index:12055;
 }
 .ptour-card{
-  position:absolute;max-width:min(340px,calc(100vw - 28px));padding:16px 16px 14px;
-  background:var(--c2, #111827);color:var(--tx,#f1f5f9);
-  border:1.5px solid color-mix(in srgb, var(--accent-color,var(--ac)) 50%, var(--br,#334155));
-  border-radius:16px;box-shadow:0 16px 40px rgba(0,0,0,.55),0 0 24px color-mix(in srgb, var(--accent-color,var(--ac)) 18%, transparent);
-  pointer-events:auto;z-index:2;
+  position:fixed;width:calc(100vw - 28px);max-width:380px;max-height:calc(100vh - 36px);overflow-y:auto;
+  padding:16px 18px 16px;background:rgba(17,24,39,.95);backdrop-filter:blur(16px);-webkit-backdrop-filter:blur(16px);
+  color:var(--tx,#f1f5f9);border:1.5px solid color-mix(in srgb, var(--accent-color,var(--ac)) 55%, var(--br,#334155));
+  border-radius:18px;box-shadow:0 20px 48px rgba(0,0,0,.65),0 0 30px color-mix(in srgb, var(--accent-color,var(--ac)) 24%, transparent);
+  pointer-events:auto;z-index:12070;box-sizing:border-box;
+  transition:top .22s cubic-bezier(.2,.9,.3,1),left .22s cubic-bezier(.2,.9,.3,1),transform .2s ease,opacity .2s ease;
 }
-.ptour-step{font-size:.68rem;font-weight:900;color:var(--accent-color,var(--ac));letter-spacing:.04em;margin-bottom:6px}
-.ptour-title{font-size:1.05rem;font-weight:900;margin-bottom:6px;line-height:1.25}
-.ptour-text{font-size:.84rem;line-height:1.55;color:var(--so,#94a3b8);margin-bottom:14px}
-.ptour-actions{display:flex;gap:8px;justify-content:flex-end;align-items:center}
-.ptour-btn{font-family:inherit;font-weight:800;font-size:.8rem;padding:9px 14px;border-radius:10px;cursor:pointer;border:1px solid var(--br)}
-.ptour-skip{background:transparent;color:var(--mu,#94a3b8)}
+.ptour-step{font-size:.72rem;font-weight:900;color:var(--accent-color,var(--ac));letter-spacing:.05em;margin-bottom:6px;display:flex;align-items:center;justify-content:space-between}
+.ptour-title{font-size:1.08rem;font-weight:900;margin-bottom:8px;line-height:1.3;display:flex;align-items:center;gap:6px}
+.ptour-text{font-size:.86rem;line-height:1.58;color:var(--so,#cbd5e1);margin-bottom:14px;word-break:break-word}
+.ptour-actions{display:flex;gap:8px;justify-content:space-between;align-items:center;margin-top:14px}
+.ptour-btn-group{display:flex;gap:8px;align-items:center}
+.ptour-btn{font-family:inherit;font-weight:800;font-size:.84rem;min-height:40px;padding:9px 15px;border-radius:12px;cursor:pointer;border:1px solid var(--br);transition:all .18s ease;display:inline-flex;align-items:center;justify-content:center;box-sizing:border-box}
+.ptour-btn:hover{filter:brightness(1.08)}
+.ptour-btn:active{transform:scale(.96)}
+.ptour-skip{background:transparent;color:var(--mu,#94a3b8);border-color:transparent;padding-left:4px;padding-right:4px}
+.ptour-skip:hover{color:var(--tx,#f1f5f9)}
+.ptour-prev{background:rgba(255,255,255,.07);color:var(--tx,#f1f5f9);border-color:rgba(255,255,255,.12)}
 .ptour-next{background:var(--accent-color,var(--ac));color:var(--text-on-accent,#fff);border-color:var(--accent-color,var(--ac));box-shadow:0 4px 14px color-mix(in srgb, var(--accent-color,var(--ac)) 35%, transparent)}
 body.ptour-active{overflow:hidden}
 .ptour-target-live{position:relative!important;z-index:12060!important;pointer-events:auto!important;animation:ptourPulse 1.4s ease-in-out infinite}
@@ -4636,12 +4642,15 @@ body.theme-matrix .tctime{
   <div class="ptour-shade" id="ptourShade"></div>
   <div class="ptour-spotlight" id="ptourSpotlight"></div>
   <div class="ptour-card" id="ptourCard">
-    <div class="ptour-step" id="ptourStep">1 / 8</div>
+    <div class="ptour-step" id="ptourStep">1 / 13</div>
     <div class="ptour-title" id="ptourTitle">Welcome</div>
     <div class="ptour-text" id="ptourText"></div>
     <div class="ptour-actions">
       <button type="button" class="ptour-btn ptour-skip" id="ptourSkip">Skip</button>
-      <button type="button" class="ptour-btn ptour-next" id="ptourNext">Next</button>
+      <div class="ptour-btn-group">
+        <button type="button" class="ptour-btn ptour-prev" id="ptourPrev" style="display:none">Back</button>
+        <button type="button" class="ptour-btn ptour-next" id="ptourNext">Next</button>
+      </div>
     </div>
   </div>
 </div>
@@ -8304,9 +8313,12 @@ async function obFinish(){
     updateUI();
     revealApp();
     showToast('Your schedule is ready',2400);
-    // Interactive FC Mobile–style tour right after first setup
+    // Interactive tour ONLY for brand-new users right after their first setup
     try{
-      if(!isProductTourDone()) setTimeout(()=>startProductTour(false), 900);
+      if(window.__isBrandNewUserOnboarding && !isProductTourDone()){
+        window.__isBrandNewUserOnboarding = false;
+        setTimeout(()=>startProductTour(false), 900);
+      }
     }catch(e){}
     // Fitness preference is collected inside onboarding — only show the legacy modal for older accounts that never answered.
     if(lsGet('fitness_prompt_shown')!=='true' && USER_SETTINGS.fitness_tracking_enabled===undefined && !USER_SETTINGS.onboardingComplete){
@@ -16639,22 +16651,64 @@ function revealApp(){
       window.__didInitialScroll=true;
     },200);
   }
-  // First-time interactive tour (FC Mobile style)
+  // First-time interactive tour (ONLY for brand-new users finishing onboarding)
   try{
-    setTimeout(()=>{ maybeStartProductTour(); }, 700);
+    if(window.__isBrandNewUserOnboarding){
+      setTimeout(()=>{ maybeStartProductTour(); }, 700);
+    }
   }catch(e){}
 }
 // ===== Product Tour (coach marks) =====
 let PTOUR_STEP=0;
 let PTOUR_ACTIVE=false;
 let PTOUR_TARGET_EL=null;
+let _ptourClickListener=null;
+let _ptourRepositionTimer=null;
+
+function hasExistingScheduleTasks(){
+  try{
+    if(!USER_SCHEDULE) return false;
+    for(let d=0; d<7; d++){
+      if(USER_SCHEDULE[d] && Array.isArray(USER_SCHEDULE[d].ts) && USER_SCHEDULE[d].ts.length > 0){
+        return true;
+      }
+    }
+  }catch(e){}
+  return false;
+}
+
+function isExistingUser(){
+  try{
+    if(lsGet('product_tour_done')==='true') return true;
+    if(USER_SETTINGS && USER_SETTINGS.productTourDone) return true;
+    if(lsGet('has_onboarded')==='true') return true;
+    if(USER_SETTINGS && (USER_SETTINGS.onboardingComplete || USER_SETTINGS.displayNameChosen || USER_SETTINGS.workspaceName)) return true;
+    if(typeof userHasExistingWorkspace==='function' && userHasExistingWorkspace()) return true;
+    if(typeof STATS!=='undefined' && ((STATS.lifetime_xp||0)>0 || (STATS.cur_streak||0)>0 || (STATS.best_streak||0)>0)) return true;
+    if(typeof USER_EDITS!=='undefined' && ((USER_EDITS.customTasks && USER_EDITS.customTasks.length>0) || (USER_EDITS.done && Object.keys(USER_EDITS.done).length>0))) return true;
+    if(typeof USER_SCHEDULES!=='undefined' && Object.keys(USER_SCHEDULES||{}).length>1) return true;
+    if(hasExistingScheduleTasks()) return true;
+    const cur=lsGet('current_user');
+    if(cur){
+      const acc=typeof findLocalAccount==='function'?findLocalAccount(cur):null;
+      if(acc && (acc.has_onboarded || acc.password)) return true;
+    }
+  }catch(e){}
+  return false;
+}
+
 function isProductTourDone(){
   try{
     if(USER_SETTINGS && USER_SETTINGS.productTourDone) return true;
     if(lsGet('product_tour_done')==='true') return true;
+    if(isExistingUser()){
+      markProductTourDone();
+      return true;
+    }
   }catch(e){}
   return false;
 }
+
 async function markProductTourDone(){
   try{ lsSet('product_tour_done','true'); }catch(e){}
   try{
@@ -16664,6 +16718,7 @@ async function markProductTourDone(){
     }
   }catch(e){}
 }
+
 function getProductTourSteps(){
   const en=(USER_SETTINGS&&USER_SETTINGS.lang)==='en';
   return [
@@ -16677,58 +16732,103 @@ function getProductTourSteps(){
         :'جولة سريعة — هنور على كل زر. تقدر تضغط المنطقة المضيئة فقط (أو التالي). هتفهم الجدول في أقل من دقيقة.'
     },
     {
-      id:'days',
-      selector:'#tabrow .tab, #tabrow > *',
+      id:'gamification',
+      selector:'#sbar .sbar-stats, #sbar',
       requireClick:false,
-      title:en?'Switch days':'بدّل بين الأيام',
+      title:en?'🔥 Streaks, Points & Gamification':'🔥 الستريك، النقاط ونظام الحماس',
       text:en
-        ?'These tabs are your week. Tap any day to see its tasks, prayers, and meals. Today is marked for you.'
-        :'التبويبات دي أيام أسبوعك. اضغط أي يوم عشان تشوف مهامه وصلواته ووجباته. يومك الحالي مميز.'
+        ?'Your daily motivation engine! Every task you finish earns XP points and fuels your Streak. Keep your streak alive day after day, beat your personal record, and level up your discipline.'
+        :'محرك الحماس اليومي! كل مهمة تنجزها بتكسبك نقاط خبرة ⭐ وتكبر الستريك 🔥 بتاعك. حافظ على استمرارية يومك، اكسر رقمك القياسي، وارتقِ بمستوى انضباطك.'
     },
     {
-      id:'task',
-      selector:'.tc:not(.excx)',
+      id:'daily_summary',
+      selector:'#dailySummaryCard, #dailySummaryWrapper',
       requireClick:false,
-      title:en?'Your tasks':'مهامك',
+      title:en?'📊 Daily Progress & Category Analytics':'📊 تقدم اليوم وتفاصيل الفئات',
       text:en
-        ?'Each card is a block in your day. Complete it for points, drag the ⋮⋮ handle to reorder, or open it to edit. Categories color the left edge.'
-        :'كل كارت = مهمة في يومك. كمّلها عشان نقاط، اسحب ⋮⋮ لإعادة الترتيب، أو افتحها للتعديل. الألوان = التصنيفات.'
-    },
-    {
-      id:'filters',
-      selector:'.cat-filter-row, #catFilterRow, .filter-pills, [data-cat-filter]',
-      requireClick:false,
-      title:en?'Filter by category':'تصفية حسب الفئة',
-      text:en
-        ?'Use category chips (Prayer, Food, Fitness…) to focus on one type of task on busy days.'
-        :'استخدم شرائح الفئات (صلاة، طعام، رياضة…) عشان تركز على نوع واحد من المهام في الأيام المزدحمة.'
+        ?'Your high-level dashboard. Watch your completion bar fill in real time as you complete tasks. Tap "Breakdown" to see exactly how your time is split between studies, fitness, and prayers, or open "Trends" for weekly charts.'
+        :'لوحة التحكم اليومية! شريط الإنجاز بيتحدث لحظة بلحظة مع كل مهمة. اضغط "تفاصيل" لترى توزيع وقتك بين المذاكرة والرياضة والعبادات، أو "المسار" لمتابعة تقدمك أسبوعياً.'
     },
     {
       id:'nutrition',
-      selector:'#macroTrendsPillText, #btn-macro-trends, .macro-bar, [id*="macro"]',
+      selector:'#macroBox, #btn-macro-trends, .macrobox',
       requireClick:false,
-      title:en?'Daily nutrition':'التغذية اليومية',
+      title:en?'🥗 Nutrition & Macro Targets':'🥗 التغذية وحساب السعرات والماكروز',
       text:en
-        ?'Track calories and macros here. Log meals from food tasks — the AI can help estimate what you ate.'
-        :'هنا السعرات والماكروز. سجّل الوجبات من مهام الأكل — والذكاء الاصطناعي يقدر يساعدك تحسب اللي كلته.'
+        ?'Fuel your body right. Track your daily Calories, Protein, Carbs, Fats, and Fiber with live visual progress bars. Log your meals directly or click "Trends" to review your nutritional history.'
+        :'غذّي جسمك بذكاء. تابع سعراتك الحرارية اليومية ونسب البروتين والكارب والدهون والألياف بأشرطة حية. سجّل وجباتك بلمسة، أو اضغط "المسار" لرؤية تاريخك الغذائي.'
+    },
+    {
+      id:'days',
+      selector:'#tabrow',
+      requireClick:false,
+      title:en?'📅 Seamless 7-Day Week Switcher':'📅 التنقل بين أيام الأسبوع بكل سهولة',
+      text:en
+        ?'Your entire week at your fingertips. Tap any day tab to review past accomplishments, organize today, or plan ahead for upcoming days. Today is always highlighted so you never lose your place.'
+        :'أسبوعك كامل بلمسة واحدة. بدّل بين الأيام لتراجع إنجازاتك السابقة، ترتّب يومك الحالي، أو تخطط للأيام الجاية. اليوم الحالي مميز دايماً عشان تكون في قلب الحدث.'
+    },
+    {
+      id:'tasks',
+      selector:'.tc:not(.excx), #panels .panel.act .tc, .panel.act',
+      requireClick:false,
+      title:en?'✅ Task Cards, Points & Drag-and-Drop':'✅ كروت المهام، النقاط وإعادة الترتيب',
+      text:en
+        ?'The heartbeat of your schedule! Tap the checkbox to check off tasks and collect points with celebration confetti. Drag the ⋮⋮ handle to rearrange your schedule in seconds, or tap the card itself to edit times, points, alarms, and notes.'
+        :'قلب جدولك النابض! اضغط علامة الصح لإتمام المهمة وجني النقاط مع احتفال حماسي. اسحب مقبض ⋮⋮ لإعادة ترتيب مهام يومك في ثوانٍ، أو اضغط على أي كارت لتعديل الوقت، النقاط، المنبهات والملاحظات.'
+    },
+    {
+      id:'filters',
+      selector:'.cat-filter-row, #catFilterRow, .filter-pills, [data-cat-filter], #dsCategoryChips',
+      requireClick:false,
+      title:en?'🏷️ Quick Category Filters':'🏷️ فلترة المهام حسب الفئة',
+      text:en
+        ?'Zero in on what matters right now. Filter your schedule with one tap by category—like Studies, Prayer, Work, Gym, or Meals—to clear mental clutter and focus during busy hours.'
+        :'ركّز في اللي يهمك في اللحظة دي. بنقرة واحدة على أي فئة (مذاكرة، صلاة، تمرين، وجبات…) هتعزل باقي المهام وتركز فقط على ما تريده بدون أي تشتيت.'
+    },
+    {
+      id:'prayers',
+      selector:'.prayer-card, [data-is-prayer], #prayerModal, .tc[data-cat="prayer"], #tabrow',
+      requireClick:false,
+      title:en?'🕌 Precise Prayer Tracking & Mosque Bonuses':'🕌 مواقيت الصلاة ونقاط الجماعة والمسجد',
+      text:en
+        ?'Stay connected spiritually. Automatic prayer times calculated for your city. Log whether you prayed on time, in congregation, or at the mosque to earn special bonus multipliers and spiritual badges!'
+        :'حافظ على صلواتك في وقتها. مواقيت صلاة دقيقة حسب موقعك. سجّل صلاتك في المسجد أو جماعة لتحصل على مضاعفات نقاط ومكافآت تشجيعية خاصة!'
+    },
+    {
+      id:'meals',
+      selector:'.tc[data-cat="food"], .tc[data-cat="meal"], #foodLogModal, #macroBox',
+      requireClick:false,
+      title:en?'🍽️ Smart Meal & Food Logging':'🍽️ تسجيل الوجبات والتقدير الذكي',
+      text:en
+        ?'Food tasks let you log your breakfast, lunch, dinner, and snacks with a tap. Enter what you ate, track your macros instantly, or describe your plate to the AI for an automatic calorie breakdown!'
+        :'مهام الوجبات بتتيح لك تسجيل أكلك وسعراتك بلمسة. اكتب اللي أكلته أو اطلب من الذكاء الاصطناعي يقدّر لك سعرات الوجبة ومكوناتها بدقة وتلقائية!'
     },
     {
       id:'ai',
       selector:'#aiFab',
-      requireClick:true,
-      title:en?'Your AI assistant':'مساعدك الذكي',
+      requireClick:false,
+      title:en?'🤖 AI Assistant Co-Pilot (Voice & Image)':'🤖 المساعد الذكي الخارق (صوت وصورة)',
       text:en
-        ?'Tap the robot. Talk naturally (Arabic, English, or both). Ask it to add tasks, skip a lesson today only, change times, or build a study plan from a photo.'
-        :'اضغط على الروبوت. اتكلم بشكل طبيعي (عربي أو إنجليزي أو الاتنين). يطلب إضافة مهام، تخطي درس النهاردة بس، تغيير وقت، أو بناء خطة مذاكرة من صورة.'
+        ?'Tap the robot anytime! Chat in natural Arabic or English. Ask it to "move my gym to 6 PM", "add a 2-hour study session", "skip today\'s meeting", or even snap a photo of your school timetable and watch it generate your full plan!'
+        :'اضغط على الروبوت في أي وقت! اتكلم معاه براحتك بالعربي أو الإنجليزي. اطلب منه "أجّل الجيم للساعة 6"، "ضيف جلسة مذاكرة"، أو صوّر جدول مدرستك بالكاميرا وسيبه يبني لك جدول أسبوعك بالكامل!'
     },
     {
-      id:'settings',
-      selector:'#profileChip, .profile-chip, #btn-profile, [id*="profile"]',
+      id:'workspaces',
+      selector:'#slotPickerBtn, #slotSelect, #profileBtn, #authBtn',
       requireClick:false,
-      title:en?'Settings & themes':'الإعدادات والثيمات',
+      title:en?'🗂️ Multiple Schedule Slots & Workspaces':'🗂️ خانات وجداول متعددة لكل مجالات حياتك',
       text:en
-        ?'Open your profile menu for Settings: schedule slots, categories (emoji + color), reminders, appearance, and the Prestige / rebirth system.'
-        :'من القائمة: الإعدادات — خانات الجدول، الفئات (إيموجي ولون)، التذكيرات، المظهر، ونظام التميّز / إعادة الميلاد.'
+        ?'You are never limited to just one schedule! Create separate slots for University, Work, Vacation, or Ramadan. Switch between them instantly without losing any tasks or data.'
+        :'مش مقيّد بجدول واحد أبداً! تقدر تنشئ خانات منفصلة للدراسة، العمل، الإجازة أو رمضان، وتبدّل بينهم في لحظة مع الحفاظ على كامل مهامك وبياناتك.'
+    },
+    {
+      id:'profile_settings',
+      selector:'#profileBtn, .profile-wrap, #pm-settings, .sbar-auth, #authBtn',
+      requireClick:false,
+      title:en?'⚡ Profile, Prestige Rebirth & Mythic Customization':'⚡ الملف الشخصي، التميّز والثيمات الأسطورية',
+      text:en
+        ?'Your customization command center. Personalize color palettes and glow effects, create custom categories with your favorite icons, set up Push notifications, use the BMR/TDEE fitness wizard, or initiate a Prestige Rebirth to unlock legendary Mythic themes!'
+        :'مركز التحكم الشامل لكل تفاصيلك. خصص ألوان وثيمات التطبيق وتوهجه، أنشئ فئاتك الخاصة بإيموجياتك المفضلة، فعّل إشعارات الموبايل، احسب احتياجك العضلي، أو ادخل نظام "إعادة الميلاد" لفتح أروع الثيمات الأسطورية!'
     },
     {
       id:'done',
@@ -16741,34 +16841,112 @@ function getProductTourSteps(){
     }
   ];
 }
+
 function ptourClearTarget(){
   if(PTOUR_TARGET_EL){
     PTOUR_TARGET_EL.classList.remove('ptour-target-live');
+    if(_ptourClickListener){
+      PTOUR_TARGET_EL.removeEventListener('click', _ptourClickListener, true);
+      _ptourClickListener=null;
+    }
     PTOUR_TARGET_EL=null;
   }
 }
+
 function ptourPlaceCard(rect){
   const card=document.getElementById('ptourCard');
   if(!card) return;
   const pad=12;
-  const cw=card.offsetWidth||320;
-  const ch=card.offsetHeight||160;
+  const vW=window.innerWidth;
+  const vH=window.innerHeight;
+  card.style.maxWidth = Math.min(380, vW - pad*2) + 'px';
+  const cw = Math.min(card.offsetWidth || 320, vW - pad*2);
+  const ch = card.offsetHeight || 180;
   let top, left;
-  if(!rect){
-    top=Math.max(pad,(window.innerHeight-ch)/2);
-    left=Math.max(pad,(window.innerWidth-cw)/2);
+
+  if(!rect || rect.width===0 || rect.height===0 || rect.bottom < 0 || rect.top > vH){
+    // Centered modal
+    top = Math.max(pad, Math.round((vH - ch)/2));
+    left = Math.max(pad, Math.round((vW - cw)/2));
   }else{
-    const below=rect.bottom+14;
-    const above=rect.top-ch-14;
-    top=below+ch+pad<window.innerHeight?below:Math.max(pad,above);
-    left=Math.min(Math.max(pad,rect.left+rect.width/2-cw/2), window.innerWidth-cw-pad);
+    // Horizontal center over element, clamped within padding
+    const elCenter = rect.left + rect.width / 2;
+    left = Math.min(Math.max(pad, Math.round(elCenter - cw / 2)), vW - cw - pad);
+
+    const spaceBelow = vH - rect.bottom - pad;
+    const spaceAbove = rect.top - pad;
+
+    if(spaceBelow >= ch + 14){
+      top = Math.round(rect.bottom + 14);
+    }else if(spaceAbove >= ch + 14){
+      top = Math.round(rect.top - ch - 14);
+    }else if(spaceBelow >= spaceAbove){
+      top = Math.min(Math.round(rect.bottom + 10), vH - ch - pad);
+    }else{
+      top = Math.max(pad, Math.round(rect.top - ch - 10));
+    }
   }
-  card.style.top=top+'px';
-  card.style.left=left+'px';
+
+  top = Math.max(pad, Math.min(top, vH - ch - pad));
+  left = Math.max(pad, Math.min(left, vW - cw - pad));
+
+  card.style.top = top + 'px';
+  card.style.left = left + 'px';
 }
+
+function ptourUpdateSpotlight(el, step){
+  const spot=document.getElementById('ptourSpotlight');
+  const shade=document.getElementById('ptourShade');
+  if(!spot) return;
+  if(!el){
+    spot.style.display='none';
+    if(shade) shade.style.background='rgba(2,6,16,.78)';
+    ptourPlaceCard(null);
+    return;
+  }
+  const r=el.getBoundingClientRect();
+  if(r.width===0 || r.height===0 || r.bottom < 0 || r.top > window.innerHeight){
+    spot.style.display='none';
+    if(shade) shade.style.background='rgba(2,6,16,.78)';
+    ptourPlaceCard(null);
+    return;
+  }
+  const m=8;
+  const pad=4;
+  const top = Math.max(pad, Math.round(r.top - m));
+  const left = Math.max(pad, Math.round(r.left - m));
+  const width = Math.min(window.innerWidth - left - pad, Math.round(r.width + m*2));
+  const height = Math.min(window.innerHeight - top - pad, Math.round(r.height + m*2));
+
+  spot.style.display='block';
+  spot.style.top=top+'px';
+  spot.style.left=left+'px';
+  spot.style.width=width+'px';
+  spot.style.height=height+'px';
+  if(shade) shade.style.background='transparent';
+  ptourPlaceCard(r);
+}
+
+function ptourReposition(){
+  if(!PTOUR_ACTIVE) return;
+  const steps=getProductTourSteps();
+  const step=steps[PTOUR_STEP];
+  if(PTOUR_TARGET_EL && step && step.selector){
+    ptourUpdateSpotlight(PTOUR_TARGET_EL, step);
+  }else{
+    ptourPlaceCard(null);
+  }
+}
+
+function ptourOnWindowChange(){
+  if(!PTOUR_ACTIVE) return;
+  if(_ptourRepositionTimer) cancelAnimationFrame(_ptourRepositionTimer);
+  _ptourRepositionTimer = requestAnimationFrame(ptourReposition);
+}
+
 function ptourShowStep(i){
   const steps=getProductTourSteps();
-  if(i<0||i>=steps.length){ endProductTour(true); return; }
+  if(i<0 || i>=steps.length){ endProductTour(true); return; }
   PTOUR_STEP=i;
   const step=steps[i];
   const en=(USER_SETTINGS&&USER_SETTINGS.lang)==='en';
@@ -16779,7 +16957,9 @@ function ptourShowStep(i){
   const text=document.getElementById('ptourText');
   const stepEl=document.getElementById('ptourStep');
   const nextBtn=document.getElementById('ptourNext');
-  if(!root||!spot) return;
+  const prevBtn=document.getElementById('ptourPrev');
+  const skipBtn=document.getElementById('ptourSkip');
+  if(!root || !spot) return;
 
   ptourClearTarget();
   if(title) title.textContent=step.title;
@@ -16790,45 +16970,46 @@ function ptourShowStep(i){
     else if(step.requireClick) nextBtn.textContent=en?'Next (or tap the glow)':'التالي (أو اضغط التوهج)';
     else nextBtn.textContent=en?'Next':'التالي';
   }
-  const skipBtn=document.getElementById('ptourSkip');
+  if(prevBtn){
+    if(i>0){
+      prevBtn.style.display='inline-flex';
+      prevBtn.textContent=en?'Back':'السابق';
+    }else{
+      prevBtn.style.display='none';
+    }
+  }
   if(skipBtn) skipBtn.textContent=en?'Skip tour':'تخطي الجولة';
 
   let el=null;
   if(step.selector){
     el=document.querySelector(step.selector);
-    // Prefer visible elements
-    if(el && el.offsetParent===null && step.selector.includes(',')){
-      for(const sel of step.selector.split(',')){
-        const cand=document.querySelector(sel.trim());
-        if(cand && cand.offsetParent!==null){ el=cand; break; }
+    if(el && (el.offsetParent===null || el.getBoundingClientRect().width===0)){
+      el=null;
+      if(step.selector.includes(',')){
+        for(const sel of step.selector.split(',')){
+          const cand=document.querySelector(sel.trim());
+          if(cand && cand.offsetParent!==null && cand.getBoundingClientRect().width>0){ el=cand; break; }
+        }
       }
     }
   }
+
   if(el){
-    try{ el.scrollIntoView({block:'center',behavior:'smooth'}); }catch(e){}
+    try{ el.scrollIntoView({block:'center',inline:'center',behavior:'smooth'}); }catch(e){}
     setTimeout(()=>{
-      const r=el.getBoundingClientRect();
-      const m=8;
-      spot.style.display='block';
-      spot.style.top=(r.top-m)+'px';
-      spot.style.left=(r.left-m)+'px';
-      spot.style.width=(r.width+m*2)+'px';
-      spot.style.height=(r.height+m*2)+'px';
-      if(shade) shade.style.background='transparent';
       el.classList.add('ptour-target-live');
       PTOUR_TARGET_EL=el;
-      ptourPlaceCard(r);
+      ptourUpdateSpotlight(el, step);
       if(step.requireClick){
-        const advance=()=>{ el.removeEventListener('click',advance,true); ptourShowStep(i+1); };
-        el.addEventListener('click',advance,true);
+        _ptourClickListener=()=>{ ptourClearTarget(); ptourShowStep(i+1); };
+        el.addEventListener('click', _ptourClickListener, true);
       }
-    },280);
+    }, 280);
   }else{
-    spot.style.display='none';
-    if(shade) shade.style.background='rgba(2,6,16,.72)';
-    ptourPlaceCard(null);
+    ptourUpdateSpotlight(null, step);
   }
 }
+
 function startProductTour(force){
   if(PTOUR_ACTIVE) return;
   if(!force && isProductTourDone()) return;
@@ -16839,6 +17020,7 @@ function startProductTour(force){
   const root=document.getElementById('productTour');
   if(root){ root.classList.add('open'); root.setAttribute('aria-hidden','false'); }
   const nextBtn=document.getElementById('ptourNext');
+  const prevBtn=document.getElementById('ptourPrev');
   const skipBtn=document.getElementById('ptourSkip');
   if(nextBtn && !nextBtn._wired){
     nextBtn._wired=true;
@@ -16848,22 +17030,44 @@ function startProductTour(force){
       else ptourShowStep(PTOUR_STEP+1);
     };
   }
+  if(prevBtn && !prevBtn._wired){
+    prevBtn._wired=true;
+    prevBtn.onclick=()=>{
+      if(PTOUR_STEP>0) ptourShowStep(PTOUR_STEP-1);
+    };
+  }
   if(skipBtn && !skipBtn._wired){
     skipBtn._wired=true;
     skipBtn.onclick=()=>endProductTour(true);
   }
+  window.addEventListener('resize', ptourOnWindowChange, { passive: true });
+  window.addEventListener('scroll', ptourOnWindowChange, { passive: true });
+  window.addEventListener('orientationchange', ptourOnWindowChange, { passive: true });
   ptourShowStep(0);
 }
+
 function endProductTour(markDone){
   PTOUR_ACTIVE=false;
   document.body.classList.remove('ptour-active');
+  window.removeEventListener('resize', ptourOnWindowChange);
+  window.removeEventListener('scroll', ptourOnWindowChange);
+  window.removeEventListener('orientationchange', ptourOnWindowChange);
+  if(_ptourRepositionTimer) cancelAnimationFrame(_ptourRepositionTimer);
   ptourClearTarget();
   const root=document.getElementById('productTour');
   if(root){ root.classList.remove('open'); root.setAttribute('aria-hidden','true'); }
   if(markDone) markProductTourDone();
 }
+
 function maybeStartProductTour(){
   if(isProductTourDone()) return;
+  if(isExistingUser()){
+    markProductTourDone();
+    return;
+  }
+  // MUST only trigger if this session is an actual fresh signup finishing onboarding!
+  if(!window.__isBrandNewUserOnboarding) return;
+  window.__isBrandNewUserOnboarding = false;
   if(document.getElementById('obWizard')?.classList.contains('open')) return;
   if(document.getElementById('landingPage')?.style.display==='block') return;
   startProductTour(false);
@@ -16987,6 +17191,7 @@ async function completeLocalSignup(username, password){
     }
     upsertLocalAccount(name, pass, {has_onboarded:false});
     lsSet('current_user', name);
+    window.__isBrandNewUserOnboarding = true;
     closeAuthModal();
     try{ document.getElementById('loginCanvas').style.display='none'; }catch(e){}
     try{ await loadAll(); }catch(e){}
@@ -16998,6 +17203,7 @@ async function completeLocalSignup(username, password){
   }
 
   // Sign in — strict credential check against local accounts profile array
+  window.__isBrandNewUserOnboarding = false;
   const acc=findLocalAccount(name);
   if(!acc){
     showAuthError('No account found for that username. Create one via Sign Up.');
@@ -17019,6 +17225,7 @@ async function completeLocalSignup(username, password){
   if(acc.has_onboarded || lsGet('has_onboarded')==='true' || userHasExistingWorkspace()){
     lsSet('has_onboarded','true');
     upsertLocalAccount(name, pass, {has_onboarded:true});
+    markProductTourDone();
     try{
       renderTabs(); renderPanels(); switchDay(todayJD()); updateUI();
       revealApp();
@@ -17875,4 +18082,4 @@ setTimeout(()=>{
 }, 2200);
 try{ setupAutoNotificationTriggers(); }catch(e){}
 </script>
-</html>
+</html> 
