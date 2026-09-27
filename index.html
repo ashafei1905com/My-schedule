@@ -12670,6 +12670,19 @@ function computeDayMacros(jd,iso){
   return{target,consumed};
 }
 
+// Macro Trends (Recharts) bundle reads these off window — they are module-scoped
+// above, so without this bridge getDayMacroStats always sees zeros even when the
+// main #macroBox bars are correct. Keep in sync if computeDayMacros signature changes.
+try{
+  window.computeDayMacros = computeDayMacros;
+  window.getJDfromISO = getJDfromISO;
+  window.TODAY = TODAY;
+  Object.defineProperty(window, 'SELECTED_DATE', {
+    get(){ return (typeof SELECTED_DATE !== 'undefined') ? SELECTED_DATE : TODAY; },
+    configurable: true
+  });
+}catch(e){ console.warn('macro trends window bridge failed', e); }
+
 function updateMacroUI(){
   const jd=getJDfromISO(SELECTED_DATE);
   const{target,consumed}=computeDayMacros(jd,SELECTED_DATE);
