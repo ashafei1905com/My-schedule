@@ -13681,12 +13681,18 @@ function aiFindTask(phrase,preferIso){
   if(!pTokens.length) return null;
   const pSet=new Set(pTokens);
 
+  // Intentionally INCLUDE free-time tasks — excluding them made "delete free time"
+  // match unrelated tasks (e.g. sleeping) because free was never a candidate.
+  const wantsFree=/free\s*time|freetime|وقت\s*حر|وقت\s*الفراغ|free\s*block/.test(p) || pSet.has('free');
+  const stop=new Set(['delete','remove','احذف','امسح','شيل','today','tomorrow','everyday','forever','every','day','week','task','the','and','from','in','on','to','a','an','only','just','please','نهائيا','دائما','كل','يوم','بس','النهاردة','بكرة','المهمة']);
+  const searchTokens=[...pSet].filter(t=>!stop.has(t) && t.length>=2);
+  const searchSet=new Set(searchTokens.length?searchTokens:[...pSet]);
+
   const candidates=[];
   for(let jd=0;jd<7;jd++){
     const iso=dateForWeekday(jd,TODAY);
     const tasks=getAllTasks(jd,iso);
     for(const t of tasks){
-      if(t[2]==='free') continue;
       candidates.push({task:t,iso,jd});
     }
   }
@@ -13697,16 +13703,22 @@ function aiFindTask(phrase,preferIso){
     if(!blob) continue;
     const nameTokens=blob.split(' ').filter(w=>w.length>=2);
     if(!nameTokens.length) continue;
+    // Prefer free-category when user clearly asked for free time
+    if(wantsFree && c.task[2]!=='free' && !/free|وقت\s*حر/.test(blob)) continue;
+    if(wantsFree && c.task[2]==='free'){
+      // strong candidate
+    }
     let overlap=0;
-    for(const tok of nameTokens) if(pSet.has(tok)) overlap++;
+    for(const tok of nameTokens) if(searchSet.has(tok)) overlap++;
     // Reverse / substring soft match
     if(overlap===0){
-      for(const pt of pSet){
+      for(const pt of searchSet){
         if(nameTokens.some(nt=>nt.includes(pt)||pt.includes(nt))) overlap+=0.6;
       }
     }
-    if(overlap===0) continue;
+    if(overlap===0 && !(wantsFree && c.task[2]==='free')) continue;
     let score=overlap/Math.max(nameTokens.length,1);
+    if(wantsFree && (c.task[2]==='free' || /free|وقت حر/.test(blob))) score=Math.max(score,0.95);
     const nameOnly=aiNormalize(c.task[4]||'');
     const enOnly=aiNormalize((typeof TASK_EN!=='undefined'&&TASK_EN[c.task[4]])||'');
     if(nameOnly&&(p.includes(nameOnly)||nameOnly.includes(p))) score=Math.max(score,0.9);
@@ -13949,12 +13961,43 @@ function aiParseIntent(msg){
       reply:`تم نقل "${found.task[4]}" من ${found.iso} إلى ${newDate}${resolvedTime?' الساعة '+resolvedTime:' (بنفس وقتها الأصلي)'} ✅`};
   }
 
-  // 3. Delete a task — "احذف السباحة النهاردة" / "delete swimming"
+  // 3. Delete a task — "احذف السباحة النهاردة" / "delete swimming" /
+  // "Delete free time in everyday forever"
   if(/احذف|امسح|شيل|delete|remove/.test(low)){
+    const forever=/forever|every\s*day|everyday|كل\s*يوم|نهائيا|دائما|من\s*دلوقتي|weekly|كل\s*أسبوع/.test(low);
+    const todayOnly=/today\s*only|just\s*today|النهاردة\s*بس|اليوم\s*فقط/.test(low);
+    const wantsFree=/free\s*time|freetime|وقت\s*حر|وقت\s*الفراغ/.test(low);
+    if(wantsFree && forever){
+      // Permanent delete of ALL free-time tasks across the week
+      const freeTasks=[];
+      for(let jd=0;jd<7;jd++){
+        const iso=dateForWeekday(jd,TODAY);
+        for(const t of getAllTasks(jd,iso)){
+          if(t[2]==='free' || /free\s*time|وقت\s*حر/.test(aiNormalize(t[4]||''))){
+            freeTasks.push({task:t,iso,jd});
+          }
+        }
+      }
+      if(!freeTasks.length){
+        const en=(USER_SETTINGS&&USER_SETTINGS.lang)==='en';
+        return{action:'unrecognizedTask',reply:en?'No free-time blocks found on the schedule.':'مفيش وقت حر ظاهر في الجدول.'};
+      }
+      const en=(USER_SETTINGS&&USER_SETTINGS.lang)==='en';
+      return{action:'deleteFreeForever',tasks:freeTasks,
+        reply:en?`Removed ${freeTasks.length} free-time block(s) forever from the weekly schedule 🗑️`:`اتشال ${freeTasks.length} وقت حر نهائياً من الجدول الأسبوعي 🗑️`};
+    }
     const found=aiFindTask(raw,SELECTED_DATE);
-    if(!found) return{action:'unrecognizedTask',reply:'مش لاقي المهمة دي. جرب تكتب اسمها زي ما هو ظاهر في الجدول.'};
-    return{action:'deleteTask',task:found.task,iso:found.iso,
-      reply:`تم حذف "${found.task[4]}" من ${found.iso} (لسه ظاهرة بس متعلّم عليها كمحذوفة) 🗑️`};
+    if(!found){
+      const en=(USER_SETTINGS&&USER_SETTINGS.lang)==='en';
+      return{action:'unrecognizedTask',reply:en?"Couldn't find that task. Use the name as it appears on the schedule.":'مش لاقي المهمة دي. جرب تكتب اسمها زي ما هو ظاهر في الجدول.'};
+    }
+    const en=(USER_SETTINGS&&USER_SETTINGS.lang)==='en';
+    if(forever && !todayOnly){
+      return{action:'deleteTask',task:found.task,iso:found.iso,forever:true,
+        reply:en?`Deleted "${found.task[4]}" forever from the weekly schedule 🗑️`:`تم حذف "${found.task[4]}" نهائياً من الجدول الأسبوعي 🗑️`};
+    }
+    return{action:'deleteTask',task:found.task,iso:found.iso,forever:false,
+      reply:en?`Deleted "${found.task[4]}" from ${found.iso} (hidden for that scope) 🗑️`:`تم حذف "${found.task[4]}" من ${found.iso} 🗑️`};
   }
 
   // 3b. Undo a delete / bring a removed task back — "رجعها" / "ارجع السباحة" /
@@ -14138,9 +14181,45 @@ async function aiExecuteAction(intent){
     await aiMoveTaskExec(task,fromIso,toDate,toTime);
     return true;
   }
+  if(action==='deleteFreeForever'){
+    const list=intent.tasks||[];
+    if(!USER_EDITS.deletes) USER_EDITS.deletes={};
+    for(const item of list){
+      const t=item.task||item;
+      if(t&&t[0]) USER_EDITS.deletes[t[0]]=true;
+      // Also strip from USER_SCHEDULE so it stays gone after reload
+      try{
+        for(let jd=0;jd<7;jd++){
+          if(USER_SCHEDULE[jd]?.ts){
+            USER_SCHEDULE[jd].ts=USER_SCHEDULE[jd].ts.filter(x=>x&&x[0]!==t[0]);
+          }
+        }
+      }catch(e){}
+    }
+    try{ await saveUserEdits(); }catch(e){}
+    try{ if(typeof saveUserSchedule==='function') await saveUserSchedule(); else if(typeof saveAll==='function') await saveAll(); }catch(e){}
+    return true;
+  }
   if(action==='deleteTask'){
-    const{task}=intent;
-    USER_EDITS.deletes[task[0]]=true;
+    const{task,forever,iso}=intent;
+    if(!USER_EDITS.deletes) USER_EDITS.deletes={};
+    if(!USER_EDITS.dayDeletes) USER_EDITS.dayDeletes={};
+    if(forever){
+      USER_EDITS.deletes[task[0]]=true;
+      try{
+        for(let jd=0;jd<7;jd++){
+          if(USER_SCHEDULE[jd]?.ts){
+            USER_SCHEDULE[jd].ts=USER_SCHEDULE[jd].ts.filter(x=>x&&x[0]!==task[0]);
+          }
+        }
+      }catch(e){}
+      try{ if(typeof saveUserSchedule==='function') await saveUserSchedule(); }catch(e){}
+    }else if(iso){
+      if(!USER_EDITS.dayDeletes[iso]) USER_EDITS.dayDeletes[iso]={};
+      USER_EDITS.dayDeletes[iso][task[0]]=true;
+    }else{
+      USER_EDITS.deletes[task[0]]=true;
+    }
     await saveUserEdits();
     return true;
   }
@@ -14456,35 +14535,54 @@ SCIENTIFIC STANDARDS:
 `;
   }
 
-  return `You are "Chaos Coordinator" — a smart schedule + habit buddy inside the user's phone.
-Talk like a real person: casual, clear, helpful. Match the user's vibe (chill, slangy, short, long — whatever they use).
-Do NOT sound like a corporate bot. NEVER require magic command words or fixed phrases.
+  return `You are "Chaos Coordinator," an elite, empathetic AI Co-Pilot and Fitness/Life Coach integrated into the user's personal OS. Your job is to seamlessly assist with daily task management, scheduling, habit tracking, gamification, and scientific nutrition coaching.
 
-### 0. NATURAL LANGUAGE (MOST IMPORTANT)
-- Understand the user NO MATTER how they type: formal, slang, dialect, mixed Arabic+English, typos, voice-to-text, incomplete sentences, emoji-only clues.
-- There is NO required phrasing. "الدرس اتلغى النهاردة" / "lesson cancelled today" / "no math 2day" / "المث مش هيحصل" are all the same intent.
-- Infer intent from meaning, not keywords. If unclear on ONE detail, ask a short question — otherwise act.
-- Scope matters: "today only" / "النهاردة بس" / "just this once" = one-day change (skip). "every week" / "من دلوقتي" / "from now on" = permanent schedule change.
-- Time changes: "moved to 4:30" / "بقى الساعة ٤ ونص" → move/update that task's time for the scope they imply.
+==================================================
+1. CORE IDENTITY & BILINGUAL EXECUTION
+==================================================
+- Language: Detect and match the user's language instantly (English or Arabic). If Arabic, use clear, modern, encouraging Arabic suitable for UI cards and conversational chat. NEVER mix languages in one reply — pure English OR pure Arabic matching the user.
+- Tone: High-energy, supportive, objective, and action-oriented. Never judge, debate, or invalidate the user's choices.
+- Talk like a real coach in a chat app: punchy, clear, helpful. No corporate fluff.
 
-### 1. LANGUAGE & STYLE
-- Reply in the same language the user is using right now (English, Arabic dialect, mixed — fine).
-- Egyptian / Gulf / Levantine Arabic are all OK. Typos and voice-to-text mess are OK.
-- Keep answers short unless they ask for detail. No stiff "How may I assist you today?".
+==================================================
+2. NUTRITION & MACRO COACHING DOMAIN
+==================================================
+- Goal Validation (STRICT): Always support the user's active primary goal from fitness context below (Build Muscle / Recomp / Lose Fat).
+  * Build Muscle: strength, hypertrophy, progressive overload, clean surplus (+200-250 kcal).
+  * Recomp: fat loss + lean gain near maintenance, high protein, heavy compounds.
+  * Lose Fat: controlled deficit, protect lean mass, high protein density.
+- Use the scientific targets in the FITNESS CONTEXT section when present (BMR, TDEE, macros).
+- Natural meal logging: parse meals, estimate P/C/F/kcal. If protein weight is unclear, ask raw vs cooked once, briefly.
 ${fitnessContext}
 
-### 2. WHAT YOU CAN DO (through the app tools)
-- Full control: slots, week rebuild, add/move/delete/skip tasks, categories, food log, mark done, points, remember facts.
-- Users may ramble: "bro make me a studying slot and I'll send my school table" — understand the intent and do it.
+==================================================
+3. TASK MANAGEMENT & SCHEDULE DOMAIN
+==================================================
+- NATURAL LANGUAGE (CRITICAL): Understand formal, slang, dialect, mixed EN/AR, typos, incomplete sentences. NO magic command phrases required.
+- Infer intent from meaning. If one detail is unclear, ask ONE short question — otherwise act.
+- SCOPE (CRITICAL — wrong scope is a bug):
+  * "today only" / "النهاردة بس" / "just this once" = one-day skip/hide only.
+  * "every day" / "everyday" / "forever" / "من دلوقتي" / "دائماً" = permanent schedule change (USER_SCHEDULE / deletes).
+  * "Delete free time in everyday forever" means remove Free Time tasks from the recurring weekly schedule — NOT "sleeping" and NOT a single date.
+- Match the task name the user said. Never delete a different task.
+- Categories: prefer Studies, Gym, Prayer, Work, Routine, Food, Free Time, Sleep, or the user's custom categories.
+- On completion: brief XP / streak encouragement when relevant.
 
-### 3. MEMORY
-- If they share something durable (school end time, preferred study hours, subjects), end with: [REMEMBER: fact in third person]
-- Tag is stripped before they see the reply.
+==================================================
+4. SPIRITUAL & GAMIFICATION DOMAIN
+==================================================
+- Respect prayer times and spiritual logging without blocking urgent focus.
+- Frame consistency (food, tasks, prayers) as ranks, rebirth tokens, and mythic unlocks when it fits naturally.
 
-### 4. STUDY / SCHOOL PLANNING
-- New slot if they want one named (Studying, School, etc.).
-- From photo or text of lessons + home time → build after-school study blocks on the active slot.
-- Harder subjects earlier; leave room for food, rest, sleep, prayers.`;
+==================================================
+5. OUTPUT FORMAT & RESPONSE RULES
+==================================================
+- Conversational chat: punchy, concise; bold headers and bullets when listing.
+- Action summaries: exact numbers (kcal, grams, time, XP) when logging meals or scheduling.
+- MEMORY: if they share something durable (school end time, preferred study hours, weight), end with [REMEMBER: fact in third person] (stripped before display).
+- Never invent task IDs or times that are not in context.
+- Keep answers short unless they ask for detail.`;
+
 }
 
 const AI_SYSTEM_PROMPT = getChaosCoordinatorSystemPrompt();
@@ -14564,10 +14662,10 @@ async function aiResolveRelativeMove(msg){
   }
   const context=aiBuildWeekTaskContext();
   const sys=`You resolve a scheduling instruction into an exact move decision. You will receive the user's instruction and the full week's task list (id, name, time, date) in JSON. Respond with ONLY a raw JSON object, nothing else — no markdown fences, no explanation:
-{"taskId":"<id of the task to move>","toDate":"YYYY-MM-DD","toTime":"H:MM ص" or "H:MM م","reasoning":"<one short sentence in Arabic explaining the placement>"}
+{"taskId":"<id of the task to move>","toDate":"YYYY-MM-DD","toTime":"H:MM AM/PM or 24h","reasoning":"<one short sentence in the SAME language as the user>"}
 If you cannot confidently identify the task or the reference task, respond with:
-{"error":"<short Arabic explanation of what's missing>"}
-Rules: "before X" means schedule at least 15 minutes earlier than X's time, same date as X unless the user said otherwise. "after X" means at least 15 minutes later than X's time, same date as X unless the user said otherwise. Never invent a task id that isn't in the provided list.`;
+{"error":"<short explanation in the SAME language as the user>"}
+Rules: Match the user's language (English or Arabic) in reasoning/error. "before X" = at least 15 minutes earlier than X, same date as X unless said otherwise. "after X" = at least 15 minutes later. Never invent a task id not in the list.`;
   try{
     const res=await fetch(AI_WORKER_URL,{
       method:'POST',
@@ -15991,10 +16089,10 @@ async function aiProcessClause(clauseText){
   // locally and deterministically through the real data functions — never through
   // the LLM. This is intentional: correctness and safety for actual data mutations
   // matter more than routing everything through one code path.
-  if(['markDone','skipTask','moveTask','deleteTask','restoreTask','unmarkDone','editPoints','addCustomTask','rememberFact','openPrayerModal','openFoodLogModal','setCurStreak','setBestStreak','setWeeklyPoints','setPunishRate','alreadyDone','unrecognizedTask','needMoreInfo'].includes(intent.action)){
+  if(['markDone','skipTask','moveTask','deleteTask','deleteFreeForever','restoreTask','unmarkDone','editPoints','addCustomTask','rememberFact','openPrayerModal','openFoodLogModal','setCurStreak','setBestStreak','setWeeklyPoints','setPunishRate','alreadyDone','unrecognizedTask','needMoreInfo'].includes(intent.action)){
     let tone='ok';
     let snapshot=null;
-    const mutatingActions=['markDone','skipTask','moveTask','deleteTask','restoreTask','unmarkDone','editPoints','addCustomTask','createCategory','editCategory','deleteCategory','createScheduleSlot','replaceWeeklySchedule','rememberFact','setCurStreak','setBestStreak','setWeeklyPoints','setPunishRate'];
+    const mutatingActions=['markDone','skipTask','moveTask','deleteTask','deleteFreeForever','restoreTask','unmarkDone','editPoints','addCustomTask','createCategory','editCategory','deleteCategory','createScheduleSlot','replaceWeeklySchedule','rememberFact','setCurStreak','setBestStreak','setWeeklyPoints','setPunishRate'];
     try{
       if(mutatingActions.includes(intent.action)){
         snapshot=aiSnapshotState(); // taken BEFORE execution so undo restores the true prior state
