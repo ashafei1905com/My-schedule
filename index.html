@@ -5878,7 +5878,10 @@ const PMETA={
 const DKEYS=['sun','mon','tue','wed','thu','fri','sat'];
 const DSHORT=['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
 const WEEK_ORDER=[6,0,1,2,3,4,5];
-const FALLBK={Fajr:'03:13',Sunrise:'04:50',Dhuhr:'11:51',Asr:'15:25',Maghrib:'18:51',Isha:'20:26'};
+// Kuwait City method=9 ballpark (late Sep). Used ONLY when Aladhan is unreachable.
+// Old values (03:13 / 18:51 / 20:26) were non-Kuwait and matched the iPhone bug exactly
+// whenever fetchPrayers failed — so a network/geo timeout looked like "wrong city".
+const FALLBK={Fajr:'04:20',Sunrise:'05:39',Dhuhr:'11:39',Asr:'15:05',Maghrib:'17:39',Isha:'18:56'};
 let PRYT={...FALLBK};
 
 const FREE_TIME={
@@ -9548,7 +9551,14 @@ const PRAYER_TUNE='0,0,0,0,0,0,0,0,0';
 async function getPrayerCoords(){
   // Cached from a previous grant — never re-prompt if we already have a location.
   const cached=await sGet(LS_GEO_COORDS);
-  if(cached && cached.lat && cached.lon) return cached;
+  if(cached && cached.lat && cached.lon){
+    // Reject clearly non-Kuwait caches (travel / bad GPS). This app is Kuwait-centric
+    // (method=9 + Asia/Kuwait); a stale Cairo/Riyadh cache shifts every prayer by
+    // tens of minutes and is worse than Kuwait City center.
+    const lat=+cached.lat, lon=+cached.lon;
+    if(lat>=28.5 && lat<=30.2 && lon>=46.5 && lon<=48.6) return cached;
+    try{ await sSet(LS_GEO_COORDS,null); }catch(e){}
+  }
 
   if(typeof navigator==='undefined' || !navigator.geolocation){
     return KUWAIT_CITY_FALLBACK;
@@ -9558,8 +9568,14 @@ async function getPrayerCoords(){
     navigator.geolocation.getCurrentPosition(
       async pos=>{
         const coords={lat:pos.coords.latitude,lon:pos.coords.longitude};
-        await sSet(LS_GEO_COORDS,coords);
-        resolve(coords);
+        // Only persist Kuwait-region fixes so a one-off abroad session doesn't lock
+        // the home-screen PWA onto foreign prayer times forever.
+        if(coords.lat>=28.5 && coords.lat<=30.2 && coords.lon>=46.5 && coords.lon<=48.6){
+          await sSet(LS_GEO_COORDS,coords);
+          resolve(coords);
+        }else{
+          resolve(KUWAIT_CITY_FALLBACK);
+        }
       },
       ()=>{
         // Denied, blocked, or timed out — fall back to city-level accuracy for
@@ -9569,7 +9585,9 @@ async function getPrayerCoords(){
         // being stuck on the fallback forever.
         resolve(KUWAIT_CITY_FALLBACK);
       },
-      {timeout:8000,maximumAge:Infinity}
+      // iOS Safari often needs >5s for a cold GPS fix; keep this short so the
+      // outer fetchPrayers timeout still has budget left for the Aladhan call.
+      {timeout:4000,maximumAge:86400000,enableHighAccuracy:false}
     );
   });
 }
@@ -9595,8 +9613,17 @@ async function fetchPrayers(forIso){
     promise,
     new Promise((_,rej)=>setTimeout(()=>rej(new Error('timeout')),ms))
   ]);
+  // Always resolve to some coords — never let a slow/denied GPS skip the Aladhan
+  // request. Previously a geo timeout threw into the outer catch and left the iPhone
+  // on static FALLBK (03:13/20:26) while desktop (which often denied geo instantly
+  // and used Kuwait City) got live method=9 times.
+  let lat=KUWAIT_CITY_FALLBACK.lat, lon=KUWAIT_CITY_FALLBACK.lon;
   try{
-    const {lat,lon}=await withTimeout(getPrayerCoords(),7000);
+    const c=await withTimeout(getPrayerCoords(),4500);
+    if(c && c.lat!=null && c.lon!=null){ lat=+c.lat; lon=+c.lon; }
+  }catch(e){ /* keep Kuwait City */ }
+
+  try{
     // Date-specific timings so each day shows its own prayer times
     let datePart='';
     try{
@@ -9607,7 +9634,7 @@ async function fetchPrayers(forIso){
     const url=datePart
       ?`https://api.aladhan.com/v1/timings${datePart}?latitude=${lat}&longitude=${lon}&method=9&tune=${PRAYER_TUNE}`
       :`https://api.aladhan.com/v1/timings?latitude=${lat}&longitude=${lon}&method=9&tune=${PRAYER_TUNE}`;
-    const res=await withTimeout(fetch(url),7000);
+    const res=await withTimeout(fetch(url),8000);
     const json=await res.json();
     if(json&&json.code===200){
       const t=json.data.timings;
@@ -9619,8 +9646,11 @@ async function fetchPrayers(forIso){
         Maghrib:stripTimeSec(t.Maghrib),
         Isha:stripTimeSec(t.Isha)
       };
-    } else throw new Error();
-  }catch{PRYT={...FALLBK};}
+    } else throw new Error('aladhan non-200');
+  }catch(e){
+    console.warn('fetchPrayers failed, using FALLBK', e);
+    PRYT={...FALLBK};
+  }
 }
 
 // ===== Notifications (Web Push) =====
