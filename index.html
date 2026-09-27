@@ -39,7 +39,7 @@
 <script src="https://cdn.jsdelivr.net/npm/d3@7/dist/d3.min.js"></script>
 <script src="macro-trends.bundle.js"></script>
 <style>
-:root{--bg:#0a0e1a;--bg-main:#0a0e1a;--c:#111827;--c2:#1a2235;--br:#1e2d45;--ac:#3b82f6;--accent-color:#3b82f6;--accent-glow:rgba(59,130,246,0.4);--text-main:#f1f5f9;--text-on-accent:#ffffff;--gr:#10b981;--or:#f59e0b;--rd:#ef4444;--pu:#8b5cf6;--ye:#fbbf24;--cy:#06b6d4;--pk:#ec4899;--tx:#f1f5f9;--mu:#64748b;--so:#94a3b8;--scrollbar-size:8px;--scrollbar-track:transparent;--scrollbar-thumb:var(--br);--scrollbar-thumb-hover:var(--ac)}
+:root{--bg:#0a0e1a;--bg-main:#0a0e1a;--c:#111827;--c2:#1a2235;--br:#1e2d45;--ac:#3b82f6;--accent-color:#3b82f6;--accent-glow:rgba(59,130,246,0.4);--text-main:#f1f5f9;--text-on-accent:#ffffff;--gr:#10b981;--or:#f59e0b;--rd:#ef4444;--pu:#8b5cf6;--ye:#fbbf24;--cy:#06b6d4;--pk:#ec4899;--tx:#f1f5f9;--mu:#64748b;--so:#94a3b8;--scrollbar-size:8px;--scrollbar-track:transparent;--scrollbar-thumb:var(--br);--scrollbar-thumb-hover:var(--ac);--duration-snappy:220ms;--ease-snappy:cubic-bezier(0.22,1,0.36,1)}
 *{margin:0;padding:0;box-sizing:border-box}
 body{font-family:'Cairo',sans-serif;background:var(--bg);color:var(--tx)}
 /* Themed scrollbars (Firefox + Chromium/WebKit) — follow --bg/--br/--ac when theme changes */
@@ -165,6 +165,15 @@ html[dir="ltr"] .tc[data-c="sunrise"]{border-left:3px solid var(--or)}
   from{opacity:0;transform:translateY(4px) scale(0.92)}
   to{opacity:1;transform:translateY(0) scale(1)}
 }
+@keyframes tcEnter{
+  from{opacity:0;transform:translateY(12px) translateX(6px) scale(0.98)}
+  to{opacity:1;transform:translateY(0) translateX(0) scale(1)}
+}
+html[dir="rtl"] .tc{animation-name:tcEnterRtl}
+@keyframes tcEnterRtl{
+  from{opacity:0;transform:translateY(12px) translateX(-6px) scale(0.98)}
+  to{opacity:1;transform:translateY(0) translateX(0) scale(1)}
+}
 #sbar{position:sticky;top:0;z-index:100;background-color:var(--bg-main);border-bottom:1px solid rgba(255,255,255,0.05);color:var(--text-main);backdrop-filter:blur(12px);padding:12px 16px;display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;min-height:64px}
 #sbar .sbar-stats{display:flex;gap:14px;align-items:center;flex:1;justify-content:center}
 #sbar .sbar-auth{display:flex;flex-direction:column;align-items:flex-end;gap:6px;flex-shrink:0}
@@ -239,7 +248,8 @@ html[dir="ltr"] .tc[data-c="sunrise"]{border-left:3px solid var(--or)}
 .ptim{font-size:.72rem;font-weight:700}
 .tl{position:relative;padding-right:20px}
 .tl::before{content:'';position:absolute;right:7px;top:0;bottom:0;width:2px;background:linear-gradient(to bottom,var(--ac),transparent);border-radius:2px}
-.tc{position:relative;margin-bottom:8px;padding:12px 14px;background:var(--c);border:1px solid var(--br);border-radius:12px;display:flex;align-items:flex-start;gap:10px;transition:opacity .45s cubic-bezier(0.4,0,0.2,1),background .35s ease,border-color .35s ease,filter .45s ease,transform .25s ease,box-shadow .25s ease}
+.tc{position:relative;margin-bottom:8px;padding:12px 14px;background:var(--c);border:1px solid var(--br);border-radius:12px;display:flex;align-items:flex-start;gap:10px;animation:tcEnter var(--duration-snappy) var(--ease-snappy) both;transition:opacity .45s cubic-bezier(0.4,0,0.2,1),background .35s ease,border-color .35s ease,filter .45s ease,transform var(--duration-snappy) var(--ease-snappy),box-shadow var(--duration-snappy) var(--ease-snappy)}
+.tc:hover{transform:translateY(-2px) scale(1.012);box-shadow:0 10px 28px -6px rgba(0,0,0,.42),0 0 18px -4px color-mix(in srgb,var(--accent-color,var(--ac)) 22%,transparent);border-color:color-mix(in srgb,var(--accent-color,var(--ac)) 40%,var(--br))}
 .tc-drag-handle{display:inline-flex;align-items:center;justify-content:center;width:22px;height:32px;cursor:grab;color:var(--mu);opacity:.45;transition:opacity .2s ease,color .2s ease,transform .2s ease,background .2s;user-select:none;-webkit-user-select:none;touch-action:none;flex-shrink:0;margin-top:2px;border-radius:8px}
 .tc-drag-handle:hover{opacity:1;color:var(--ac);transform:scale(1.08);background:color-mix(in srgb, var(--ac) 12%, transparent)}
 .tc-drag-handle:active{cursor:grabbing;background:color-mix(in srgb, var(--ac) 18%, transparent)}
@@ -720,7 +730,7 @@ html[dir="ltr"] .tc[data-c="sunrise"]{border-left:3px solid var(--or)}
   #sbar{padding:10px 12px;min-height:56px}
   .sbar-stats{gap:10px}
   .sv{font-size:1.25rem}
-  .ptour-card{left:12px!important;right:12px!important;width:auto!important;max-width:none!important;transform:none!important}
+  .ptour-card{left:12px!important;right:12px!important;width:auto!important;max-width:none!important;transform:none!important;bottom:auto}
 }
 /* FC Mobile–style product tour */
 .product-tour{position:fixed;inset:0;z-index:12050;display:none;pointer-events:none;overflow:hidden}
@@ -3785,15 +3795,8 @@ body.theme-matrix .tctime{
         </div>
         <div class="set-section" id="setsec-notifications">
           <h3 data-i18n="sec_notif">التذكيرات (تعمل تلقائياً)</h3>
-          <p class="desc" data-i18n="sec_notif_desc">Reminders stay always-on. Once permission is granted, the next 30 days are stored in the cloud and the server keeps sending them even if you stop opening the app. Open the app occasionally so the next window can refresh.</p>
-          <div class="set-actions" style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">
-            <button type="button" id="btn-notif-toggle" class="topbtn" style="background:rgba(16,185,129,.18);border:1px solid var(--br);color:var(--gr)">🔔 التذكيرات (تلقائية)</button>
-            <button type="button" id="btn-notif-test" class="altbtn" style="padding:8px 12px;font-size:0.85rem">🔔 تجربة الإشعار</button>
-          </div>
-          <div id="notif-sync-badge" style="font-size:0.8rem;margin-top:8px;color:var(--gr);font-weight:600">✅ التذكيرات تعمل تلقائياً في الخلفية</div>
-          <p class="desc" style="margin-top:16px;font-weight:800" id="taskNotifListTitle">Per-task notifications</p>
-          <div id="taskNotifList" style="margin-top:8px;display:flex;flex-direction:column;gap:8px"></div>
-          <p class="desc" style="margin-top:18px;font-weight:800" id="prayerLocTitle">Prayer locations</p>
+          <!-- Prayer locations at top of Reminders for visibility -->
+          <p class="desc" style="margin-top:4px;font-weight:800" id="prayerLocTitle">Prayer locations</p>
           <p class="desc" id="prayerLocDesc">Mosque is fixed at max points. Add your own places below (points capped at Mosque).</p>
           <div id="prayerLocList" style="margin-top:8px"></div>
           <div style="display:flex;gap:8px;margin-top:10px;flex-wrap:wrap;align-items:center">
@@ -3802,6 +3805,14 @@ body.theme-matrix .tctime{
             <input id="prayerLocPts" type="number" min="1" max="5" value="2" style="width:64px;padding:8px;border-radius:8px;border:1px solid var(--br);background:var(--c);color:var(--tx)">
             <button type="button" id="prayerLocAddBtn" class="altbtn">Add</button>
           </div>
+          <p class="desc" id="secNotifDesc" data-i18n="sec_notif_desc" style="margin-top:18px">Reminders stay always-on. Once permission is granted, the next 30 days are stored in the cloud and the server keeps sending them even if you stop opening the app. Open the app occasionally so the next window can refresh.</p>
+          <div class="set-actions" style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">
+            <button type="button" id="btn-notif-toggle" class="topbtn" style="background:rgba(16,185,129,.18);border:1px solid var(--br);color:var(--gr)">🔔 التذكيرات (تلقائية)</button>
+            <button type="button" id="btn-notif-test" class="altbtn" style="padding:8px 12px;font-size:0.85rem">🔔 تجربة الإشعار</button>
+          </div>
+          <div id="notif-sync-badge" style="font-size:0.8rem;margin-top:8px;color:var(--gr);font-weight:600">✅ التذكيرات تعمل تلقائياً في الخلفية</div>
+          <p class="desc" style="margin-top:16px;font-weight:800" id="taskNotifListTitle">Per-task notifications</p>
+          <div id="taskNotifList" style="margin-top:8px;display:flex;flex-direction:column;gap:8px"></div>
         </div>
         <div class="set-section" id="setsec-reports">
           <h3 data-i18n="sec_reports">التقارير</h3>
@@ -7513,7 +7524,8 @@ function applyI18n(){
   // Notifications section heading
   const secNotif=document.querySelector('#setsec-notifications h3');
   if(secNotif) secNotif.textContent=isEn?'Reminders':'التذكيرات';
-  const secNotifDesc=document.querySelector('#setsec-notifications > .desc');
+  // Prefer explicit id — after Prayer locations moved to top, the first > .desc is no longer the reminders blurb
+  const secNotifDesc=document.getElementById('secNotifDesc') || document.querySelector('#setsec-notifications [data-i18n="sec_notif_desc"]');
   if(secNotifDesc) secNotifDesc.textContent=isEn
     ?'Reminders stay always-on via cloud push for the next 30 days — they keep firing after you leave the app. Open the app occasionally to refresh the next window.'
     :'تعمل التذكيرات وتتزامن سحابياً لمدة ١٤ يوماً قادمة بشكل تلقائي.';
@@ -17265,31 +17277,34 @@ function ptourPlaceCard(rect){
   const pad=12;
   const vW=window.innerWidth;
   const vH=window.innerHeight;
-  card.style.maxWidth = Math.min(380, vW - pad*2) + 'px';
+  // Full-bleed on narrow screens; still respect pad for readability
+  const narrow = vW < 720;
+  card.style.maxWidth = narrow ? (vW - pad*2) + 'px' : Math.min(380, vW - pad*2) + 'px';
   const cw = Math.min(card.offsetWidth || 320, vW - pad*2);
-  const ch = card.offsetHeight || 180;
+  const ch = Math.min(card.offsetHeight || 180, vH - pad*2);
   let top, left;
 
-  if(!rect || rect.width===0 || rect.height===0 || rect.bottom < 0 || rect.top > vH){
-    // Centered modal
-    top = Math.max(pad, Math.round((vH - ch)/2));
-    left = Math.max(pad, Math.round((vW - cw)/2));
-  }else{
-    // Horizontal center over element, clamped within padding
-    const elCenter = rect.left + rect.width / 2;
-    left = Math.min(Math.max(pad, Math.round(elCenter - cw / 2)), vW - cw - pad);
+  // Always center horizontally — mobile !important left/right also does this
+  left = Math.max(pad, Math.round((vW - cw) / 2));
 
+  if(!rect || rect.width===0 || rect.height===0 || rect.bottom < 0 || rect.top > vH){
+    // No target: dock near bottom so main UI stays readable behind the shade
+    top = Math.max(pad, Math.round(vH - ch - pad - 8));
+  }else{
     const spaceBelow = vH - rect.bottom - pad;
     const spaceAbove = rect.top - pad;
-
-    if(spaceBelow >= ch + 14){
+    const targetTall = rect.height > vH * 0.32;
+    // Prefer below the highlight; if cramped or target is tall, dock to bottom/top of viewport
+    if(!targetTall && spaceBelow >= ch + 16){
       top = Math.round(rect.bottom + 14);
-    }else if(spaceAbove >= ch + 14){
+    }else if(!targetTall && spaceAbove >= ch + 16){
       top = Math.round(rect.top - ch - 14);
-    }else if(spaceBelow >= spaceAbove){
-      top = Math.min(Math.round(rect.bottom + 10), vH - ch - pad);
+    }else if(rect.top < vH * 0.45){
+      // Target in upper half → tip at bottom of screen (main schedule pattern)
+      top = Math.max(pad, Math.round(vH - ch - pad - 8));
     }else{
-      top = Math.max(pad, Math.round(rect.top - ch - 10));
+      // Target lower → tip near top
+      top = pad + 8;
     }
   }
 
@@ -17298,6 +17313,9 @@ function ptourPlaceCard(rect){
 
   card.style.top = top + 'px';
   card.style.left = left + 'px';
+  card.style.right = 'auto';
+  card.style.bottom = 'auto';
+  card.style.transform = 'none';
 }
 
 function ptourUpdateSpotlight(el, step){
@@ -17319,10 +17337,19 @@ function ptourUpdateSpotlight(el, step){
   }
   const m=8;
   const pad=4;
-  const top = Math.max(pad, Math.round(r.top - m));
-  const left = Math.max(pad, Math.round(r.left - m));
-  const width = Math.min(window.innerWidth - left - pad, Math.round(r.width + m*2));
-  const height = Math.min(window.innerHeight - top - pad, Math.round(r.height + m*2));
+  const vH=window.innerHeight;
+  const vW=window.innerWidth;
+  // Cap very large targets (full day headers, long lists) so the tip has room
+  const maxH = Math.round(vH * 0.42);
+  const maxW = Math.round(vW * 0.96);
+  let top = Math.max(pad, Math.round(r.top - m));
+  let left = Math.max(pad, Math.round(r.left - m));
+  let width = Math.min(vW - left - pad, Math.round(r.width + m*2), maxW);
+  let height = Math.min(vH - top - pad, Math.round(r.height + m*2), maxH);
+  // If we capped height and the element is taller, keep the visible top of the target in frame
+  if(r.height + m*2 > maxH){
+    height = maxH;
+  }
 
   spot.style.display='block';
   spot.style.top=top+'px';
@@ -17330,7 +17357,8 @@ function ptourUpdateSpotlight(el, step){
   spot.style.width=width+'px';
   spot.style.height=height+'px';
   if(shade) shade.style.background='transparent';
-  ptourPlaceCard(r);
+  // Placement uses the *visible* spotlight box so the card never covers the glow
+  ptourPlaceCard({top, left, width, height, bottom: top + height, right: left + width});
 }
 
 function ptourReposition(){
@@ -17432,15 +17460,25 @@ function ptourShowStep(i){
   };
   el=resolveEl();
 
-  // Bring target near the top of the viewport so the tip + highlight are readable
+  // Bring target into the upper third of the viewport so tip can dock below/bottom
   try{
     if(el){
-      el.scrollIntoView({block:'start',inline:'nearest',behavior:'smooth'});
-      // Also scroll parent containers (settings content)
-      const scroller=el.closest('.set-content, .set-body, #settingsScreen, .pan, #app');
+      el.scrollIntoView({block:'center',inline:'nearest',behavior:'smooth'});
+      // Nudge window so target sits ~22% from top (leaves room for bottom tip)
+      setTimeout(()=>{
+        try{
+          const rr=el.getBoundingClientRect();
+          const idealTop = Math.round(window.innerHeight * 0.18);
+          const delta = rr.top - idealTop;
+          if(Math.abs(delta) > 24){
+            window.scrollBy({top:delta, behavior:'smooth'});
+          }
+        }catch(e){}
+      }, 80);
+      const scroller=el.closest('.set-content, .set-body, #settingsScreen, .pan.act, #app');
       if(scroller && scroller!==el){
         try{
-          const top=el.offsetTop - 12;
+          const top=el.offsetTop - 24;
           if(typeof scroller.scrollTo==='function') scroller.scrollTo({top:Math.max(0,top),behavior:'smooth'});
           else scroller.scrollTop=Math.max(0,top);
         }catch(e){}
@@ -17464,9 +17502,11 @@ function ptourShowStep(i){
       ptourUpdateSpotlight(null, step);
     }
   };
-  setTimeout(apply, 120);
-  setTimeout(apply, 380);
-  setTimeout(apply, 750);
+  // Smooth scroll needs a beat before measuring rects
+  setTimeout(apply, 60);
+  setTimeout(apply, 280);
+  setTimeout(apply, 520);
+  setTimeout(apply, 900);
 }
 
 function startProductTour(force){
