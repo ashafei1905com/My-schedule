@@ -1,6 +1,6 @@
 <!DOCTYPE html>
 <html lang="en" dir="ltr">
-<!-- cache-bust: 2026-09-25b -->
+<!-- cache-bust: 2026-09-27-onboard-race -->
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1.0,maximum-scale=1.0,user-scalable=no">
@@ -18694,6 +18694,13 @@ function initLandingDynamicEffects(){
 function userHasExistingWorkspace(){
   try{
     if(USER_SETTINGS && USER_SETTINGS.onboardingComplete) return true;
+    if(USER_SETTINGS && (USER_SETTINGS.displayNameChosen || USER_SETTINGS.workspaceName)) return true;
+    if(lsGet('has_onboarded')==='true') return true;
+    // Any real progress means this is NOT a brand-new account — never re-run the
+    // 7-step wizard (it was wiping returning users when cloud hydrate was slow).
+    if(STATS && ((STATS.pts||0)>0 || (STATS.best||0)>0 || (STATS.cur||0)>0 || (STATS.lifetime_xp||0)>0 || STATS.lc || STATS.lf)) return true;
+    if(FIRST_SEEN && !IS_BRAND_NEW_SESSION) return true;
+    if(historyData && Object.keys(historyData).length>0) return true;
     if(USER_SCHEDULE && Object.keys(USER_SCHEDULE).length>0){
       for(const k of Object.keys(USER_SCHEDULE)){
         const day=USER_SCHEDULE[k];
@@ -18717,9 +18724,22 @@ function syncOnboardedFlagFromState(){
   if(userHasExistingWorkspace()){
     lsSet('has_onboarded','true');
     PENDING_ONBOARDING=false;
+    try{ document.getElementById('obWizard')?.classList.remove('open'); }catch(e){}
     return true;
   }
   return false;
+}
+function dismissOnboardingIfReturningUser(){
+  if(!userHasExistingWorkspace()) return false;
+  PENDING_ONBOARDING=false;
+  lsSet('has_onboarded','true');
+  try{ document.getElementById('obWizard')?.classList.remove('open'); }catch(e){}
+  try{
+    renderTabs(); renderPanels(); switchDay(todayJD()); updateUI();
+    if(typeof renderSlotsUI==='function') renderSlotsUI();
+    if(typeof applyTheme==='function') applyTheme();
+  }catch(e){}
+  return true;
 }
 
 function showLandingIfNeeded(){
@@ -18838,7 +18858,12 @@ function initAppFlow(user){
   try{
     syncOnboardedFlagFromState();
     const hasExisting = userHasExistingWorkspace();
-    const needsOnboarding = (!hasExisting) && lsGet('has_onboarded')!=='true';
+    // Signed-in but cloud not hydrated yet: do NOT start the 7-step wizard.
+    // On iPhone the first open often races ahead of getDoc; showing onboarding
+    // here was the "7 questions → wrong colors/slot" bug. Wait for hydrate.
+    const signedIn = !!(user && (user.uid || user.email));
+    const waitingForCloud = signedIn && !CLOUD_SCHEDULES_HYDRATED;
+    const needsOnboarding = (!hasExisting) && lsGet('has_onboarded')!=='true' && !waitingForCloud;
     if(needsOnboarding && (user || lsGet('current_user'))){
       OB_STEP=0;
       OB_ANSWERS={
@@ -18910,13 +18935,18 @@ if (typeof onAuthStateChanged !== 'undefined' && typeof fbAuth !== 'undefined') 
       // manual refresh to recover, and the banner only shows when the load has
       // genuinely failed twice in a row, not on the first blip.
       let ud = null;
+      // Mobile (especially iOS PWA on cellular) often needs >3.5s for the first
+      // Firestore getDoc after a cold WebChannel. The old 3.5s/2.5s caps made cloud
+      // hydrate fail silently → phone kept bare local slots + local pts and looked
+      // "totally out of sync" even when the account data was fine on the laptop.
       try{
-        const fetchTimeout = new Promise((_, rej) => setTimeout(() => rej(new Error('Firestore timeout')), 3500));
+        const fetchTimeout = new Promise((_, rej) => setTimeout(() => rej(new Error('Firestore timeout')), 12000));
         ud = await Promise.race([getDoc(doc(fbDb,'users',user.uid)), fetchTimeout]);
       }catch(e0){
         console.warn('cloud load failed or timed out, retrying once',e0);
         try{
-          const retryTimeout = new Promise((_, rej) => setTimeout(() => rej(new Error('Firestore retry timeout')), 2500));
+          await new Promise(r=>setTimeout(r,800));
+          const retryTimeout = new Promise((_, rej) => setTimeout(() => rej(new Error('Firestore retry timeout')), 15000));
           ud = await Promise.race([getDoc(doc(fbDb,'users',user.uid)), retryTimeout]);
         }catch(e1){
           console.warn('cloud retry also failed or timed out', e1);
@@ -18946,10 +18976,16 @@ if (typeof onAuthStateChanged !== 'undefined' && typeof fbAuth !== 'undefined') 
             // Weekly points: if local already rolled into a newer week than cloud,
             // local's pts (post-reset, often 0) is authoritative — never max-merge
             // against a stale cloud total from the previous week.
+            // Exception: a brand-new local session (fresh PWA / cleared site data)
+            // must adopt cloud stats wholesale — otherwise localWeek="this week" +
+            // pts=0 wins and the phone looks permanently behind the laptop.
             const localWeek=localStats.lastPtsWeekStart||'';
             const cloudWeek=cloudStats.lastPtsWeekStart||'';
+            const brandNewLocal=!!IS_BRAND_NEW_SESSION || (!localStats.lc && !localStats.lf && !(localStats.pts>0) && !(localStats.cur>0) && !(localStats.best>0));
             let mergedPts;
-            if(localWeek && cloudWeek && localWeek>cloudWeek){
+            if(brandNewLocal){
+              mergedPts=cloudStats.pts||0;
+            }else if(localWeek && cloudWeek && localWeek>cloudWeek){
               mergedPts=localStats.pts||0;
             }else if(cloudWeek && localWeek && cloudWeek>localWeek){
               mergedPts=cloudStats.pts||0;
@@ -18958,11 +18994,11 @@ if (typeof onAuthStateChanged !== 'undefined' && typeof fbAuth !== 'undefined') 
             }
             STATS={
               pts:mergedPts,
-              cur:Math.max(cloudStats.cur||0,localStats.cur||0),
+              cur:brandNewLocal?(cloudStats.cur||0):Math.max(cloudStats.cur||0,localStats.cur||0),
               best:Math.max(cloudStats.best||0,localStats.best||0),
-              lc:laterDate(cloudStats.lc,localStats.lc),
-              lf:laterDate(cloudStats.lf,localStats.lf),
-              lastPtsWeekStart:laterDate(cloudStats.lastPtsWeekStart,localStats.lastPtsWeekStart),
+              lc:brandNewLocal?(cloudStats.lc||localStats.lc):laterDate(cloudStats.lc,localStats.lc),
+              lf:brandNewLocal?(cloudStats.lf||localStats.lf):laterDate(cloudStats.lf,localStats.lf),
+              lastPtsWeekStart:brandNewLocal?(cloudStats.lastPtsWeekStart||localStats.lastPtsWeekStart):laterDate(cloudStats.lastPtsWeekStart,localStats.lastPtsWeekStart),
               bestFixed:cloudStats.bestFixed||localStats.bestFixed||false,
               punishRateOverride:(cloudStats.punishRateOverride!=null)?cloudStats.punishRateOverride:(localStats.punishRateOverride!=null?localStats.punishRateOverride:null),
               lifetime_xp:Math.max(cloudStats.lifetime_xp||0,localStats.lifetime_xp||0),
@@ -18972,6 +19008,7 @@ if (typeof onAuthStateChanged !== 'undefined' && typeof fbAuth !== 'undefined') 
               activeMythicTheme:cloudStats.activeMythicTheme||localStats.activeMythicTheme||null,
               lastRankKey:cloudStats.lastRankKey||localStats.lastRankKey||'chaos'
             };
+            try{ await sSet(LS.stats,STATS); }catch(e){}
           }
           // FIX: this used to be a flat overwrite (savedReports=d.reports), which is
           // exactly what caused real, already-saved weekly reports to vanish: if
@@ -19102,8 +19139,15 @@ if (typeof onAuthStateChanged !== 'undefined' && typeof fbAuth !== 'undefined') 
           // of the same check.
           PENDING_ONBOARDING = !USER_SCHEDULE || Object.keys(USER_SCHEDULE).length===0;
           if(USER_SETTINGS && USER_SETTINGS.onboardingComplete) PENDING_ONBOARDING=false;
+          if(d.firstSeen || (d.stats && ((d.stats.pts||0)>0 || (d.stats.best||0)>0 || d.stats.lc)) || (d.historyData && Object.keys(d.historyData).length>0)){
+            PENDING_ONBOARDING=false;
+          }
           if(!PENDING_ONBOARDING){ lsSet('has_onboarded','true'); }
           else if(userHasExistingWorkspace()){ PENDING_ONBOARDING=false; lsSet('has_onboarded','true'); }
+          // Cloud just arrived — kill the wizard if it opened from a race, then
+          // repaint with real schedule/theme/points (this is the "swipe up and
+          // reopen → color finally changes" path, forced on first successful load).
+          try{ dismissOnboardingIfReturningUser(); }catch(e){}
           if(d.userMemory) USER_MEMORY=d.userMemory;
           if(d.mealOptions) MEAL_OPTIONS=d.mealOptions;
           if(d.weeklyPointsHistory) weeklyPointsHistory={...weeklyPointsHistory,...d.weeklyPointsHistory};
@@ -19152,6 +19196,43 @@ if (typeof onAuthStateChanged !== 'undefined' && typeof fbAuth !== 'undefined') 
         // the source via experimentalForceLongPolling above; this retry+toast is only
         // a last-resort fallback for a genuine, currently-ongoing connectivity loss.
         showToast('⚠️ فشل تحميل بياناتك من Firebase بعد أكتر من محاولة — البيانات المحلية اللي شايفها دلوقتي هي آخر نسخة متزامنة، مش بالضرورة أحدث حاجة. جرب تتأكد إن الإنترنت شغال، أو أعد تحميل الصفحة.',5500,'warn');
+        // One more delayed pull — iOS often succeeds once WebChannel is warm.
+        // Does not open onboarding; only merges if getDoc works.
+        setTimeout(async ()=>{
+          if(CLOUD_SCHEDULES_HYDRATED || !fbAuth?.currentUser) return;
+          try{
+            const ud2=await getDoc(doc(fbDb,'users',fbAuth.currentUser.uid));
+            if(ud2 && ud2.exists()){
+              const d2=ud2.data();
+              if(d2.stats){
+                STATS={
+                  ...STATS,
+                  pts:Math.max(STATS.pts||0,d2.stats.pts||0),
+                  cur:Math.max(STATS.cur||0,d2.stats.cur||0),
+                  best:Math.max(STATS.best||0,d2.stats.best||0),
+                  lifetime_xp:Math.max(STATS.lifetime_xp||0,d2.stats.lifetime_xp||0),
+                  activeMythicTheme:d2.stats.activeMythicTheme||STATS.activeMythicTheme||null,
+                  unlockedThemes:Array.from(new Set([...(STATS.unlockedThemes||[]),...(d2.stats.unlockedThemes||[])]))
+                };
+              }
+              if(d2.userSchedules){
+                const cloudSlots=deserializeAllSchedulesFromFirestore(d2.userSchedules);
+                USER_SCHEDULES=mergeScheduleSlotsPreferLocal(USER_SCHEDULES, cloudSlots);
+                ACTIVE_SCHEDULE_ID=d2.activeScheduleId||ACTIVE_SCHEDULE_ID||'default';
+                if(USER_SCHEDULES[ACTIVE_SCHEDULE_ID]) USER_SCHEDULE=USER_SCHEDULES[ACTIVE_SCHEDULE_ID].sched;
+                LAST_KNOWN_CLOUD_SCHEDULES=JSON.parse(JSON.stringify(cloudSlots));
+              }else if(d2.userSchedule){
+                USER_SCHEDULE=deserializeScheduleFromFirestore(d2.userSchedule);
+              }
+              if(d2.userSettings) USER_SETTINGS={trackPrayers:true,lang:'en',...d2.userSettings,...USER_SETTINGS,onboardingComplete:USER_SETTINGS.onboardingComplete||d2.userSettings.onboardingComplete};
+              CLOUD_SCHEDULES_HYDRATED=true;
+              try{ await sSet(LS.stats,STATS); await sSet(LS.userSchedules,USER_SCHEDULES); await sSet(LS.userSchedule,USER_SCHEDULE); await sSet(LS.userSettings,USER_SETTINGS); }catch(e){}
+              dismissOnboardingIfReturningUser();
+              try{ renderTabs(); renderPanels(); switchDay(todayJD()); updateUI(); applyTheme(); renderSlotsUI(); }catch(e){}
+              if(FIREBASE_ONLINE===false) setFirebaseOnline();
+            }
+          }catch(e){ console.warn('delayed cloud hydrate failed',e); }
+        },4000);
       }
     }
     initAppFlow(user);
