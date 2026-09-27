@@ -11760,7 +11760,7 @@ function renderCard(task,isToday,jd){
       act=`<button class="cbtn" data-action="confirm" data-id="${id}" data-pts="${pts}">${en?'Confirm ✓':'تأكيد ✓'}<span class="ptslbl">+${pts}⭐</span></button>`;
     }
   }else{
-    act=isDone? (doneMap[id] && doneMap[id].skipped ? `<div class="cbtn exp" style="opacity:0.7">⏩ ${en?'Skipped':'تم التخطي'}</div>` : renderDoneCheckBtn(done,en)) : (isSnack?`<div class="ptsbdg">🍎 ${pts}⭐ ${en?'optional':'اختياري'}</div>`:`<div class="ptsbdg">${pts}⭐</div>`);
+    act=isDone? ((done && typeof done==='object' && done.skipped) ? `<div class="cbtn exp" style="opacity:0.7">⏩ ${en?'Skipped':'تم التخطي'}</div>` : renderDoneCheckBtn(done,en)) : (isSnack?`<div class="ptsbdg">🍎 ${pts}⭐ ${en?'optional':'اختياري'}</div>`:`<div class="ptsbdg">${pts}⭐</div>`);
   }
 
   // Edit/delete in Settings → Edit mode for every task (custom + base schedule)
