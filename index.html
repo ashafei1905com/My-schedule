@@ -6181,22 +6181,70 @@ function deserializeScheduleFromFirestore(sched){
 // onboarding" instead of silently inheriting Abdullah's personal SCHED.
 const ABDULLAH_UID='cWY1nZwSkJSJFzpQ72IrPxduhav2';
 
+// Set true only after a successful cloud read of schedule slots (or a confirmed
+// empty account). Prevents a fresh iPhone PWA from pushing a single empty
+// "My Workspace" and wiping multi-slot data that already lives in Firestore.
+let CLOUD_SCHEDULES_HYDRATED=false;
+let LAST_KNOWN_CLOUD_SCHEDULES=null;
+
+function mergeScheduleSlotsPreferLocal(localMap, cloudMap){
+  const out={};
+  const cloud=cloudMap&&typeof cloudMap==='object'?cloudMap:{};
+  const local=localMap&&typeof localMap==='object'?localMap:{};
+  for(const id of Object.keys(cloud)){
+    out[id]=cloud[id];
+  }
+  for(const id of Object.keys(local)){
+    // Local always wins for the same id (this device just edited it).
+    out[id]=local[id];
+  }
+  return out;
+}
+
+function isBareDefaultSchedules(map){
+  if(!map||typeof map!=='object') return true;
+  const ids=Object.keys(map);
+  if(ids.length===0) return true;
+  if(ids.length>1) return false;
+  const only=map[ids[0]];
+  const sched=only&&only.sched;
+  if(!sched||typeof sched!=='object') return true;
+  // "Bare" = no real tasks on any day yet
+  return Object.keys(sched).every(jd=>{
+    const d=sched[jd];
+    return !d || !Array.isArray(d.ts) || d.ts.length===0;
+  });
+}
+
 async function saveUserSchedule(){
   if(!USER_SCHEDULES[ACTIVE_SCHEDULE_ID]){
     USER_SCHEDULES[ACTIVE_SCHEDULE_ID] = { id: ACTIVE_SCHEDULE_ID, name: USER_SETTINGS?.workspaceName || 'My Workspace', sched: {} };
   }
   USER_SCHEDULES[ACTIVE_SCHEDULE_ID].sched = USER_SCHEDULE;
+  // Never drop slots that exist only on another device / in last cloud snapshot.
+  if(LAST_KNOWN_CLOUD_SCHEDULES){
+    USER_SCHEDULES=mergeScheduleSlotsPreferLocal(USER_SCHEDULES, LAST_KNOWN_CLOUD_SCHEDULES);
+    if(USER_SCHEDULES[ACTIVE_SCHEDULE_ID]) USER_SCHEDULE=USER_SCHEDULES[ACTIVE_SCHEDULE_ID].sched||USER_SCHEDULE;
+  }
   await sSet(LS.userSchedule,USER_SCHEDULE);
   await sSet(LS.userSchedules,USER_SCHEDULES);
   await sSet(LS.activeScheduleId,ACTIVE_SCHEDULE_ID);
   const user=fbAuth.currentUser;
   if(!user)return; // guests never sync a schedule anywhere
+  // Guard: unsigned/fresh device before first successful cloud hydrate must not
+  // clobber multi-slot cloud data with a solitary empty default workspace.
+  if(!CLOUD_SCHEDULES_HYDRATED && isBareDefaultSchedules(USER_SCHEDULES)){
+    console.warn('saveUserSchedule skipped cloud write — not hydrated yet, local is bare default');
+    return;
+  }
   try{
     await setDoc(doc(fbDb,'users',user.uid),{
       userSchedule:serializeScheduleForFirestore(USER_SCHEDULE),
       userSchedules:serializeAllSchedulesForFirestore(USER_SCHEDULES),
       activeScheduleId:ACTIVE_SCHEDULE_ID
     },{merge:true});
+    LAST_KNOWN_CLOUD_SCHEDULES=JSON.parse(JSON.stringify(USER_SCHEDULES));
+    CLOUD_SCHEDULES_HYDRATED=true;
   }catch(e){console.warn('userSchedule cloud save failed',e);}
 }
 
@@ -9402,20 +9450,31 @@ async function saveAll(){
   // short delay covers the common transient case (a momentary drop, a slow
   // connection) without adding real complexity; a second consecutive failure
   // still surfaces the existing red badge + toast exactly as before.
-  const attemptSave=async()=>setDoc(doc(fbDb,'users',user.uid),{
-    stats:STATS,
-    reports:savedReports,
-    historyData:historyData,
-    penalizedDates:penalizedDates,
-    firstSeen:FIRST_SEEN,
-    userEdits:USER_EDITS,
-    mealOptions:MEAL_OPTIONS,
-    weeklyPointsHistory:weeklyPointsHistory,
-    userSchedule:serializeScheduleForFirestore(USER_SCHEDULE),
-    userSchedules:serializeAllSchedulesForFirestore(USER_SCHEDULES),
-    activeScheduleId:ACTIVE_SCHEDULE_ID,
-    userSettings:USER_SETTINGS
-  },{merge:true});
+  const attemptSave=async()=>{
+    // Same clobber guard as saveUserSchedule: a fresh device must not overwrite
+    // multi-slot cloud schedules with a bare default before the first hydrate.
+    const payload={
+      stats:STATS,
+      reports:savedReports,
+      historyData:historyData,
+      penalizedDates:penalizedDates,
+      firstSeen:FIRST_SEEN,
+      userEdits:USER_EDITS,
+      mealOptions:MEAL_OPTIONS,
+      weeklyPointsHistory:weeklyPointsHistory,
+      userSettings:USER_SETTINGS
+    };
+    const canWriteSched=CLOUD_SCHEDULES_HYDRATED || !isBareDefaultSchedules(USER_SCHEDULES);
+    if(canWriteSched){
+      if(LAST_KNOWN_CLOUD_SCHEDULES){
+        USER_SCHEDULES=mergeScheduleSlotsPreferLocal(USER_SCHEDULES, LAST_KNOWN_CLOUD_SCHEDULES);
+      }
+      payload.userSchedule=serializeScheduleForFirestore(USER_SCHEDULE);
+      payload.userSchedules=serializeAllSchedulesForFirestore(USER_SCHEDULES);
+      payload.activeScheduleId=ACTIVE_SCHEDULE_ID;
+    }
+    return setDoc(doc(fbDb,'users',user.uid),payload,{merge:true});
+  };
   try{
     await attemptSave();
     if(!FIREBASE_ONLINE) setFirebaseOnline(); // recovered from a prior failure — clear the stale red badge
@@ -18977,20 +19036,49 @@ if (typeof onAuthStateChanged !== 'undefined' && typeof fbAuth !== 'undefined') 
           // not-yet-synced local migration result in the rare case a save is still
           // in flight).
           if(d.userSchedules) {
-            USER_SCHEDULES=deserializeAllSchedulesFromFirestore(d.userSchedules);
-            ACTIVE_SCHEDULE_ID = d.activeScheduleId || 'default';
+            const cloudSlots=deserializeAllSchedulesFromFirestore(d.userSchedules);
+            // Prefer cloud slots, but keep any local-only slot the phone created
+            // offline after the last sync (won't wipe laptop slots either).
+            USER_SCHEDULES=mergeScheduleSlotsPreferLocal(USER_SCHEDULES, cloudSlots);
+            // If cloud had real multi-slot data and local was bare default, take cloud fully.
+            if(!isBareDefaultSchedules(cloudSlots) && isBareDefaultSchedules(USER_SCHEDULES)){
+              USER_SCHEDULES=cloudSlots;
+            }
+            // Always prefer cloud's richer map when it has more slots than local.
+            if(Object.keys(cloudSlots||{}).length > Object.keys(USER_SCHEDULES||{}).length){
+              USER_SCHEDULES=mergeScheduleSlotsPreferLocal(USER_SCHEDULES, cloudSlots);
+            }
+            ACTIVE_SCHEDULE_ID = d.activeScheduleId || ACTIVE_SCHEDULE_ID || 'default';
             if (USER_SCHEDULES[ACTIVE_SCHEDULE_ID]) {
               USER_SCHEDULE = USER_SCHEDULES[ACTIVE_SCHEDULE_ID].sched;
             }
+            LAST_KNOWN_CLOUD_SCHEDULES=JSON.parse(JSON.stringify(cloudSlots));
+            CLOUD_SCHEDULES_HYDRATED=true;
+            try{
+              await sSet(LS.userSchedules,USER_SCHEDULES);
+              await sSet(LS.activeScheduleId,ACTIVE_SCHEDULE_ID);
+              await sSet(LS.userSchedule,USER_SCHEDULE);
+            }catch(e){}
           } else if(d.userSchedule) {
             USER_SCHEDULE=deserializeScheduleFromFirestore(d.userSchedule);
             // Legacy single-schedule accounts: wrap into the slots map once.
-            if(!USER_SCHEDULES || !Object.keys(USER_SCHEDULES).length){
+            if(!USER_SCHEDULES || !Object.keys(USER_SCHEDULES).length || isBareDefaultSchedules(USER_SCHEDULES)){
               USER_SCHEDULES={default:{id:'default',name:(USER_SETTINGS&&USER_SETTINGS.workspaceName)||'My Workspace',sched:USER_SCHEDULE}};
               ACTIVE_SCHEDULE_ID='default';
             }
+            LAST_KNOWN_CLOUD_SCHEDULES=JSON.parse(JSON.stringify(USER_SCHEDULES));
+            CLOUD_SCHEDULES_HYDRATED=true;
+            try{
+              await sSet(LS.userSchedules,USER_SCHEDULES);
+              await sSet(LS.activeScheduleId,ACTIVE_SCHEDULE_ID);
+              await sSet(LS.userSchedule,USER_SCHEDULE);
+            }catch(e){}
+          } else {
+            // Cloud doc exists but has no schedule fields yet — safe to treat as hydrated empty.
+            CLOUD_SCHEDULES_HYDRATED=true;
           }
           try{ ensureScheduleSlots(); }catch(e){}
+          try{ if(typeof renderSlotsUI==='function') renderSlotsUI(); }catch(e){}
           if(d.userSettings) USER_SETTINGS={trackPrayers:true,lang:'en',...d.userSettings};
           // One-time migration trigger — see migrateAbdullahScheduleIfNeeded's own
           // comments for the full idempotency/safety reasoning. Called here, AFTER
@@ -19044,6 +19132,8 @@ if (typeof onAuthStateChanged !== 'undefined' && typeof fbAuth !== 'undefined') 
           // this closes the theoretical gap of his very first-ever sign-in landing
           // in this branch before that doc exists.
           migrateAbdullahScheduleIfNeeded(user.uid);
+          // No cloud doc yet — safe to write whatever this device builds (onboarding).
+          CLOUD_SCHEDULES_HYDRATED=true;
           PENDING_ONBOARDING = !USER_SCHEDULE || Object.keys(USER_SCHEDULE).length===0;
           if(USER_SETTINGS && USER_SETTINGS.onboardingComplete) PENDING_ONBOARDING=false;
           if(!PENDING_ONBOARDING){ lsSet('has_onboarded','true'); }
@@ -19051,6 +19141,8 @@ if (typeof onAuthStateChanged !== 'undefined' && typeof fbAuth !== 'undefined') 
         }
       }catch(e){
         console.warn('cloud load failed after retry',e);
+        // Keep CLOUD_SCHEDULES_HYDRATED=false so we do NOT push bare local slots
+        // and erase another device's workspaces while offline.
         setFirebaseOffline();
         // CORRECTED (2026-07-24): this used to blame router/DNS filtering and tell
         // the user to change their DNS to 1.1.1.1. That theory was tested directly —
