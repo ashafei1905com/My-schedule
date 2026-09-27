@@ -444,6 +444,38 @@ html[dir="rtl"] .tc{animation-name:tcEnterRtl}
 #settingsScreen input:focus,
 #settingsScreen select:focus,
 #settingsScreen textarea:focus{outline:none;border-color:var(--ac)!important;box-shadow:0 0 0 3px color-mix(in srgb, var(--ac) 20%, transparent)}
+
+/* Rounded color wells everywhere (settings, task editor, prayer loc, mythic) —
+   native type=color is a harsh square on desktop + iOS; wrap with radius + border. */
+input[type="color"]{
+  -webkit-appearance:none;
+  appearance:none;
+  width:44px;
+  height:36px;
+  padding:0;
+  border:2px solid color-mix(in srgb, var(--ac, #3b82f6) 35%, var(--br, #1e2d45)) !important;
+  border-radius:12px !important;
+  background:transparent !important;
+  cursor:pointer;
+  overflow:hidden;
+  box-shadow:0 0 0 1px rgba(0,0,0,.35) inset;
+  transition:border-color .2s ease, box-shadow .2s ease, transform .15s ease;
+}
+input[type="color"]:hover{
+  border-color:var(--ac, #3b82f6) !important;
+  box-shadow:0 0 12px color-mix(in srgb, var(--ac, #3b82f6) 28%, transparent);
+}
+input[type="color"]:active{transform:scale(.96)}
+input[type="color"]::-webkit-color-swatch-wrapper{padding:3px;border-radius:10px}
+input[type="color"]::-webkit-color-swatch{
+  border:none;
+  border-radius:8px;
+  box-shadow:0 1px 3px rgba(0,0,0,.35);
+}
+input[type="color"]::-moz-color-swatch{
+  border:none;
+  border-radius:8px;
+}
 .set-header{display:flex;align-items:center;justify-content:space-between;padding:16px 20px;border-bottom:1px solid color-mix(in srgb, var(--ac) 25%, var(--br));flex-shrink:0;background:color-mix(in srgb, var(--c) 88%, var(--ac))}
 .set-header h2{font-size:1.15rem;font-weight:900;margin:0}
 .set-nav button.act{background:color-mix(in srgb, var(--ac) 22%, transparent)!important;border-color:var(--ac)!important;color:var(--tx)!important;box-shadow:0 0 12px color-mix(in srgb, var(--ac) 20%, transparent)}
@@ -2740,7 +2772,59 @@ body.theme-matrix .tctime{
 <style>
 @media (max-width:899px){
   #loginCanvas > div{grid-template-columns:1fr!important}
+  #loginCanvas .login-canvas-form{
+    padding:28px 20px 48px !important;
+    max-width:100% !important;
+  }
+  #loginCanvas h1{
+    font-size:1.45rem !important;
+    line-height:1.3 !important;
+    margin-bottom:22px !important;
+  }
+  #loginCanvas #loginGoogleBtn,
+  #loginCanvas #authContinueBtn{
+    min-height:48px;
+    font-size:1rem !important;
+    border-radius:14px !important;
+  }
+  #loginCanvas #authUsernameInput,
+  #loginCanvas #authPasswordInput{
+    min-height:48px;
+    font-size:16px !important; /* prevents iOS zoom-on-focus */
+    border-radius:14px !important;
+  }
+  #loginCanvas .auth-mode-label{
+    font-size:.72rem;
+    letter-spacing:.08em;
+    text-transform:uppercase;
+    color:#64748b;
+    font-weight:900;
+    margin-bottom:10px;
+  }
+  #loginCanvas #authModeToggle{
+    display:block;
+    width:100%;
+    text-align:center;
+    margin:6px 0;
+    padding:12px;
+    color:#93c5fd;
+    font-weight:800;
+    font-size:.88rem;
+    background:transparent;
+    border:none;
+  }
 }
+#loginCanvas #loginGoogleBtn{
+  transition:background .2s ease, border-color .2s ease, transform .15s ease;
+}
+#loginCanvas #loginGoogleBtn:active,
+#loginCanvas #authContinueBtn:active{transform:scale(.98)}
+#loginCanvas #authContinueBtn{
+  background:linear-gradient(135deg,#7c6ff5,#5b4fe0) !important;
+  box-shadow:0 8px 24px rgba(109,94,252,.35);
+  transition:box-shadow .2s ease, transform .15s ease, filter .15s ease;
+}
+#loginCanvas #authContinueBtn:hover{filter:brightness(1.06)}
 .ob-day-strip{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:12px}
 .ob-day-tab{font-family:inherit;font-weight:800;font-size:.72rem;padding:8px 12px;border-radius:999px;border:1px solid var(--br);background:var(--c);color:var(--so);cursor:pointer}
 .ob-day-tab.on{border-color:var(--ac);background:color-mix(in srgb,var(--ac) 18%,var(--c));color:var(--tx)}
