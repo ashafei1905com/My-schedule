@@ -3665,7 +3665,7 @@ body.theme-matrix .tctime{
                   حساب دقيق لمعدل الأيض الأساسي (BMR) ومعدل حرق الطاقة اليومي (TDEE) بمعادلة Mifflin-St Jeor واقتراح نسب الماكروز.
                 </p>
               </div>
-              <span class="badge" style="background:rgba(59,130,246,.15);color:var(--ac);border:1px solid rgba(59,130,246,.3);font-size:.7rem;font-weight:800;padding:4px 8px;border-radius:6px">Mifflin-St Jeor</span>
+              <span id="setFitnessFormulaBadge" class="badge" style="background:rgba(59,130,246,.15);color:var(--ac);border:1px solid rgba(59,130,246,.3);font-size:.7rem;font-weight:800;padding:4px 8px;border-radius:6px">Mifflin-St Jeor</span>
             </div>
 
             <div class="set-row" style="padding:8px 12px;background:rgba(255,255,255,.03);border:1px solid var(--br);border-radius:8px">
@@ -3729,7 +3729,7 @@ body.theme-matrix .tctime{
                 <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;flex-wrap:wrap;gap:6px">
                   <span style="font-size:.8rem;font-weight:900;color:var(--ac);display:flex;align-items:center;gap:6px">
                     <span>🎯</span>
-                    <span>Mifflin-St Jeor Scientific Targets</span>
+                    <span id="setFitnessFormulaTitle">Mifflin-St Jeor Scientific Targets</span>
                   </span>
                   <span id="setCalcKcal" style="font-size:.92rem;font-weight:900;color:var(--tx);background:rgba(0,0,0,.25);padding:3px 10px;border-radius:6px;border:1px solid var(--br)">2133 kcal/day</span>
                 </div>
@@ -12899,9 +12899,35 @@ function renderFitnessSettingsStats(){
   const ratioText = document.getElementById('fwMacroRatioText');
   if(ratioText) ratioText.textContent = `Protein ${pPct}% · Fats ${fPct}% · Carbs ${cPct}%`;
 
+  const isEn = (USER_SETTINGS && USER_SETTINGS.lang) === 'en';
+  const formulaName = calc.formula_name || calc.formulaName || (calc.body_fat ? 'Katch-McArdle' : 'Mifflin-St Jeor');
+  const formulaTitle = isEn
+    ? `${formulaName} Scientific Targets`
+    : (formulaName === 'Katch-McArdle' ? 'أهداف كاتش-ماكاردل العلمية' : 'أهداف ميفلين-سانت جور العلمية');
+  const formulaBadge = formulaName === 'Katch-McArdle'
+    ? (isEn ? 'Katch-McArdle' : 'كاتش-ماكاردل')
+    : (isEn ? 'Mifflin-St Jeor' : 'ميفلين-سانت جور');
+
+  const titleEl = document.getElementById('setFitnessFormulaTitle');
+  if(titleEl) titleEl.textContent = formulaTitle;
+  const badgeEl = document.getElementById('setFitnessFormulaBadge');
+  if(badgeEl) badgeEl.textContent = formulaBadge;
+  const descEl = document.getElementById('fwDesc');
+  if(descEl){
+    descEl.textContent = isEn
+      ? `Precise BMR & TDEE with ${formulaName} and macro recommendations.`
+      : (formulaName === 'Katch-McArdle'
+          ? 'حساب دقيق لمعدل الأيض الأساسي (BMR) ومعدل حرق الطاقة اليومي (TDEE) بمعادلة كاتش-ماكاردل واقتراح نسب الماكروز.'
+          : 'حساب دقيق لمعدل الأيض الأساسي (BMR) ومعدل حرق الطاقة اليومي (TDEE) بمعادلة ميفلين-سانت جور واقتراح نسب الماكروز.');
+  }
+
   if(document.getElementById('setCalcBmrTdee')){
-    const goalText = calc.goal === 'muscle' ? '+250 kcal surplus' : (calc.goal === 'fat_loss' ? '15% deficit' : '10% deficit');
-    document.getElementById('setCalcBmrTdee').textContent = `Mifflin-St Jeor BMR: ${calc.bmr} kcal · TDEE: ${calc.tdee} kcal (${goalText})`;
+    const goalText = isEn
+      ? (calc.goal === 'muscle' ? '+250 kcal surplus' : (calc.goal === 'fat_loss' ? '15% deficit' : '10% deficit'))
+      : (calc.goal === 'muscle' ? 'فائض +250 سعرة' : (calc.goal === 'fat_loss' ? 'عجز 15%' : 'عجز 10%'));
+    document.getElementById('setCalcBmrTdee').textContent = isEn
+      ? `${formulaName} BMR: ${calc.bmr} kcal · TDEE: ${calc.tdee} kcal (${goalText})`
+      : `${formulaBadge} BMR: ${calc.bmr} سعرة · TDEE: ${calc.tdee} سعرة (${goalText})`;
   }
 }
 
@@ -13031,11 +13057,14 @@ function renderFitnessWizardResults(calc){
   const kcalEl = document.getElementById('wizCalcKcal');
   if(kcalEl) kcalEl.textContent = Number(calc.target_kcal).toLocaleString();
 
-  // Formula badge
+  // Formula badge — must match the formula actually used in calculateFitnessTargets
   const formulaEl = document.getElementById('wizHeroFormulaBadge');
   if(formulaEl){
-    if(calc.body_fat){
-      formulaEl.textContent = isEn ? `Katch-McArdle Formula (${calc.body_fat}% BF)` : `معادلة كاتش-ماكاردل (${calc.body_fat}% دهون)`;
+    const fName = calc.formula_name || calc.formulaName || (calc.body_fat ? 'Katch-McArdle' : 'Mifflin-St Jeor');
+    if(fName === 'Katch-McArdle' || (calc.body_fat && calc.body_fat >= 4)){
+      formulaEl.textContent = isEn
+        ? `Katch-McArdle Formula${calc.body_fat ? ` (${calc.body_fat}% BF)` : ''}`
+        : `معادلة كاتش-ماكاردل${calc.body_fat ? ` (${calc.body_fat}% دهون)` : ''}`;
     } else {
       formulaEl.textContent = isEn ? 'Mifflin-St Jeor Formula' : 'معادلة ميفلين-سانت جور';
     }
@@ -14359,10 +14388,14 @@ function calculateFitnessTargets(m){
   const bodyFat = (m?.body_fat !== undefined && m?.body_fat !== null && m?.body_fat !== '') ? Number(m.body_fat) : null;
 
   let bmr = 0;
+  let formulaKey = 'mifflin';
+  let formulaName = 'Mifflin-St Jeor';
   if(bodyFat && bodyFat >= 4 && bodyFat <= 60){
     // Katch-McArdle (preferred when BF% known): BMR = 370 + 21.6 × lean body mass (kg)
     const leanMass = weight * (1 - (bodyFat / 100));
     bmr = Math.round(370 + (21.6 * leanMass));
+    formulaKey = 'katch';
+    formulaName = 'Katch-McArdle';
   } else {
     // Mifflin-St Jeor (Academy of Nutrition & Dietetics preferred equation)
     // Male: 10w + 6.25h − 5a + 5 | Female: 10w + 6.25h − 5a − 161
@@ -14371,6 +14404,8 @@ function calculateFitnessTargets(m){
     } else {
       bmr = Math.round((10 * weight) + (6.25 * height) - (5 * age) + 5);
     }
+    formulaKey = 'mifflin';
+    formulaName = 'Mifflin-St Jeor';
   }
 
   // TDEE = BMR × Harris-Benedict activity multiplier (1.2–1.9)
@@ -14453,7 +14488,10 @@ function calculateFitnessTargets(m){
     activity,
     activity_level: activity,
     goal,
-    body_fat: bodyFat
+    body_fat: bodyFat,
+    formula_key: formulaKey,
+    formula_name: formulaName,
+    formulaName: formulaName
   };
 }
 
