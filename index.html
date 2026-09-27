@@ -1,9 +1,3 @@
-@media (max-width:900px){
-  #settingsScreen:not(.mobile-sec-open) .set-section{display:none!important}
-  #settingsScreen.mobile-sec-open .set-nav{display:none!important}
-  #settingsScreen.mobile-sec-open .set-section.act{display:block!important}
-  #settingsScreen.mobile-sec-open .set-mobile-back{display:flex!important}
-}
 <!DOCTYPE html>
 <html lang="en" dir="ltr">
 <!-- cache-bust: 2026-09-25b -->
@@ -80,18 +74,41 @@ html[dir="ltr"] .tc[data-c="sunrise"]{border-left:3px solid var(--or)}
 .modal-box::-webkit-scrollbar-track{background:var(--scrollbar-track);margin:12px 0}
 .modal-box::-webkit-scrollbar-thumb{background:var(--scrollbar-thumb);border-radius:999px;border:2px solid transparent;background-clip:padding-box}
 .modal-box::-webkit-scrollbar-thumb:hover{background:var(--scrollbar-thumb-hover)}
-@media (max-width:700px){
-  .set-body{flex-direction:column;position:relative}
-  .set-nav{width:100%;border-left:none;border-bottom:1px solid var(--br);padding:10px;display:flex;flex-wrap:wrap;gap:6px;max-height:none}
-  .set-nav button{width:auto;flex:1 1 auto;text-align:center;padding:10px 12px;margin:0}
-  .set-content{padding:16px 14px;flex:1;overflow-y:auto}
-  /* Mobile: section list first; open section becomes full-screen */
-  #settingsScreen.mobile-sec-open .set-nav{display:none!important}
-  #settingsScreen.mobile-sec-open .set-content{padding-top:8px}
+@media (max-width:900px){
+  .set-body{flex-direction:column;position:relative;flex:1;min-height:0;overflow:hidden}
+  .set-nav{
+    width:100%;border-left:none;border-bottom:none;padding:12px 14px 20px;
+    display:flex;flex-direction:column;flex-wrap:nowrap;gap:8px;
+    max-height:none;overflow-y:auto;-webkit-overflow-scrolling:touch;
+  }
+  .set-nav button{
+    width:100%;flex:0 0 auto;text-align:start;padding:14px 16px;margin:0;
+    border-radius:14px;border:1px solid var(--br);background:rgba(255,255,255,.03);
+    font-size:.92rem;font-weight:800;color:var(--tx);
+  }
+  .set-nav button.act{
+    background:color-mix(in srgb, var(--ac) 18%, transparent)!important;
+    border-color:var(--ac)!important;color:var(--tx)!important;
+    box-shadow:0 0 0 1px color-mix(in srgb, var(--ac) 35%, transparent);
+  }
+  .set-content{
+    padding:12px 14px 28px;flex:1;min-height:0;overflow-y:auto;
+    -webkit-overflow-scrolling:touch;width:100%;box-sizing:border-box;
+  }
+  .set-section{max-width:none!important;width:100%;box-sizing:border-box}
+  /* Master-detail: list OR full section — never both */
   #settingsScreen:not(.mobile-sec-open) .set-section{display:none!important}
-  #settingsScreen:not(.mobile-sec-open) .set-nav{display:flex}
+  #settingsScreen:not(.mobile-sec-open) .set-nav{display:flex!important}
+  #settingsScreen:not(.mobile-sec-open) .set-mobile-back{display:none!important}
+  #settingsScreen.mobile-sec-open .set-nav{display:none!important}
+  #settingsScreen.mobile-sec-open .set-section{display:none!important}
   #settingsScreen.mobile-sec-open .set-section.act{display:block!important}
-  #settingsScreen.mobile-sec-open .set-mobile-back{display:flex!important}
+  #settingsScreen.mobile-sec-open .set-mobile-back{
+    display:flex!important;position:sticky;top:0;z-index:5;
+    margin-bottom:12px;backdrop-filter:blur(8px);
+    background:color-mix(in srgb, var(--bg) 88%, transparent)!important;
+  }
+  #settingsScreen.mobile-sec-open .set-content{padding-top:8px}
 }
 /* Back is mobile-only — always hidden on desktop */
 #settingsScreen .set-mobile-back{
@@ -6624,31 +6641,81 @@ function renderCategoryManager(){
   const title=document.getElementById('catManagerTitle');
   const desc=document.getElementById('catManagerDesc');
   if(title) title.textContent=en?'Your categories':'فئاتك';
-  if(desc) desc.textContent=en?'Tap Edit on any category (built-in or custom) to change name, emoji, and color. Add new ones below.':'اضغط تعديل على أي فئة (أساسية أو مخصصة) لتغيير الاسم والإيموجي واللون. أضف فئات جديدة من الأسفل.';
+  if(desc) desc.textContent=en
+    ?'Edit any category — name, emoji, color. Expand to see tasks and move them into this category.'
+    :'عدّل أي فئة — الاسم والإيموجي واللون. وسّع لترى المهام وانقلها لهذه الفئة.';
   const addBtn=document.getElementById('catMgrAddBtn');
   const editId=(document.getElementById('catMgrEditId')||{}).value||'';
   if(addBtn) addBtn.textContent=editId?(en?'Save changes':'حفظ التعديل'):(en?'+ Add':'+ إضافة');
+
+  // Build task index by category id across the week
+  const tasksByCat={};
+  try{
+    for(let jd=0;jd<7;jd++){
+      const iso=(typeof dateForWeekday==='function')?dateForWeekday(jd,TODAY):null;
+      const tasks=(typeof getAllTasks==='function')?getAllTasks(jd,iso||TODAY):((USER_SCHEDULE[jd]&&USER_SCHEDULE[jd].ts)||[]);
+      for(const t of tasks){
+        if(!t||t._deleted) continue;
+        const catId=String((t[14]&&t[14].id)||t[2]||'routine');
+        if(!tasksByCat[catId]) tasksByCat[catId]=[];
+        // dedupe by task id
+        if(!tasksByCat[catId].some(x=>x[0]===t[0])) tasksByCat[catId].push(t);
+      }
+    }
+  }catch(e){}
+
   const all=getAllCategories();
-  list.innerHTML=all.map(c=>{
-    const nm=typeof c.name==='object'?(c.name[en?'en':'ar']||c.name.en||c.id):c.name;
-    const isBuiltIn=!!c.isBuiltIn || DEFAULT_TASK_CATEGORIES.some(d=>d.id===c.id);
+  list.innerHTML=all.map(cat=>{
+    const nm=typeof cat.name==='object'?(cat.name[en?'en':'ar']||cat.name.en||cat.id):cat.name;
+    const isBuiltIn=!!cat.isBuiltIn || DEFAULT_TASK_CATEGORIES.some(d=>d.id===cat.id);
     const badge=isBuiltIn
       ?`<span style="font-size:.62rem;font-weight:800;color:var(--mu);background:rgba(255,255,255,.06);padding:2px 6px;border-radius:6px">${en?'Built-in':'أساسية'}</span>`
       :`<span style="font-size:.62rem;font-weight:800;color:#a78bfa;background:rgba(139,92,246,.12);padding:2px 6px;border-radius:6px">${en?'Custom':'مخصصة'}</span>`;
-    const delBtn=isBuiltIn?'':`<button type="button" class="altbtn" data-cat-del="${c.id}" style="padding:6px 10px;font-size:.72rem;color:#f87171;border-color:rgba(239,68,68,.4)">${en?'Delete':'حذف'}</button>`;
-    return `<div style="display:flex;align-items:center;gap:10px;padding:10px 12px;border-radius:12px;border:1px solid var(--br);background:var(--c2)">
-      <span style="width:36px;height:36px;border-radius:10px;display:flex;align-items:center;justify-content:center;background:color-mix(in srgb, ${c.color||'#3b82f6'} 22%, transparent);border:1px solid ${c.color||'#3b82f6'};font-size:1.15rem">${c.icon||'🏷️'}</span>
-      <div style="flex:1;min-width:0">
-        <div style="font-weight:800;font-size:.88rem;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;display:flex;align-items:center;gap:6px;flex-wrap:wrap">${nm} ${badge}</div>
-        <div style="font-size:.68rem;color:var(--mu)">${c.color||''}</div>
+    const delBtn=isBuiltIn?'':`<button type="button" class="altbtn" data-cat-del="${cat.id}" style="padding:6px 10px;font-size:.72rem;color:#f87171;border-color:rgba(239,68,68,.4)">${en?'Delete':'حذف'}</button>`;
+    const catTasks=tasksByCat[cat.id]||[];
+    const taskRows=catTasks.length
+      ? catTasks.map(t=>{
+          const tname=(typeof tn==='function'?tn(t[4]):t[4])||t[4]||t[0];
+          return `<div style="display:flex;align-items:center;gap:8px;padding:6px 8px;border-radius:8px;background:rgba(0,0,0,.18);margin-top:4px">
+            <span style="font-size:1rem">${t[3]||'•'}</span>
+            <span style="flex:1;font-size:.78rem;font-weight:700;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${tname}</span>
+            <select data-cat-reassign="${t[0]}" data-from-cat="${cat.id}" style="max-width:120px;padding:4px 6px;border-radius:8px;border:1px solid var(--br);background:var(--c2);color:var(--tx);font-size:.68rem;font-weight:700">
+              ${all.map(opt=>{
+                const on=typeof opt.name==='object'?(opt.name[en?'en':'ar']||opt.name.en||opt.id):opt.name;
+                return `<option value="${opt.id}" ${opt.id===cat.id?'selected':''}>${opt.icon||''} ${on}</option>`;
+              }).join('')}
+            </select>
+          </div>`;
+        }).join('')
+      : `<div style="font-size:.72rem;color:var(--mu);padding:6px 2px">${en?'No tasks in this category yet.':'لا مهام في هذه الفئة بعد.'}</div>`;
+    return `<div class="cat-mgr-row" data-cat-id="${cat.id}" style="border:1px solid var(--br);border-radius:14px;background:var(--c2);margin-bottom:10px;overflow:hidden">
+      <div style="display:flex;align-items:center;gap:10px;padding:12px 12px">
+        <span style="width:40px;height:40px;border-radius:12px;display:flex;align-items:center;justify-content:center;background:color-mix(in srgb, ${cat.color||'#3b82f6'} 22%, transparent);border:1px solid ${cat.color||'#3b82f6'};font-size:1.2rem">${cat.icon||'🏷️'}</span>
+        <div style="flex:1;min-width:0">
+          <div style="font-weight:800;font-size:.9rem;display:flex;align-items:center;gap:6px;flex-wrap:wrap">${nm} ${badge}</div>
+          <div style="font-size:.68rem;color:var(--mu)">${cat.color||''} · ${catTasks.length} ${en?'tasks':'مهام'}</div>
+        </div>
+        <button type="button" class="altbtn" data-cat-edit="${cat.id}" style="padding:6px 10px;font-size:.72rem">${en?'Edit':'تعديل'}</button>
+        <button type="button" class="altbtn" data-cat-expand="${cat.id}" style="padding:6px 10px;font-size:.72rem">${en?'Tasks':'المهام'}</button>
+        ${delBtn}
       </div>
-      <button type="button" class="altbtn" data-cat-edit="${c.id}" style="padding:6px 10px;font-size:.72rem">${en?'Edit':'تعديل'}</button>
-      ${delBtn}
+      <div data-cat-tasks-panel="${cat.id}" style="display:none;padding:0 12px 12px;border-top:1px solid var(--br)">
+        <div style="font-size:.72rem;font-weight:800;color:var(--so);margin:10px 0 4px">${en?'Tasks in this category — change dropdown to move':'مهام هذه الفئة — غيّر القائمة للنقل'}</div>
+        ${taskRows}
+      </div>
     </div>`;
   }).join('');
+
   if(!list._wired){
     list._wired=true;
     list.addEventListener('click', async e=>{
+      const expandBtn=e.target.closest('[data-cat-expand]');
+      if(expandBtn){
+        const id=expandBtn.getAttribute('data-cat-expand');
+        const panel=list.querySelector(`[data-cat-tasks-panel="${id}"]`);
+        if(panel) panel.style.display=panel.style.display==='none'?'block':'none';
+        return;
+      }
       const editBtn=e.target.closest('[data-cat-edit]');
       const delBtn=e.target.closest('[data-cat-del]');
       const en2=(USER_SETTINGS&&USER_SETTINGS.lang)==='en';
@@ -6667,6 +6734,7 @@ function renderCategoryManager(){
         if(editEl) editEl.value=id;
         if(addBtn) addBtn.textContent=en2?'Save changes':'حفظ التعديل';
         nameEl?.focus();
+        try{ nameEl?.scrollIntoView({block:'center',behavior:'smooth'}); }catch(err){}
       }
       if(delBtn){
         const id=delBtn.getAttribute('data-cat-del');
@@ -6674,6 +6742,50 @@ function renderCategoryManager(){
         if(!ok) return;
         await deleteCustomCategory(id);
         showToast(en2?'Category deleted':'تم حذف الفئة',1600);
+      }
+    });
+    list.addEventListener('change', async e=>{
+      const sel=e.target.closest('[data-cat-reassign]');
+      if(!sel) return;
+      const taskId=sel.getAttribute('data-cat-reassign');
+      const newCat=sel.value;
+      const en2=(USER_SETTINGS&&USER_SETTINGS.lang)==='en';
+      const catInfo=getAllCategories().find(x=>x.id===newCat);
+      const icon=catInfo?.icon||'✨';
+      const color=catInfo?.color||'#6366f1';
+      let moved=0;
+      try{
+        for(let jd=0;jd<7;jd++){
+          if(!USER_SCHEDULE[jd]||!Array.isArray(USER_SCHEDULE[jd].ts)) continue;
+          for(const t of USER_SCHEDULE[jd].ts){
+            if(t&&t[0]===taskId){
+              t[2]=newCat;
+              t[3]=icon;
+              t[10]=color;
+              t[14]=newCat;
+              moved++;
+            }
+          }
+        }
+        // Also patch customTasks if present
+        if(USER_EDITS&&Array.isArray(USER_EDITS.customTasks)){
+          for(const ct of USER_EDITS.customTasks){
+            if(ct&&(ct.id===taskId||ct[0]===taskId)){
+              if(Array.isArray(ct)){ ct[2]=newCat; ct[3]=icon; ct[10]=color; ct[14]=newCat; }
+              else{ ct.cat=newCat; ct.icon=icon; ct.color=color; }
+              moved++;
+            }
+          }
+        }
+        if(typeof saveUserSchedule==='function') await saveUserSchedule();
+        else if(typeof saveAll==='function') await saveAll();
+        try{ if(typeof saveUserEdits==='function') await saveUserEdits(); }catch(err){}
+        try{ renderPanels(); }catch(err){}
+        showToast(en2?`Moved to ${catInfo?(typeof catInfo.name==='object'?catInfo.name.en:catInfo.name):newCat}`:`تم النقل إلى الفئة`,1600);
+        renderCategoryManager();
+      }catch(err){
+        console.warn('reassign failed',err);
+        showToast(en2?'Could not move task':'تعذر نقل المهمة',2000,'warn');
       }
     });
   }
@@ -6693,6 +6805,16 @@ function renderCategoryManager(){
           if(!USER_SETTINGS.categoryOverrides) USER_SETTINGS.categoryOverrides={};
           USER_SETTINGS.categoryOverrides[eid]={name:{en:name,ar:name},icon,color};
           try{ await saveUserSettings(); }catch(err){}
+          // Propagate icon/color to existing tasks in this category
+          try{
+            for(let jd=0;jd<7;jd++){
+              if(!USER_SCHEDULE[jd]?.ts) continue;
+              for(const t of USER_SCHEDULE[jd].ts){
+                if(t&&(t[2]===eid||t[14]===eid)){ t[3]=icon; t[10]=color; }
+              }
+            }
+            if(typeof saveUserSchedule==='function') await saveUserSchedule();
+          }catch(err){}
           try{ renderPanels(); }catch(err){}
         }else{
           await editCustomCategory(eid,{name,icon,color});
@@ -6712,8 +6834,6 @@ function renderCategoryManager(){
 }
 
 
-// Opens the editor. existingTask (a full task tuple) present = edit mode, prefills
-// every field from it; absent = add mode, blank form with sensible defaults.
 function isFoodishName(name){
   const s=String(name||'').toLowerCase();
   return /طعام|أكل|اكل|وجبة|فطار|فطور|غداء|غدا|عشاء|عشا|سناك|سناكس|breakfast|lunch|dinner|snack|meal|food|eat|coffee|شاي|قهوة|عصير/.test(s);
@@ -13539,11 +13659,20 @@ function openSettingsScreen(){
   }catch(e){}
   // Always raise above leftover overlays (landing / toast stacking)
   const ss=document.getElementById('settingsScreen');
-  if(ss){ ss.style.zIndex='10150'; ss.classList.add('open'); }
+  if(ss){
+    ss.style.zIndex='10150';
+    ss.classList.add('open');
+    // Mobile: start on the section list (not a blank content pane)
+    ss.classList.remove('mobile-sec-open');
+  }
   updateAuthUI(fbAuth?.currentUser||null);
 }
 function closeSettingsScreen(){
-  document.getElementById('settingsScreen')?.classList.remove('open');
+  const ss=document.getElementById('settingsScreen');
+  if(ss){
+    ss.classList.remove('open');
+    ss.classList.remove('mobile-sec-open');
+  }
 }
 function setAppLang(lang){
   // prestige/mythic shop strings follow USER_SETTINGS.lang via updatePrestigeUI
@@ -16987,19 +17116,24 @@ document.body.addEventListener('click',async e=>{
     const sec=setNavBtn.getAttribute('data-setsec');
     document.querySelectorAll('#setNav button').forEach(b=>b.classList.toggle('act',b===setNavBtn));
     document.querySelectorAll('.set-section').forEach(s=>s.classList.toggle('act',s.id==='setsec-'+sec));
-    // Mobile / narrow: always open the section panel (not just max-width media — some
-    // phones report larger CSS width in landscape / desktop mode).
-    const narrow = (window.matchMedia && window.matchMedia('(max-width:900px)').matches) || (window.innerWidth||0) < 900;
-    if(narrow){
-      document.getElementById('settingsScreen')?.classList.add('mobile-sec-open');
+    // Treat phones / small tablets as master-detail. Prefer visualViewport on iOS.
+    const vw = (window.visualViewport && window.visualViewport.width) || window.innerWidth || 0;
+    const narrow = vw < 920 || (window.matchMedia && window.matchMedia('(max-width:900px)').matches) || ('ontouchstart' in window && vw < 1024);
+    const screen=document.getElementById('settingsScreen');
+    if(narrow && screen){
+      screen.classList.add('mobile-sec-open');
       const back=document.getElementById('setMobileBack');
       const en=(USER_SETTINGS&&USER_SETTINGS.lang)==='en';
       if(back) back.textContent=en?'← Back to settings':'→ رجوع للإعدادات';
     }
     const actSec=document.getElementById('setsec-'+sec);
-    if(actSec) try{ actSec.scrollIntoView({block:'start',behavior:'smooth'}); }catch(e){}
+    if(actSec){
+      try{ actSec.scrollIntoView({block:'start',behavior:'smooth'}); }catch(e){}
+      try{ document.querySelector('.set-content')?.scrollTo?.(0,0); }catch(e){}
+    }
     if(sec==='notifications'){ try{ renderTaskNotifList(); renderPrayerLocList(); }catch(e){} }
     if(sec==='appearance'){ try{ renderCategoryManager(); }catch(e){} }
+    if(sec==='fitness'){ try{ if(typeof renderFitnessSettingsStats==='function') renderFitnessSettingsStats(); }catch(e){} }
     return;
   }
 
