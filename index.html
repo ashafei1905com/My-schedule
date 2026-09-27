@@ -1,3 +1,9 @@
+@media (max-width:900px){
+  #settingsScreen:not(.mobile-sec-open) .set-section{display:none!important}
+  #settingsScreen.mobile-sec-open .set-nav{display:none!important}
+  #settingsScreen.mobile-sec-open .set-section.act{display:block!important}
+  #settingsScreen.mobile-sec-open .set-mobile-back{display:flex!important}
+}
 <!DOCTYPE html>
 <html lang="en" dir="ltr">
 <!-- cache-bust: 2026-09-25b -->
@@ -3803,6 +3809,7 @@ body.theme-matrix .tctime{
             <input id="prayerLocName" type="text" placeholder="Name" style="flex:1;min-width:100px;padding:8px 10px;border-radius:8px;border:1px solid var(--br);background:var(--c);color:var(--tx);font-family:inherit">
             <input id="prayerLocIcon" type="text" placeholder="📍" maxlength="4" style="width:48px;padding:8px;border-radius:8px;border:1px solid var(--br);background:var(--c);color:var(--tx);text-align:center">
             <input id="prayerLocPts" type="number" min="1" max="5" value="2" style="width:64px;padding:8px;border-radius:8px;border:1px solid var(--br);background:var(--c);color:var(--tx)">
+            <input id="prayerLocColor" type="color" value="#fbbf24" title="Color" style="width:42px;height:36px;border:none;background:transparent;cursor:pointer">
             <button type="button" id="prayerLocAddBtn" class="altbtn">Add</button>
           </div>
           <p class="desc" id="secNotifDesc" data-i18n="sec_notif_desc" style="margin-top:18px">Reminders stay always-on. Once permission is granted, the next 30 days are stored in the cloud and the server keeps sending them even if you stop opening the app. Open the app occasionally so the next window can refresh.</p>
@@ -6358,8 +6365,20 @@ const LEGACY_CAT_MAP = {
 };
 
 function getAllCategories(){
+  const overrides = (USER_SETTINGS && USER_SETTINGS.categoryOverrides) ? USER_SETTINGS.categoryOverrides : {};
+  const defaults = DEFAULT_TASK_CATEGORIES.map(c=>{
+    const o = overrides[c.id];
+    if(!o) return {...c, isBuiltIn:true};
+    return {
+      ...c,
+      isBuiltIn:true,
+      icon: o.icon || c.icon,
+      color: o.color || c.color,
+      name: o.name ? (typeof o.name === 'object' ? o.name : {en:o.name, ar:o.name}) : c.name
+    };
+  });
   const custom = (USER_SETTINGS && Array.isArray(USER_SETTINGS.customCategories)) ? USER_SETTINGS.customCategories : [];
-  return [...DEFAULT_TASK_CATEGORIES, ...custom];
+  return [...defaults, ...custom.map(c=>({...c, isCustom:true}))];
 }
 
 function getTaskCategory(catKey, task){
@@ -6605,27 +6624,28 @@ function renderCategoryManager(){
   const title=document.getElementById('catManagerTitle');
   const desc=document.getElementById('catManagerDesc');
   if(title) title.textContent=en?'Your categories':'فئاتك';
-  if(desc) desc.textContent=en?'Add or edit categories — name, emoji, and color. AI can create these too.':'أضف أو عدّل الفئات — الاسم والإيموجي واللون. الذكاء الاصطناعي يقدر يعملها كمان.';
+  if(desc) desc.textContent=en?'Tap Edit on any category (built-in or custom) to change name, emoji, and color. Add new ones below.':'اضغط تعديل على أي فئة (أساسية أو مخصصة) لتغيير الاسم والإيموجي واللون. أضف فئات جديدة من الأسفل.';
   const addBtn=document.getElementById('catMgrAddBtn');
   const editId=(document.getElementById('catMgrEditId')||{}).value||'';
   if(addBtn) addBtn.textContent=editId?(en?'Save changes':'حفظ التعديل'):(en?'+ Add':'+ إضافة');
-  const custom=(USER_SETTINGS&&USER_SETTINGS.customCategories)||[];
-  if(!custom.length){
-    list.innerHTML=`<p class="desc" style="margin:0">${en?'No custom categories yet — add one below.':'لا فئات مخصصة بعد — أضف واحدة بالأسفل.'}</p>`;
-  }else{
-    list.innerHTML=custom.map(c=>{
-      const nm=typeof c.name==='object'?(c.name[en?'en':'ar']||c.name.en||c.id):c.name;
-      return `<div style="display:flex;align-items:center;gap:10px;padding:10px 12px;border-radius:12px;border:1px solid var(--br);background:var(--c2)">
-        <span style="width:36px;height:36px;border-radius:10px;display:flex;align-items:center;justify-content:center;background:color-mix(in srgb, ${c.color||'#3b82f6'} 22%, transparent);border:1px solid ${c.color||'#3b82f6'};font-size:1.15rem">${c.icon||'🏷️'}</span>
-        <div style="flex:1;min-width:0">
-          <div style="font-weight:800;font-size:.88rem;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${nm}</div>
-          <div style="font-size:.68rem;color:var(--mu)">${c.color||''}</div>
-        </div>
-        <button type="button" class="altbtn" data-cat-edit="${c.id}" style="padding:6px 10px;font-size:.72rem">${en?'Edit':'تعديل'}</button>
-        <button type="button" class="altbtn" data-cat-del="${c.id}" style="padding:6px 10px;font-size:.72rem;color:#f87171;border-color:rgba(239,68,68,.4)">${en?'Delete':'حذف'}</button>
-      </div>`;
-    }).join('');
-  }
+  const all=getAllCategories();
+  list.innerHTML=all.map(c=>{
+    const nm=typeof c.name==='object'?(c.name[en?'en':'ar']||c.name.en||c.id):c.name;
+    const isBuiltIn=!!c.isBuiltIn || DEFAULT_TASK_CATEGORIES.some(d=>d.id===c.id);
+    const badge=isBuiltIn
+      ?`<span style="font-size:.62rem;font-weight:800;color:var(--mu);background:rgba(255,255,255,.06);padding:2px 6px;border-radius:6px">${en?'Built-in':'أساسية'}</span>`
+      :`<span style="font-size:.62rem;font-weight:800;color:#a78bfa;background:rgba(139,92,246,.12);padding:2px 6px;border-radius:6px">${en?'Custom':'مخصصة'}</span>`;
+    const delBtn=isBuiltIn?'':`<button type="button" class="altbtn" data-cat-del="${c.id}" style="padding:6px 10px;font-size:.72rem;color:#f87171;border-color:rgba(239,68,68,.4)">${en?'Delete':'حذف'}</button>`;
+    return `<div style="display:flex;align-items:center;gap:10px;padding:10px 12px;border-radius:12px;border:1px solid var(--br);background:var(--c2)">
+      <span style="width:36px;height:36px;border-radius:10px;display:flex;align-items:center;justify-content:center;background:color-mix(in srgb, ${c.color||'#3b82f6'} 22%, transparent);border:1px solid ${c.color||'#3b82f6'};font-size:1.15rem">${c.icon||'🏷️'}</span>
+      <div style="flex:1;min-width:0">
+        <div style="font-weight:800;font-size:.88rem;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;display:flex;align-items:center;gap:6px;flex-wrap:wrap">${nm} ${badge}</div>
+        <div style="font-size:.68rem;color:var(--mu)">${c.color||''}</div>
+      </div>
+      <button type="button" class="altbtn" data-cat-edit="${c.id}" style="padding:6px 10px;font-size:.72rem">${en?'Edit':'تعديل'}</button>
+      ${delBtn}
+    </div>`;
+  }).join('');
   if(!list._wired){
     list._wired=true;
     list.addEventListener('click', async e=>{
@@ -6634,7 +6654,7 @@ function renderCategoryManager(){
       const en2=(USER_SETTINGS&&USER_SETTINGS.lang)==='en';
       if(editBtn){
         const id=editBtn.getAttribute('data-cat-edit');
-        const cat=((USER_SETTINGS.customCategories)||[]).find(c=>c.id===id);
+        const cat=getAllCategories().find(x=>x.id===id);
         if(!cat) return;
         const nm=typeof cat.name==='object'?(cat.name.en||cat.name.ar||''):cat.name;
         const nameEl=document.getElementById('catMgrName');
@@ -6650,7 +6670,7 @@ function renderCategoryManager(){
       }
       if(delBtn){
         const id=delBtn.getAttribute('data-cat-del');
-        const ok=await appConfirm(en2?'Delete this category?':'حذف هذه الفئة؟', en2?'Tasks keep their old category id.':'المهام تحتفظ بمعرّف الفئة القديم.');
+        const ok=await appConfirm(en2?'Delete this category?':'حذف هذه الفئة؟', en2?'Tasks keep their old category id.':'المهام تحتفظ بمعرّف الفئة القديمة.');
         if(!ok) return;
         await deleteCustomCategory(id);
         showToast(en2?'Category deleted':'تم حذف الفئة',1600);
@@ -6668,7 +6688,15 @@ function renderCategoryManager(){
       const eid=editEl?.value||'';
       if(!name){ showToast(en2?'Enter a category name':'اكتب اسم الفئة',1800,'warn'); return; }
       if(eid){
-        await editCustomCategory(eid,{name,icon,color});
+        const isBuiltIn=DEFAULT_TASK_CATEGORIES.some(d=>d.id===eid);
+        if(isBuiltIn){
+          if(!USER_SETTINGS.categoryOverrides) USER_SETTINGS.categoryOverrides={};
+          USER_SETTINGS.categoryOverrides[eid]={name:{en:name,ar:name},icon,color};
+          try{ await saveUserSettings(); }catch(err){}
+          try{ renderPanels(); }catch(err){}
+        }else{
+          await editCustomCategory(eid,{name,icon,color});
+        }
         if(editEl) editEl.value='';
         showToast(en2?'Category updated':'تم تحديث الفئة',1600);
       }else{
@@ -6682,6 +6710,7 @@ function renderCategoryManager(){
     };
   }
 }
+
 
 // Opens the editor. existingTask (a full task tuple) present = edit mode, prefills
 // every field from it; absent = add mode, blank form with sensible defaults.
@@ -9821,10 +9850,47 @@ function renderPrayerLocList(){
   if(!list) return;
   const en=(USER_SETTINGS&&USER_SETTINGS.lang)==='en';
   const locs=USER_SETTINGS.prayerLocations||[];
-  list.innerHTML=locs.map((loc,i)=>`<div style="display:flex;justify-content:space-between;align-items:center;padding:8px 10px;border:1px solid var(--br);border-radius:8px;margin-bottom:6px">
-    <span>${loc.icon||'📍'} ${loc.name} · ${loc.pts}⭐</span>
-    <button type="button" class="altbtn" data-prayer-loc-del="${i}">${en?'Remove':'حذف'}</button>
-  </div>`).join('')||`<p class="desc">${en?'No custom locations yet.':'لا أماكن مخصصة بعد.'}</p>`;
+  // Built-in options always shown (Mosque locked gold like the prayer modal choice)
+  const builtIn = en
+    ? [
+        {icon:'🕌', name:'Mosque', pts:5, gold:true, locked:true},
+        {icon:'🏠', name:'Home', pts:2, gold:false, locked:true},
+        {icon:'📍', name:'Other', pts:2, gold:false, locked:true}
+      ]
+    : [
+        {icon:'🕌', name:'المسجد', pts:5, gold:true, locked:true},
+        {icon:'🏠', name:'البيت', pts:2, gold:false, locked:true},
+        {icon:'📍', name:'أخرى', pts:2, gold:false, locked:true}
+      ];
+  const builtHtml = builtIn.map(loc=>{
+    const goldStyle = loc.gold
+      ? 'border-color:rgba(251,191,36,.55);background:linear-gradient(135deg,rgba(251,191,36,.12),rgba(245,158,11,.06));box-shadow:0 0 12px rgba(251,191,36,.15)'
+      : 'border-color:var(--br);background:var(--c2)';
+    const lock = loc.locked ? `<span style="font-size:.62rem;color:var(--mu);font-weight:800">${en?'Fixed':'ثابت'}</span>` : '';
+    const star = loc.gold ? '⭐' : '⭐';
+    return `<div style="display:flex;justify-content:space-between;align-items:center;padding:10px 12px;border:1.5px solid;border-radius:10px;margin-bottom:6px;${goldStyle}">
+      <span style="font-weight:800;display:flex;align-items:center;gap:8px">${loc.icon} ${loc.name} · ${loc.pts}${star} ${lock}</span>
+    </div>`;
+  }).join('');
+  const customHtml = locs.map((loc,i)=>{
+    const color = loc.color || '#fbbf24';
+    const gold = (parseInt(loc.pts,10)||0) >= 5;
+    const goldStyle = gold
+      ? `border-color:rgba(251,191,36,.55);background:linear-gradient(135deg,color-mix(in srgb, ${color} 18%, transparent),rgba(245,158,11,.06))`
+      : `border-color:color-mix(in srgb, ${color} 40%, var(--br));background:color-mix(in srgb, ${color} 10%, var(--c2))`;
+    return `<div style="display:flex;justify-content:space-between;align-items:center;gap:8px;padding:10px 12px;border:1.5px solid;border-radius:10px;margin-bottom:6px;${goldStyle}">
+      <span style="font-weight:800;display:flex;align-items:center;gap:8px;min-width:0">
+        <span style="width:10px;height:10px;border-radius:50%;background:${color};flex-shrink:0;box-shadow:0 0 6px ${color}"></span>
+        ${loc.icon||'📍'} ${loc.name} · ${loc.pts||2}⭐
+      </span>
+      <span style="display:flex;gap:4px;flex-shrink:0">
+        <button type="button" class="altbtn" data-prayer-loc-up="${i}" title="Up" style="padding:4px 8px;font-size:.7rem">↑</button>
+        <button type="button" class="altbtn" data-prayer-loc-down="${i}" title="Down" style="padding:4px 8px;font-size:.7rem">↓</button>
+        <button type="button" class="altbtn" data-prayer-loc-del="${i}" style="padding:4px 8px;font-size:.72rem">${en?'Remove':'حذف'}</button>
+      </span>
+    </div>`;
+  }).join('');
+  list.innerHTML = builtHtml + (customHtml || '') + (locs.length?'':`<p class="desc" style="margin-top:8px">${en?'Add your own places below (Gym, Work…). Points capped at Mosque.':'أضف أماكنك بالأسفل (جيم، شغل…). النقاط بحد أقصى المسجد.'}</p>`);
 }
 
 const NOTIF_LEAD_MIN=30;
@@ -10061,7 +10127,7 @@ function getPrayerLocationOptions(en){
     if(!loc||!loc.name) continue;
     const pts=Math.min(MOSQUE_MAX_PTS, Math.max(1, parseInt(loc.pts,10)||2));
     const icon=loc.icon||'📍';
-    base.push({label:`${loc.name} ${icon}`,pts,gold:pts>=MOSQUE_MAX_PTS});
+    base.push({label:`${loc.name} ${icon}`,pts,gold:pts>=MOSQUE_MAX_PTS,color:loc.color||null});
   }
   return base;
 }
@@ -12458,6 +12524,16 @@ function computeDayMacros(jd,iso){
     }
   }
 
+  // Count EVERY food-log entry for this day (logging is source of truth for intake,
+  // even if the task card wasn't marked done).
+  const countedIds=new Set();
+  for(const [fid, entry] of Object.entries(dayFoodLog||{})){
+    const m=entry && entry.macro;
+    if(!m) continue;
+    consumed.p+=(+m.p||0);consumed.c+=(+m.c||0);consumed.f+=(+m.f||0);consumed.b+=(+m.b||0);consumed.k+=(+m.k||0);
+    countedIds.add(fid);
+  }
+
   for(const t of allTasks){
     const macro=t[11];
     if(!macro) continue;
@@ -12466,10 +12542,9 @@ function computeDayMacros(jd,iso){
       target.p+=macro.p;target.c+=macro.c;target.f+=macro.f;target.b+=(macro.b||0);target.k+=macro.k;
     }
     const v=dayDone[t[0]];
-    if(v!==undefined && v!==false){
-      const logged=dayFoodLog[t[0]]?.macro;
-      const m=logged||macro;
-      consumed.p+=m.p;consumed.c+=m.c;consumed.f+=m.f;consumed.b+=(m.b||0);consumed.k+=m.k;
+    // Done-but-not-logged still contributes table macros; skip if already counted via foodLog
+    if(v!==undefined && v!==false && !countedIds.has(t[0])){
+      consumed.p+=macro.p;consumed.c+=macro.c;consumed.f+=macro.f;consumed.b+=(macro.b||0);consumed.k+=macro.k;
     }
   }
   return{target,consumed};
@@ -16721,7 +16796,7 @@ document.body.addEventListener('click',async e=>{
     pts=Math.min(MOSQUE_MAX_PTS, Math.max(1, pts));
     if(!name){ showToast((USER_SETTINGS.lang==='en')?'Enter a location name':'أدخل اسم المكان',2000,'warn'); return; }
     if(!USER_SETTINGS.prayerLocations) USER_SETTINGS.prayerLocations=[];
-    USER_SETTINGS.prayerLocations.push({name,icon,pts});
+    const color=(document.getElementById('prayerLocColor')?.value||'#fbbf24'); USER_SETTINGS.prayerLocations.push({name,icon,pts,color});
     try{ await saveUserSettings(); }catch(e){}
     renderPrayerLocList();
     const nm=document.getElementById('prayerLocName'); if(nm) nm.value='';
@@ -16733,6 +16808,20 @@ document.body.addEventListener('click',async e=>{
     if(USER_SETTINGS.prayerLocations) USER_SETTINGS.prayerLocations.splice(idx,1);
     try{ await saveUserSettings(); }catch(e){}
     renderPrayerLocList();
+    return;
+  }
+  const upLoc=closest('[data-prayer-loc-up]');
+  if(upLoc){
+    const idx=parseInt(upLoc.getAttribute('data-prayer-loc-up'),10);
+    const arr=USER_SETTINGS.prayerLocations||[];
+    if(idx>0 && idx<arr.length){ const t=arr[idx-1]; arr[idx-1]=arr[idx]; arr[idx]=t; USER_SETTINGS.prayerLocations=arr; try{ await saveUserSettings(); }catch(e){} renderPrayerLocList(); }
+    return;
+  }
+  const downLoc=closest('[data-prayer-loc-down]');
+  if(downLoc){
+    const idx=parseInt(downLoc.getAttribute('data-prayer-loc-down'),10);
+    const arr=USER_SETTINGS.prayerLocations||[];
+    if(idx>=0 && idx<arr.length-1){ const t=arr[idx+1]; arr[idx+1]=arr[idx]; arr[idx]=t; USER_SETTINGS.prayerLocations=arr; try{ await saveUserSettings(); }catch(e){} renderPrayerLocList(); }
     return;
   }
   const notifDetail=closest('[data-notif-toggle-detail]');
@@ -16762,13 +16851,19 @@ document.body.addEventListener('click',async e=>{
     const sec=setNavBtn.getAttribute('data-setsec');
     document.querySelectorAll('#setNav button').forEach(b=>b.classList.toggle('act',b===setNavBtn));
     document.querySelectorAll('.set-section').forEach(s=>s.classList.toggle('act',s.id==='setsec-'+sec));
-    if(window.matchMedia && window.matchMedia('(max-width:700px)').matches){
+    // Mobile / narrow: always open the section panel (not just max-width media — some
+    // phones report larger CSS width in landscape / desktop mode).
+    const narrow = (window.matchMedia && window.matchMedia('(max-width:900px)').matches) || (window.innerWidth||0) < 900;
+    if(narrow){
       document.getElementById('settingsScreen')?.classList.add('mobile-sec-open');
       const back=document.getElementById('setMobileBack');
       const en=(USER_SETTINGS&&USER_SETTINGS.lang)==='en';
       if(back) back.textContent=en?'← Back to settings':'→ رجوع للإعدادات';
     }
-    if(sec==='notifications'){ try{ renderTaskNotifList(); }catch(e){} }
+    const actSec=document.getElementById('setsec-'+sec);
+    if(actSec) try{ actSec.scrollIntoView({block:'start',behavior:'smooth'}); }catch(e){}
+    if(sec==='notifications'){ try{ renderTaskNotifList(); renderPrayerLocList(); }catch(e){} }
+    if(sec==='appearance'){ try{ renderCategoryManager(); }catch(e){} }
     return;
   }
 
