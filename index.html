@@ -1,6 +1,6 @@
 <!DOCTYPE html>
 <html lang="en" dir="ltr">
-<!-- cache-bust: 2026-09-28-ux-full -->
+<!-- cache-bust: 2026-09-28-task-merge -->
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1.0,maximum-scale=1.0,user-scalable=no">
@@ -6176,7 +6176,12 @@ function serializeAllSchedulesForFirestore(schedules){
   if(!schedules) return schedules;
   const out = {};
   for(const id of Object.keys(schedules)){
-    out[id] = { id: schedules[id].id, name: schedules[id].name, sched: serializeScheduleForFirestore(schedules[id].sched) };
+    out[id] = {
+      id: schedules[id].id,
+      name: schedules[id].name,
+      icon: schedules[id].icon||null,
+      sched: serializeScheduleForFirestore(schedules[id].sched)
+    };
   }
   return out;
 }
@@ -6184,7 +6189,12 @@ function deserializeAllSchedulesFromFirestore(schedules){
   if(!schedules) return schedules;
   const out = {};
   for(const id of Object.keys(schedules)){
-    out[id] = { id: schedules[id].id, name: schedules[id].name, sched: deserializeScheduleFromFirestore(schedules[id].sched) };
+    out[id] = {
+      id: schedules[id].id,
+      name: schedules[id].name,
+      icon: schedules[id].icon||null,
+      sched: deserializeScheduleFromFirestore(schedules[id].sched)
+    };
   }
   return out;
 }
@@ -6292,16 +6302,56 @@ function mergeStatsPreferRicher(localS, cloudS){
   return out;
 }
 
+// Merge two weekday maps so tasks from BOTH devices survive.
+// Same task id: local wins (this device may have just edited it).
+// Task only on cloud: keep it (fixes "added on laptop, missing on phone").
+function mergeSchedDayTasks(localSched, cloudSched){
+  const out={};
+  const L=localSched&&typeof localSched==='object'?localSched:{};
+  const C=cloudSched&&typeof cloudSched==='object'?cloudSched:{};
+  const jds=new Set([...Object.keys(L), ...Object.keys(C)]);
+  for(const jd of jds){
+    const ld=L[jd]||{};
+    const cd=C[jd]||{};
+    const byId={};
+    const take=(t)=>{
+      if(!t) return;
+      const id=Array.isArray(t)?t[0]:(t.tuple&&t.tuple[0]);
+      if(!id) return;
+      const tuple=Array.isArray(t)?t:(t.tuple||null);
+      if(!tuple) return;
+      byId[id]=tuple;
+    };
+    // Cloud first, then local overwrites same ids
+    for(const t of (cd.ts||[])) take(t);
+    for(const t of (ld.ts||[])) take(t);
+    out[jd]={
+      n:ld.n||cd.n,
+      wk:ld.wk||cd.wk,
+      bd:ld.bd||cd.bd,
+      gm:(ld.gm!=null?ld.gm:cd.gm)||null,
+      ts:Object.values(byId)
+    };
+  }
+  return out;
+}
 function mergeScheduleSlotsPreferLocal(localMap, cloudMap){
   const out={};
   const cloud=cloudMap&&typeof cloudMap==='object'?cloudMap:{};
   const local=localMap&&typeof localMap==='object'?localMap:{};
-  for(const id of Object.keys(cloud)){
-    out[id]=cloud[id];
-  }
-  for(const id of Object.keys(local)){
-    // Local always wins for the same id (this device just edited it).
-    out[id]=local[id];
+  const ids=new Set([...Object.keys(cloud), ...Object.keys(local)]);
+  for(const id of ids){
+    const L=local[id];
+    const C=cloud[id];
+    if(!L && C){ out[id]=C; continue; }
+    if(L && !C){ out[id]=L; continue; }
+    // Both exist: deep-merge tasks so laptop-added tasks appear on phone
+    out[id]={
+      id:(L&&L.id)||(C&&C.id)||id,
+      name:(L&&L.name)||(C&&C.name)||id,
+      icon:(L&&L.icon)||(C&&C.icon)||null,
+      sched:mergeSchedDayTasks(L&&L.sched, C&&C.sched)
+    };
   }
   return out;
 }
@@ -19485,16 +19535,11 @@ if (typeof onAuthStateChanged !== 'undefined' && typeof fbAuth !== 'undefined') 
           // in flight).
           if(d.userSchedules) {
             const cloudSlots=deserializeAllSchedulesFromFirestore(d.userSchedules);
-            // Prefer cloud slots, but keep any local-only slot the phone created
-            // offline after the last sync (won't wipe laptop slots either).
+            // Deep-merge slots + tasks (union by task id). Old "local whole slot wins"
+            // dropped laptop-added tasks on the phone forever.
             USER_SCHEDULES=mergeScheduleSlotsPreferLocal(USER_SCHEDULES, cloudSlots);
-            // If cloud had real multi-slot data and local was bare default, take cloud fully.
             if(!isBareDefaultSchedules(cloudSlots) && isBareDefaultSchedules(USER_SCHEDULES)){
-              USER_SCHEDULES=cloudSlots;
-            }
-            // Always prefer cloud's richer map when it has more slots than local.
-            if(Object.keys(cloudSlots||{}).length > Object.keys(USER_SCHEDULES||{}).length){
-              USER_SCHEDULES=mergeScheduleSlotsPreferLocal(USER_SCHEDULES, cloudSlots);
+              USER_SCHEDULES=JSON.parse(JSON.stringify(cloudSlots));
             }
             ACTIVE_SCHEDULE_ID = d.activeScheduleId || ACTIVE_SCHEDULE_ID || 'default';
             if (USER_SCHEDULES[ACTIVE_SCHEDULE_ID]) {
@@ -19507,6 +19552,7 @@ if (typeof onAuthStateChanged !== 'undefined' && typeof fbAuth !== 'undefined') 
               await sSet(LS.activeScheduleId,ACTIVE_SCHEDULE_ID);
               await sSet(LS.userSchedule,USER_SCHEDULE);
             }catch(e){}
+            try{ renderTabs(); renderPanels(); switchDay(todayJD()); updateUI(); }catch(e){}
           } else if(d.userSchedule) {
             USER_SCHEDULE=deserializeScheduleFromFirestore(d.userSchedule);
             // Legacy single-schedule accounts: wrap into the slots map once.
