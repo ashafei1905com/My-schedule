@@ -1,6 +1,6 @@
 <!DOCTYPE html>
 <html lang="en" dir="ltr">
-<!-- cache-bust: 2026-09-28-ux-full -->
+<!-- cache-bust: 2026-09-28-features4 -->
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1.0,maximum-scale=1.0,user-scalable=no">
@@ -467,7 +467,26 @@ html[dir="rtl"] .tc{animation-name:tcEnterRtl}
 .ds-kpi-sub-val{font-size:.76rem;color:var(--mu, #64748b);font-weight:600}
 .ds-pts-number{color:#fbbf24}
 .ds-progress-track{width:100%;height:6px;background:rgba(255,255,255,.07);border-radius:999px;overflow:hidden;margin:8px 0 6px}
-.ds-progress-fill{height:100%;background:linear-gradient(90deg, #10b981, #34d399);border-radius:999px;transition:width .45s cubic-bezier(0.4,0,0.2,1)}
+.ds-progress-fill{height:100%;background:linear-gradient(90deg, #10b981, #34d399);border-radius:999px;transition:width .55s cubic-bezier(0.22,1,0.36,1);will-change:width}
+.ds-progress-fill.ds-progress-pulse{animation:dsBarPulse .55s ease}
+@keyframes dsBarPulse{0%{filter:brightness(1)}40%{filter:brightness(1.35)}100%{filter:brightness(1)}}
+.ds-weekly-trend{margin-top:12px;padding:12px 14px;border-radius:12px;border:1px solid color-mix(in srgb, var(--ac) 22%, var(--br));background:color-mix(in srgb, var(--ac) 8%, rgba(0,0,0,.2));display:flex;align-items:center;gap:12px;flex-wrap:wrap}
+.ds-weekly-trend-spark{display:flex;align-items:flex-end;gap:3px;height:28px;flex-shrink:0}
+.ds-weekly-trend-spark span{width:6px;border-radius:3px 3px 1px 1px;background:color-mix(in srgb, var(--ac) 70%, #34d399);opacity:.85;transition:height .35s ease}
+.ds-weekly-trend-meta{flex:1;min-width:120px}
+.ds-weekly-trend-label{font-size:.7rem;font-weight:800;color:var(--so);margin-bottom:2px}
+.ds-weekly-trend-val{font-size:.88rem;font-weight:900;color:var(--tx)}
+.ds-weekly-trend-delta{font-size:.72rem;font-weight:800;margin-inline-start:6px}
+.ds-weekly-trend-delta.up{color:#34d399}
+.ds-weekly-trend-delta.down{color:#f87171}
+.ds-weekly-trend-delta.flat{color:var(--mu)}
+.fw-weight-progress{margin-top:10px;padding:10px 12px;border-radius:10px;border:1px solid color-mix(in srgb, var(--ac) 25%, var(--br));background:rgba(0,0,0,.18)}
+.fw-weight-progress-head{display:flex;justify-content:space-between;align-items:center;gap:8px;margin-bottom:6px;flex-wrap:wrap}
+.fw-weight-progress-title{font-size:.75rem;font-weight:900;color:var(--tx)}
+.fw-weight-progress-nums{font-size:.78rem;font-weight:800;color:var(--ac)}
+.fw-weight-bar-track{height:8px;border-radius:999px;background:rgba(255,255,255,.08);overflow:hidden}
+.fw-weight-bar-fill{height:100%;border-radius:999px;background:linear-gradient(90deg,var(--ac),#34d399);transition:width .5s cubic-bezier(0.22,1,0.36,1)}
+.fw-weight-progress-sub{font-size:.68rem;color:var(--mu);margin-top:5px;font-weight:600}
 .ds-kpi-footer-text{font-size:.66rem;color:var(--mu, #94a3b8);font-weight:600}
 .ds-cat-section{margin-top:10px;padding-top:10px;border-top:1px solid rgba(255,255,255,.06)}
 .ds-cat-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:7px}
@@ -4048,6 +4067,10 @@ body.theme-matrix .tctime{
                 <label for="setBodyFat" style="display:block;font-size:.78rem;font-weight:800;color:var(--so);margin-bottom:6px" id="setBodyFatLbl">Body fat % (optional)</label>
                 <input type="number" id="setBodyFat" min="4" max="50" step="0.5" placeholder="e.g. 15" style="width:100%;padding:8px 10px;border-radius:8px;border:1px solid var(--br);background:var(--c);color:var(--tx);font-family:inherit;font-weight:800">
               </div>
+              <div>
+                <label for="setTargetWeight" style="display:block;font-size:.78rem;font-weight:800;color:var(--so);margin-bottom:6px" id="setTargetWeightLbl">Target weight (kg)</label>
+                <input type="number" id="setTargetWeight" min="30" max="250" step="0.5" placeholder="e.g. 70" style="width:100%;padding:8px 10px;border-radius:8px;border:1px solid var(--br);background:var(--c);color:var(--tx);font-family:inherit;font-weight:800">
+              </div>
 
               <!-- Real-time Scientific Target Calculation Card -->
               <div id="setFitnessPreviewCard" style="padding:12px;background:rgba(59,130,246,.08);border:1px solid rgba(59,130,246,.25);border-radius:10px;margin-top:4px">
@@ -4361,6 +4384,18 @@ body.theme-matrix .tctime{
               <div class="ds-progress-fill" id="dsPointsBar" style="width:0%;background:linear-gradient(90deg, #f59e0b, #fbbf24)"></div>
             </div>
             <div class="ds-kpi-footer-text" id="dsPointsSubText">Total points earned today</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Weekly habit consistency trend -->
+      <div class="ds-weekly-trend" id="dsWeeklyTrend">
+        <div class="ds-weekly-trend-spark" id="dsWeeklySpark" aria-hidden="true"></div>
+        <div class="ds-weekly-trend-meta">
+          <div class="ds-weekly-trend-label" id="dsWeeklyTrendLabel">Weekly consistency</div>
+          <div>
+            <span class="ds-weekly-trend-val" id="dsWeeklyTrendVal">—</span>
+            <span class="ds-weekly-trend-delta flat" id="dsWeeklyTrendDelta"></span>
           </div>
         </div>
       </div>
@@ -9379,9 +9414,15 @@ function getTaskSortTimeMinutes(t){
   if(typeof t[10]==='string' && /^\d{1,2}:\d{2}$/.test(t[10])) return toMin(t[10]);
   return toMin(t[1]);
 }
+function taskPriorityRank(t){
+  const p=(t&&(t.priority||t[15]))||'medium';
+  if(p==='high') return 0;
+  if(p==='low') return 2;
+  return 1; // medium / default
+}
 function sortKey(t, iso, jd){
-  // Always chronological by start time. Drag-order is only used while edit mode is on
-  // so the timeline never appears shuffled after accidental reorders.
+  // Chronological by start time; within the same minute, High → Medium → Low.
+  // Drag-order only while edit mode is on.
   if(window.SCHEDULE_EDIT_MODE){
     const effIso = iso || (typeof SELECTED_DATE!=='undefined'?SELECTED_DATE:todayStr());
     const dayOrder = (USER_EDITS?.order && (USER_EDITS.order[effIso] || (jd!=null && USER_EDITS.order['jd_'+jd]))) || null;
@@ -9391,7 +9432,9 @@ function sortKey(t, iso, jd){
     }
   }
   const base = getTaskSortTimeMinutes(t);
-  return t[2]==='sleep'?base+1440:base;
+  const timePart = t[2]==='sleep'?base+1440:base;
+  // Fractional secondary key so priority sorts inside equal times without breaking time order
+  return timePart + (taskPriorityRank(t) * 0.01);
 }
 // Both functions now accept an optional `iso` (the actual calendar date being viewed).
 // When omitted they fall back to the natural date for weekday `jd` relative to TODAY's
@@ -13793,7 +13836,18 @@ function updateUI(){
   const dsPctBadgeEl=document.getElementById('dsPctBadge');
   if(dsPctBadgeEl) dsPctBadgeEl.textContent=`${pct}%`;
   const dsTasksProgressEl=document.getElementById('dsTasksProgress');
-  if(dsTasksProgressEl) dsTasksProgressEl.style.width=`${Math.min(pct,100)}%`;
+  if(dsTasksProgressEl){
+    const nextW=`${Math.min(pct,100)}%`;
+    if(dsTasksProgressEl.style.width!==nextW){
+      dsTasksProgressEl.classList.remove('ds-progress-pulse');
+      // force reflow so animation can retrigger
+      void dsTasksProgressEl.offsetWidth;
+      dsTasksProgressEl.style.width=nextW;
+      dsTasksProgressEl.classList.add('ds-progress-pulse');
+    }else{
+      dsTasksProgressEl.style.width=nextW;
+    }
+  }
   const dsTasksRemainingEl=document.getElementById('dsTasksRemainingText');
   if(dsTasksRemainingEl){
     dsTasksRemainingEl.textContent=completedCount>=totalTasksCount && totalTasksCount>0
@@ -13837,6 +13891,60 @@ function updateUI(){
   if(dsPointsSubTextEl){
     dsPointsSubTextEl.textContent=en?`${completedCount} completed items score`:`مجموع ${completedCount} مهمة منجزة`;
   }
+
+  // Weekly consistency trend (last 7 days completion % + vs prior week)
+  try{
+    const spark=document.getElementById('dsWeeklySpark');
+    const trendVal=document.getElementById('dsWeeklyTrendVal');
+    const trendDelta=document.getElementById('dsWeeklyTrendDelta');
+    const trendLabel=document.getElementById('dsWeeklyTrendLabel');
+    if(trendLabel) trendLabel.textContent=en?'Weekly consistency':'ثبات الأسبوع';
+    const dayPcts=[];
+    for(let i=6;i>=0;i--){
+      const iso=dateOff(-i, SELECTED_DATE||TODAY);
+      const jdI=getJDfromISO(iso);
+      const reqI=typeof getReqTasks==='function'?getReqTasks(jdI,iso):[];
+      const doneMap=(historyData[iso]||{}).done||{};
+      const doneN=reqI.filter(t=>doneMap[t[0]]).length;
+      const p=reqI.length?Math.round((doneN/reqI.length)*100):0;
+      dayPcts.push(p);
+    }
+    const avg=dayPcts.length?Math.round(dayPcts.reduce((a,b)=>a+b,0)/dayPcts.length):0;
+    // Prior 7 days average
+    const prevPcts=[];
+    for(let i=13;i>=7;i--){
+      const iso=dateOff(-i, SELECTED_DATE||TODAY);
+      const jdI=getJDfromISO(iso);
+      const reqI=typeof getReqTasks==='function'?getReqTasks(jdI,iso):[];
+      const doneMap=(historyData[iso]||{}).done||{};
+      const doneN=reqI.filter(t=>doneMap[t[0]]).length;
+      prevPcts.push(reqI.length?Math.round((doneN/reqI.length)*100):0);
+    }
+    const prevAvg=prevPcts.length?Math.round(prevPcts.reduce((a,b)=>a+b,0)/prevPcts.length):0;
+    const delta=avg-prevAvg;
+    if(spark){
+      spark.innerHTML=dayPcts.map(p=>{
+        const h=Math.max(4, Math.round((p/100)*28));
+        return `<span style="height:${h}px" title="${p}%"></span>`;
+      }).join('');
+    }
+    if(trendVal) trendVal.textContent=en?`${avg}% avg this week`:`متوسط ${avg}% هذا الأسبوع`;
+    if(trendDelta){
+      if(prevAvg===0 && avg===0){
+        trendDelta.textContent=en?'No prior data':'لا بيانات سابقة';
+        trendDelta.className='ds-weekly-trend-delta flat';
+      }else if(delta>0){
+        trendDelta.textContent=en?`▲ +${delta}% vs last week`:`▲ +${delta}% عن الأسبوع الماضي`;
+        trendDelta.className='ds-weekly-trend-delta up';
+      }else if(delta<0){
+        trendDelta.textContent=en?`▼ ${delta}% vs last week`:`▼ ${delta}% عن الأسبوع الماضي`;
+        trendDelta.className='ds-weekly-trend-delta down';
+      }else{
+        trendDelta.textContent=en?'● Same as last week':'● مثل الأسبوع الماضي';
+        trendDelta.className='ds-weekly-trend-delta flat';
+      }
+    }
+  }catch(e){ console.warn('weekly trend',e); }
 
   // Header Subtitle & Date
   const dsTitleEl=document.getElementById('dsTitle');
@@ -14025,7 +14133,46 @@ function renderFitnessSettingsStats(){
   const ratioText = document.getElementById('fwMacroRatioText');
   if(ratioText) ratioText.textContent = `Protein ${pPct}% · Fats ${fPct}% · Carbs ${cPct}%`;
 
+  // Current weight vs target weight progress
   const isEn = (USER_SETTINGS && USER_SETTINGS.lang) === 'en';
+  try{
+    const targetInp=document.getElementById('setTargetWeight');
+    const storedTarget=Number(m.target_weight)||Number(USER_SETTINGS.target_weight)||null;
+    if(targetInp && storedTarget && !targetInp.value) targetInp.value=storedTarget;
+    const targetW=Number(targetInp?.value)||storedTarget||null;
+    let box=document.getElementById('fwWeightProgressBox');
+    if(!box && previewCard){
+      box=document.createElement('div');
+      box.id='fwWeightProgressBox';
+      box.className='fw-weight-progress';
+      previewCard.appendChild(box);
+    }
+    if(box){
+      if(targetW && weight){
+        const startW=Number(m.start_weight)||weight;
+        const span=Math.abs(startW-targetW)||1;
+        const moved=Math.abs(startW-weight);
+        let pctDone=Math.max(0, Math.min(100, Math.round((moved/span)*100)));
+        // If already past target, show 100%
+        if((goal==='fat_loss' && weight<=targetW) || (goal==='muscle' && weight>=targetW) || (goal==='recomp' && Math.abs(weight-targetW)<0.5)){
+          pctDone=100;
+        }
+        const diff=(weight-targetW);
+        const diffTxt=diff===0?(isEn?'On target':'على الهدف'):(diff>0?`+${diff.toFixed(1)} kg`:`${diff.toFixed(1)} kg`);
+        box.innerHTML=`<div class="fw-weight-progress-head">
+          <span class="fw-weight-progress-title">${isEn?'Weight progress':'تقدم الوزن'}</span>
+          <span class="fw-weight-progress-nums">${weight} → ${targetW} kg</span>
+        </div>
+        <div class="fw-weight-bar-track"><div class="fw-weight-bar-fill" style="width:${pctDone}%"></div></div>
+        <div class="fw-weight-progress-sub">${isEn?`Current vs target: ${diffTxt} · ${pctDone}% of path`:`الحالي مقابل الهدف: ${diffTxt} · ${pctDone}% من الطريق`}</div>`;
+        box.style.display='block';
+      }else{
+        box.innerHTML=`<div class="fw-weight-progress-sub">${isEn?'Set a target weight above to track progress toward your goal.':'حدد وزن الهدف بالأعلى لتتبع التقدم نحو هدفك.'}</div>`;
+        box.style.display='block';
+      }
+    }
+  }catch(e){}
+
   const formulaName = calc.formula_name || calc.formulaName || (calc.body_fat ? 'Katch-McArdle' : 'Mifflin-St Jeor');
   const formulaTitle = isEn
     ? `${formulaName} Scientific Targets`
@@ -14540,9 +14687,16 @@ async function handleSettingsFitnessSave(){
   const bodyFat = bfVal ? Number(bfVal) : null;
 
   const calculated = calculateFitnessTargets({gender, age, weight, height, activity, goal, body_fat: bodyFat});
+  const targetWeightRaw=document.getElementById('setTargetWeight')?.value;
+  const targetWeight=targetWeightRaw?Math.max(30, Math.min(250, Number(targetWeightRaw))):null;
+  if(targetWeight){
+    calculated.target_weight=targetWeight;
+    if(!calculated.start_weight) calculated.start_weight=weight;
+  }
 
   USER_SETTINGS.fitness_tracking_enabled = ftChecked;
   USER_SETTINGS.fitness_metrics = calculated;
+  USER_SETTINGS.target_weight = targetWeight;
 
   USER_SETTINGS.gender = calculated.gender;
   USER_SETTINGS.age = calculated.age;
@@ -14648,6 +14802,7 @@ function openSettingsScreen(){
   if(document.getElementById('setHeight')) document.getElementById('setHeight').value = m.height || USER_SETTINGS.height || 175;
   if(document.getElementById('setActivity')) document.getElementById('setActivity').value = m.activity || USER_SETTINGS.activity || USER_SETTINGS.activity_level || 1.55;
   if(document.getElementById('setBodyFat')) document.getElementById('setBodyFat').value = m.body_fat || USER_SETTINGS.body_fat || '';
+  if(document.getElementById('setTargetWeight')) document.getElementById('setTargetWeight').value = m.target_weight || USER_SETTINGS.target_weight || '';
 
   const goal = m.goal || USER_SETTINGS.goal || 'recomp';
   ['setGoalMuscle', 'setGoalRecomp', 'setGoalFatLoss'].forEach(id=>{
@@ -18414,7 +18569,7 @@ document.body.addEventListener('input',e=>{
   if(t && t.id && t.id.startsWith('wiz')){
     renderFitnessWizardPreview();
   }
-  if(t && t.id && t.id.startsWith('set') && ['setAge','setWeight','setHeight','setActivity','setBodyFat'].includes(t.id)){
+  if(t && t.id && t.id.startsWith('set') && ['setAge','setWeight','setHeight','setActivity','setBodyFat','setTargetWeight'].includes(t.id)){
     renderFitnessSettingsStats();
   }
   if(t && (t.matches('[data-notif-enabled]')||t.matches('[data-notif-lead]')||t.matches('[data-notif-start]')||t.matches('[data-notif-end]')||t.matches('[data-notif-lead-min]')||t.matches('[data-notif-end-min]'))){
