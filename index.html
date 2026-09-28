@@ -1,6 +1,6 @@
 <!DOCTYPE html>
 <html lang="en" dir="ltr">
-<!-- cache-bust: 2026-09-28-hard-sync -->
+<!-- cache-bust: 2026-09-28-ux-full -->
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1.0,maximum-scale=1.0,user-scalable=no">
@@ -487,9 +487,24 @@ input[type="color"]::-moz-color-swatch{
 .tn-row{border-color:color-mix(in srgb, var(--ac) 18%, var(--br))!important}
 .tn-switch input:checked{accent-color:var(--ac)}
 .set-body{flex:1;display:flex;overflow:hidden}
-.set-nav{width:200px;border-left:1px solid var(--br);padding:16px 10px;overflow-y:auto;flex-shrink:0}
-.set-nav button{width:100%;text-align:right;padding:12px 14px;margin-bottom:4px;background:transparent;border:none;border-radius:10px;color:var(--so);font-family:'Cairo',sans-serif;font-size:.85rem;font-weight:700;cursor:pointer}
-.set-nav button:hover{background:rgba(255,255,255,.05);color:var(--tx)}
+.set-nav{width:220px;border-left:1px solid color-mix(in srgb, var(--ac) 18%, var(--br));padding:14px 12px;overflow-y:auto;flex-shrink:0;background:color-mix(in srgb, var(--c2) 80%, transparent)}
+.set-nav button{width:100%;text-align:right;padding:12px 14px;margin-bottom:6px;background:transparent;border:1px solid transparent;border-radius:12px;color:var(--so);font-family:'Cairo',sans-serif;font-size:.86rem;font-weight:700;cursor:pointer;transition:background .15s,border-color .15s,color .15s,box-shadow .15s}
+.set-nav button:hover{background:color-mix(in srgb, var(--ac) 10%, transparent);color:var(--tx);border-color:color-mix(in srgb, var(--ac) 22%, transparent)}
+.set-section{background:color-mix(in srgb, var(--c2) 55%, transparent);border:1px solid color-mix(in srgb, var(--ac) 14%, var(--br));border-radius:16px;padding:16px 16px 20px;margin-bottom:14px}
+.set-section h3{font-size:1.05rem;font-weight:900;margin:0 0 6px;color:var(--tx);letter-spacing:.01em}
+.set-section .desc{font-size:.78rem;line-height:1.45;color:var(--mu);margin:0 0 14px}
+.set-row{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:12px 12px;margin-bottom:8px;border-radius:12px;border:1px solid color-mix(in srgb, var(--ac) 12%, var(--br));background:color-mix(in srgb, var(--c) 70%, transparent)}
+.set-row label{font-weight:700;font-size:.88rem;color:var(--tx)}
+.set-header{border-bottom:1px solid color-mix(in srgb, var(--ac) 20%, var(--br));background:color-mix(in srgb, var(--c2) 90%, transparent);backdrop-filter:blur(10px)}
+.color-swatch-row{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-top:6px}
+.color-swatch-btn{width:28px;height:28px;border-radius:999px;border:2px solid rgba(255,255,255,.15);cursor:pointer;padding:0;box-shadow:0 0 0 1px rgba(0,0,0,.25);transition:transform .12s,box-shadow .12s}
+.color-swatch-btn:hover{transform:scale(1.08)}
+.color-swatch-btn.sel{box-shadow:0 0 0 2px var(--bg),0 0 0 4px var(--ac);border-color:var(--ac)}
+.color-swatch-hex{width:96px;padding:6px 8px;border-radius:8px;border:1px solid var(--br);background:var(--c);color:var(--tx);font-size:.75rem;font-family:ui-monospace,monospace}
+@media (max-width:720px){
+  .set-nav{width:100%;border-left:none;border-bottom:1px solid color-mix(in srgb, var(--ac) 18%, var(--br));display:flex;flex-direction:row;flex-wrap:nowrap;overflow-x:auto;padding:10px;gap:6px}
+  .set-nav button{width:auto;flex:0 0 auto;white-space:nowrap;margin-bottom:0;padding:10px 14px}
+}
 .set-nav button.act{background:rgba(59,130,246,.15);color:var(--ac)}
 .set-content{flex:1;padding:24px 20px;overflow-y:auto}
 .set-section{display:none;max-width:520px}
@@ -3498,10 +3513,24 @@ body.theme-matrix .tctime{
   border-radius: 999px;
   transition: width 0.4s ease;
 }
-.fw-bar-p { background: #38bdf8; }
-.fw-bar-f { background: #facc15; }
-.fw-bar-c { background: #34d399; }
-.fw-bar-b { background: #a78bfa; }
+.fw-bar-p { background: var(--ac, #38bdf8); }
+.fw-bar-f { background: color-mix(in srgb, var(--ac, #facc15) 55%, #facc15); }
+.fw-bar-c { background: color-mix(in srgb, var(--ac, #34d399) 40%, #34d399); }
+.fw-bar-b { background: color-mix(in srgb, var(--ac, #a78bfa) 50%, #a78bfa); }
+#macroTrendsModal, #macroTrendsRoot, .macro-trends-wrap {
+  --mt-accent: var(--ac);
+  border-color: color-mix(in srgb, var(--ac) 25%, var(--br));
+}
+#macroTrendsModal .fw-macro-card,
+.macro-trends-wrap .fw-macro-card {
+  border-color: color-mix(in srgb, var(--ac) 22%, var(--br));
+  box-shadow: 0 0 0 1px color-mix(in srgb, var(--ac) 8%, transparent);
+}
+#btn-macro-trends, #btn-open-macro-trends-settings {
+  background: color-mix(in srgb, var(--ac) 14%, transparent) !important;
+  color: var(--ac) !important;
+  border-color: color-mix(in srgb, var(--ac) 35%, transparent) !important;
+}
 
 /* Ratio Stacked Bar */
 .fw-ratio-card {
@@ -3904,7 +3933,7 @@ body.theme-matrix .tctime{
           <h3 data-i18n="sec_notif">التذكيرات (تعمل تلقائياً)</h3>
           <!-- Prayer locations at top of Reminders for visibility -->
           <p class="desc" style="margin-top:4px;font-weight:800" id="prayerLocTitle">Prayer locations</p>
-          <p class="desc" id="prayerLocDesc">Mosque is fixed at max points. Add your own places below (points capped at Mosque).</p>
+          <p class="desc" id="prayerLocDesc">Edit Mosque / Home / Other points &amp; names. Add your own places below.</p>
           <div id="prayerLocList" style="margin-top:8px"></div>
           <div style="display:flex;gap:8px;margin-top:10px;flex-wrap:wrap;align-items:center">
             <input id="prayerLocName" type="text" placeholder="Name" style="flex:1;min-width:100px;padding:8px 10px;border-radius:8px;border:1px solid var(--br);background:var(--c);color:var(--tx);font-family:inherit">
@@ -3943,25 +3972,39 @@ body.theme-matrix .tctime{
             <div style="display:flex;flex-wrap:wrap;gap:8px;align-items:center">
               <input type="text" id="catMgrName" placeholder="Name (e.g. Piano)" style="flex:1;min-width:120px;padding:10px 12px;border-radius:10px;border:1px solid var(--br);background:var(--c2);color:var(--tx);font-family:inherit;font-weight:700">
               <input type="text" id="catMgrIcon" value="🏷️" maxlength="4" style="width:52px;padding:10px;border-radius:10px;border:1px solid var(--br);background:var(--c2);color:var(--tx);text-align:center;font-size:1.1rem">
-              <input type="color" id="catMgrColor" value="#3b82f6" style="width:42px;height:40px;border:none;background:transparent;cursor:pointer">
+              <input type="hidden" id="catMgrColor" value="#3b82f6">
               <button type="button" id="catMgrAddBtn" class="fl-submit-btn" style="width:auto;margin:0;padding:10px 16px">+ Add</button>
             </div>
+            <div class="color-swatch-row" id="catMgrSwatches" data-color-target="catMgrColor"></div>
             <input type="hidden" id="catMgrEditId" value="">
+          </div>
+
+          <div style="margin-top:18px;padding:14px;border:1px solid color-mix(in srgb, var(--ac) 22%, var(--br));border-radius:14px;background:var(--c)">
+            <div style="font-weight:900;font-size:.9rem;margin-bottom:4px" id="slotLogoTitle">Workspace logo</div>
+            <p class="desc" id="slotLogoDesc" style="margin:0 0 10px">Emoji icon for the active schedule slot (shown in the picker and title area).</p>
+            <div style="display:flex;flex-wrap:wrap;gap:8px;align-items:center">
+              <input type="text" id="slotLogoInput" maxlength="4" value="📅" style="width:56px;padding:10px;border-radius:12px;border:1px solid var(--br);background:var(--c2);color:var(--tx);text-align:center;font-size:1.25rem">
+              <div id="slotLogoPresets" style="display:flex;flex-wrap:wrap;gap:6px"></div>
+              <button type="button" id="slotLogoSaveBtn" class="altbtn" style="padding:10px 14px">Save logo</button>
+            </div>
           </div>
 
           <div class="theme-custom-panel" id="themeCustomPanel">
             <div class="theme-custom-row">
               <label data-i18n="theme_accent">Accent</label>
-              <input type="color" id="themeAccentPick" value="#3b82f6" style="width:42px;height:32px;border:none;background:transparent;cursor:pointer">
+              <input type="hidden" id="themeAccentPick" value="#3b82f6">
             </div>
-            <div class="theme-custom-row">
+            <div class="color-swatch-row" data-color-target="themeAccentPick"></div>
+            <div class="theme-custom-row" style="margin-top:10px">
               <label data-i18n="theme_card">Card</label>
-              <input type="color" id="themeCardPick" value="#111827" style="width:42px;height:32px;border:none;background:transparent;cursor:pointer">
+              <input type="hidden" id="themeCardPick" value="#111827">
             </div>
-            <div class="theme-custom-row">
+            <div class="color-swatch-row" data-color-target="themeCardPick"></div>
+            <div class="theme-custom-row" style="margin-top:10px">
               <label data-i18n="theme_bg">Background</label>
-              <input type="color" id="themeBgPick" value="#0a0e1a" style="width:42px;height:32px;border:none;background:transparent;cursor:pointer">
+              <input type="hidden" id="themeBgPick" value="#0a0e1a">
             </div>
+            <div class="color-swatch-row" data-color-target="themeBgPick"></div>
           </div>
           
           <div class="desc" id="unlockedMythicTitle" style="margin-top:20px;font-weight:900">Unlocked Mythic Themes</div>
@@ -4151,6 +4194,14 @@ body.theme-matrix .tctime{
 
   <div class="tw"><div class="tabs" id="tabrow"></div></div>
   <div id="panels"></div>
+  <!-- Floating schedule edit toolbar -->
+  <div id="editModeBar" style="display:none;position:fixed;left:50%;transform:translateX(-50%);bottom:calc(18px + env(safe-area-inset-bottom,0px));z-index:12000;background:color-mix(in srgb, var(--c2) 92%, transparent);border:1.5px solid var(--ac);border-radius:16px;padding:10px 12px;box-shadow:0 12px 40px rgba(0,0,0,.45),0 0 0 1px color-mix(in srgb, var(--ac) 25%, transparent);backdrop-filter:blur(12px);display:none;align-items:center;gap:8px;flex-wrap:wrap;justify-content:center;max-width:min(560px,94vw)">
+    <span id="editModeBarLabel" style="font-size:.78rem;font-weight:800;color:var(--tx);padding:0 4px">Edit mode</span>
+    <button type="button" id="editUndoBtn" class="altbtn" style="padding:8px 12px;font-size:.78rem" title="Undo">↶ Undo</button>
+    <button type="button" id="editRedoBtn" class="altbtn" style="padding:8px 12px;font-size:.78rem" title="Redo">↷ Redo</button>
+    <button type="button" id="editMultiDeleteBtn" class="altbtn" style="padding:8px 12px;font-size:.78rem;color:#f87171;border-color:rgba(239,68,68,.45)">🗑️ Delete selected</button>
+    <button type="button" id="editDoneBtn" class="cbtn" style="padding:8px 16px;font-size:.82rem;font-weight:900;background:var(--ac);border-color:var(--ac);color:#0b1220">Done ✓</button>
+  </div>
 </main>
 
 <!-- Prayer Modal -->
@@ -4290,16 +4341,16 @@ body.theme-matrix .tctime{
     <!-- Step: choose from saved options or type free text -->
     <div id="flChooseStep">
       <div id="flSavedOpts" class="fl-opts"></div>
-      <div class="fl-divider"><span>أو اكتب إيه اللي أكلته بالظبط</span></div>
-      <textarea id="flFreeText" class="fl-textarea" rows="3" placeholder="مثال: طبق فراخ مشوي مع رز وسلطة، وكوب لبن"></textarea>
-      <button id="flSubmitBtn" class="fl-submit-btn" type="button">احسب واحفظ ✅</button>
-      <button id="flCancelBtn" class="modal-back-btn" type="button">إلغاء</button>
+      <div class="fl-divider"><span id="flDividerText">Or type exactly what you ate</span></div>
+      <textarea id="flFreeText" class="fl-textarea" rows="3" placeholder="e.g. grilled chicken with rice and salad, and a glass of milk"></textarea>
+      <button id="flSubmitBtn" class="fl-submit-btn" type="button">Calculate &amp; save ✅</button>
+      <button id="flCancelBtn" class="modal-back-btn" type="button">Cancel</button>
     </div>
 
     <!-- Step: loading while the worker computes macros -->
     <div id="flLoadingStep" style="display:none;padding:24px 0;text-align:center">
       <div style="width:34px;height:34px;border:3px solid #1e2d45;border-top-color:#10b981;border-radius:50%;animation:spin .8s linear infinite;margin:0 auto 12px"></div>
-      <div style="color:var(--mu);font-size:.82rem">بيحسب القيم الغذائية بدقة...</div>
+      <div id="flLoadingText" style="color:var(--mu);font-size:.82rem">Calculating nutrition accurately…</div>
     </div>
 
     <!-- Step: result + verdict + save-as-option prompt -->
@@ -4308,13 +4359,13 @@ body.theme-matrix .tctime{
       <div id="flItemBreakdown" style="display:none;background:var(--c);border:1px solid var(--br);border-radius:10px;padding:10px 12px;margin-bottom:12px"></div>
       <div id="flVerdict" class="fl-verdict"></div>
       <div id="flSaveOptRow" class="fl-save-row">
-        <span>تحفظها كخيار سريع للمرة الجاية؟</span>
+        <span id="flSaveOptLabel">Save as a quick option next time?</span>
         <div style="display:flex;gap:8px">
-          <button id="flSaveOptYes" class="fl-mini-btn fl-mini-yes" type="button">نعم ✅</button>
-          <button id="flSaveOptNo" class="fl-mini-btn fl-mini-no" type="button">لا</button>
+          <button id="flSaveOptYes" class="fl-mini-btn fl-mini-yes" type="button">Yes ✅</button>
+          <button id="flSaveOptNo" class="fl-mini-btn fl-mini-no" type="button">No</button>
         </div>
       </div>
-      <button id="flDoneBtn" class="fl-submit-btn" type="button" style="margin-top:10px">تمام 👍</button>
+      <button id="flDoneBtn" class="fl-submit-btn" type="button" style="margin-top:10px">Done 👍</button>
     </div>
 
     <!-- Step: AI follow-up question (rare — only if the description is too ambiguous
@@ -5473,9 +5524,16 @@ function awardTaskPoints(basePts, opts={}){
   STATS.lifetime_xp=(STATS.lifetime_xp||0)+awarded;
   ensureRankTracking();
   const now=getRankMeta(STATS.lifetime_xp);
-  if(now.key!==STATS.lastRankKey){
+  // Only celebrate a real upward rank change — never on hydrate/re-sync when
+  // lastRankKey was missing/stale and XP already matched Habit Builder+.
+  const order=RANK_TIERS.map(r=>r.key);
+  const prevIdx=Math.max(0, order.indexOf(STATS.lastRankKey||'chaos'));
+  const nextIdx=Math.max(0, order.indexOf(now.key));
+  if(now.key!==STATS.lastRankKey && nextIdx>prevIdx){
     STATS.lastRankKey=now.key;
     try{ showRankUpModal(now); }catch(e){ console.warn(e); }
+  }else{
+    STATS.lastRankKey=now.key;
   }
   try{ updatePrestigeUI(); }catch(e){}
   if(opts.x!=null && opts.y!=null) floatPts(opts.x,opts.y,awarded);
@@ -6343,15 +6401,22 @@ function renderSlotsUI(){
   if(sel){
     sel.innerHTML=ids.map(id=>{
       const s=USER_SCHEDULES[id];
+      const ico=(s&&s.icon)||'📅';
       const label=(s&&s.name)||id;
       const active=id===ACTIVE_SCHEDULE_ID?' ★':'';
-      return `<option value="${id}" ${id===ACTIVE_SCHEDULE_ID?'selected':''}>${label}${active}</option>`;
+      return `<option value="${id}" ${id===ACTIVE_SCHEDULE_ID?'selected':''}>${ico} ${label}${active}</option>`;
     }).join('');
   }
   const lbl=document.getElementById('slotPickerLabel');
   if(lbl){
     const s=USER_SCHEDULES[ACTIVE_SCHEDULE_ID];
-    lbl.textContent=((s&&s.name)||'My Workspace')+' ★';
+    const ico=(s&&s.icon)||'📅';
+    lbl.textContent=`${ico} ${((s&&s.name)||'My Workspace')} ★`;
+  }
+  const logoIn=document.getElementById('slotLogoInput');
+  if(logoIn){
+    const s=USER_SCHEDULES[ACTIVE_SCHEDULE_ID];
+    logoIn.value=(s&&s.icon)||'📅';
   }
 }
 async function openSlotPicker(){
@@ -6391,8 +6456,9 @@ async function openSlotPicker(){
       const s=USER_SCHEDULES[id]||{};
       const name=s.name||id;
       const isOn=id===ACTIVE_SCHEDULE_ID;
+      const ico=s.icon||'📅';
       return `<button type="button" class="modal-opt${isOn?' gold':''}" data-slot-pick="${id}" style="text-align:start">
-        <span>${name}${isOn?(en?' · Active':' · نشط'):''}</span>
+        <span>${ico} ${name}${isOn?(en?' · Active':' · نشط'):''}</span>
         <span class="opt-pts">${isOn?'★':en?'Switch':'تبديل'}</span>
       </button>`;
     }).join('');
@@ -6563,9 +6629,11 @@ const LEGACY_CAT_MAP = {
   sunrise: 'routine'
 };
 
-function getAllCategories(){
+function getAllCategories(opts){
+  opts=opts||{};
+  const hidden = (USER_SETTINGS && Array.isArray(USER_SETTINGS.hiddenCategories)) ? USER_SETTINGS.hiddenCategories : [];
   const overrides = (USER_SETTINGS && USER_SETTINGS.categoryOverrides) ? USER_SETTINGS.categoryOverrides : {};
-  const defaults = DEFAULT_TASK_CATEGORIES.map(c=>{
+  let defaults = DEFAULT_TASK_CATEGORIES.map(c=>{
     const o = overrides[c.id];
     if(!o) return {...c, isBuiltIn:true};
     return {
@@ -6576,6 +6644,9 @@ function getAllCategories(){
       name: o.name ? (typeof o.name === 'object' ? o.name : {en:o.name, ar:o.name}) : c.name
     };
   });
+  if(!opts.includeHidden){
+    defaults=defaults.filter(c=>!hidden.includes(c.id));
+  }
   const custom = (USER_SETTINGS && Array.isArray(USER_SETTINGS.customCategories)) ? USER_SETTINGS.customCategories : [];
   return [...defaults, ...custom.map(c=>({...c, isCustom:true}))];
 }
@@ -6853,7 +6924,7 @@ function renderCategoryManager(){
     const badge=isBuiltIn
       ?`<span style="font-size:.62rem;font-weight:800;color:var(--mu);background:rgba(255,255,255,.06);padding:2px 6px;border-radius:6px">${en?'Built-in':'أساسية'}</span>`
       :`<span style="font-size:.62rem;font-weight:800;color:#a78bfa;background:rgba(139,92,246,.12);padding:2px 6px;border-radius:6px">${en?'Custom':'مخصصة'}</span>`;
-    const delBtn=isBuiltIn?'':`<button type="button" class="altbtn" data-cat-del="${cat.id}" style="padding:6px 10px;font-size:.72rem;color:#f87171;border-color:rgba(239,68,68,.4)">${en?'Delete':'حذف'}</button>`;
+    const delBtn=`<button type="button" class="altbtn" data-cat-del="${cat.id}" data-cat-builtin="${isBuiltIn?'1':'0'}" style="padding:6px 10px;font-size:.72rem;color:#f87171;border-color:rgba(239,68,68,.4)">${en?'Delete':'حذف'}</button>`;
     const catTasks=tasksByCat[cat.id]||[];
     const taskRows=catTasks.length
       ? catTasks.map(t=>{
@@ -6894,6 +6965,10 @@ function renderCategoryManager(){
       const expandBtn=e.target.closest('[data-cat-expand]');
       if(expandBtn){
         const id=expandBtn.getAttribute('data-cat-expand');
+        // Accordion: only one category open at a time (fixes the traffic-jam list)
+        list.querySelectorAll('[data-cat-tasks-panel]').forEach(p=>{
+          if(p.getAttribute('data-cat-tasks-panel')!==id) p.style.display='none';
+        });
         const panel=list.querySelector(`[data-cat-tasks-panel="${id}"]`);
         if(panel) panel.style.display=panel.style.display==='none'?'block':'none';
         return;
@@ -6915,15 +6990,29 @@ function renderCategoryManager(){
         if(colorEl) colorEl.value=cat.color||'#3b82f6';
         if(editEl) editEl.value=id;
         if(addBtn) addBtn.textContent=en2?'Save changes':'حفظ التعديل';
+        try{ wireAllColorSwatchRows(); }catch(err){}
         nameEl?.focus();
         try{ nameEl?.scrollIntoView({block:'center',behavior:'smooth'}); }catch(err){}
       }
       if(delBtn){
         const id=delBtn.getAttribute('data-cat-del');
-        const ok=await appConfirm(en2?'Delete this category?':'حذف هذه الفئة؟', en2?'Tasks keep their old category id.':'المهام تحتفظ بمعرّف الفئة القديمة.');
+        const isBuilt=delBtn.getAttribute('data-cat-builtin')==='1';
+        const ok=await appConfirm(
+          en2?'Delete this category?':'حذف هذه الفئة؟',
+          isBuilt
+            ?(en2?'Built-in categories are hidden from the list. Existing tasks keep their labels until you reassign them.':'الفئات الأساسية تُخفى من القائمة. المهام تحتفظ بتصنيفها حتى تعيد تعيينها.')
+            :(en2?'Tasks keep their old category id.':'المهام تحتفظ بمعرّف الفئة القديمة.')
+        );
         if(!ok) return;
-        await deleteCustomCategory(id);
-        showToast(en2?'Category deleted':'تم حذف الفئة',1600);
+        if(isBuilt){
+          if(!USER_SETTINGS.hiddenCategories) USER_SETTINGS.hiddenCategories=[];
+          if(!USER_SETTINGS.hiddenCategories.includes(id)) USER_SETTINGS.hiddenCategories.push(id);
+          try{ await saveUserSettings(); }catch(e){}
+          try{ renderCategoryManager(); stRenderCategoryChips(); }catch(e){}
+        }else{
+          await deleteCustomCategory(id);
+        }
+        showToast(en2?'Category removed':'تم حذف الفئة',1600);
       }
     });
     list.addEventListener('change', async e=>{
@@ -7247,11 +7336,21 @@ async function stHandleSave(){
       const modal=document.createElement('div');
       modal.id='editScopeModal';
       modal.style.cssText='position:fixed;inset:0;z-index:13000;background:rgba(2,6,16,.72);display:flex;align-items:center;justify-content:center;padding:16px;';
-      modal.innerHTML=`<div style="background:var(--c2,#111827);border:1px solid var(--br);border-radius:16px;max-width:360px;width:100%;padding:18px 16px;box-shadow:0 20px 50px rgba(0,0,0,.5)">
-        <div style="font-weight:900;font-size:1rem;margin-bottom:8px">${enSave?'Apply edit':'تطبيق التعديل'}</div>
-        <div style="font-size:.85rem;color:var(--so);margin-bottom:14px;line-height:1.5">${enSave?'Apply these changes for today only, or forever on the weekly schedule?':'تطبيق التعديل على اليوم فقط، ولا نهائياً على الجدول الأسبوعي؟'}</div>
-        <button type="button" data-scope="today" style="width:100%;margin-bottom:8px;padding:12px;border-radius:12px;border:1px solid rgba(245,158,11,.45);background:rgba(245,158,11,.12);color:#fbbf24;font-family:inherit;font-weight:800;cursor:pointer">${enSave?'Just for today':'اليوم فقط'}</button>
-        <button type="button" data-scope="forever" style="width:100%;margin-bottom:8px;padding:12px;border-radius:12px;border:1px solid rgba(59,130,246,.45);background:rgba(59,130,246,.12);color:#60a5fa;font-family:inherit;font-weight:800;cursor:pointer">${enSave?'Forever (every week)':'نهائياً (كل أسبوع)'}</button>
+      modal.innerHTML=`<div style="background:var(--c2,#111827);border:1.5px solid color-mix(in srgb, var(--ac) 35%, var(--br));border-radius:16px;max-width:380px;width:100%;padding:18px 16px;box-shadow:0 20px 50px rgba(0,0,0,.5)">
+        <div style="font-weight:900;font-size:1rem;margin-bottom:8px;color:var(--tx)">${enSave?'Where should this edit apply?':'فين ينطبق التعديل؟'}</div>
+        <div style="font-size:.82rem;color:var(--so);margin-bottom:14px;line-height:1.5">${enSave?'Pick how far this change should go for this task.':'اختار مدى تطبيق التغيير على هذه المهمة.'}</div>
+        <button type="button" data-scope="today" style="width:100%;margin-bottom:8px;padding:12px;border-radius:12px;border:1px solid rgba(245,158,11,.45);background:rgba(245,158,11,.12);color:#fbbf24;font-family:inherit;font-weight:800;cursor:pointer;text-align:start">
+          <div>${enSave?'Only this time (today)':'هذه المرة فقط (اليوم)'}</div>
+          <div style="font-size:.68rem;font-weight:600;opacity:.85;margin-top:4px">${enSave?'Does not change other days or next weeks.':'ما يغيّرش باقي الأيام أو الأسابيع الجاية.'}</div>
+        </button>
+        <button type="button" data-scope="weekday" style="width:100%;margin-bottom:8px;padding:12px;border-radius:12px;border:1px solid rgba(167,139,250,.45);background:rgba(139,92,246,.12);color:#c4b5fd;font-family:inherit;font-weight:800;cursor:pointer;text-align:start">
+          <div>${enSave?'This weekday every week':'نفس اليوم من كل أسبوع'}</div>
+          <div style="font-size:.68rem;font-weight:600;opacity:.85;margin-top:4px">${enSave?'e.g. every Monday wake-up — not other weekdays.':'مثلاً كل اثنين استيقاظ — مش باقي الأيام.'}</div>
+        </button>
+        <button type="button" data-scope="forever" style="width:100%;margin-bottom:8px;padding:12px;border-radius:12px;border:1px solid rgba(59,130,246,.45);background:rgba(59,130,246,.12);color:#60a5fa;font-family:inherit;font-weight:800;cursor:pointer;text-align:start">
+          <div>${enSave?'All matching days on the weekly schedule':'كل الأيام المطابقة في الجدول الأسبوعي'}</div>
+          <div style="font-size:.68rem;font-weight:600;opacity:.85;margin-top:4px">${enSave?'Updates every day you selected in the editor.':'يحدّث كل يوم محدد في المحرر.'}</div>
+        </button>
         <button type="button" data-scope="cancel" style="width:100%;padding:10px;border-radius:12px;border:1px solid var(--br);background:transparent;color:var(--mu);font-family:inherit;font-weight:700;cursor:pointer">${enSave?'Cancel':'إلغاء'}</button>
       </div>`;
       document.body.appendChild(modal);
@@ -7266,8 +7365,9 @@ async function stHandleSave(){
     if(!editScope || editScope==='cancel') return;
   }
   try{
+    pushEditSnapshot('edit-task');
     if(editScope==='today' && ST_ACTIVE_TASK_ID){
-      // One-day override via USER_EDITS.moves style snapshot for this iso only
+      // One-day override via USER_EDITS dayOverrides for this iso only
       if(!USER_EDITS) USER_EDITS=emptyUserEdits();
       if(!USER_EDITS.dayOverrides) USER_EDITS.dayOverrides={};
       const iso=SELECTED_DATE||TODAY;
@@ -7277,6 +7377,16 @@ async function stHandleSave(){
         cat:selectedCat, icon:ST_SELECTED_ICON
       };
       try{ if(typeof saveUserEdits==='function') await saveUserEdits(); }catch(e){}
+    }else if(editScope==='weekday' && ST_ACTIVE_TASK_ID){
+      // Only the weekday being viewed (ST_ACTIVE_JD), not all selected days
+      await saveScheduleTask(ST_ACTIVE_JD,ST_ACTIVE_TASK_ID,{time:displayTime,name,desc,pts,color:ST_SELECTED_COLOR,foodLog,endTime:displayEnd,days:[ST_ACTIVE_JD],notify,cat:selectedCat,icon:ST_SELECTED_ICON});
+      if(USER_EDITS && USER_EDITS.dayOverrides){
+        const iso=SELECTED_DATE||TODAY;
+        if(USER_EDITS.dayOverrides[iso] && USER_EDITS.dayOverrides[iso][ST_ACTIVE_TASK_ID]){
+          delete USER_EDITS.dayOverrides[iso][ST_ACTIVE_TASK_ID];
+        }
+        try{ if(typeof saveUserEdits==='function') await saveUserEdits(); }catch(e){}
+      }
     }else{
       await saveScheduleTask(ST_ACTIVE_JD,ST_ACTIVE_TASK_ID,{time:displayTime,name,desc,pts,color:ST_SELECTED_COLOR,foodLog,endTime:displayEnd,days,notify,cat:selectedCat,icon:ST_SELECTED_ICON});
       // Clear any day-only override for this task if promoting to forever
@@ -7785,7 +7895,7 @@ function applyI18n(){
   const prayerLocTitle=document.getElementById('prayerLocTitle');
   if(prayerLocTitle) prayerLocTitle.textContent=isEn?'Prayer locations':'أماكن الصلاة';
   const prayerLocDesc=document.getElementById('prayerLocDesc');
-  if(prayerLocDesc) prayerLocDesc.textContent=isEn?'Mosque is fixed at max points. Add your own places below (points capped at Mosque).':'المسجد ثابت بأعلى النقاط. أضف أماكنك بالأسفل (بحد أقصى نقاط المسجد).';
+  if(prayerLocDesc) prayerLocDesc.textContent=isEn?'Edit Mosque / Home / Other points & names. Add your own places below.':'عدّل نقاط وأسماء المسجد والبيت وأخرى. أضف أماكنك بالأسفل.';
   const prayerLocAdd=document.getElementById('prayerLocAddBtn');
   if(prayerLocAdd) prayerLocAdd.textContent=isEn?'Add':'إضافة';
   const slotHeading=document.getElementById('slotHeading');
@@ -7931,6 +8041,56 @@ function matchThemePresetId(accent,card,bg){
   const hit=THEME_PRESETS.find(p=>p.accent.toLowerCase()===a&&p.card.toLowerCase()===c&&p.bg.toLowerCase()===b);
   return hit?hit.id:'custom';
 }
+const COLOR_SWATCH_PRESETS=[
+  '#3b82f6','#2563eb','#7c3aed','#a78bfa','#ec4899','#f43f5e','#ef4444','#f97316',
+  '#fbbf24','#22c55e','#10b981','#14b8a6','#06b6d4','#0ea5e9','#64748b','#0a0e1a',
+  '#111827','#1e293b','#f8fafc','#e2e8f0'
+];
+function wireColorSwatchRow(row){
+  if(!row) return;
+  const targetId=row.getAttribute('data-color-target');
+  if(!targetId) return;
+  const input=document.getElementById(targetId);
+  const current=(input&&input.value)||'#3b82f6';
+  row.innerHTML='';
+  COLOR_SWATCH_PRESETS.forEach(col=>{
+    const btn=document.createElement('button');
+    btn.type='button';
+    btn.className='color-swatch-btn'+(current.toLowerCase()===col.toLowerCase()?' sel':'');
+    btn.style.background=col;
+    btn.title=col;
+    btn.onclick=()=>{
+      if(input){
+        input.value=col;
+        input.dispatchEvent(new Event('change',{bubbles:true}));
+      }
+      row.querySelectorAll('.color-swatch-btn').forEach(b=>b.classList.remove('sel'));
+      btn.classList.add('sel');
+      const hex=row.querySelector('.color-swatch-hex');
+      if(hex) hex.value=col;
+    };
+    row.appendChild(btn);
+  });
+  const hex=document.createElement('input');
+  hex.type='text';
+  hex.className='color-swatch-hex';
+  hex.value=current;
+  hex.placeholder='#hex';
+  hex.onchange=()=>{
+    let v=(hex.value||'').trim();
+    if(!v.startsWith('#')) v='#'+v;
+    if(!/^#[0-9a-fA-F]{6}$/.test(v)) return;
+    if(input){
+      input.value=v;
+      input.dispatchEvent(new Event('change',{bubbles:true}));
+    }
+    wireColorSwatchRow(row);
+  };
+  row.appendChild(hex);
+}
+function wireAllColorSwatchRows(){
+  document.querySelectorAll('.color-swatch-row[data-color-target]').forEach(wireColorSwatchRow);
+}
 function applyThemeColors(accent,card,bg,presetId){
   try{
     const a=accent||'#3b82f6';
@@ -8007,7 +8167,9 @@ function renderThemeSwatches(){
   };
   row.appendChild(custom);
 
-  // Wire custom pickers
+  // Swatch rows for custom colors (replaces awkward native color squares)
+  try{ wireAllColorSwatchRows(); }catch(e){}
+  // Keep hidden inputs working if changed programmatically
   ['themeAccentPick','themeCardPick','themeBgPick'].forEach(id=>{
     const el=document.getElementById(id);
     if(!el) return;
@@ -8988,6 +9150,110 @@ let USER_EDITS={moves:{},deletes:{},dayDeletes:{},dayOverrides:{},pointOverrides
 
 function emptyUserEdits(){return{moves:{},deletes:{},dayDeletes:{},dayOverrides:{},pointOverrides:{},customTasks:[],order:{}};}
 window.SCHEDULE_EDIT_MODE=false;
+window.SELECTED_EDIT_TASKS=new Set();
+window.EDIT_UNDO_STACK=[];
+window.EDIT_REDO_STACK=[];
+
+function pushEditSnapshot(label){
+  try{
+    const snap={
+      label:label||'edit',
+      schedule:JSON.parse(JSON.stringify(USER_SCHEDULE||{})),
+      edits:JSON.parse(JSON.stringify(USER_EDITS||{})),
+      schedules:JSON.parse(JSON.stringify(USER_SCHEDULES||{})),
+      active:ACTIVE_SCHEDULE_ID
+    };
+    window.EDIT_UNDO_STACK.push(snap);
+    if(window.EDIT_UNDO_STACK.length>30) window.EDIT_UNDO_STACK.shift();
+    window.EDIT_REDO_STACK=[];
+  }catch(e){}
+}
+function applyEditSnapshot(snap){
+  if(!snap) return;
+  USER_SCHEDULE=snap.schedule||USER_SCHEDULE;
+  USER_EDITS=snap.edits||USER_EDITS;
+  if(snap.schedules) USER_SCHEDULES=snap.schedules;
+  if(snap.active) ACTIVE_SCHEDULE_ID=snap.active;
+  try{ renderTabs(); renderPanels(); switchDay(getJDfromISO(SELECTED_DATE||TODAY)); updateUI(); }catch(e){}
+}
+function editUndo(){
+  if(!window.EDIT_UNDO_STACK.length){ showToast((USER_SETTINGS&&USER_SETTINGS.lang)==='en'?'Nothing to undo':'لا يوجد تراجع',1400,'warn'); return; }
+  try{
+    const current={schedule:JSON.parse(JSON.stringify(USER_SCHEDULE||{})),edits:JSON.parse(JSON.stringify(USER_EDITS||{})),schedules:JSON.parse(JSON.stringify(USER_SCHEDULES||{})),active:ACTIVE_SCHEDULE_ID};
+    window.EDIT_REDO_STACK.push(current);
+  }catch(e){}
+  applyEditSnapshot(window.EDIT_UNDO_STACK.pop());
+  try{ saveUserSchedule(); }catch(e){}
+}
+function editRedo(){
+  if(!window.EDIT_REDO_STACK.length){ showToast((USER_SETTINGS&&USER_SETTINGS.lang)==='en'?'Nothing to redo':'لا يوجد إعادة',1400,'warn'); return; }
+  try{
+    const current={schedule:JSON.parse(JSON.stringify(USER_SCHEDULE||{})),edits:JSON.parse(JSON.stringify(USER_EDITS||{})),schedules:JSON.parse(JSON.stringify(USER_SCHEDULES||{})),active:ACTIVE_SCHEDULE_ID};
+    window.EDIT_UNDO_STACK.push(current);
+  }catch(e){}
+  applyEditSnapshot(window.EDIT_REDO_STACK.pop());
+  try{ saveUserSchedule(); }catch(e){}
+}
+function setScheduleEditMode(on){
+  window.SCHEDULE_EDIT_MODE=!!on;
+  if(!window.SCHEDULE_EDIT_MODE){
+    window.SELECTED_EDIT_TASKS=new Set();
+  }
+  const bar=document.getElementById('editModeBar');
+  const en=(USER_SETTINGS&&USER_SETTINGS.lang)==='en';
+  if(bar){
+    bar.style.display=window.SCHEDULE_EDIT_MODE?'flex':'none';
+    const lab=document.getElementById('editModeBarLabel');
+    if(lab) lab.textContent=en?'Edit mode — select tasks to delete':'وضع التعديل — اختر مهام للحذف';
+    const u=document.getElementById('editUndoBtn'); if(u) u.textContent=en?'↶ Undo':'↶ تراجع';
+    const r=document.getElementById('editRedoBtn'); if(r) r.textContent=en?'↷ Redo':'↷ إعادة';
+    const d=document.getElementById('editMultiDeleteBtn'); if(d) d.textContent=en?'🗑️ Delete selected':'🗑️ حذف المحدد';
+    const done=document.getElementById('editDoneBtn'); if(done) done.textContent=en?'Done ✓':'تم ✓';
+  }
+  const editModeEl=document.getElementById('setScheduleEditMode');
+  if(editModeEl) editModeEl.checked=!!window.SCHEDULE_EDIT_MODE;
+  try{ renderTabs(); renderPanels(); switchDay(getJDfromISO(SELECTED_DATE||TODAY)); updateUI(); }catch(e){}
+}
+function wireEditModeBar(){
+  if(window._editBarWired) return;
+  window._editBarWired=true;
+  document.getElementById('editDoneBtn')?.addEventListener('click',()=>{
+    setScheduleEditMode(false);
+    showToast((USER_SETTINGS&&USER_SETTINGS.lang)==='en'?'Edit mode off':'وضع التعديل متوقف',1400);
+  });
+  document.getElementById('editUndoBtn')?.addEventListener('click',()=>editUndo());
+  document.getElementById('editRedoBtn')?.addEventListener('click',()=>editRedo());
+  document.getElementById('editMultiDeleteBtn')?.addEventListener('click',async ()=>{
+    const ids=[...(window.SELECTED_EDIT_TASKS||[])];
+    if(!ids.length){
+      showToast((USER_SETTINGS&&USER_SETTINGS.lang)==='en'?'Select tasks first (checkbox on cards)':'اختر مهام أولاً (مربع الاختيار على البطاقات)',2000,'warn');
+      return;
+    }
+    const en=(USER_SETTINGS&&USER_SETTINGS.lang)==='en';
+    const ok=await appConfirm(en?`Delete ${ids.length} task(s)?`:`حذف ${ids.length} مهمة؟`, en?'Choose scope in the next step if prompted.':'سيُطلب النطاق إن لزم.');
+    if(!ok) return;
+    pushEditSnapshot('multi-delete');
+    for(const id of ids){
+      try{
+        // Prefer existing delete handler if present
+        if(typeof deleteScheduleTaskById==='function') await deleteScheduleTaskById(id);
+        else if(typeof softDeleteTask==='function') await softDeleteTask(id);
+        else {
+          // Fallback: mark dayDeletes for today
+          if(!USER_EDITS.dayDeletes) USER_EDITS.dayDeletes={};
+          const iso=SELECTED_DATE||TODAY;
+          if(!USER_EDITS.dayDeletes[iso]) USER_EDITS.dayDeletes[iso]={};
+          USER_EDITS.dayDeletes[iso][id]=true;
+        }
+      }catch(e){}
+    }
+    window.SELECTED_EDIT_TASKS=new Set();
+    try{ await saveUserSchedule(); if(typeof saveUserEdits==='function') await saveUserEdits(); }catch(e){}
+    try{ renderPanels(); switchDay(getJDfromISO(SELECTED_DATE||TODAY)); updateUI(); }catch(e){}
+    showToast(en?`Deleted ${ids.length}`:`تم حذف ${ids.length}`,1600);
+  });
+}
+try{ document.addEventListener('DOMContentLoaded',()=>{ try{ wireEditModeBar(); }catch(e){} }); }catch(e){}
 const DND_DISABLED=true; // drag-reorder removed by design (time-ordered schedule)
 
 // Applies USER_EDITS to a list of base tasks that were generated for weekday `jd` on
@@ -10209,31 +10475,44 @@ function renderTaskNotifList(){
     </div>`;
   }).join('');
 }
+function getPrayerBuiltInLocations(){
+  const en=(USER_SETTINGS&&USER_SETTINGS.lang)==='en';
+  const defaults=en
+    ? [{id:'mosque',icon:'🕌',name:'Mosque',pts:5},{id:'home',icon:'🏠',name:'Home',pts:2},{id:'other',icon:'📍',name:'Other',pts:2}]
+    : [{id:'mosque',icon:'🕌',name:'المسجد',pts:5},{id:'home',icon:'🏠',name:'البيت',pts:2},{id:'other',icon:'📍',name:'أخرى',pts:2}];
+  const saved=USER_SETTINGS.prayerBuiltIns||{};
+  return defaults.map(d=>{
+    const o=saved[d.id]||{};
+    return {
+      id:d.id,
+      icon:o.icon||d.icon,
+      name:o.name||d.name,
+      pts:Math.max(1, Math.min(10, parseInt(o.pts!=null?o.pts:d.pts,10)||d.pts)),
+      color:o.color||null
+    };
+  });
+}
 function renderPrayerLocList(){
   const list=document.getElementById('prayerLocList');
   if(!list) return;
   const en=(USER_SETTINGS&&USER_SETTINGS.lang)==='en';
   const locs=USER_SETTINGS.prayerLocations||[];
-  // Built-in options always shown (Mosque locked gold like the prayer modal choice)
-  const builtIn = en
-    ? [
-        {icon:'🕌', name:'Mosque', pts:5, gold:true, locked:true},
-        {icon:'🏠', name:'Home', pts:2, gold:false, locked:true},
-        {icon:'📍', name:'Other', pts:2, gold:false, locked:true}
-      ]
-    : [
-        {icon:'🕌', name:'المسجد', pts:5, gold:true, locked:true},
-        {icon:'🏠', name:'البيت', pts:2, gold:false, locked:true},
-        {icon:'📍', name:'أخرى', pts:2, gold:false, locked:true}
-      ];
+  const builtIn=getPrayerBuiltInLocations();
   const builtHtml = builtIn.map(loc=>{
-    const goldStyle = loc.gold
-      ? 'border-color:rgba(251,191,36,.55);background:linear-gradient(135deg,rgba(251,191,36,.12),rgba(245,158,11,.06));box-shadow:0 0 12px rgba(251,191,36,.15)'
-      : 'border-color:var(--br);background:var(--c2)';
-    const lock = loc.locked ? `<span style="font-size:.62rem;color:var(--mu);font-weight:800">${en?'Fixed':'ثابت'}</span>` : '';
-    const star = loc.gold ? '⭐' : '⭐';
-    return `<div style="display:flex;justify-content:space-between;align-items:center;padding:10px 12px;border:1.5px solid;border-radius:10px;margin-bottom:6px;${goldStyle}">
-      <span style="font-weight:800;display:flex;align-items:center;gap:8px">${loc.icon} ${loc.name} · ${loc.pts}${star} ${lock}</span>
+    const gold = (loc.pts||0)>=5;
+    const color = loc.color || (gold?'#fbbf24':'#94a3b8');
+    const goldStyle = gold
+      ? `border-color:rgba(251,191,36,.55);background:linear-gradient(135deg,rgba(251,191,36,.12),rgba(245,158,11,.06));box-shadow:0 0 12px rgba(251,191,36,.15)`
+      : `border-color:var(--br);background:var(--c2)`;
+    return `<div style="display:flex;justify-content:space-between;align-items:center;gap:8px;padding:10px 12px;border:1.5px solid;border-radius:10px;margin-bottom:6px;${goldStyle}">
+      <span style="font-weight:800;display:flex;align-items:center;gap:8px;min-width:0">
+        <span style="width:10px;height:10px;border-radius:50%;background:${color};flex-shrink:0"></span>
+        ${loc.icon} ${loc.name} · ${loc.pts}⭐
+      </span>
+      <span style="display:flex;gap:4px;flex-shrink:0;align-items:center">
+        <input type="number" min="1" max="10" value="${loc.pts}" data-builtin-pts="${loc.id}" style="width:52px;padding:4px 6px;border-radius:8px;border:1px solid var(--br);background:var(--c);color:var(--tx);font-size:.75rem;font-weight:800">
+        <button type="button" class="altbtn" data-builtin-edit="${loc.id}" style="padding:4px 8px;font-size:.72rem">${en?'Edit':'تعديل'}</button>
+      </span>
     </div>`;
   }).join('');
   const customHtml = locs.map((loc,i)=>{
@@ -10254,7 +10533,36 @@ function renderPrayerLocList(){
       </span>
     </div>`;
   }).join('');
-  list.innerHTML = builtHtml + (customHtml || '') + (locs.length?'':`<p class="desc" style="margin-top:8px">${en?'Add your own places below (Gym, Work…). Points capped at Mosque.':'أضف أماكنك بالأسفل (جيم، شغل…). النقاط بحد أقصى المسجد.'}</p>`);
+  list.innerHTML = builtHtml + (customHtml || '') + `<p class="desc" style="margin-top:8px">${en?'Mosque / Home / Other are editable. Add more places below.':'المسجد والبيت وأخرى قابلة للتعديل. أضف أماكن إضافية بالأسفل.'}</p>`;
+  if(!list._builtinWired){
+    list._builtinWired=true;
+    list.addEventListener('change', async e=>{
+      const ptsEl=e.target.closest('[data-builtin-pts]');
+      if(!ptsEl) return;
+      const id=ptsEl.getAttribute('data-builtin-pts');
+      if(!USER_SETTINGS.prayerBuiltIns) USER_SETTINGS.prayerBuiltIns={};
+      if(!USER_SETTINGS.prayerBuiltIns[id]) USER_SETTINGS.prayerBuiltIns[id]={};
+      USER_SETTINGS.prayerBuiltIns[id].pts=Math.max(1,Math.min(10,parseInt(ptsEl.value,10)||1));
+      try{ await saveUserSettings(); }catch(err){}
+      renderPrayerLocList();
+    });
+    list.addEventListener('click', async e=>{
+      const editBtn=e.target.closest('[data-builtin-edit]');
+      if(!editBtn) return;
+      const id=editBtn.getAttribute('data-builtin-edit');
+      const cur=getPrayerBuiltInLocations().find(x=>x.id===id);
+      if(!cur) return;
+      const en2=(USER_SETTINGS&&USER_SETTINGS.lang)==='en';
+      const name=prompt(en2?'Location name:':'اسم المكان:', cur.name);
+      if(name==null) return;
+      const icon=prompt(en2?'Icon (emoji):':'أيقونة:', cur.icon)||cur.icon;
+      if(!USER_SETTINGS.prayerBuiltIns) USER_SETTINGS.prayerBuiltIns={};
+      USER_SETTINGS.prayerBuiltIns[id]={...(USER_SETTINGS.prayerBuiltIns[id]||{}), name:name.trim()||cur.name, icon};
+      try{ await saveUserSettings(); }catch(err){}
+      renderPrayerLocList();
+      showToast(en2?'Location updated':'تم تحديث المكان',1600);
+    });
+  }
 }
 
 const NOTIF_LEAD_MIN=30;
@@ -12200,7 +12508,11 @@ function renderCard(task,isToday,jd){
       if(isDone) customAct=renderDoneCheckBtn(done,en);
       else customAct=`<button class="cbtn" data-action="confirm" data-id="${id}" data-pts="${pts}">✓<span class="ptslbl">+${pts}⭐</span></button>`;
     }
+    const sel=window.SELECTED_EDIT_TASKS&&window.SELECTED_EDIT_TASKS.has(id);
     act=`<div style="display:flex;gap:4px;flex-shrink:0;align-items:center;flex-wrap:wrap">
+      <label style="display:flex;align-items:center;gap:4px;cursor:pointer;padding:4px 6px;border-radius:8px;border:1px solid ${sel?'var(--ac)':'var(--br)'};background:${sel?'color-mix(in srgb, var(--ac) 18%, transparent)':'transparent'}">
+        <input type="checkbox" data-action="toggleEditSelect" data-id="${id}" ${sel?'checked':''} style="width:16px;height:16px;accent-color:var(--ac)">
+      </label>
       ${customAct}
       <button class="cbtn" data-action="editSchedTask" data-id="${id}" data-jd="${jd}" style="padding:5px 9px;font-size:.68rem" title="${en?'Edit':'تعديل'}">✏️</button>
       <button class="cbtn" data-action="deleteSchedTask" data-id="${id}" data-jd="${jd}" style="padding:5px 9px;font-size:.68rem;background:rgba(239,68,68,.1);border-color:rgba(239,68,68,.4);color:#ef4444" title="${en?'Delete':'حذف'}">🗑️</button>
@@ -13832,16 +14144,44 @@ function openSettingsScreen(){
   const prayEl=document.getElementById('setTrackPrayers');
   if(showEl) showEl.checked=USER_SETTINGS.showTracking!==false;
   if(prayEl) prayEl.checked=!!USER_SETTINGS.trackPrayers;
+  try{ wireAllColorSwatchRows(); }catch(e){}
+  try{ renderSlotsUI(); }catch(e){}
+  try{
+    const presets=document.getElementById('slotLogoPresets');
+    if(presets && !presets._wired){
+      presets._wired=true;
+      const icons=['📅','🏠','💼','🏋️','📚','🌙','☀️','🎯','🧠','🕌','⚡','🔥'];
+      presets.innerHTML=icons.map(ic=>`<button type="button" class="altbtn" data-slot-logo="${ic}" style="padding:6px 8px;font-size:1.1rem">${ic}</button>`).join('');
+      presets.addEventListener('click',e=>{
+        const b=e.target.closest('[data-slot-logo]');
+        if(!b) return;
+        const logoIn=document.getElementById('slotLogoInput');
+        if(logoIn) logoIn.value=b.getAttribute('data-slot-logo');
+      });
+    }
+    const saveLogo=document.getElementById('slotLogoSaveBtn');
+    if(saveLogo && !saveLogo._wired){
+      saveLogo._wired=true;
+      saveLogo.addEventListener('click',async()=>{
+        ensureScheduleSlots();
+        const ico=(document.getElementById('slotLogoInput')?.value||'📅').trim()||'📅';
+        if(USER_SCHEDULES[ACTIVE_SCHEDULE_ID]) USER_SCHEDULES[ACTIVE_SCHEDULE_ID].icon=ico;
+        try{ await saveUserSchedule(); }catch(e){}
+        renderSlotsUI();
+        const en=(USER_SETTINGS&&USER_SETTINGS.lang)==='en';
+        showToast(en?'Workspace logo saved':'تم حفظ شعار مساحة العمل',1600);
+      });
+    }
+  }catch(e){}
   const editModeEl=document.getElementById('setScheduleEditMode');
   if(editModeEl){
     editModeEl.checked=!!window.SCHEDULE_EDIT_MODE;
     if(!editModeEl._wired){
       editModeEl._wired=true;
       editModeEl.addEventListener('change',()=>{
-        window.SCHEDULE_EDIT_MODE=!!editModeEl.checked;
-        try{ renderTabs();renderPanels();switchDay(getJDfromISO(SELECTED_DATE));updateUI(); }catch(e){}
+        setScheduleEditMode(!!editModeEl.checked);
         const en=(USER_SETTINGS&&USER_SETTINGS.lang)==='en';
-        showToast(window.SCHEDULE_EDIT_MODE?(en?'Edit mode on — edit/delete visible':'وضع التعديل مفعّل'):(en?'Edit mode off':'وضع التعديل متوقف'),1600);
+        showToast(window.SCHEDULE_EDIT_MODE?(en?'Edit mode on — use Done when finished':'وضع التعديل مفعّل — اضغط تم عند الانتهاء'):(en?'Edit mode off':'وضع التعديل متوقف'),1800);
       });
     }
   }
@@ -15709,9 +16049,19 @@ function openFoodLogModal(task,existingEntry,prefillText){
   if(submitBtn) submitBtn.textContent=en?'Calculate & save ✅':'احسب واحفظ ✅';
   const cancelBtn=document.querySelector('#foodLogModal .modal-back-btn, #flCancelBtn');
   if(cancelBtn) cancelBtn.textContent=en?'Cancel':'إلغاء';
-  const divEl=document.querySelector('#foodLogModal .fl-divider span');
+  const divEl=document.getElementById('flDividerText')||document.querySelector('#foodLogModal .fl-divider span');
   if(divEl) divEl.textContent=en?'Or type exactly what you ate':'أو اكتب إيه اللي أكلته بالظبط';
-  const ta=document.getElementById('flTextarea')||document.getElementById('flDesc');
+  const loadTxt=document.getElementById('flLoadingText');
+  if(loadTxt) loadTxt.textContent=en?'Calculating nutrition accurately…':'بيحسب القيم الغذائية بدقة...';
+  const saveLbl=document.getElementById('flSaveOptLabel');
+  if(saveLbl) saveLbl.textContent=en?'Save as a quick option next time?':'تحفظها كخيار سريع للمرة الجاية؟';
+  const yesBtn=document.getElementById('flSaveOptYes');
+  if(yesBtn) yesBtn.textContent=en?'Yes ✅':'نعم ✅';
+  const noBtn=document.getElementById('flSaveOptNo');
+  if(noBtn) noBtn.textContent=en?'No':'لا';
+  const doneBtn=document.getElementById('flDoneBtn');
+  if(doneBtn) doneBtn.textContent=en?'Done 👍':'تمام 👍';
+  const ta=document.getElementById('flFreeText')||document.getElementById('flTextarea')||document.getElementById('flDesc');
   if(ta) ta.placeholder=en?'e.g. grilled chicken with rice and salad, cup of yogurt':'مثال: طبق فراخ مشوي مع رز وسلطة، وكوب لبن';
 
   // Reset to the choose step every time it opens.
@@ -17414,10 +17764,20 @@ document.body.addEventListener('click',async e=>{
     else showToast((USER_SETTINGS&&USER_SETTINGS.lang)==='en'?'Could not find that task to edit':'مفيش المهمة دي للتعديل',2800,'warn');
     return;
   }
+  const toggleSel=closest('[data-action="toggleEditSelect"]');
+  if(toggleSel){
+    const taskId=toggleSel.getAttribute('data-id');
+    if(!window.SELECTED_EDIT_TASKS) window.SELECTED_EDIT_TASKS=new Set();
+    if(toggleSel.checked) window.SELECTED_EDIT_TASKS.add(taskId);
+    else window.SELECTED_EDIT_TASKS.delete(taskId);
+    try{ renderPanels(); switchDay(getJDfromISO(SELECTED_DATE)); }catch(e){}
+    return;
+  }
   const delSchedBtn=closest('[data-action="deleteSchedTask"]');
   if(delSchedBtn){
     const jd=parseInt(delSchedBtn.getAttribute('data-jd'),10);
     const taskId=delSchedBtn.getAttribute('data-id');
+    try{ pushEditSnapshot('delete-one'); }catch(e){}
     await stHandleDelete(jd,taskId);
     return;
   }
