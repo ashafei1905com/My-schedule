@@ -1,6 +1,6 @@
 <!DOCTYPE html>
 <html lang="en" dir="ltr">
-<!-- cache-bust: 2026-09-27-stats-sync -->
+<!-- cache-bust: 2026-09-28-hard-sync -->
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1.0,maximum-scale=1.0,user-scalable=no">
@@ -6186,6 +6186,53 @@ const ABDULLAH_UID='cWY1nZwSkJSJFzpQ72IrPxduhav2';
 // "My Workspace" and wiping multi-slot data that already lives in Firestore.
 let CLOUD_SCHEDULES_HYDRATED=false;
 let LAST_KNOWN_CLOUD_SCHEDULES=null;
+// Broader flag: any successful users/{uid} getDoc (or confirmed missing doc).
+// Until this is true, saveAll must NOT push stats/history to cloud — that was the
+// remaining points/streak/rank desync: phone opened, local STATS=0, saveAll ran
+// from weekly-reset/punishment, merge:true replaced cloud stats with zeros.
+let CLOUD_DATA_HYDRATED=false;
+let LAST_KNOWN_CLOUD_STATS=null;
+
+function mergeStatsPreferRicher(localS, cloudS){
+  const L=localS||{};
+  const C=cloudS||{};
+  const laterDate=(a,b)=>{if(!a)return b||null;if(!b)return a;return a>b?a:b;};
+  const localWeek=L.lastPtsWeekStart||'';
+  const cloudWeek=C.lastPtsWeekStart||'';
+  let pts;
+  if(localWeek && cloudWeek && localWeek>cloudWeek) pts=L.pts||0;
+  else if(cloudWeek && localWeek && cloudWeek>localWeek) pts=C.pts||0;
+  else pts=Math.max(L.pts||0, C.pts||0);
+  const out={
+    ...C,
+    ...L,
+    pts,
+    cur:Math.max(L.cur||0, C.cur||0),
+    best:Math.max(L.best||0, C.best||0),
+    lifetime_xp:Math.max(L.lifetime_xp||0, C.lifetime_xp||0),
+    prestige_level:Math.max(L.prestige_level||0, C.prestige_level||0),
+    rebirth_tokens:Math.max(L.rebirth_tokens||0, C.rebirth_tokens||0),
+    lc:laterDate(L.lc, C.lc),
+    lf:laterDate(L.lf, C.lf),
+    lastPtsWeekStart:laterDate(L.lastPtsWeekStart, C.lastPtsWeekStart),
+    bestFixed:C.bestFixed||L.bestFixed||false,
+    punishRateOverride:(L.punishRateOverride!=null)?L.punishRateOverride:(C.punishRateOverride!=null?C.punishRateOverride:null),
+    unlockedThemes:Array.from(new Set([...(C.unlockedThemes||[]),...(L.unlockedThemes||[])])),
+    activeMythicTheme:L.activeMythicTheme||C.activeMythicTheme||null,
+    lastRankKey:L.lastRankKey||C.lastRankKey||'chaos'
+  };
+  // If cloud has strictly higher streak, keep cloud lf (don't let empty local lf win via laterDate alone when cur came from cloud).
+  if((C.cur||0)>(L.cur||0)){
+    out.cur=C.cur||0;
+    if(C.lf) out.lf=C.lf;
+  }
+  if((C.lifetime_xp||0)>=(L.lifetime_xp||0) && C.lastRankKey) out.lastRankKey=C.lastRankKey;
+  try{
+    const meta=getRankMeta(out.lifetime_xp||0);
+    if(meta&&meta.key) out.lastRankKey=meta.key;
+  }catch(e){}
+  return out;
+}
 
 function mergeScheduleSlotsPreferLocal(localMap, cloudMap){
   const out={};
@@ -9451,8 +9498,17 @@ async function saveAll(){
   // connection) without adding real complexity; a second consecutive failure
   // still surfaces the existing red badge + toast exactly as before.
   const attemptSave=async()=>{
-    // Same clobber guard as saveUserSchedule: a fresh device must not overwrite
-    // multi-slot cloud schedules with a bare default before the first hydrate.
+    // HARD RULE: while signed in, never push to cloud until the first getDoc has
+    // finished. Pre-hydrate saveAll was replacing cloud stats with phone zeros.
+    if(!CLOUD_DATA_HYDRATED){
+      console.warn('saveAll: cloud write skipped — waiting for first hydrate');
+      return null;
+    }
+    // Never write stats weaker than the last known cloud snapshot.
+    if(LAST_KNOWN_CLOUD_STATS){
+      STATS=mergeStatsPreferRicher(STATS, LAST_KNOWN_CLOUD_STATS);
+      try{ await sSet(LS.stats,STATS); }catch(e){}
+    }
     const payload={
       stats:STATS,
       reports:savedReports,
@@ -9476,19 +9532,23 @@ async function saveAll(){
     return setDoc(doc(fbDb,'users',user.uid),payload,{merge:true});
   };
   try{
-    await attemptSave();
+    const wrote=await attemptSave();
+    if(wrote===null) return; // local-only; still waiting on first cloud hydrate
     if(!FIREBASE_ONLINE) setFirebaseOnline(); // recovered from a prior failure — clear the stale red badge
     // We just wrote this exact historyData to the cloud successfully, so it IS the
     // new known-good cloud snapshot — update the cache directly rather than issuing
     // a redundant getDoc() to re-confirm what we already know we just wrote.
     LAST_KNOWN_CLOUD_HISTORY=JSON.parse(JSON.stringify(historyData));
+    LAST_KNOWN_CLOUD_STATS=JSON.parse(JSON.stringify(STATS));
   }catch(e1){
     console.warn('cloud save failed, retrying once',e1);
     await new Promise(r=>setTimeout(r,1500));
     try{
-      await attemptSave();
+      const wrote2=await attemptSave();
+      if(wrote2===null) return;
       if(!FIREBASE_ONLINE) setFirebaseOnline();
       LAST_KNOWN_CLOUD_HISTORY=JSON.parse(JSON.stringify(historyData));
+      LAST_KNOWN_CLOUD_STATS=JSON.parse(JSON.stringify(STATS));
     }catch(e2){
       console.warn('cloud save failed after retry',e2);
       setFirebaseOffline();
@@ -18995,67 +19055,12 @@ if (typeof onAuthStateChanged !== 'undefined' && typeof fbAuth !== 'undefined') 
           // already happened before this fix, but it makes the loss structurally
           // impossible going forward — a stale local 0 can never beat a real cloud 25.
           if(d.stats){
-            const cloudStats=d.stats;
-            const localStats=STATS;
-            const laterDate=(a,b)=>{if(!a)return b;if(!b)return a;return a>b?a:b;};
-            // Weekly points: if local already rolled into a newer week than cloud,
-            // local's pts (post-reset, often 0) is authoritative — never max-merge
-            // against a stale cloud total from the previous week.
-            // Exception: a brand-new local session (fresh PWA / cleared site data)
-            // must adopt cloud stats wholesale — otherwise localWeek="this week" +
-            // pts=0 wins and the phone looks permanently behind the laptop.
-            const localWeek=localStats.lastPtsWeekStart||'';
-            const cloudWeek=cloudStats.lastPtsWeekStart||'';
-            // Treat "almost empty local stats" as brand-new even if IS_BRAND_NEW_SESSION
-            // was cleared — common on iPhone after a partial first open.
-            const brandNewLocal=!!IS_BRAND_NEW_SESSION
-              || (
-                !(localStats.pts>0) && !(localStats.cur>0) && !(localStats.best>0)
-                && !(localStats.lifetime_xp>0) && !localStats.lf
-                && (!localStats.lc || localStats.lc===TODAY)
-              );
-            let mergedPts;
-            if(brandNewLocal){
-              mergedPts=cloudStats.pts||0;
-            }else if(localWeek && cloudWeek && localWeek>cloudWeek){
-              mergedPts=localStats.pts||0;
-            }else if(cloudWeek && localWeek && cloudWeek>localWeek){
-              mergedPts=cloudStats.pts||0;
-            }else{
-              mergedPts=Math.max(cloudStats.pts||0,localStats.pts||0);
-            }
-            // Streak (cur/lf) and rank (lifetime_xp/lastRankKey): on a thin local
-            // profile always prefer cloud. Max-merge alone is not enough if
-            // checkStreak already zeroed cur before hydrate finished.
-            STATS={
-              pts:mergedPts,
-              cur:brandNewLocal?(cloudStats.cur||0):Math.max(cloudStats.cur||0,localStats.cur||0),
-              best:Math.max(cloudStats.best||0,localStats.best||0),
-              lc:brandNewLocal?(cloudStats.lc||localStats.lc||null):laterDate(cloudStats.lc,localStats.lc),
-              lf:brandNewLocal?(cloudStats.lf||null):laterDate(cloudStats.lf,localStats.lf),
-              lastPtsWeekStart:brandNewLocal
-                ?(cloudStats.lastPtsWeekStart||localStats.lastPtsWeekStart||null)
-                :laterDate(cloudStats.lastPtsWeekStart,localStats.lastPtsWeekStart),
-              bestFixed:cloudStats.bestFixed||localStats.bestFixed||false,
-              punishRateOverride:(cloudStats.punishRateOverride!=null)?cloudStats.punishRateOverride:(localStats.punishRateOverride!=null?localStats.punishRateOverride:null),
-              lifetime_xp:brandNewLocal
-                ?(cloudStats.lifetime_xp||0)
-                :Math.max(cloudStats.lifetime_xp||0,localStats.lifetime_xp||0),
-              prestige_level:Math.max(cloudStats.prestige_level||0,localStats.prestige_level||0),
-              rebirth_tokens:Math.max(cloudStats.rebirth_tokens||0,localStats.rebirth_tokens||0),
-              unlockedThemes:Array.from(new Set([...(cloudStats.unlockedThemes||[]),...(localStats.unlockedThemes||[])])),
-              activeMythicTheme:cloudStats.activeMythicTheme||localStats.activeMythicTheme||null,
-              lastRankKey:brandNewLocal
-                ?(cloudStats.lastRankKey||localStats.lastRankKey||'chaos')
-                :(cloudStats.lastRankKey||localStats.lastRankKey||'chaos')
-            };
-            // Prefer higher-rank key if XP implies it
-            try{
-              const meta=getRankMeta(STATS.lifetime_xp||0);
-              if(meta && meta.key) STATS.lastRankKey=meta.key;
-            }catch(e){}
+            LAST_KNOWN_CLOUD_STATS=JSON.parse(JSON.stringify(d.stats));
+            STATS=mergeStatsPreferRicher(STATS, d.stats);
             try{ await sSet(LS.stats,STATS); }catch(e){}
           }
+          CLOUD_DATA_HYDRATED=true;
+          try{ updateUI(); updatePrestigeUI(); }catch(e){}
           // FIX: this used to be a flat overwrite (savedReports=d.reports), which is
           // exactly what caused real, already-saved weekly reports to vanish: if
           // Firestore's SDK returns a STALE cached snapshot (e.g. after the network
@@ -19224,6 +19229,7 @@ if (typeof onAuthStateChanged !== 'undefined' && typeof fbAuth !== 'undefined') 
           migrateAbdullahScheduleIfNeeded(user.uid);
           // No cloud doc yet — safe to write whatever this device builds (onboarding).
           CLOUD_SCHEDULES_HYDRATED=true;
+          CLOUD_DATA_HYDRATED=true;
           PENDING_ONBOARDING = !USER_SCHEDULE || Object.keys(USER_SCHEDULE).length===0;
           if(USER_SETTINGS && USER_SETTINGS.onboardingComplete) PENDING_ONBOARDING=false;
           if(!PENDING_ONBOARDING){ lsSet('has_onboarded','true'); }
@@ -19251,24 +19257,8 @@ if (typeof onAuthStateChanged !== 'undefined' && typeof fbAuth !== 'undefined') 
             if(ud2 && ud2.exists()){
               const d2=ud2.data();
               if(d2.stats){
-                const cs=d2.stats;
-                const thin=!(STATS.pts>0)&&!(STATS.cur>0)&&!(STATS.best>0)&&!(STATS.lifetime_xp>0)&&!STATS.lf;
-                STATS={
-                  ...STATS,
-                  pts:thin?(cs.pts||0):Math.max(STATS.pts||0,cs.pts||0),
-                  cur:thin?(cs.cur||0):Math.max(STATS.cur||0,cs.cur||0),
-                  best:Math.max(STATS.best||0,cs.best||0),
-                  lf:thin?(cs.lf||null):(STATS.lf||cs.lf||null),
-                  lc:thin?(cs.lc||STATS.lc||null):(STATS.lc||cs.lc||null),
-                  lastPtsWeekStart:thin?(cs.lastPtsWeekStart||STATS.lastPtsWeekStart||null):(STATS.lastPtsWeekStart||cs.lastPtsWeekStart||null),
-                  lifetime_xp:thin?(cs.lifetime_xp||0):Math.max(STATS.lifetime_xp||0,cs.lifetime_xp||0),
-                  prestige_level:Math.max(STATS.prestige_level||0,cs.prestige_level||0),
-                  rebirth_tokens:Math.max(STATS.rebirth_tokens||0,cs.rebirth_tokens||0),
-                  lastRankKey:cs.lastRankKey||STATS.lastRankKey||'chaos',
-                  activeMythicTheme:cs.activeMythicTheme||STATS.activeMythicTheme||null,
-                  unlockedThemes:Array.from(new Set([...(STATS.unlockedThemes||[]),...(cs.unlockedThemes||[])]))
-                };
-                try{ const meta=getRankMeta(STATS.lifetime_xp||0); if(meta&&meta.key) STATS.lastRankKey=meta.key; }catch(e){}
+                LAST_KNOWN_CLOUD_STATS=JSON.parse(JSON.stringify(d2.stats));
+                STATS=mergeStatsPreferRicher(STATS, d2.stats);
               }
               if(d2.userSchedules){
                 const cloudSlots=deserializeAllSchedulesFromFirestore(d2.userSchedules);
@@ -19281,6 +19271,7 @@ if (typeof onAuthStateChanged !== 'undefined' && typeof fbAuth !== 'undefined') 
               }
               if(d2.userSettings) USER_SETTINGS={trackPrayers:true,lang:'en',...d2.userSettings,...USER_SETTINGS,onboardingComplete:USER_SETTINGS.onboardingComplete||d2.userSettings.onboardingComplete};
               CLOUD_SCHEDULES_HYDRATED=true;
+              CLOUD_DATA_HYDRATED=true;
               try{ await sSet(LS.stats,STATS); await sSet(LS.userSchedules,USER_SCHEDULES); await sSet(LS.userSchedule,USER_SCHEDULE); await sSet(LS.userSettings,USER_SETTINGS); }catch(e){}
               dismissOnboardingIfReturningUser();
               try{ checkStreak(); }catch(e){}
