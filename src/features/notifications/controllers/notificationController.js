@@ -145,7 +145,7 @@ export async function handleTestPush(request, env) {
           topic: 'test'
         }
       },
-      subscription,
+      sub,
       {
         subject: vapid.subject,
         publicKey: vapid.publicKey,
@@ -153,7 +153,7 @@ export async function handleTestPush(request, env) {
       }
     );
 
-    const pushRes = await fetch(subscription.endpoint, { method, headers, body: pushBody });
+    const pushRes = await fetch(sub.endpoint, { method, headers, body: pushBody });
     if (!pushRes.ok) {
       const txt = await pushRes.text().catch(() => '');
       return json({ error: `Push service returned ${pushRes.status}: ${txt}`, status: pushRes.status }, 400);

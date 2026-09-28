@@ -74,42 +74,103 @@ html[dir="ltr"] .tc[data-c="sunrise"]{border-left:3px solid var(--or)}
 .modal-box::-webkit-scrollbar-track{background:var(--scrollbar-track);margin:12px 0}
 .modal-box::-webkit-scrollbar-thumb{background:var(--scrollbar-thumb);border-radius:999px;border:2px solid transparent;background-clip:padding-box}
 .modal-box::-webkit-scrollbar-thumb:hover{background:var(--scrollbar-thumb-hover)}
-@media (max-width:900px){
-  .set-body{flex-direction:column;position:relative;flex:1;min-height:0;overflow:hidden}
-  .set-nav{
-    width:100%;border-left:none;border-bottom:none;padding:12px 14px 20px;
-    display:flex;flex-direction:column;flex-wrap:nowrap;gap:8px;
-    max-height:none;overflow-y:auto;-webkit-overflow-scrolling:touch;
-  }
-  .set-nav button{
-    width:100%;flex:0 0 auto;text-align:start;padding:14px 16px;margin:0;
-    border-radius:14px;border:1px solid var(--br);background:rgba(255,255,255,.03);
-    font-size:.92rem;font-weight:800;color:var(--tx);
-  }
-  .set-nav button.act{
-    background:color-mix(in srgb, var(--ac) 18%, transparent)!important;
-    border-color:var(--ac)!important;color:var(--tx)!important;
-    box-shadow:0 0 0 1px color-mix(in srgb, var(--ac) 35%, transparent);
-  }
-  .set-content{
-    padding:12px 14px 28px;flex:1;min-height:0;overflow-y:auto;
-    -webkit-overflow-scrolling:touch;width:100%;box-sizing:border-box;
-  }
-  .set-section{max-width:none!important;width:100%;box-sizing:border-box}
-  /* Master-detail: list OR full section — never both */
-  #settingsScreen:not(.mobile-sec-open) .set-section{display:none!important}
-  #settingsScreen:not(.mobile-sec-open) .set-nav{display:flex!important}
-  #settingsScreen:not(.mobile-sec-open) .set-mobile-back{display:none!important}
-  #settingsScreen.mobile-sec-open .set-nav{display:none!important}
-  #settingsScreen.mobile-sec-open .set-section{display:none!important}
-  #settingsScreen.mobile-sec-open .set-section.act{display:block!important}
-  #settingsScreen.mobile-sec-open .set-mobile-back{
-    display:flex!important;position:sticky;top:0;z-index:5;
-    margin-bottom:12px;backdrop-filter:blur(8px);
-    background:color-mix(in srgb, var(--bg) 88%, transparent)!important;
-  }
-  #settingsScreen.mobile-sec-open .set-content{padding-top:8px}
+/* ==========================================================================
+   SETTINGS REDESIGN — ULTRA RESPONSIVE (MOBILE, TABLET & DESKTOP)
+   ========================================================================== */
+#settingsScreen{
+  position:fixed;inset:0;background:var(--bg);z-index:10150;display:none;flex-direction:column;
+  padding-top:env(safe-area-inset-top, 0px);
+  padding-bottom:env(safe-area-inset-bottom, 0px);
 }
+#settingsScreen.open{display:flex}
+
+.set-header{
+  display:flex;align-items:center;justify-content:space-between;
+  padding:14px 18px;border-bottom:1px solid color-mix(in srgb, var(--ac) 20%, var(--br));
+  background:color-mix(in srgb, var(--c2) 90%, transparent);
+  backdrop-filter:blur(16px);-webkit-backdrop-filter:blur(16px);
+  flex-shrink:0;z-index:10;
+}
+.set-header-left{display:flex;align-items:center;gap:10px;min-width:0}
+.set-header h2{font-size:1.15rem;font-weight:900;margin:0;color:var(--tx);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.set-back-btn{
+  display:none;align-items:center;gap:6px;background:rgba(255,255,255,.08);
+  border:1px solid var(--br);border-radius:10px;padding:7px 14px;
+  color:var(--tx);font-family:inherit;font-size:.85rem;font-weight:800;
+  cursor:pointer;transition:all .15s ease;
+}
+.set-back-btn:hover{background:color-mix(in srgb, var(--ac) 20%, transparent);border-color:var(--ac)}
+.set-back-btn:active{transform:scale(0.96)}
+.set-done-btn{
+  display:inline-flex;align-items:center;gap:6px;padding:7px 16px;
+  border-radius:10px;background:rgba(255,255,255,.07);border:1px solid var(--br);
+  color:var(--tx);font-family:inherit;font-weight:800;font-size:.85rem;cursor:pointer;
+}
+.set-done-btn:hover{background:color-mix(in srgb, var(--ac) 15%, transparent);border-color:var(--ac)}
+
+.set-body{flex:1;display:flex;min-height:0;overflow:hidden;position:relative}
+
+/* Master Nav Sidebar */
+.set-nav{
+  width:290px;flex-shrink:0;background:color-mix(in srgb, var(--c2) 75%, transparent);
+  border-inline-end:1px solid color-mix(in srgb, var(--ac) 16%, var(--br));
+  padding:12px;overflow-y:auto;display:flex;flex-direction:column;gap:6px;
+  -webkit-overflow-scrolling:touch;
+}
+.set-search-wrap{position:sticky;top:0;z-index:4;margin-bottom:6px;background:inherit;padding-bottom:4px}
+.set-search-input{
+  width:100%;box-sizing:border-box;padding:10px 14px;border-radius:12px;
+  border:1px solid var(--br);background:color-mix(in srgb, var(--c) 80%, transparent);
+  color:var(--tx);font-family:inherit;font-size:.84rem;font-weight:700;
+  outline:none;transition:border-color .15s,box-shadow .15s;
+}
+.set-search-input:focus{border-color:var(--ac);box-shadow:0 0 0 2px color-mix(in srgb, var(--ac) 25%, transparent)}
+
+/* Nav Items */
+.set-nav-item{
+  width:100%;display:flex;align-items:center;justify-content:space-between;
+  padding:10px 12px;border-radius:12px;border:1px solid transparent;
+  background:rgba(255,255,255,.02);color:var(--tx);text-decoration:none;
+  cursor:pointer;text-align:start;font-family:inherit;
+  transition:all .15s ease;
+}
+.set-nav-item:hover{
+  background:color-mix(in srgb, var(--ac) 10%, transparent);
+  border-color:color-mix(in srgb, var(--ac) 20%, transparent);
+}
+.set-nav-item.act{
+  background:color-mix(in srgb, var(--ac) 18%, transparent)!important;
+  border-color:var(--ac)!important;
+  box-shadow:0 0 12px color-mix(in srgb, var(--ac) 20%, transparent);
+}
+.set-nav-left{display:flex;align-items:center;gap:10px;min-width:0;flex:1}
+.set-nav-badge{
+  width:36px;height:36px;border-radius:10px;display:flex;align-items:center;
+  justify-content:center;font-size:1.15rem;flex-shrink:0;
+  background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.08);
+}
+.set-nav-text{display:flex;flex-direction:column;min-width:0;gap:1px}
+.set-nav-title{font-size:.88rem;font-weight:800;color:var(--tx);line-height:1.2;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.set-nav-desc{font-size:.7rem;color:var(--mu);line-height:1.2;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.set-nav-chevron{font-size:1.1rem;color:var(--so);opacity:.6;transition:transform .15s}
+html[dir="rtl"] .set-nav-chevron{transform:scaleX(-1)}
+.set-nav-item.act .set-nav-chevron{opacity:1;color:var(--ac)}
+
+/* Content Pane */
+.set-content{
+  flex:1;min-height:0;overflow-y:auto;padding:24px 28px 48px;
+  -webkit-overflow-scrolling:touch;box-sizing:border-box;
+}
+.set-section{
+  display:none;background:color-mix(in srgb, var(--c2) 55%, transparent);
+  border:1px solid color-mix(in srgb, var(--ac) 14%, var(--br));
+  border-radius:18px;padding:20px;margin-bottom:16px;
+  max-width:760px;margin-inline:auto;
+  box-shadow:0 8px 30px rgba(0,0,0,.2);
+}
+.set-section.act{display:block;animation:setFadeIn .18s ease-out}
+@keyframes setFadeIn{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:translateY(0)}}
+
 /* Back is mobile-only — always hidden on desktop */
 #settingsScreen .set-mobile-back{
   display:none!important;
@@ -122,8 +183,48 @@ html[dir="ltr"] .tc[data-c="sunrise"]{border-left:3px solid var(--or)}
   background:color-mix(in srgb,var(--accent-color,var(--ac,#3b82f6)) 14%,transparent);
   border-color:var(--accent-color,var(--ac,#3b82f6));
 }
-@media (max-width:700px){
-  #settingsScreen.mobile-sec-open .set-mobile-back{display:flex!important}
+
+/* Mobile Breakpoints (< 900px) */
+@media (max-width:900px){
+  .set-body{flex-direction:column;position:relative}
+  .set-nav{
+    width:100%;border-inline-end:none;padding:12px 14px 24px;
+    max-height:none;flex:1;
+  }
+  .set-nav-item{padding:12px 14px;border-radius:14px;background:rgba(255,255,255,.03);border:1px solid var(--br)}
+  .set-content{padding:16px 14px 44px;width:100%;box-sizing:border-box}
+  .set-section{max-width:none!important;padding:18px 16px;border-radius:16px}
+  
+  /* Master-detail switching */
+  #settingsScreen:not(.mobile-sec-open) .set-nav{display:flex!important}
+  #settingsScreen:not(.mobile-sec-open) .set-content{display:none!important}
+  #settingsScreen:not(.mobile-sec-open) .set-back-btn{display:none!important}
+  
+  #settingsScreen.mobile-sec-open .set-nav{display:none!important}
+  #settingsScreen.mobile-sec-open .set-content{display:block!important}
+  #settingsScreen.mobile-sec-open .set-back-btn{display:inline-flex!important}
+  #settingsScreen.mobile-sec-open .set-mobile-back{display:none!important}
+}
+
+@media (min-width: 901px) and (max-width: 1100px) {
+  .set-nav { width: 250px; }
+  .set-content { padding: 18px 20px 36px; }
+}
+
+@media (max-width:600px){
+  .set-header{padding:12px 14px}
+  .set-header h2{font-size:1.02rem}
+  .set-done-btn{padding:6px 12px;font-size:.8rem}
+  .set-content{padding:12px 10px 36px}
+  .set-section{padding:14px 12px;border-radius:14px}
+  .set-nav-title{font-size:.84rem}
+  .set-nav-desc{font-size:.68rem}
+}
+
+/* Responsive grids on small screens */
+@media (max-width:540px){
+  .fw-macro-grid-responsive{grid-template-columns:1fr 1fr!important;gap:8px!important}
+  .fw-inputs-grid-responsive{grid-template-columns:repeat(auto-fit, minmax(85px, 1fr))!important}
 }
 /* Public marketing pages must never inherit app RTL */
 #landingPage,#loginCanvas{
@@ -501,16 +602,8 @@ input[type="color"]::-moz-color-swatch{
 .color-swatch-btn:hover{transform:scale(1.08)}
 .color-swatch-btn.sel{box-shadow:0 0 0 2px var(--bg),0 0 0 4px var(--ac);border-color:var(--ac)}
 .color-swatch-hex{width:96px;padding:6px 8px;border-radius:8px;border:1px solid var(--br);background:var(--c);color:var(--tx);font-size:.75rem;font-family:ui-monospace,monospace}
-@media (max-width:720px){
-  .set-nav{width:100%;border-left:none;border-bottom:1px solid color-mix(in srgb, var(--ac) 18%, var(--br));display:flex;flex-direction:row;flex-wrap:nowrap;overflow-x:auto;padding:10px;gap:6px}
-  .set-nav button{width:auto;flex:0 0 auto;white-space:nowrap;margin-bottom:0;padding:10px 14px}
-}
-.set-nav button.act{background:rgba(59,130,246,.15);color:var(--ac)}
-.set-content{flex:1;padding:24px 20px;overflow-y:auto}
-.set-section{display:none;max-width:520px}
-.set-section.act{display:block}
-.set-section h3{font-size:1rem;font-weight:900;margin:0 0 6px}
-.set-section p.desc{font-size:.78rem;color:var(--mu);margin:0 0 18px;line-height:1.5}
+.set-section h3{font-size:1.05rem;font-weight:900;margin:0 0 6px}
+.set-section p.desc{font-size:.78rem;color:var(--mu);margin:0 0 16px;line-height:1.5}
 .set-row{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:14px 0;border-bottom:1px solid var(--br)}
 .set-row label{font-size:.88rem;font-weight:700}
 .set-row input[type=checkbox]{width:20px;height:20px;accent-color:var(--ac)}
@@ -3721,20 +3814,122 @@ body.theme-matrix .tctime{
 
   <div id="settingsScreen">
     <div class="set-header">
-      <h2 id="setTitle">⚙️ الإعدادات</h2>
-      <button type="button" id="setCloseBtn" class="topbtn" style="background:rgba(100,116,139,.15);border:1px solid var(--br);color:var(--tx)">إغلاق</button>
+      <div class="set-header-left">
+        <button type="button" id="setBackBtn" class="set-back-btn" aria-label="Back">
+          <span class="set-back-arrow">‹</span>
+          <span id="setBackBtnText">Back</span>
+        </button>
+        <h2 id="setTitle">⚙️ Settings</h2>
+      </div>
+      <div style="display:flex;align-items:center;gap:8px">
+        <button type="button" id="setCloseBtn" class="topbtn set-done-btn"><span id="setCloseBtnText">✕ Close</span></button>
+      </div>
     </div>
     <div class="set-body">
       <div class="set-nav" id="setNav">
-        <button type="button" data-setsec="general" class="act" data-i18n="nav_general">عام</button>
-        <button type="button" data-setsec="tracking" data-i18n="nav_tracking">التتبع</button>
-        <button type="button" data-setsec="fitness" id="navFitnessBtn" data-i18n="nav_fitness">🏋️ Fitness & Macros</button>
-        <button type="button" data-setsec="notifications" data-i18n="nav_notif">التذكيرات</button>
-        <button type="button" data-setsec="reports" data-i18n="nav_reports">التقارير</button>
-        <button type="button" data-setsec="appearance" data-i18n="nav_appearance">المظهر</button>
-        <button type="button" data-setsec="prestige" id="navPrestigeBtn">مركز الامتياز</button>
-        <button type="button" data-setsec="language" data-i18n="nav_language">اللغة</button>
-        <button type="button" data-setsec="account" data-i18n="nav_account">الحساب</button>
+        <div class="set-search-wrap">
+          <input type="text" id="setSearchInput" class="set-search-input" placeholder="🔍 Search settings..." autocomplete="off">
+        </div>
+        <button type="button" data-setsec="general" class="set-nav-item act">
+          <div class="set-nav-left">
+            <span class="set-nav-badge" style="background:rgba(59,130,246,.15);border:1px solid rgba(59,130,246,.3);color:#60a5fa">⚙️</span>
+            <div class="set-nav-text">
+              <span class="set-nav-title" data-i18n="nav_general">General</span>
+              <span class="set-nav-desc" data-i18n="nav_general_sub">Workspaces & task edit mode</span>
+            </div>
+          </div>
+          <span class="set-nav-chevron">›</span>
+        </button>
+        <button type="button" data-setsec="tracking" class="set-nav-item">
+          <div class="set-nav-left">
+            <span class="set-nav-badge" style="background:rgba(99,102,241,.15);border:1px solid rgba(99,102,241,.3);color:#818cf8">📊</span>
+            <div class="set-nav-text">
+              <span class="set-nav-title" data-i18n="nav_tracking">Tracking</span>
+              <span class="set-nav-desc" data-i18n="nav_tracking_sub">Points, streak & habit systems</span>
+            </div>
+          </div>
+          <span class="set-nav-chevron">›</span>
+        </button>
+        <button type="button" data-setsec="fitness" id="navFitnessBtn" class="set-nav-item">
+          <div class="set-nav-left">
+            <span class="set-nav-badge" style="background:rgba(239,68,68,.15);border:1px solid rgba(239,68,68,.3);color:#f87171">🏋️</span>
+            <div class="set-nav-text">
+              <span class="set-nav-title" data-i18n="nav_fitness">Fitness & Macros</span>
+              <span class="set-nav-desc" data-i18n="nav_fitness_sub">Scientific BMR, TDEE & targets</span>
+            </div>
+          </div>
+          <span class="set-nav-chevron">›</span>
+        </button>
+        <button type="button" data-setsec="notifications" class="set-nav-item">
+          <div class="set-nav-left">
+            <span class="set-nav-badge" style="background:rgba(245,158,11,.15);border:1px solid rgba(245,158,11,.3);color:#fbbf24">🔔</span>
+            <div class="set-nav-text">
+              <span class="set-nav-title" data-i18n="nav_notif">Notifications</span>
+              <span class="set-nav-desc" data-i18n="nav_notif_sub">Always-on reminders & prayers</span>
+            </div>
+          </div>
+          <span class="set-nav-chevron">›</span>
+        </button>
+        <button type="button" data-setsec="reports" class="set-nav-item">
+          <div class="set-nav-left">
+            <span class="set-nav-badge" style="background:rgba(139,92,246,.15);border:1px solid rgba(139,92,246,.3);color:#c084fc">📈</span>
+            <div class="set-nav-text">
+              <span class="set-nav-title" data-i18n="nav_reports">Reports</span>
+              <span class="set-nav-desc" data-i18n="nav_reports_sub">Weekly history & insights</span>
+            </div>
+          </div>
+          <span class="set-nav-chevron">›</span>
+        </button>
+        <button type="button" data-setsec="appearance" class="set-nav-item">
+          <div class="set-nav-left">
+            <span class="set-nav-badge" style="background:rgba(236,72,153,.15);border:1px solid rgba(236,72,153,.3);color:#f472b6">🎨</span>
+            <div class="set-nav-text">
+              <span class="set-nav-title" data-i18n="nav_appearance">Appearance</span>
+              <span class="set-nav-desc" data-i18n="nav_appearance_sub">Themes, palette & categories</span>
+            </div>
+          </div>
+          <span class="set-nav-chevron">›</span>
+        </button>
+        <button type="button" data-setsec="prestige" id="navPrestigeBtn" class="set-nav-item">
+          <div class="set-nav-left">
+            <span class="set-nav-badge" style="background:rgba(251,191,36,.15);border:1px solid rgba(251,191,36,.3);color:#f59e0b">🏆</span>
+            <div class="set-nav-text">
+              <span class="set-nav-title" data-i18n="nav_prestige">Perfection Center</span>
+              <span class="set-nav-desc" data-i18n="nav_prestige_sub">Lifetime XP, ranks & tokens</span>
+            </div>
+          </div>
+          <span class="set-nav-chevron">›</span>
+        </button>
+        <button type="button" data-setsec="routines" class="set-nav-item">
+          <div class="set-nav-left">
+            <span class="set-nav-badge" style="background:rgba(6,182,212,.15);border:1px solid rgba(6,182,212,.3);color:#22d3ee">💼</span>
+            <div class="set-nav-text">
+              <span class="set-nav-title" data-i18n="sec_routines">Workspaces</span>
+              <span class="set-nav-desc" data-i18n="sec_routines_sub">Manage schedules & routines</span>
+            </div>
+          </div>
+          <span class="set-nav-chevron">›</span>
+        </button>
+        <button type="button" data-setsec="language" class="set-nav-item">
+          <div class="set-nav-left">
+            <span class="set-nav-badge" style="background:rgba(20,184,166,.15);border:1px solid rgba(20,184,166,.3);color:#2dd4bf">🌐</span>
+            <div class="set-nav-text">
+              <span class="set-nav-title" data-i18n="nav_language">Language</span>
+              <span class="set-nav-desc" data-i18n="nav_language_sub">العربية / English</span>
+            </div>
+          </div>
+          <span class="set-nav-chevron">›</span>
+        </button>
+        <button type="button" data-setsec="account" class="set-nav-item">
+          <div class="set-nav-left">
+            <span class="set-nav-badge" style="background:rgba(100,116,139,.15);border:1px solid rgba(100,116,139,.3);color:#94a3b8">👤</span>
+            <div class="set-nav-text">
+              <span class="set-nav-title" data-i18n="nav_account">Account</span>
+              <span class="set-nav-desc" data-i18n="nav_account_sub">Profile & sign-in session</span>
+            </div>
+          </div>
+          <span class="set-nav-chevron">›</span>
+        </button>
       </div>
       <div class="set-content">
         <button type="button" class="set-mobile-back" id="setMobileBack">← Back</button>
@@ -3930,26 +4125,69 @@ body.theme-matrix .tctime{
           </div>
         </div>
         <div class="set-section" id="setsec-notifications">
-          <h3 data-i18n="sec_notif">التذكيرات (تعمل تلقائياً)</h3>
-          <!-- Prayer locations at top of Reminders for visibility -->
-          <p class="desc" style="margin-top:4px;font-weight:800" id="prayerLocTitle">Prayer locations</p>
-          <p class="desc" id="prayerLocDesc">Edit Mosque / Home / Other points &amp; names. Add your own places below.</p>
-          <div id="prayerLocList" style="margin-top:8px"></div>
-          <div style="display:flex;gap:8px;margin-top:10px;flex-wrap:wrap;align-items:center">
-            <input id="prayerLocName" type="text" placeholder="Name" style="flex:1;min-width:100px;padding:8px 10px;border-radius:8px;border:1px solid var(--br);background:var(--c);color:var(--tx);font-family:inherit">
-            <input id="prayerLocIcon" type="text" placeholder="📍" maxlength="4" style="width:48px;padding:8px;border-radius:8px;border:1px solid var(--br);background:var(--c);color:var(--tx);text-align:center">
-            <input id="prayerLocPts" type="number" min="1" max="5" value="2" style="width:64px;padding:8px;border-radius:8px;border:1px solid var(--br);background:var(--c);color:var(--tx)">
-            <input id="prayerLocColor" type="color" value="#fbbf24" title="Color" style="width:42px;height:36px;border:none;background:transparent;cursor:pointer">
-            <button type="button" id="prayerLocAddBtn" class="altbtn">Add</button>
+          <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px;margin-bottom:12px;border-bottom:1px solid var(--br);padding-bottom:10px">
+            <div>
+              <h3 style="margin:0;font-size:1.1rem;font-weight:900;display:flex;align-items:center;gap:8px" data-i18n="sec_notif">🔔 Notifications &amp; Reminders</h3>
+              <p class="desc" style="margin:4px 0 0;font-size:.78rem;color:var(--so)" data-i18n="sec_notif_desc">Triple-redundant reminder delivery: In-app live ticker, Service Worker background alarm, and Cloud Web Push.</p>
+            </div>
           </div>
-          <p class="desc" id="secNotifDesc" data-i18n="sec_notif_desc" style="margin-top:18px">Reminders stay always-on. Once permission is granted, the next 30 days are stored in the cloud and the server keeps sending them even if you stop opening the app. Open the app occasionally so the next window can refresh.</p>
-          <div class="set-actions" style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">
-            <button type="button" id="btn-notif-toggle" class="topbtn" style="background:rgba(16,185,129,.18);border:1px solid var(--br);color:var(--gr)">🔔 التذكيرات (تلقائية)</button>
-            <button type="button" id="btn-notif-test" class="altbtn" style="padding:8px 12px;font-size:0.85rem">🔔 تجربة الإشعار</button>
+
+          <!-- Diagnostic & Health Status Card -->
+          <div style="background:rgba(255,255,255,.025);border:1px solid color-mix(in srgb, var(--ac) 24%, var(--br));border-radius:14px;padding:14px;margin-bottom:18px">
+            <div style="font-size:.82rem;font-weight:900;color:var(--tx);margin-bottom:10px;display:flex;align-items:center;justify-content:space-between">
+              <span>📡 System Status</span>
+              <span id="notif-sync-badge" class="badge" style="background:rgba(16,185,129,.15);border:1px solid rgba(16,185,129,.35);color:#34d399;font-size:.72rem;padding:3px 8px;border-radius:6px">Active · 30-Day Queue Synced</span>
+            </div>
+            <div style="display:grid;grid-template-columns:repeat(auto-fit, minmax(130px, 1fr));gap:8px;margin-bottom:12px">
+              <div style="background:var(--c);border:1px solid var(--br);border-radius:10px;padding:8px 10px;text-align:center">
+                <div style="font-size:.65rem;color:var(--mu);font-weight:700">Device Platform</div>
+                <div id="diagDevicePlatform" style="font-size:.82rem;font-weight:900;color:var(--tx);margin-top:2px">📱 Mobile / Web</div>
+              </div>
+              <div style="background:var(--c);border:1px solid var(--br);border-radius:10px;padding:8px 10px;text-align:center">
+                <div style="font-size:.65rem;color:var(--mu);font-weight:700">OS Permission</div>
+                <div id="diagNotifPerm" style="font-size:.82rem;font-weight:900;color:#34d399;margin-top:2px">Granted ✅</div>
+              </div>
+              <div style="background:var(--c);border:1px solid var(--br);border-radius:10px;padding:8px 10px;text-align:center">
+                <div style="font-size:.65rem;color:var(--mu);font-weight:700">Active Engine</div>
+                <div style="font-size:.82rem;font-weight:900;color:var(--ac);margin-top:2px">⚡ Live 20s Ticker</div>
+              </div>
+            </div>
+
+            <!-- iOS PWA Guidance Notice -->
+            <div id="diagIosNotice" style="display:none;background:rgba(245,158,11,.1);border:1px solid rgba(245,158,11,.3);border-radius:10px;padding:10px 12px;margin-bottom:12px;font-size:.76rem;line-height:1.45;color:var(--tx)">
+              <strong>📱 iPhone Notification Tip:</strong> On iOS, notifications require adding this app to your Home Screen. Tap Share (<strong>⬆️</strong>) &gt; <strong>Add to Home Screen</strong>, then open the app from your home screen and enable notifications.
+            </div>
+
+            <!-- Quick Action Buttons -->
+            <div style="display:flex;gap:8px;flex-wrap:wrap">
+              <button type="button" id="btn-notif-toggle" class="fl-submit-btn" style="flex:1;min-width:140px;margin:0;padding:10px 14px;font-size:.82rem">🔔 Enable / Verify</button>
+              <button type="button" id="btn-notif-test" class="altbtn" style="flex:1;min-width:140px;padding:10px 14px;font-size:.82rem;display:flex;align-items:center;justify-content:center;gap:6px">🧪 Test Notification</button>
+              <button type="button" onclick="renewPushSubscription()" class="altbtn" style="padding:10px 14px;font-size:.82rem">🔄 Resync Cloud</button>
+            </div>
           </div>
-          <div id="notif-sync-badge" style="font-size:0.8rem;margin-top:8px;color:var(--gr);font-weight:600">✅ التذكيرات تعمل تلقائياً في الخلفية</div>
-          <p class="desc" style="margin-top:16px;font-weight:800" id="taskNotifListTitle">Per-task notifications</p>
-          <div id="taskNotifList" style="margin-top:8px;display:flex;flex-direction:column;gap:8px"></div>
+
+          <!-- Per-Task Notifications -->
+          <div style="margin-bottom:20px">
+            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">
+              <span style="font-weight:800;font-size:.9rem;color:var(--tx)" id="taskNotifListTitle">Per-Task Notification Preferences</span>
+              <span style="font-size:.72rem;color:var(--mu)">Lead time &amp; alarms</span>
+            </div>
+            <div id="taskNotifList" style="display:flex;flex-direction:column;gap:8px"></div>
+          </div>
+
+          <!-- Prayer locations -->
+          <div style="background:var(--c);border:1px solid var(--br);border-radius:14px;padding:14px">
+            <div style="font-weight:800;font-size:.88rem;color:var(--tx);margin-bottom:4px" id="prayerLocTitle">Prayer Locations &amp; Bonus Points</div>
+            <p class="desc" id="prayerLocDesc" style="margin:0 0 10px;font-size:.74rem">Configure points for praying at Mosque, Home, or custom locations.</p>
+            <div id="prayerLocList" style="margin-bottom:12px"></div>
+            <div style="display:grid;grid-template-columns:1fr auto auto auto auto;gap:6px;align-items:center" class="prayer-loc-input-grid">
+              <input id="prayerLocName" type="text" placeholder="Location Name" style="padding:8px 10px;border-radius:8px;border:1px solid var(--br);background:var(--c2);color:var(--tx);font-family:inherit;font-size:.82rem">
+              <input id="prayerLocIcon" type="text" placeholder="📍" maxlength="4" style="width:44px;padding:8px 4px;border-radius:8px;border:1px solid var(--br);background:var(--c2);color:var(--tx);text-align:center;font-size:.9rem">
+              <input id="prayerLocPts" type="number" min="1" max="5" value="2" style="width:52px;padding:8px 4px;border-radius:8px;border:1px solid var(--br);background:var(--c2);color:var(--tx);font-size:.82rem">
+              <input id="prayerLocColor" type="color" value="#fbbf24" title="Color" style="width:36px;height:34px;border:none;background:transparent;cursor:pointer;padding:0">
+              <button type="button" id="prayerLocAddBtn" class="fl-submit-btn" style="width:auto;margin:0;padding:8px 14px;font-size:.82rem">+ Add</button>
+            </div>
+          </div>
         </div>
         <div class="set-section" id="setsec-reports">
           <h3 data-i18n="sec_reports">التقارير</h3>
@@ -4186,10 +4424,16 @@ body.theme-matrix .tctime{
     </div>
   </div>
 
-  <div style="padding:8px 16px;display:flex;gap:8px;align-items:center">
-    <button class="altbtn" id="btn-hist-prev" type="button">← يوم سابق</button>
-    <div class="ptsbdg" id="hist-label">اليوم</div>
-    <button class="altbtn" id="btn-hist-next" type="button">يوم تالٍ →</button>
+  <div style="padding:8px 16px;display:flex;gap:8px;align-items:center;justify-content:space-between;flex-wrap:wrap">
+    <div style="display:flex;gap:8px;align-items:center">
+      <button class="altbtn" id="btn-hist-prev" type="button">← يوم سابق</button>
+      <div class="ptsbdg" id="hist-label">اليوم</div>
+      <button class="altbtn" id="btn-hist-next" type="button">يوم تالٍ →</button>
+    </div>
+    <button id="btnMainAddTask" class="fl-submit-btn" type="button" style="margin:0;width:auto;padding:8px 16px;font-size:.85rem;display:inline-flex;align-items:center;gap:6px;cursor:pointer;border-radius:10px;box-shadow:0 2px 10px rgba(59,130,246,.25)">
+      <span>➕</span>
+      <span id="btnMainAddTaskText">Add Task</span>
+    </button>
   </div>
 
   <div class="tw"><div class="tabs" id="tabrow"></div></div>
@@ -4285,6 +4529,15 @@ body.theme-matrix .tctime{
           <label id="stEndTimeLbl" style="font-size:.72rem;color:var(--so);font-weight:700;display:block;margin-bottom:6px">End time</label>
           <input id="stEndTime" type="time" class="ob-textinput" style="text-align:left;font-size:.9rem;padding:12px 14px;direction:ltr">
         </div>
+      </div>
+      <div>
+        <label id="stPriorityLbl" style="font-size:.72rem;color:var(--so);font-weight:700;display:block;margin-bottom:6px">Task Priority</label>
+        <div id="stPriorityRow" style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px">
+          <button type="button" class="st-prio-btn" data-priority="low" style="padding:10px 8px;border-radius:10px;border:1.5px solid var(--br);background:rgba(255,255,255,.03);color:var(--so);font-weight:800;font-size:.78rem;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:6px">🟢 <span class="st-prio-text">Low</span></button>
+          <button type="button" class="st-prio-btn act" data-priority="medium" style="padding:10px 8px;border-radius:10px;border:1.5px solid var(--or,#f59e0b);background:rgba(245,158,11,.15);color:var(--tx);font-weight:800;font-size:.78rem;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:6px">🟡 <span class="st-prio-text">Medium</span></button>
+          <button type="button" class="st-prio-btn" data-priority="high" style="padding:10px 8px;border-radius:10px;border:1.5px solid var(--br);background:rgba(255,255,255,.03);color:var(--so);font-weight:800;font-size:.78rem;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:6px">🔴 <span class="st-prio-text">High</span></button>
+        </div>
+        <input type="hidden" id="stPriority" value="medium">
       </div>
       <div>
         <label id="stDescLbl" style="font-size:.72rem;color:var(--so);font-weight:700;display:block;margin-bottom:6px">Description (optional)</label>
@@ -6759,15 +7012,17 @@ function scheduleEnsureDay(jd){
 // codebase exactly ([id,time,cat,ico,name,desc,pts,alts,hw,isEx,...]) so it renders
 // through the exact same renderCard path as SCHED-derived tasks — now fully supporting
 // custom task categories with distinct icons and colors.
-async function saveScheduleTask(jd,existingId,{time,name,desc,pts,color,foodLog,endTime,days,notify,cat,icon}){
+async function saveScheduleTask(jd,existingId,{time,name,desc,pts,color,foodLog,endTime,days,notify,cat,icon,priority}){
   pts=Math.min(parseInt(pts,10)||5,30); if(![5,15,30].includes(pts)) pts=pts>=30?30:(pts>=15?15:5);
   const id=existingId||scheduleGenTaskId();
   const category=cat||(foodLog?'food':(ST_SELECTED_CATEGORY||'routine'));
   const ico=icon||ST_SELECTED_ICON||(foodLog?'🍽️':'✨');
   const macros=foodLog?{p:0,c:0,f:0,b:0,k:0}:null;
   const mealKey=foodLog?('custom:'+id):null;
-  // Index 10 = color. Index 11 = macros. Index 12 = mealKey. Index 13 = endTime (HH:MM display). Index 14 = category id.
-  const tuple=[id,time,category,ico,name,desc||'',pts||0,null,null,false,color||null,macros,mealKey,endTime||null,category];
+  const prio=(priority==='low'||priority==='high'||priority==='medium')?priority:'medium';
+  // Index 10 = color. Index 11 = macros. Index 12 = mealKey. Index 13 = endTime (HH:MM display). Index 14 = category id. Index 15 = priority.
+  const tuple=[id,time,category,ico,name,desc||'',pts||0,null,null,false,color||null,macros,mealKey,endTime||null,category,prio];
+  tuple.priority=prio;
   const dayList=(Array.isArray(days)&&days.length)?days:[jd];
   for(const d of dayList){
     scheduleEnsureDay(d);
@@ -7169,6 +7424,34 @@ function stUpdateFoodLogVisibility(){
   if(show&&foodEl&&isFoodishName(name)) foodEl.checked=true;
 }
 let ST_RETURN_TO_SETTINGS=false;
+let ST_SELECTED_PRIORITY='medium';
+
+function stSelectPriority(prio){
+  const p=(prio==='low'||prio==='high'||prio==='medium')?prio:'medium';
+  ST_SELECTED_PRIORITY=p;
+  const inp=document.getElementById('stPriority');
+  if(inp) inp.value=p;
+  const btns=document.querySelectorAll('#stPriorityRow .st-prio-btn');
+  btns.forEach(b=>{
+    const bp=b.getAttribute('data-priority');
+    const isSel=(bp===p);
+    b.classList.toggle('act',isSel);
+    if(bp==='low'){
+      b.style.borderColor=isSel?'var(--gr,#10b981)':'var(--br)';
+      b.style.background=isSel?'rgba(16,185,129,.18)':'rgba(255,255,255,.03)';
+      b.style.color=isSel?'var(--tx)':'var(--so)';
+    }else if(bp==='medium'){
+      b.style.borderColor=isSel?'var(--or,#f59e0b)':'var(--br)';
+      b.style.background=isSel?'rgba(245,158,11,.18)':'rgba(255,255,255,.03)';
+      b.style.color=isSel?'var(--tx)':'var(--so)';
+    }else if(bp==='high'){
+      b.style.borderColor=isSel?'var(--rd,#ef4444)':'var(--br)';
+      b.style.background=isSel?'rgba(239,68,68,.18)':'rgba(255,255,255,.03)';
+      b.style.color=isSel?'var(--tx)':'var(--so)';
+    }
+  });
+}
+
 function openScheduleTaskEditor(jd,existingTask,opts){
   opts=opts||{};
   ST_RETURN_TO_SETTINGS=!!opts.fromSettings || !!document.getElementById('settingsScreen')?.classList.contains('open');
@@ -7200,6 +7483,7 @@ function openScheduleTaskEditor(jd,existingTask,opts){
   setLbl('stNewCatTitle','Create Custom Category','إنشاء فئة مخصصة');
   setLbl('stTimeLbl','Start time','وقت البداية');
   setLbl('stEndTimeLbl','End time','وقت النهاية');
+  setLbl('stPriorityLbl','Task Priority','أولوية المهمة');
   setLbl('stDescLbl','Description (optional)','وصف (اختياري)');
   setLbl('stDaysLbl','Days of week','أيام الأسبوع');
   setLbl('stPtsLbl','Task Difficulty / Intensity','صعوبة / شدة المهمة');
@@ -7207,6 +7491,25 @@ function openScheduleTaskEditor(jd,existingTask,opts){
   setLbl('stColorLbl','Color','اللون');
   setLbl('stNotifyLbl','🔔 Notify me about this task','🔔 ذكّرني بهذه المهمة');
   setLbl('stFoodLogLbl','🍽️ Log food for this task?','🍽️ تسجيل أكل لهذه المهمة؟');
+
+  // Priority row wiring and labels
+  const prioRow=document.getElementById('stPriorityRow');
+  if(prioRow && !prioRow._wired){
+    prioRow._wired=true;
+    prioRow.addEventListener('click',e=>{
+      const b=e.target.closest('[data-priority]');
+      if(!b) return;
+      stSelectPriority(b.getAttribute('data-priority'));
+    });
+  }
+  const initPrio=existingTask?.priority||(existingTask&&existingTask[15])||'medium';
+  stSelectPriority(initPrio);
+  const prioTexts=document.querySelectorAll('#stPriorityRow .st-prio-text');
+  if(prioTexts.length===3){
+    prioTexts[0].textContent=en?'Low':'منخفضة';
+    prioTexts[1].textContent=en?'Medium':'متوسطة';
+    prioTexts[2].textContent=en?'High':'عالية';
+  }
   const addCatToggleBtn=document.getElementById('stAddCatToggleBtn');
   if(addCatToggleBtn) addCatToggleBtn.textContent=en?'+ New Category':'+ فئة جديدة';
   const cancelNewCatBtn=document.getElementById('stCancelNewCatBtn');
@@ -7365,6 +7668,7 @@ async function stHandleSave(){
   const displayEnd=endVal?toDisplayTime(endVal):null;
   const desc=(document.getElementById('stDesc')?.value||'').trim();
   let checkedPoints=Math.min(parseInt(document.getElementById('stPts')?.value,10)||5,30); if(![5,15,30].includes(checkedPoints)) checkedPoints=checkedPoints>=30?30:(checkedPoints>=15?15:5); const pts=checkedPoints;
+  const priority=document.getElementById('stPriority')?.value||ST_SELECTED_PRIORITY||'medium';
 
   if(ST_ACTIVE_JD===null){
     if(errEl){ errEl.textContent='⚠️ Error — reopen the task'; errEl.style.display='block'; }
@@ -7424,12 +7728,12 @@ async function stHandleSave(){
       if(!USER_EDITS.dayOverrides[iso]) USER_EDITS.dayOverrides[iso]={};
       USER_EDITS.dayOverrides[iso][ST_ACTIVE_TASK_ID]={
         time:displayTime, name, desc, pts, color:ST_SELECTED_COLOR, foodLog, endTime:displayEnd,
-        cat:selectedCat, icon:ST_SELECTED_ICON
+        cat:selectedCat, icon:ST_SELECTED_ICON, priority
       };
       try{ if(typeof saveUserEdits==='function') await saveUserEdits(); }catch(e){}
     }else if(editScope==='weekday' && ST_ACTIVE_TASK_ID){
       // Only the weekday being viewed (ST_ACTIVE_JD), not all selected days
-      await saveScheduleTask(ST_ACTIVE_JD,ST_ACTIVE_TASK_ID,{time:displayTime,name,desc,pts,color:ST_SELECTED_COLOR,foodLog,endTime:displayEnd,days:[ST_ACTIVE_JD],notify,cat:selectedCat,icon:ST_SELECTED_ICON});
+      await saveScheduleTask(ST_ACTIVE_JD,ST_ACTIVE_TASK_ID,{time:displayTime,name,desc,pts,color:ST_SELECTED_COLOR,foodLog,endTime:displayEnd,days:[ST_ACTIVE_JD],notify,cat:selectedCat,icon:ST_SELECTED_ICON,priority});
       if(USER_EDITS && USER_EDITS.dayOverrides){
         const iso=SELECTED_DATE||TODAY;
         if(USER_EDITS.dayOverrides[iso] && USER_EDITS.dayOverrides[iso][ST_ACTIVE_TASK_ID]){
@@ -7438,7 +7742,7 @@ async function stHandleSave(){
         try{ if(typeof saveUserEdits==='function') await saveUserEdits(); }catch(e){}
       }
     }else{
-      await saveScheduleTask(ST_ACTIVE_JD,ST_ACTIVE_TASK_ID,{time:displayTime,name,desc,pts,color:ST_SELECTED_COLOR,foodLog,endTime:displayEnd,days,notify,cat:selectedCat,icon:ST_SELECTED_ICON});
+      await saveScheduleTask(ST_ACTIVE_JD,ST_ACTIVE_TASK_ID,{time:displayTime,name,desc,pts,color:ST_SELECTED_COLOR,foodLog,endTime:displayEnd,days,notify,cat:selectedCat,icon:ST_SELECTED_ICON,priority});
       // Clear any day-only override for this task if promoting to forever
       if(ST_ACTIVE_TASK_ID && USER_EDITS && USER_EDITS.dayOverrides){
         for(const iso of Object.keys(USER_EDITS.dayOverrides)){
@@ -7465,6 +7769,14 @@ async function stHandleSave(){
   }
   showToast(t('task_saved'),2200);
 }
+
+window.openAddSchedTaskModal = function(jd){
+  const targetJd = (jd !== undefined && jd !== null && !isNaN(jd)) 
+    ? parseInt(jd, 10) 
+    : (typeof getJDfromISO === 'function' ? getJDfromISO(SELECTED_DATE || TODAY) : todayJD());
+  openScheduleTaskEditor(targetJd, null);
+};
+window.openAddTaskModal = window.openAddSchedTaskModal;
 
 async function stHandleDelete(jd,taskId){
   const en=(USER_SETTINGS&&USER_SETTINGS.lang)==='en';
@@ -7914,6 +8226,10 @@ function applyI18n(){
     else if(/ألياف|Fiber/i.test(raw)) el.textContent=t('fiber');
   });
   const isEn = (USER_SETTINGS && USER_SETTINGS.lang) === 'en';
+  const addTaskBtnText = document.getElementById('btnMainAddTaskText');
+  if(addTaskBtnText) addTaskBtnText.textContent = isEn ? 'Add Task' : 'إضافة مهمة';
+  const setBackBtnText = document.getElementById('setBackBtnText');
+  if(setBackBtnText) setBackBtnText.textContent = isEn ? 'Back' : 'رجوع';
   const mtPill = document.getElementById('macroTrendsPillText');
   if(mtPill) mtPill.textContent = isEn ? 'Macro Trends' : 'مخطط الماكروز';
   const mtSwitch = document.getElementById('macroTrendsSwitchText');
@@ -10738,21 +11054,149 @@ async function syncPushSchedule(forceRenew = false, silent = true){
   }
 }
 
+async function triggerDeviceNotification(title, body, tag){
+  const options = {
+    body,
+    tag: tag || ('notif-' + Date.now()),
+    icon: 'data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"%3E%3Ctext y="75" font-size="80"%3E%F0%9F%8F%8B%EF%B8%8F%3C/text%3E%3C/svg%3E',
+    badge: 'data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"%3E%3Ctext y="75" font-size="80"%3E%F0%9F%94%94%3C/text%3E%3C/svg%3E',
+    vibrate: [200, 100, 200],
+    data: { url: './' }
+  };
+  try {
+    const reg = await navigator.serviceWorker.getRegistration();
+    if(reg && typeof reg.showNotification === 'function'){
+      await reg.showNotification(title, options);
+      return true;
+    }
+  } catch(e) {}
+  try {
+    if(navigator.serviceWorker && navigator.serviceWorker.controller){
+      navigator.serviceWorker.controller.postMessage({ type: 'SHOW_NOTIFICATION', title, options });
+      return true;
+    }
+  } catch(e) {}
+  try {
+    if(typeof Notification !== 'undefined' && Notification.permission === 'granted'){
+      new Notification(title, options);
+      return true;
+    }
+  } catch(e) {}
+  return false;
+}
+
+let _lastNotifTickMin = -1;
+function runLocalNotificationTick(){
+  if(typeof Notification === 'undefined' || Notification.permission !== 'granted') return;
+  if(typeof NOTIF_ENABLED !== 'undefined' && !NOTIF_ENABLED) return;
+
+  const nowMin = typeof getKuwaitNow === 'function' ? getKuwaitNow() : (new Date().getHours()*60 + new Date().getMinutes());
+  if(nowMin === _lastNotifTickMin) return;
+  _lastNotifTickMin = nowMin;
+
+  const jd = typeof todayJD === 'function' ? todayJD() : (new Date().getDay());
+  const tasks = (typeof getAllTasks === 'function' ? getAllTasks(jd, TODAY) : []).filter(t => t && !t._deleted && t[2] !== 'free');
+  if(!tasks.length) return;
+
+  const firedKey = 'FIRED_NOTIFS_' + (typeof TODAY !== 'undefined' ? TODAY : new Date().toISOString().slice(0,10));
+  let firedSet = new Set();
+  try {
+    const raw = localStorage.getItem(firedKey);
+    if(raw) firedSet = new Set(JSON.parse(raw));
+  } catch(e) {}
+
+  const isEn = (USER_SETTINGS && USER_SETTINGS.lang) === 'en';
+
+  tasks.forEach(t => {
+    const id = t[0];
+    const taskName = t[4] || '';
+    if(typeof DONE !== 'undefined' && DONE[id] !== undefined && DONE[id] !== false) return;
+
+    const cfg = typeof getTaskNotifConfig === 'function' ? getTaskNotifConfig(id) : { enabled: true, startEnabled: true, leadEnabled: false, endLeadEnabled: false };
+    if(!cfg || !cfg.enabled) return;
+
+    const startMin = toMin(t[10] || t[1]);
+    const endMin = typeof notifTaskEndMin === 'function' ? notifTaskEndMin(t) : (startMin + 60);
+
+    // 1. Lead notification (e.g. 15-30 min before start)
+    if(cfg.leadEnabled){
+      const leadAt = startMin - (cfg.leadMin || 15);
+      const leadKey = id + '_lead';
+      if(leadAt >= 0 && nowMin >= leadAt && nowMin < leadAt + 3 && !firedSet.has(leadKey)){
+        firedSet.add(leadKey);
+        triggerDeviceNotification(
+          isEn ? `⏳ Upcoming: ${taskName}` : `⏳ اقترب الموعد: ${taskName}`,
+          isEn ? `Starts in ${cfg.leadMin || 15} minutes` : `هتبدأ خلال ${cfg.leadMin || 15} دقيقة`,
+          leadKey
+        );
+      }
+    }
+
+    // 2. Start notification (at start time)
+    if(cfg.startEnabled){
+      const startKey = id + '_start';
+      if(nowMin >= startMin && nowMin < startMin + 3 && !firedSet.has(startKey)){
+        firedSet.add(startKey);
+        triggerDeviceNotification(
+          isEn ? `⏰ Time for: ${taskName}` : `⏰ حان الوقت: ${taskName}`,
+          isEn ? `Scheduled to start now` : `الموعد المحدد بدأ الآن`,
+          startKey
+        );
+      }
+    }
+
+    // 3. Ending notification
+    if(cfg.endLeadEnabled && t[2] !== 'sleep'){
+      const endLeadMin = endMin - (cfg.endLeadMin || 30);
+      const endKey = id + '_ending';
+      if(endLeadMin > startMin && nowMin >= endLeadMin && nowMin < endLeadMin + 3 && !firedSet.has(endKey)){
+        firedSet.add(endKey);
+        triggerDeviceNotification(
+          isEn ? `⌛ Ending soon: ${taskName}` : `⌛ اقتربت نهاية: ${taskName}`,
+          isEn ? `${cfg.endLeadMin || 30} minutes remaining` : `متبقي ${cfg.endLeadMin || 30} دقيقة على الانتهاء`,
+          endKey
+        );
+      }
+    }
+  });
+
+  try {
+    localStorage.setItem(firedKey, JSON.stringify([...firedSet]));
+  } catch(e) {}
+}
+
+if(typeof window.__localNotifInterval === 'undefined'){
+  window.__localNotifInterval = setInterval(runLocalNotificationTick, 20000);
+}
+
 async function testPushNotification(){
+  const isEn = (USER_SETTINGS && USER_SETTINGS.lang) === 'en';
   if(typeof Notification === 'undefined'){
-    showToast('المتصفح لا يدعم الإشعارات ❌', 3500, 'warn');
+    showToast(isEn ? 'Browser does not support notifications ❌' : 'المتصفح لا يدعم الإشعارات ❌', 3500, 'warn');
     return;
   }
   if(Notification.permission !== 'granted'){
     const granted = await requestNotifPermission(false);
     if(!granted){
-      showToast('من فضلك فعّل الإشعارات أولاً بالضغط على زرار التذكيرات ⚠️', 4000, 'warn');
+      showToast(isEn ? 'Please enable notifications first in settings ⚠️' : 'من فضلك فعّل الإشعارات أولاً بالضغط على زرار التذكيرات ⚠️', 4000, 'warn');
       return;
     }
   }
-  showToast('⏳ جاري إرسال إشعار تجريبي عبر السيرفر...', 2500);
+  showToast(isEn ? '⏳ Testing notification delivery...' : '⏳ جاري إرسال إشعار تجريبي عبر الجهاز والسيرفر...', 2500);
 
-  // 1. Ensure service worker and subscription
+  // 1. Immediate local test notification
+  let localOk = false;
+  try{
+    localOk = await triggerDeviceNotification(
+      isEn ? '🔔 Notification Test' : '🔔 تجربة إشعارات الجدول',
+      isEn ? 'Notifications are fully working on your device! ✅' : 'نظام الإشعارات شغال على جهازك بنجاح ✅',
+      'instant-test-' + Date.now()
+    );
+  }catch(e){
+    console.warn('Local notif test err:', e);
+  }
+
+  // 2. Ensure cloud push sync
   await syncPushSchedule(false, false);
 
   const workerUrl = (typeof window.AI_WORKER_URL === 'string' && window.AI_WORKER_URL)
@@ -10768,48 +11212,31 @@ async function testPushNotification(){
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ uid, subscription: PUSH_SUBSCRIPTION })
       });
-      const data = await res.json();
+      const data = await res.json().catch(()=>({}));
       if(res.ok && data.ok){
         cloudSuccess = true;
-        showToast('🔔 وصل الإشعار السحابي بنجاح! جدولك شغال ومحفوظ ✅', 5000);
       } else if(res.status === 410 || (data.error && data.error.includes('expired'))){
-        showToast('🔄 انتهت صلاحية اشتراك المتصفح القديم بسبب الغياب، بنجدده دلوقتي...', 3500);
-        await syncPushSchedule(true);
+        await syncPushSchedule(true, true);
         if(PUSH_SUBSCRIPTION){
           const retryRes = await fetch(workerUrl + '/api/test-push', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ uid, subscription: PUSH_SUBSCRIPTION })
           });
-          if(retryRes.ok){
-            cloudSuccess = true;
-            showToast('✅ تم تجديد الاشتراك السحابي بنجاح وإرسال الإشعار!', 4500);
-          }
+          if(retryRes.ok) cloudSuccess = true;
         }
-      } else {
-        console.warn('test-push error response:', data);
       }
     }catch(err){
       console.warn('test-push fetch error:', err);
     }
   }
 
-  // Also verify via Service Worker directly as local confirmation
-  try{
-    const reg = await navigator.serviceWorker.getRegistration();
-    if(reg){
-      await reg.showNotification('🔔 تجربة إشعارات الجدول', {
-        body: 'نظام الإشعارات شغال على جهازك بنجاح ✅',
-        icon: 'data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"%3E%3Ctext y="75" font-size="80"%3E%F0%9F%8F%8B%EF%B8%8F%3C/text%3E%3C/svg%3E',
-        badge: 'data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"%3E%3Ctext y="75" font-size="80"%3E%F0%9F%94%94%3C/text%3E%3C/svg%3E',
-        tag: 'instant-local-test-' + Date.now()
-      });
-      if(!cloudSuccess){
-        showToast('✅ تم إظهار إشعار تجريبي عبر الجهاز بنجاح!', 3500);
-      }
-    }
-  }catch(e){
-    console.warn('Local notification test failed:', e);
+  if(cloudSuccess){
+    showToast(isEn ? '🔔 Device & Cloud notifications confirmed! ✅' : '🔔 وصل الإشعار السحابي والجهاز بنجاح! جدولك شغال ومحفوظ ✅', 4500);
+  } else if(localOk){
+    showToast(isEn ? '✅ Test notification displayed on your device!' : '✅ تم إظهار إشعار تجريبي عبر الجهاز بنجاح!', 3500);
+  } else {
+    showToast(isEn ? '⚠️ Check notification permissions in your OS/Safari settings' : '⚠️ تأكد من إعدادات الإشعارات في النظام/سفاري', 4000, 'warn');
   }
 }
 
@@ -12589,6 +13016,16 @@ function renderCard(task,isToday,jd){
 
   const catBadgeHtml=`<span class="tc-cat-badge" style="background:color-mix(in srgb, ${cardColor} 14%, transparent);color:${cardColor};border:1px solid color-mix(in srgb, ${cardColor} 30%, transparent)"><span class="tc-cat-badge-ico">${cardIcon}</span><span>${catName}</span></span>`;
 
+  const taskPrio = task.priority || task[15];
+  let prioBadgeHtml = '';
+  if(taskPrio === 'high'){
+    prioBadgeHtml = `<span class="tc-prio-badge prio-high" style="display:inline-flex;align-items:center;gap:3px;padding:2px 7px;border-radius:6px;font-size:.62rem;font-weight:800;background:rgba(239,68,68,.15);border:1px solid rgba(239,68,68,.35);color:#f87171">🔴 ${enBadge?'High':'عالية'}</span>`;
+  } else if(taskPrio === 'low'){
+    prioBadgeHtml = `<span class="tc-prio-badge prio-low" style="display:inline-flex;align-items:center;gap:3px;padding:2px 7px;border-radius:6px;font-size:.62rem;font-weight:800;background:rgba(16,185,129,.15);border:1px solid rgba(16,185,129,.35);color:#34d399">🟢 ${enBadge?'Low':'منخفضة'}</span>`;
+  } else if(taskPrio === 'medium'){
+    prioBadgeHtml = `<span class="tc-prio-badge prio-med" style="display:inline-flex;align-items:center;gap:3px;padding:2px 7px;border-radius:6px;font-size:.62rem;font-weight:800;background:rgba(245,158,11,.15);border:1px solid rgba(245,158,11,.35);color:#fbbf24">🟡 ${enBadge?'Medium':'متوسطة'}</span>`;
+  }
+
   return`<div class="tc${isDone?' done':''}${isEx?' excx':''}${isDeleted?' excx':''}" data-c="${catInfo.id}" data-cat="${catInfo.id}" id="c-${id}" data-task-id="${id}" data-jd="${jd}" style="border-inline-start:3.5px solid ${cardColor};${isDeleted?'opacity:.5':''}">
     <div class="tctime">${arTime}</div>
     <div class="tcico" style="background:color-mix(in srgb, ${cardColor} 12%, transparent);border-color:color-mix(in srgb, ${cardColor} 28%, transparent);color:${cardColor}">${cardIcon}</div>
@@ -12596,7 +13033,7 @@ function renderCard(task,isToday,jd){
       <div class="tcname" ${isCustom?`style="color:${cardColor}"`:''}>${dispName}</div>
       <div class="tcdesc">${getDisplayDesc(task,SELECTED_DATE||TODAY)}</div>
       <div style="display:flex;align-items:center;gap:5px;flex-wrap:wrap;margin-top:2px">
-        ${catBadgeHtml}${hwH}${movedBadge}${customBadge}${deletedBadge}${loggedBadge}
+        ${catBadgeHtml}${prioBadgeHtml}${hwH}${movedBadge}${customBadge}${deletedBadge}${loggedBadge}
       </div>
     </div>
     ${act}
@@ -14312,6 +14749,26 @@ function openSettingsScreen(){
     // Mobile: start on the section list (not a blank content pane)
     ss.classList.remove('mobile-sec-open');
   }
+  const setTitleHeader = document.getElementById('setTitle');
+  const isEn = (USER_SETTINGS && USER_SETTINGS.lang) === 'en';
+  if(setTitleHeader) setTitleHeader.textContent = isEn ? '⚙️ Settings' : '⚙️ الإعدادات';
+  try {
+    const searchInp = document.getElementById('setSearchInput');
+    if(searchInp && !searchInp._wired){
+      searchInp._wired = true;
+      searchInp.addEventListener('input', () => {
+        const q = (searchInp.value || '').trim().toLowerCase();
+        document.querySelectorAll('#setNav .set-nav-item').forEach(item => {
+          if(!q){ item.style.display = ''; return; }
+          const title = (item.querySelector('.set-nav-title')?.textContent || '').toLowerCase();
+          const desc = (item.querySelector('.set-nav-desc')?.textContent || '').toLowerCase();
+          item.style.display = (title.includes(q) || desc.includes(q)) ? 'flex' : 'none';
+        });
+      });
+    }
+    if(searchInp) searchInp.value = '';
+    document.querySelectorAll('#setNav .set-nav-item').forEach(item => item.style.display = '');
+  } catch(e) {}
   updateAuthUI(fbAuth?.currentUser||null);
 }
 function closeSettingsScreen(){
@@ -14349,6 +14806,34 @@ function updateAuthUI(user){
     notifInSettings.textContent=(NOTIF_ENABLED?t('notif_on'):t('notif_off'))+` (${diagLabel})`;
     notifInSettings.style.background=NOTIF_ENABLED?'rgba(16,185,129,.18)':'rgba(100,116,139,.15)';
     notifInSettings.style.color=NOTIF_ENABLED?'var(--gr)':'var(--so)';
+  }
+  const devEl = document.getElementById('diagDevicePlatform');
+  const permEl = document.getElementById('diagNotifPerm');
+  const iosNotice = document.getElementById('diagIosNotice');
+  const isApple = typeof isIOS === 'function' ? isIOS() : false;
+  if(devEl){
+    if(isApple){
+      devEl.textContent = isPWANow ? '📱 iPhone (PWA)' : '📱 iPhone (Safari)';
+    } else if(window.innerWidth < 768){
+      devEl.textContent = isPWANow ? '📱 Mobile (PWA)' : '📱 Mobile Browser';
+    } else {
+      devEl.textContent = '💻 Laptop / PC';
+    }
+  }
+  if(permEl){
+    if(permState === 'granted'){
+      permEl.textContent = 'Granted ✅';
+      permEl.style.color = '#34d399';
+    } else if(permState === 'denied'){
+      permEl.textContent = 'Blocked ❌';
+      permEl.style.color = '#f87171';
+    } else {
+      permEl.textContent = 'Needs Setup ⚠️';
+      permEl.style.color = '#fbbf24';
+    }
+  }
+  if(iosNotice){
+    iosNotice.style.display = (isApple && !isPWANow) ? 'block' : 'none';
   }
   const localUser=lsGet('current_user');
   if(user || localUser){
@@ -17687,8 +18172,14 @@ document.body.addEventListener('click',async e=>{
   }
   if(tgt.id==='setLangAr'){ setAppLang('ar'); return; }
   if(tgt.id==='setLangEn'){ setAppLang('en'); return; }
-  if(tgt.id==='setMobileBack'){
-    document.getElementById('settingsScreen')?.classList.remove('mobile-sec-open');
+  if(tgt.id==='setBackBtn' || (tgt.closest && tgt.closest('#setBackBtn')) || tgt.id==='setMobileBack' || (tgt.closest && tgt.closest('#setMobileBack'))){
+    const screen = document.getElementById('settingsScreen');
+    if(screen){
+      screen.classList.remove('mobile-sec-open');
+    }
+    const setTitleHeader = document.getElementById('setTitle');
+    const isEn = (USER_SETTINGS && USER_SETTINGS.lang) === 'en';
+    if(setTitleHeader) setTitleHeader.textContent = isEn ? '⚙️ Settings' : '⚙️ الإعدادات';
     return;
   }
   if(tgt.id==='setNewRoutineBtn') {
@@ -17773,6 +18264,14 @@ document.body.addEventListener('click',async e=>{
     const sec=setNavBtn.getAttribute('data-setsec');
     document.querySelectorAll('#setNav button').forEach(b=>b.classList.toggle('act',b===setNavBtn));
     document.querySelectorAll('.set-section').forEach(s=>s.classList.toggle('act',s.id==='setsec-'+sec));
+    const secTitleEl = setNavBtn.querySelector('.set-nav-title');
+    const secBadgeEl = setNavBtn.querySelector('.set-nav-badge');
+    const secTitleText = secTitleEl ? secTitleEl.textContent : '';
+    const secBadgeText = secBadgeEl ? secBadgeEl.textContent : '';
+    const setTitleHeader = document.getElementById('setTitle');
+    if(setTitleHeader && secTitleText){
+      setTitleHeader.textContent = (secBadgeText ? secBadgeText + ' ' : '') + secTitleText;
+    }
     // Treat phones / small tablets as master-detail. Prefer visualViewport on iOS.
     const vw = (window.visualViewport && window.visualViewport.width) || window.innerWidth || 0;
     const narrow = vw < 920 || (window.matchMedia && window.matchMedia('(max-width:900px)').matches) || ('ontouchstart' in window && vw < 1024);
@@ -17791,6 +18290,11 @@ document.body.addEventListener('click',async e=>{
     if(sec==='notifications'){ try{ renderTaskNotifList(); renderPrayerLocList(); }catch(e){} }
     if(sec==='appearance'){ try{ renderCategoryManager(); }catch(e){} }
     if(sec==='fitness'){ try{ if(typeof renderFitnessSettingsStats==='function') renderFitnessSettingsStats(); }catch(e){} }
+    return;
+  }
+
+  if(tgt.id==='btnMainAddTask' || (tgt.closest && tgt.closest('#btnMainAddTask'))){
+    if(typeof openAddSchedTaskModal === 'function') openAddSchedTaskModal();
     return;
   }
 

@@ -41,6 +41,7 @@ self.addEventListener('push', (event) => {
     tag: data.tag || 'schedule-reminder',
     dir: 'auto',
     lang: 'en',
+    vibrate: [200, 100, 200],
     requireInteraction: false,
     data: { url: (data.data && data.data.url) || './' }
   };
@@ -86,7 +87,17 @@ self.addEventListener('periodicsync', (event) => {
 });
 
 self.addEventListener('message', (event) => {
-  // Reserved for future client↔SW commands
+  if (event.data && event.data.type === 'SHOW_NOTIFICATION') {
+    const { title, options } = event.data;
+    event.waitUntil(self.registration.showNotification(title, {
+      icon: 'data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"%3E%3Ctext y="75" font-size="80"%3E%F0%9F%8F%8B%EF%B8%8F%3C/text%3E%3C/svg%3E',
+      badge: 'data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"%3E%3Ctext y="75" font-size="80"%3E%F0%9F%94%94%3C/text%3E%3C/svg%3E',
+      vibrate: [200, 100, 200],
+      tag: 'local-reminder-' + Date.now(),
+      dir: 'auto',
+      ...options
+    }));
+  }
 });
 
 self.addEventListener('notificationclick', (event) => {
