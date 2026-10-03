@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="en" dir="ltr">
+<!-- cache-bust: 2026-09-28-ux-full -->
 <!-- cache-bust: 2026-10-03-en-lang -->
 <head>
 <meta charset="UTF-8">
@@ -467,26 +468,7 @@ html[dir="rtl"] .tc{animation-name:tcEnterRtl}
 .ds-kpi-sub-val{font-size:.76rem;color:var(--mu, #64748b);font-weight:600}
 .ds-pts-number{color:#fbbf24}
 .ds-progress-track{width:100%;height:6px;background:rgba(255,255,255,.07);border-radius:999px;overflow:hidden;margin:8px 0 6px}
-.ds-progress-fill{height:100%;background:linear-gradient(90deg, #10b981, #34d399);border-radius:999px;transition:width .55s cubic-bezier(0.22,1,0.36,1);will-change:width}
-.ds-progress-fill.ds-progress-pulse{animation:dsBarPulse .55s ease}
-@keyframes dsBarPulse{0%{filter:brightness(1)}40%{filter:brightness(1.35)}100%{filter:brightness(1)}}
-.ds-weekly-trend{margin-top:12px;padding:12px 14px;border-radius:12px;border:1px solid color-mix(in srgb, var(--ac) 22%, var(--br));background:color-mix(in srgb, var(--ac) 8%, rgba(0,0,0,.2));display:flex;align-items:center;gap:12px;flex-wrap:wrap}
-.ds-weekly-trend-spark{display:flex;align-items:flex-end;gap:3px;height:28px;flex-shrink:0}
-.ds-weekly-trend-spark span{width:6px;border-radius:3px 3px 1px 1px;background:color-mix(in srgb, var(--ac) 70%, #34d399);opacity:.85;transition:height .35s ease}
-.ds-weekly-trend-meta{flex:1;min-width:120px}
-.ds-weekly-trend-label{font-size:.7rem;font-weight:800;color:var(--so);margin-bottom:2px}
-.ds-weekly-trend-val{font-size:.88rem;font-weight:900;color:var(--tx)}
-.ds-weekly-trend-delta{font-size:.72rem;font-weight:800;margin-inline-start:6px}
-.ds-weekly-trend-delta.up{color:#34d399}
-.ds-weekly-trend-delta.down{color:#f87171}
-.ds-weekly-trend-delta.flat{color:var(--mu)}
-.fw-weight-progress{margin-top:10px;padding:10px 12px;border-radius:10px;border:1px solid color-mix(in srgb, var(--ac) 25%, var(--br));background:rgba(0,0,0,.18)}
-.fw-weight-progress-head{display:flex;justify-content:space-between;align-items:center;gap:8px;margin-bottom:6px;flex-wrap:wrap}
-.fw-weight-progress-title{font-size:.75rem;font-weight:900;color:var(--tx)}
-.fw-weight-progress-nums{font-size:.78rem;font-weight:800;color:var(--ac)}
-.fw-weight-bar-track{height:8px;border-radius:999px;background:rgba(255,255,255,.08);overflow:hidden}
-.fw-weight-bar-fill{height:100%;border-radius:999px;background:linear-gradient(90deg,var(--ac),#34d399);transition:width .5s cubic-bezier(0.22,1,0.36,1)}
-.fw-weight-progress-sub{font-size:.68rem;color:var(--mu);margin-top:5px;font-weight:600}
+.ds-progress-fill{height:100%;background:linear-gradient(90deg, #10b981, #34d399);border-radius:999px;transition:width .45s cubic-bezier(0.4,0,0.2,1)}
 .ds-kpi-footer-text{font-size:.66rem;color:var(--mu, #94a3b8);font-weight:600}
 .ds-cat-section{margin-top:10px;padding-top:10px;border-top:1px solid rgba(255,255,255,.06)}
 .ds-cat-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:7px}
@@ -607,16 +589,14 @@ input[type="color"]::-moz-color-swatch{
 .tn-row{border-color:color-mix(in srgb, var(--ac) 18%, var(--br))!important}
 .tn-switch input:checked{accent-color:var(--ac)}
 .set-body{flex:1;display:flex;overflow:hidden}
-/* Legacy set-nav width/padding — master nav block above owns structure; do not
-   flatten .set-nav-item into single-line text-align-only buttons. */
-.set-nav{width:290px;border-inline-end:1px solid color-mix(in srgb, var(--ac) 18%, var(--br));padding:12px;overflow-y:auto;flex-shrink:0;background:color-mix(in srgb, var(--c2) 80%, transparent)}
-.set-nav button.set-nav-item{width:100%;margin-bottom:0;background:rgba(255,255,255,.02);border:1px solid transparent;border-radius:12px;color:var(--tx);font-family:'Cairo',sans-serif;font-size:.86rem;font-weight:700;cursor:pointer;transition:background .15s,border-color .15s,color .15s,box-shadow .15s}
-.set-nav button.set-nav-item:hover{background:color-mix(in srgb, var(--ac) 10%, transparent);color:var(--tx);border-color:color-mix(in srgb, var(--ac) 22%, transparent)}
+.set-nav{width:220px;border-left:1px solid color-mix(in srgb, var(--ac) 18%, var(--br));padding:14px 12px;overflow-y:auto;flex-shrink:0;background:color-mix(in srgb, var(--c2) 80%, transparent)}
+.set-nav button{width:100%;text-align:right;padding:12px 14px;margin-bottom:6px;background:transparent;border:1px solid transparent;border-radius:12px;color:var(--so);font-family:'Cairo',sans-serif;font-size:.86rem;font-weight:700;cursor:pointer;transition:background .15s,border-color .15s,color .15s,box-shadow .15s}
+.set-nav button:hover{background:color-mix(in srgb, var(--ac) 10%, transparent);color:var(--tx);border-color:color-mix(in srgb, var(--ac) 22%, transparent)}
 .set-section{background:color-mix(in srgb, var(--c2) 55%, transparent);border:1px solid color-mix(in srgb, var(--ac) 14%, var(--br));border-radius:16px;padding:16px 16px 20px;margin-bottom:14px}
 .set-section h3{font-size:1.05rem;font-weight:900;margin:0 0 6px;color:var(--tx);letter-spacing:.01em}
 .set-section .desc{font-size:.78rem;line-height:1.45;color:var(--mu);margin:0 0 14px}
-.set-row{display:flex;align-items:center;justify-content:space-between;gap:16px;padding:16px 18px;margin-bottom:10px;border-radius:14px;border:1px solid color-mix(in srgb, var(--ac) 12%, var(--br));background:color-mix(in srgb, var(--c) 70%, transparent);box-sizing:border-box}
-.set-row label{font-weight:700;font-size:.88rem;color:var(--tx);flex:1;min-width:0;line-height:1.4;padding-inline:2px 10px}
+.set-row{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:12px 12px;margin-bottom:8px;border-radius:12px;border:1px solid color-mix(in srgb, var(--ac) 12%, var(--br));background:color-mix(in srgb, var(--c) 70%, transparent)}
+.set-row label{font-weight:700;font-size:.88rem;color:var(--tx)}
 .set-header{border-bottom:1px solid color-mix(in srgb, var(--ac) 20%, var(--br));background:color-mix(in srgb, var(--c2) 90%, transparent);backdrop-filter:blur(10px)}
 .color-swatch-row{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-top:6px}
 .color-swatch-btn{width:28px;height:28px;border-radius:999px;border:2px solid rgba(255,255,255,.15);cursor:pointer;padding:0;box-shadow:0 0 0 1px rgba(0,0,0,.25);transition:transform .12s,box-shadow .12s}
@@ -625,37 +605,9 @@ input[type="color"]::-moz-color-swatch{
 .color-swatch-hex{width:96px;padding:6px 8px;border-radius:8px;border:1px solid var(--br);background:var(--c);color:var(--tx);font-size:.75rem;font-family:ui-monospace,monospace}
 .set-section h3{font-size:1.05rem;font-weight:900;margin:0 0 6px}
 .set-section p.desc{font-size:.78rem;color:var(--mu);margin:0 0 16px;line-height:1.5}
-/* Ticket / toggle rows — generous inset so labels never kiss the border */
-.set-row,
-.tn-row,
-.theme-custom-row,
-#settingsScreen .set-row{
-  display:flex;align-items:center;justify-content:space-between;gap:16px;
-  padding:16px 18px;margin-bottom:10px;border-radius:14px;
-  border:1px solid color-mix(in srgb, var(--ac) 12%, var(--br));
-  background:color-mix(in srgb, var(--c) 70%, transparent);
-  box-sizing:border-box;
-}
-.set-row label,
-.tn-row label,
-.theme-custom-row label,
-#settingsScreen .set-row label{
-  font-size:.88rem;font-weight:700;flex:1;min-width:0;line-height:1.4;
-  padding-inline:2px 10px;color:var(--tx);
-}
-.set-row input[type=checkbox],
-#settingsScreen .set-row input[type=checkbox]{
-  width:22px;height:22px;accent-color:var(--ac);flex-shrink:0;margin-inline:4px;
-}
-/* Nav items: room for badge + two-line title/desc; extra bottom pad so last items clear the FAB */
-.set-nav{padding-bottom:96px!important}
-.set-nav-item{min-height:56px;padding:12px 14px!important;box-sizing:border-box}
-.set-nav-badge{width:40px;height:40px;font-size:1.2rem}
-.set-nav-title{font-size:.9rem}
-.set-nav-desc{font-size:.72rem;opacity:.9}
-/* Task cards also need breathing room on dense screens */
-.tc{padding:14px 16px!important;gap:12px}
-.tn-row{padding:16px 18px}
+.set-row{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:14px 0;border-bottom:1px solid var(--br)}
+.set-row label{font-size:.88rem;font-weight:700}
+.set-row input[type=checkbox]{width:20px;height:20px;accent-color:var(--ac)}
 .set-actions{display:flex;flex-direction:column;gap:10px;margin-top:8px}
 .set-actions .altbtn,.set-actions .topbtn{width:100%;justify-content:center}
 .icon-presets{display:flex;flex-wrap:wrap;gap:10px}
@@ -982,7 +934,6 @@ body.ptour-active{overflow:hidden}
 #aiFab:hover{transform:scale(1.08)}
 #aiFab:active{transform:scale(.94)}
 #aiFab.hidden{display:none}
-body.settings-open #aiFab{display:none!important;pointer-events:none!important}
 #aiPanel{position:fixed;bottom:0;left:0;width:100%;max-width:420px;height:min(640px,88vh);background:var(--c2);border:2px solid var(--br);border-radius:20px 20px 0 0;z-index:9999;display:none;flex-direction:column;box-shadow:0 -8px 40px rgba(0,0,0,.6)}
 #aiPanel.open{display:flex;animation:aiPopIn .32s cubic-bezier(.2,.9,.3,1.3)}
 @media(min-width:460px){#aiPanel:not(.full){bottom:22px;left:22px;border-radius:20px}}
@@ -4098,10 +4049,6 @@ body.theme-matrix .tctime{
                 <label for="setBodyFat" style="display:block;font-size:.78rem;font-weight:800;color:var(--so);margin-bottom:6px" id="setBodyFatLbl">Body fat % (optional)</label>
                 <input type="number" id="setBodyFat" min="4" max="50" step="0.5" placeholder="e.g. 15" style="width:100%;padding:8px 10px;border-radius:8px;border:1px solid var(--br);background:var(--c);color:var(--tx);font-family:inherit;font-weight:800">
               </div>
-              <div>
-                <label for="setTargetWeight" style="display:block;font-size:.78rem;font-weight:800;color:var(--so);margin-bottom:6px" id="setTargetWeightLbl">Target weight (kg)</label>
-                <input type="number" id="setTargetWeight" min="30" max="250" step="0.5" placeholder="e.g. 70" style="width:100%;padding:8px 10px;border-radius:8px;border:1px solid var(--br);background:var(--c);color:var(--tx);font-family:inherit;font-weight:800">
-              </div>
 
               <!-- Real-time Scientific Target Calculation Card -->
               <div id="setFitnessPreviewCard" style="padding:12px;background:rgba(59,130,246,.08);border:1px solid rgba(59,130,246,.25);border-radius:10px;margin-top:4px">
@@ -4415,18 +4362,6 @@ body.theme-matrix .tctime{
               <div class="ds-progress-fill" id="dsPointsBar" style="width:0%;background:linear-gradient(90deg, #f59e0b, #fbbf24)"></div>
             </div>
             <div class="ds-kpi-footer-text" id="dsPointsSubText">Total points earned today</div>
-          </div>
-        </div>
-      </div>
-
-      <!-- Weekly habit consistency trend -->
-      <div class="ds-weekly-trend" id="dsWeeklyTrend">
-        <div class="ds-weekly-trend-spark" id="dsWeeklySpark" aria-hidden="true"></div>
-        <div class="ds-weekly-trend-meta">
-          <div class="ds-weekly-trend-label" id="dsWeeklyTrendLabel">Weekly consistency</div>
-          <div>
-            <span class="ds-weekly-trend-val" id="dsWeeklyTrendVal">—</span>
-            <span class="ds-weekly-trend-delta flat" id="dsWeeklyTrendDelta"></span>
           </div>
         </div>
       </div>
@@ -6611,94 +6546,16 @@ function mergeStatsPreferRicher(localS, cloudS){
   return out;
 }
 
-// Deep-merge one day's task list by task id. Local tuple wins on id collision
-// (this device just edited it). Tasks that exist only on one side are kept so
-// a phone with a partial local week never erases laptop-only tasks, and vice
-// versa. Day-level metadata (n/wk/bd/gm) prefers local when local has any tasks.
-function mergeDaySchedPreferLocal(localDay, cloudDay){
-  if(!localDay && !cloudDay) return localDay||cloudDay||null;
-  if(!localDay) return cloudDay;
-  if(!cloudDay) return localDay;
-  const byId={};
-  const pushTuple=(t)=>{
-    if(!t || t[0]==null) return;
-    byId[String(t[0])]=t; // later source overwrites (local applied second)
-  };
-  const localTs=Array.isArray(localDay.ts)?localDay.ts:[];
-  const cloudTs=Array.isArray(cloudDay.ts)?cloudDay.ts:[];
-  for(const t of cloudTs) pushTuple(t);
-  for(const t of localTs) pushTuple(t);
-  if(localTs.length){
-    const localIds=new Set(localTs.map(t=>t&&String(t[0])).filter(Boolean));
-    const mergedOrder=[];
-    for(const t of localTs){
-      const id=t&&String(t[0]);
-      if(id && !mergedOrder.includes(id)) mergedOrder.push(id);
-    }
-    for(const t of cloudTs){
-      const id=t&&String(t[0]);
-      if(id && !localIds.has(id) && !mergedOrder.includes(id)) mergedOrder.push(id);
-    }
-    return {
-      n: localDay.n!=null?localDay.n:cloudDay.n,
-      wk: localDay.wk!=null?localDay.wk:cloudDay.wk,
-      bd: localDay.bd!=null?localDay.bd:cloudDay.bd,
-      gm: localDay.gm!=null?localDay.gm:cloudDay.gm,
-      ts: mergedOrder.map(id=>byId[id]).filter(Boolean)
-    };
-  }
-  return {
-    n: cloudDay.n!=null?cloudDay.n:localDay.n,
-    wk: cloudDay.wk!=null?cloudDay.wk:localDay.wk,
-    bd: cloudDay.bd!=null?cloudDay.bd:localDay.bd,
-    gm: cloudDay.gm!=null?cloudDay.gm:localDay.gm,
-    ts: cloudTs.slice()
-  };
-}
-
-function mergeSchedMapsPreferLocal(localSched, cloudSched){
-  const out={};
-  const cloud=cloudSched&&typeof cloudSched==='object'?cloudSched:{};
-  const local=localSched&&typeof localSched==='object'?localSched:{};
-  for(const jd of Object.keys(cloud)) out[jd]=cloud[jd];
-  for(const jd of Object.keys(local)){
-    out[jd]=mergeDaySchedPreferLocal(local[jd], cloud[jd]);
-  }
-  // Days only on cloud already copied; days only on local merged above.
-  return out;
-}
-
-// deepMergeTasks=true  → LOAD path: union tasks by id so neither device loses work
-// deepMergeTasks=false → SAVE path: local slot content is authoritative (so deletes
-//                        and edits stick); only cloud-only *workspaces* are preserved
-function mergeScheduleSlotsPreferLocal(localMap, cloudMap, deepMergeTasks){
+function mergeScheduleSlotsPreferLocal(localMap, cloudMap){
   const out={};
   const cloud=cloudMap&&typeof cloudMap==='object'?cloudMap:{};
   const local=localMap&&typeof localMap==='object'?localMap:{};
-  const deep=!!deepMergeTasks;
-  // Start with every cloud slot so other-device workspaces are never dropped.
   for(const id of Object.keys(cloud)){
     out[id]=cloud[id];
   }
   for(const id of Object.keys(local)){
-    const c=cloud[id];
-    const l=local[id];
-    if(!c){
-      // Local-only workspace (created offline on this device).
-      out[id]=l;
-      continue;
-    }
-    if(deep){
-      // Load: deep-merge the week so tasks unique to either device survive.
-      out[id]={
-        id: l.id||c.id||id,
-        name: (l.name!=null&&l.name!=='')?l.name:(c.name||id),
-        sched: mergeSchedMapsPreferLocal(l.sched, c.sched)
-      };
-    }else{
-      // Save: this device's slot is the source of truth (includes intentional deletes).
-      out[id]=l;
-    }
+    // Local always wins for the same id (this device just edited it).
+    out[id]=local[id];
   }
   return out;
 }
@@ -6725,8 +6582,7 @@ async function saveUserSchedule(){
   USER_SCHEDULES[ACTIVE_SCHEDULE_ID].sched = USER_SCHEDULE;
   // Never drop slots that exist only on another device / in last cloud snapshot.
   if(LAST_KNOWN_CLOUD_SCHEDULES){
-    // Save path: do NOT deep-merge tasks — local deletes/edits must stick.
-    USER_SCHEDULES=mergeScheduleSlotsPreferLocal(USER_SCHEDULES, LAST_KNOWN_CLOUD_SCHEDULES, false);
+    USER_SCHEDULES=mergeScheduleSlotsPreferLocal(USER_SCHEDULES, LAST_KNOWN_CLOUD_SCHEDULES);
     if(USER_SCHEDULES[ACTIVE_SCHEDULE_ID]) USER_SCHEDULE=USER_SCHEDULES[ACTIVE_SCHEDULE_ID].sched||USER_SCHEDULE;
   }
   await sSet(LS.userSchedule,USER_SCHEDULE);
@@ -7976,17 +7832,8 @@ function detectTextLang(text){
 const I18N={
   ar:{
     settings:'⚙️ الإعدادات', close:'إغلاق', save:'حفظ ✅', sign_out:'خروج', sign_in:'تسجيل دخول',
-    nav_general:'عام', nav_general_sub:'مساحات العمل ووضع تعديل المهام',
-    nav_tracking:'التتبع', nav_tracking_sub:'النقاط والاستريك وأنظمة العادات',
-    nav_fitness:'اللياقة والماكروز', nav_fitness_sub:'BMR و TDEE وأهداف علمية',
-    nav_notif:'التذكيرات', nav_notif_sub:'تذكيرات دائمة ومواعيد الصلاة',
-    nav_reports:'التقارير', nav_reports_sub:'السجل الأسبوعي والتحليلات',
-    nav_appearance:'المظهر', nav_appearance_sub:'الألوان والثيمات والتصنيفات',
-    nav_prestige:'مركز الامتياز', nav_prestige_sub:'نقاط الخبرة والرتب والرموز',
-    nav_language:'اللغة', nav_language_sub:'العربية / English',
-    nav_account:'الحساب', nav_account_sub:'الملف الشخصي وجلسة الدخول',
-    sec_routines:'مساحات العمل', sec_routines_sub:'إدارة الجداول والروتين',
-    sec_routines_desc:'إدارة جداول مختلفة (مثل الدراسة مقابل الإجازة).',
+    nav_general:'عام', nav_tracking:'التتبع', nav_fitness:'🏋️ اللياقة والماكروز', nav_notif:'التذكيرات', nav_reports:'التقارير',
+    nav_appearance:'المظهر', nav_language:'اللغة', nav_account:'الحساب',
     sec_general:'عام', sec_general_desc:'إدارة مهامك اليومية من هنا.',
     sec_tracking:'التتبع', sec_tracking_desc:'أظهر أو أخفِ أنظمة النقاط والصلاة واللياقة.',
     sec_fitness:'أهداف اللياقة والتغذية', sec_fitness_desc:'حساب السعرات والماكروز اليومية بدقة علمية (BMR / TDEE).',
@@ -8023,17 +7870,8 @@ const I18N={
   },
   en:{
     settings:'⚙️ Settings', close:'Close', save:'Save ✅', sign_out:'Sign out', sign_in:'Sign in',
-    nav_general:'General', nav_general_sub:'Workspaces & task edit mode',
-    nav_tracking:'Tracking', nav_tracking_sub:'Points, streak & habit systems',
-    nav_fitness:'Fitness & Macros', nav_fitness_sub:'Scientific BMR, TDEE & targets',
-    nav_notif:'Reminders', nav_notif_sub:'Always-on reminders & prayers',
-    nav_reports:'Reports', nav_reports_sub:'Weekly history & insights',
-    nav_appearance:'Appearance', nav_appearance_sub:'Themes, palette & categories',
-    nav_prestige:'Perfection Center', nav_prestige_sub:'Lifetime XP, ranks & tokens',
-    nav_language:'Language', nav_language_sub:'العربية / English',
-    nav_account:'Account', nav_account_sub:'Profile & sign-in session',
-    sec_routines:'Workspaces', sec_routines_sub:'Manage schedules & routines',
-    sec_routines_desc:'Manage different schedules (e.g. School vs Vacation).',
+    nav_general:'General', nav_tracking:'Tracking', nav_fitness:'🏋️ Fitness & Macros', nav_notif:'Reminders', nav_reports:'Reports',
+    nav_appearance:'Appearance', nav_language:'Language', nav_account:'Account',
     sec_general:'General', sec_general_desc:'Manage your daily tasks here.',
     sec_tracking:'Tracking', sec_tracking_desc:'Show or hide points, prayer, and fitness tracking.',
     sec_fitness:'Fitness & Nutrition Targets', sec_fitness_desc:'Personalized scientific BMR, TDEE, and macro calculations.',
@@ -8316,12 +8154,7 @@ function wireMythicColorCustomizer(){
 function applyI18n(){
   document.querySelectorAll('[data-i18n]').forEach(el=>{
     const k=el.getAttribute('data-i18n');
-    if(!k) return;
-    // Never replace a real HTML fallback label with the raw key string when a
-    // translation is missing (that is what produced visible "nav_tracking_sub"
-    // under polished nav items).
-    const translated=t(k);
-    if(translated && translated!==k) el.textContent=translated;
+    if(k) el.textContent=t(k);
   });
   const setTitle=document.getElementById('setTitle');
   if(setTitle) setTitle.textContent=t('settings');
@@ -9554,15 +9387,9 @@ function getTaskSortTimeMinutes(t){
   if(typeof t[10]==='string' && /^\d{1,2}:\d{2}$/.test(t[10])) return toMin(t[10]);
   return toMin(t[1]);
 }
-function taskPriorityRank(t){
-  const p=(t&&(t.priority||t[15]))||'medium';
-  if(p==='high') return 0;
-  if(p==='low') return 2;
-  return 1; // medium / default
-}
 function sortKey(t, iso, jd){
-  // Chronological by start time; within the same minute, High → Medium → Low.
-  // Drag-order only while edit mode is on.
+  // Always chronological by start time. Drag-order is only used while edit mode is on
+  // so the timeline never appears shuffled after accidental reorders.
   if(window.SCHEDULE_EDIT_MODE){
     const effIso = iso || (typeof SELECTED_DATE!=='undefined'?SELECTED_DATE:todayStr());
     const dayOrder = (USER_EDITS?.order && (USER_EDITS.order[effIso] || (jd!=null && USER_EDITS.order['jd_'+jd]))) || null;
@@ -9572,9 +9399,7 @@ function sortKey(t, iso, jd){
     }
   }
   const base = getTaskSortTimeMinutes(t);
-  const timePart = t[2]==='sleep'?base+1440:base;
-  // Fractional secondary key so priority sorts inside equal times without breaking time order
-  return timePart + (taskPriorityRank(t) * 0.01);
+  return t[2]==='sleep'?base+1440:base;
 }
 // Both functions now accept an optional `iso` (the actual calendar date being viewed).
 // When omitted they fall back to the natural date for weekday `jd` relative to TODAY's
@@ -10288,8 +10113,7 @@ async function saveAll(){
     const canWriteSched=CLOUD_SCHEDULES_HYDRATED || !isBareDefaultSchedules(USER_SCHEDULES);
     if(canWriteSched){
       if(LAST_KNOWN_CLOUD_SCHEDULES){
-        // Save path: preserve other workspaces only; local active slot stays authoritative.
-        USER_SCHEDULES=mergeScheduleSlotsPreferLocal(USER_SCHEDULES, LAST_KNOWN_CLOUD_SCHEDULES, false);
+        USER_SCHEDULES=mergeScheduleSlotsPreferLocal(USER_SCHEDULES, LAST_KNOWN_CLOUD_SCHEDULES);
       }
       payload.userSchedule=serializeScheduleForFirestore(USER_SCHEDULE);
       payload.userSchedules=serializeAllSchedulesForFirestore(USER_SCHEDULES);
@@ -13977,18 +13801,7 @@ function updateUI(){
   const dsPctBadgeEl=document.getElementById('dsPctBadge');
   if(dsPctBadgeEl) dsPctBadgeEl.textContent=`${pct}%`;
   const dsTasksProgressEl=document.getElementById('dsTasksProgress');
-  if(dsTasksProgressEl){
-    const nextW=`${Math.min(pct,100)}%`;
-    if(dsTasksProgressEl.style.width!==nextW){
-      dsTasksProgressEl.classList.remove('ds-progress-pulse');
-      // force reflow so animation can retrigger
-      void dsTasksProgressEl.offsetWidth;
-      dsTasksProgressEl.style.width=nextW;
-      dsTasksProgressEl.classList.add('ds-progress-pulse');
-    }else{
-      dsTasksProgressEl.style.width=nextW;
-    }
-  }
+  if(dsTasksProgressEl) dsTasksProgressEl.style.width=`${Math.min(pct,100)}%`;
   const dsTasksRemainingEl=document.getElementById('dsTasksRemainingText');
   if(dsTasksRemainingEl){
     dsTasksRemainingEl.textContent=completedCount>=totalTasksCount && totalTasksCount>0
@@ -14032,60 +13845,6 @@ function updateUI(){
   if(dsPointsSubTextEl){
     dsPointsSubTextEl.textContent=en?`${completedCount} completed items score`:`مجموع ${completedCount} مهمة منجزة`;
   }
-
-  // Weekly consistency trend (last 7 days completion % + vs prior week)
-  try{
-    const spark=document.getElementById('dsWeeklySpark');
-    const trendVal=document.getElementById('dsWeeklyTrendVal');
-    const trendDelta=document.getElementById('dsWeeklyTrendDelta');
-    const trendLabel=document.getElementById('dsWeeklyTrendLabel');
-    if(trendLabel) trendLabel.textContent=en?'Weekly consistency':'ثبات الأسبوع';
-    const dayPcts=[];
-    for(let i=6;i>=0;i--){
-      const iso=dateOff(-i, SELECTED_DATE||TODAY);
-      const jdI=getJDfromISO(iso);
-      const reqI=typeof getReqTasks==='function'?getReqTasks(jdI,iso):[];
-      const doneMap=(historyData[iso]||{}).done||{};
-      const doneN=reqI.filter(t=>doneMap[t[0]]).length;
-      const p=reqI.length?Math.round((doneN/reqI.length)*100):0;
-      dayPcts.push(p);
-    }
-    const avg=dayPcts.length?Math.round(dayPcts.reduce((a,b)=>a+b,0)/dayPcts.length):0;
-    // Prior 7 days average
-    const prevPcts=[];
-    for(let i=13;i>=7;i--){
-      const iso=dateOff(-i, SELECTED_DATE||TODAY);
-      const jdI=getJDfromISO(iso);
-      const reqI=typeof getReqTasks==='function'?getReqTasks(jdI,iso):[];
-      const doneMap=(historyData[iso]||{}).done||{};
-      const doneN=reqI.filter(t=>doneMap[t[0]]).length;
-      prevPcts.push(reqI.length?Math.round((doneN/reqI.length)*100):0);
-    }
-    const prevAvg=prevPcts.length?Math.round(prevPcts.reduce((a,b)=>a+b,0)/prevPcts.length):0;
-    const delta=avg-prevAvg;
-    if(spark){
-      spark.innerHTML=dayPcts.map(p=>{
-        const h=Math.max(4, Math.round((p/100)*28));
-        return `<span style="height:${h}px" title="${p}%"></span>`;
-      }).join('');
-    }
-    if(trendVal) trendVal.textContent=en?`${avg}% avg this week`:`متوسط ${avg}% هذا الأسبوع`;
-    if(trendDelta){
-      if(prevAvg===0 && avg===0){
-        trendDelta.textContent=en?'No prior data':'لا بيانات سابقة';
-        trendDelta.className='ds-weekly-trend-delta flat';
-      }else if(delta>0){
-        trendDelta.textContent=en?`▲ +${delta}% vs last week`:`▲ +${delta}% عن الأسبوع الماضي`;
-        trendDelta.className='ds-weekly-trend-delta up';
-      }else if(delta<0){
-        trendDelta.textContent=en?`▼ ${delta}% vs last week`:`▼ ${delta}% عن الأسبوع الماضي`;
-        trendDelta.className='ds-weekly-trend-delta down';
-      }else{
-        trendDelta.textContent=en?'● Same as last week':'● مثل الأسبوع الماضي';
-        trendDelta.className='ds-weekly-trend-delta flat';
-      }
-    }
-  }catch(e){ console.warn('weekly trend',e); }
 
   // Header Subtitle & Date
   const dsTitleEl=document.getElementById('dsTitle');
@@ -14274,46 +14033,7 @@ function renderFitnessSettingsStats(){
   const ratioText = document.getElementById('fwMacroRatioText');
   if(ratioText) ratioText.textContent = `Protein ${pPct}% · Fats ${fPct}% · Carbs ${cPct}%`;
 
-  // Current weight vs target weight progress
   const isEn = (USER_SETTINGS && USER_SETTINGS.lang) === 'en';
-  try{
-    const targetInp=document.getElementById('setTargetWeight');
-    const storedTarget=Number(m.target_weight)||Number(USER_SETTINGS.target_weight)||null;
-    if(targetInp && storedTarget && !targetInp.value) targetInp.value=storedTarget;
-    const targetW=Number(targetInp?.value)||storedTarget||null;
-    let box=document.getElementById('fwWeightProgressBox');
-    if(!box && previewCard){
-      box=document.createElement('div');
-      box.id='fwWeightProgressBox';
-      box.className='fw-weight-progress';
-      previewCard.appendChild(box);
-    }
-    if(box){
-      if(targetW && weight){
-        const startW=Number(m.start_weight)||weight;
-        const span=Math.abs(startW-targetW)||1;
-        const moved=Math.abs(startW-weight);
-        let pctDone=Math.max(0, Math.min(100, Math.round((moved/span)*100)));
-        // If already past target, show 100%
-        if((goal==='fat_loss' && weight<=targetW) || (goal==='muscle' && weight>=targetW) || (goal==='recomp' && Math.abs(weight-targetW)<0.5)){
-          pctDone=100;
-        }
-        const diff=(weight-targetW);
-        const diffTxt=diff===0?(isEn?'On target':'على الهدف'):(diff>0?`+${diff.toFixed(1)} kg`:`${diff.toFixed(1)} kg`);
-        box.innerHTML=`<div class="fw-weight-progress-head">
-          <span class="fw-weight-progress-title">${isEn?'Weight progress':'تقدم الوزن'}</span>
-          <span class="fw-weight-progress-nums">${weight} → ${targetW} kg</span>
-        </div>
-        <div class="fw-weight-bar-track"><div class="fw-weight-bar-fill" style="width:${pctDone}%"></div></div>
-        <div class="fw-weight-progress-sub">${isEn?`Current vs target: ${diffTxt} · ${pctDone}% of path`:`الحالي مقابل الهدف: ${diffTxt} · ${pctDone}% من الطريق`}</div>`;
-        box.style.display='block';
-      }else{
-        box.innerHTML=`<div class="fw-weight-progress-sub">${isEn?'Set a target weight above to track progress toward your goal.':'حدد وزن الهدف بالأعلى لتتبع التقدم نحو هدفك.'}</div>`;
-        box.style.display='block';
-      }
-    }
-  }catch(e){}
-
   const formulaName = calc.formula_name || calc.formulaName || (calc.body_fat ? 'Katch-McArdle' : 'Mifflin-St Jeor');
   const formulaTitle = isEn
     ? `${formulaName} Scientific Targets`
@@ -14828,16 +14548,9 @@ async function handleSettingsFitnessSave(){
   const bodyFat = bfVal ? Number(bfVal) : null;
 
   const calculated = calculateFitnessTargets({gender, age, weight, height, activity, goal, body_fat: bodyFat});
-  const targetWeightRaw=document.getElementById('setTargetWeight')?.value;
-  const targetWeight=targetWeightRaw?Math.max(30, Math.min(250, Number(targetWeightRaw))):null;
-  if(targetWeight){
-    calculated.target_weight=targetWeight;
-    if(!calculated.start_weight) calculated.start_weight=weight;
-  }
 
   USER_SETTINGS.fitness_tracking_enabled = ftChecked;
   USER_SETTINGS.fitness_metrics = calculated;
-  USER_SETTINGS.target_weight = targetWeight;
 
   USER_SETTINGS.gender = calculated.gender;
   USER_SETTINGS.age = calculated.age;
@@ -14943,7 +14656,6 @@ function openSettingsScreen(){
   if(document.getElementById('setHeight')) document.getElementById('setHeight').value = m.height || USER_SETTINGS.height || 175;
   if(document.getElementById('setActivity')) document.getElementById('setActivity').value = m.activity || USER_SETTINGS.activity || USER_SETTINGS.activity_level || 1.55;
   if(document.getElementById('setBodyFat')) document.getElementById('setBodyFat').value = m.body_fat || USER_SETTINGS.body_fat || '';
-  if(document.getElementById('setTargetWeight')) document.getElementById('setTargetWeight').value = m.target_weight || USER_SETTINGS.target_weight || '';
 
   const goal = m.goal || USER_SETTINGS.goal || 'recomp';
   ['setGoalMuscle', 'setGoalRecomp', 'setGoalFatLoss'].forEach(id=>{
@@ -14995,10 +14707,6 @@ function openSettingsScreen(){
     // Mobile: start on the section list (not a blank content pane)
     ss.classList.remove('mobile-sec-open');
   }
-  // FAB sits above the nav list visually on some builds — hide while Settings is open
-  // so Perfection Center / Workspaces are fully readable.
-  document.body.classList.add('settings-open');
-  try{ const fab=document.getElementById('aiFab'); if(fab) fab.classList.add('hidden'); }catch(e){}
   const setTitleHeader = document.getElementById('setTitle');
   const isEn = (USER_SETTINGS && USER_SETTINGS.lang) === 'en';
   if(setTitleHeader) setTitleHeader.textContent = isEn ? '⚙️ Settings' : '⚙️ الإعدادات';
@@ -15027,8 +14735,6 @@ function closeSettingsScreen(){
     ss.classList.remove('open');
     ss.classList.remove('mobile-sec-open');
   }
-  document.body.classList.remove('settings-open');
-  try{ const fab=document.getElementById('aiFab'); if(fab) fab.classList.remove('hidden'); }catch(e){}
 }
 function setAppLang(lang){
   // prestige/mythic shop strings follow USER_SETTINGS.lang via updatePrestigeUI
@@ -16960,78 +16666,29 @@ HARD RULE — QUANTITY FIRST (do not invent amounts):
 - Never ask more than ONE combined question per turn.
 - Once qty + (method if relevant) are known for every item, status is "ready" and items must use plain English food-database names.
 
-HARD RULE — STRICT INGREDIENT MATCHING (do not invent extras):
-- Only log components the user explicitly named OR that are intrinsic to the exact named menu item. NEVER add optional toppings, extra sauces, oils, sides, rice, dessert toppings, or "assumed" extras.
-- Generic "sandwich" / "ساندويتش" without fillings named → do NOT invent oil, tomato base, side salad, fries, or cheese. Ask what is inside, or log only what was stated.
-- "KFC Twister" / twister = 1 tortilla + fried chicken breast/tenders + lettuce + mayonnaise/twister sauce ONLY. Never add fried rice, dessert toppings, extra sides.
-- Conjunctions "مع" / "with" / "and" between a food and a drink are SEPARATORS: "ساندويتش مع حليب" = sandwich item(s) + milk as independent log lines — never merge milk into the sandwich.
-
-ARABIC TRANSLATION & DIALECT MAPPING (when converting to English food names on "ready"):
-- حليب / كوباية حليب / كأس حليب / كوب حليب → "whole milk" (or the specified milk type). NEVER map milk to dessert topping, pudding, powdered mix, or ice cream.
-- خبز لبناني / خبز عربي → "pita bread".
-- خبز أسمر → "whole wheat pita bread".
-- جبنة دمياطي / جبنة دمياطي → "Domiati cheese" or "feta cheese".
-- لبن / زبادي → yogurt (not milk) unless the user clearly meant drinking milk.
-
 REGIONAL / EGYPTIAN FOOD RULES (when converting to items on "ready"):
 - Hawawshi / حواوشي: ALWAYS treat as the FULL sandwich (seasoned ground meat + baladi bread wrapper), not raw meat alone. Standard full loaf ≈ 200–250g total. Scale fractions (e.g. رغيف وربع = 1.25×). Prefer food names like "hawawshi sandwich" or "ground beef in baladi bread".
 - Green salad / سلطة خضراء: raw vegetables only (lettuce, cucumber, tomato, parsley, rocket, etc.). NEVER map to creamy American dressings (Green Goddess, Caesar, mayo) unless the user explicitly named a dressing or mayo.
-- Oil / olive oil / زيت: ONLY if the user mentioned oil. Never invent oil on a sandwich or salad. If oil is named with no weight, use a culinary 5–15g (tsp/tbsp), NEVER 100g — or ask.
-- Composite plated dishes (كشري، مندي، كبسة، etc.): prefer plate size (صغير/وسط/كبير) when asking; on ready, emit a single gram total for that plate size. Do not invent unmentioned sides.
+- Oil / olive oil / زيت inside a salad or dish with NO weight given: if you somehow already have quantity context for the dish and must include oil, use a culinary teaspoon/tablespoon amount (5–15g), NEVER 100g. Prefer asking if oil is mentioned as its own free-floating item with no amount.
+- Composite plated dishes (كشري، مندي، كبسة، etc.): prefer plate size (صغير/وسط/كبير) when asking; on ready, emit a single gram total for that plate size.
 
-CRITICAL — MULTI-TURN CONTEXT: if an earlier user message named a food and your prior turn asked a follow-up, the LATEST user message answers that question — combine them. Example: "أكلت فراخ" then you asked method/qty, then "مشوي، 200 جرام" → ready with grilled chicken 200g. Never re-ask what was already answered.
+CRITICAL — MULTI-TURN CONTEXT: if the conversation so far already contains an earlier user message describing a food, and your own prior assistant turn asked a follow-up question about THAT SAME food, the LATEST user message is the ANSWER to that question — not a new, separate, standalone meal. You MUST combine it with the food named earlier before deciding ready/needs_info. Example: earlier user message "أكلت فراخ", your prior question "مقلي ولا مشوي؟ وكام؟", latest user message "مشوي، 200 جرام" -> this means grilled chicken, 200g — status MUST be "ready" with items:[{"food":"grilled chicken breast","qty":200,"unit":"g"}]. NEVER re-ask about the food identity itself once it was already named in an earlier turn — a short reply like a cooking method or a number is answering your own question, not starting over. If, after combining the full conversation, something is still genuinely missing, ask ONLY about that remaining gap — never repeat a question about something already answered in an earlier turn.
 
-CRITICAL — TOLERATE TYPOS: phone dialect typos are normal (طيق→طبق, متوصط→متوسط). Read the intended word; do not treat a typo as missing info.
+CRITICAL — TOLERATE TYPOS AND SPELLING VARIANTS: Abdullah is typing quickly on a phone, in dialect, and typos are normal and expected — never let a misspelled word block you from recognizing what he clearly meant. If a word is a close phonetic/visual match to an Arabic word you'd expect in context (e.g. "طيق" instead of "طبق", "متوصط" instead of "متوسط", a transposed or dropped letter, a missing/extra alef or ya), silently read it as the intended word and proceed normally — do not ask him to repeat himself, do not treat a typo as missing information, and do not get stuck re-asking the same question because one word didn't match exactly. This is especially important for size-descriptor answers (see the rule above) — a misspelled "طبق متوسط" is still a complete size descriptor and must be treated as such.
 
-CRITICAL — NEVER INVENT FACTS about protocols/diet plans/goals unless they appear in the memory block or his message. If no restrictions were stated, every food is simply allowed — move straight to quantity/method.
+CRITICAL — NEVER INVENT FACTS: you have no information about Abdullah beyond what is explicitly given to you in this conversation and in the "THINGS YOU KNOW ABOUT ABDULLAH" section below, if present. NEVER reference a "protocol", "diet plan", "system", "his goals", or any rule/restriction he supposedly follows unless it is explicitly stated in that memory section or in his own message. If nothing has been said about restrictions, treat every food as simply allowed and move straight to figuring out quantity/method — do not comment on whether a food "fits" anything unless he asked you to.
 
-CRITICAL — followUpQuestion must be built FROM his actual message:
-- Name the SPECIFIC food he wrote (e.g. "أكلت فراخ" → ask about الفراخ, not a generic "الوجبة").
-- If only one of several items is missing info, name that one only.
-- Compose the question fresh each time; never reuse stock phrasing.
-- Units must fit the food (eggs → كام بيضة؟; rice → cup/grams; meat → grams/portion). Do not default to "cup" for non-cup foods.
-- For cooked/plated dishes: ask plate/portion size with explicit options inline — pattern: "كام كمية [food]؟ (مثلاً: طبق صغير، وسط، أو كبير؟)". Never ask bag/box/cup units for a hot plated meal.${aiMemoryBlock()}`;
+CRITICAL — the followUpQuestion must be built FROM his actual message, never a generic template:
+- Name the SPECIFIC food he mentioned by name in the question (e.g. if he wrote "أكلت فراخ", ask "الفراخ كانت قد ايه تقريبا؟" — not a generic "قد ايه الوجبة؟" that could apply to anything).
+- If he mentioned multiple items and only one is missing info, name THAT one specifically, not all of them.
+- Never reuse a stock example phrasing verbatim — compose the question fresh each time from what he actually wrote. Two different messages with two different missing details must never produce the same question text.
+- If unsure what unit makes sense for a food, offer units that actually fit THAT food (e.g. eggs -> "كام بيضة؟" not "كام كوباية؟"; rice/liquid -> cups/grams make sense; meat -> grams/portion makes sense). Do not default to "cup" as a generic fallback question when the food isn't cup-measured.
+- For a COOKED/PLATED DISH (composite meals like koshary/kabsa/mandi, or any home-cooked meal served on a plate) — the ONLY sensible units are plate/portion SIZE ("طبق صغير/متوسط/كبير", "حصة عادية/كبيرة") or a direct gram estimate. NEVER ask about container units that dish was never sold or stored in — no "كيس" (bag), "علبة" (box/can), "كوب" (cup), or similar packaging/container words for something served hot on a plate. Those units belong to packaged/measured ingredients (rice before cooking, milk, cereal), not to a finished cooked meal. When asking a plated-dish quantity question, the followUpQuestion itself MUST explicitly offer the size options inline so he can just pick one instead of guessing what answer format you want — pattern: "كام كمية [food]؟ (مثلاً: طبق صغير، وسط، أو كبير؟)" — always name the specific food, always offer small/medium/large explicitly, never leave the question open-ended without options.${aiMemoryBlock()}`;
 }
 
 // Calls flBuildExtractionPrompt via the Worker (still using the free Gemini/Llama
 // proxy — this call has nothing to do with actual nutrition numbers, only language
 // understanding, so the free-tier model is perfectly fine here).
-// True when the user's text already contains a quantity/size signal so the model
-// is allowed to return "ready". Used as a safety net: free-tier models sometimes
-// invent a silent default portion (100g / 1 serving) even when the prompt forbids
-// it — this gate forces a follow-up question instead of writing invented macros.
-function flTextHasQuantitySignal(text){
-  if(!text) return false;
-  const t=String(text);
-  // Digits only count when they look like a real amount (number + unit/size, or
-  // a standalone count near a food word). A lone year/time digit in free text must
-  // NOT unlock "ready" and let the model invent grams.
-  if(/(?:[0-9٠-٩]+(?:\s*[./]\s*[0-9٠-٩]+)?)\s*(?:جرام|جم\b|غرام|g\b|grams?|ملل|مل\b|ml\b|oz|أونصة|اونصة|كوب|كوباية|cup|ملعقة|ملعقه|tbsp|tsp|رغيف|قطعة|حبة|بيضة|plate|bowl|serving)/i.test(t)) return true;
-  if(/(?:[0-9٠-٩]+)\s*(?:x|×|\*)\s*/i.test(t)) return true; // "2x eggs" style
-  // Pure count next to countable nouns (eggs, loaves, pieces) — still a signal.
-  if(/(?:[0-9٠-٩]+)\s*(?:بيض|بيضة|بيضات|رغيف|أرغفة|قطعة|قطع|حبة|حبات|eggs?|loaves?|pieces?)/i.test(t)) return true;
-  // Explicit size / count / portion words (AR + EN) without requiring a digit.
-  if(/(طبق\s*(صغير|وسط|متوسط|كبير)?|حصة\s*(صغيرة|عادية|كبيرة)?|رغيفين|رغيف\b|قطعة|قطعتين|حبة|حبتين|بيضة|بيضتين|كوب|كوباية|ملعقة|ملعقتين|ملعقه|نص\s*رغيف|ربع\s*رغيف|ونص|و\s*ربع|medium\s*plate|large\s*plate|small\s*plate|\bmedium\b|\blarge\b|\bsmall\b|\bplate\b|\bbowl\b|\bcup\b|\btbsp\b|\btsp\b|\boz\b|\bserving\b|\bportion\b|\bpiece\b|\bloaf\b)/i.test(t)) return true;
-  return false;
-}
-
-function flBuildMissingQtyQuestion(description){
-  const t=String(description||'').trim();
-  // Prefer naming the food he actually wrote when we can pull a short token.
-  const m=t.match(/(?:أكلت|اكلت|خلصت|تناولت|ate|had)\s+(.+?)(?:\s*[،,]|$)/i);
-  const foodBit=(m&&m[1]?m[1].trim():t).slice(0,40);
-  const en=(USER_SETTINGS&&USER_SETTINGS.lang)==='en';
-  if(en){
-    return foodBit
-      ? `About how much ${foodBit}? (e.g. small / medium / large plate, or grams)`
-      : 'About how much was it? (e.g. small / medium / large plate, or grams)';
-  }
-  // Plated / composite-friendly default with explicit size options.
-  return foodBit
-    ? `كام كمية ${foodBit} تقريبا؟ (مثلاً: طبق صغير، وسط، أو كبير — أو بالجرام لو تعرف)`
-    : 'كام كمية تقريبا؟ (مثلاً: طبق صغير، وسط، أو كبير — أو بالجرام لو تعرف)';
-}
-
 async function flExtractMealInfo(description,priorTurns){
   if(!AI_WORKER_URL || AI_WORKER_URL==='REPLACE_WITH_YOUR_WORKER_URL'){
     return {ok:false,error:(USER_SETTINGS&&USER_SETTINGS.lang)==='en'?'⚠️ AI is not connected to the server.':'⚠️ المساعد الذكي لسه مش متوصل بالسيرفر.'};
@@ -17041,10 +16698,6 @@ async function flExtractMealInfo(description,priorTurns){
   // multi-round clarification (rare — only for genuinely ambiguous meals) has full
   // context rather than restarting blind each round.
   const messages=[...(priorTurns||[]),{role:'user',content:description}];
-  // If this is a multi-turn answer to a prior quantity question, the *combined*
-  // context (orig + answer) may already have quantity even when the latest line
-  // alone does not. Only apply the invent-qty guard on a first-turn extraction.
-  const isFirstTurn=!priorTurns || !priorTurns.length;
   try{
     const res=await fetch(AI_WORKER_URL,{
       method:'POST',
@@ -17057,48 +16710,10 @@ async function flExtractMealInfo(description,priorTurns){
     let parsed;
     try{ parsed=JSON.parse(raw); }catch{ return{ok:false,error:uiIsEn()?'⚠️ Could not understand that description — try rephrasing.':'⚠️ مش فاهم الوصف ده كويس — جرب تكتبه بشكل أوضح.'}; }
     if(parsed.status==='needs_info'){
-      return{ok:true,needsInfo:true,question:parsed.followUpQuestion||flBuildMissingQtyQuestion(description),rawModelText:data.text};
+      return{ok:true,needsInfo:true,question:parsed.followUpQuestion||'ممكن توضح أكتر؟',rawModelText:data.text};
     }
     if(!Array.isArray(parsed.items) || !parsed.items.length){
       return{ok:false,error:uiIsEn()?'⚠️ Could not identify what was eaten — try describing it again.':'⚠️ مش قادر أحدد إيه اللي اتاكل بالظبط — جرب توصف تاني.'};
-    }
-    // Safety net: model returned "ready" with invented amounts when the user never
-    // stated quantity. Force a single quantity question instead of logging a guess.
-    // Skip when priorTurns exists (user already answered a follow-up) or when the
-    // text itself contains a quantity/size signal.
-    if(isFirstTurn && !flTextHasQuantitySignal(description)){
-      return{
-        ok:true,
-        needsInfo:true,
-        question:(parsed.followUpQuestion && String(parsed.followUpQuestion).trim()) || flBuildMissingQtyQuestion(description),
-        rawModelText:data.text,
-        forcedQtyAsk:true
-      };
-    }
-    // Second safety net even when a weak signal was present: reject classic silent
-    // defaults the free-tier model invents (exactly 100g / 1 serving with no user
-    // number) unless the description clearly stated that amount.
-    if(isFirstTurn && Array.isArray(parsed.items)){
-      const looksInvented=parsed.items.some(it=>{
-        if(!it) return false;
-        const q=Number(it.qty);
-        const u=String(it.unit||'').toLowerCase();
-        const isHundredG=(q===100 && (u==='g'||u==='gram'||u==='grams'));
-        const isOneServing=(q===1 && (u==='serving'||u==='portion'||u==='plate'));
-        if(!isHundredG && !isOneServing) return false;
-        // User actually wrote 100 / 1 + unit → allow.
-        if(/[0-9٠-٩]/.test(description) && flTextHasQuantitySignal(description)) return false;
-        return true;
-      });
-      if(looksInvented && !flTextHasQuantitySignal(description)){
-        return{
-          ok:true,
-          needsInfo:true,
-          question:flBuildMissingQtyQuestion(description),
-          rawModelText:data.text,
-          forcedQtyAsk:true
-        };
-      }
     }
     return{ok:true,needsInfo:false,items:parsed.items};
   }catch(e){
@@ -18861,7 +18476,7 @@ document.body.addEventListener('input',e=>{
   if(t && t.id && t.id.startsWith('wiz')){
     renderFitnessWizardPreview();
   }
-  if(t && t.id && t.id.startsWith('set') && ['setAge','setWeight','setHeight','setActivity','setBodyFat','setTargetWeight'].includes(t.id)){
+  if(t && t.id && t.id.startsWith('set') && ['setAge','setWeight','setHeight','setActivity','setBodyFat'].includes(t.id)){
     renderFitnessSettingsStats();
   }
   if(t && (t.matches('[data-notif-enabled]')||t.matches('[data-notif-lead]')||t.matches('[data-notif-start]')||t.matches('[data-notif-end]')||t.matches('[data-notif-lead-min]')||t.matches('[data-notif-end-min]'))){
@@ -20411,15 +20026,12 @@ if (typeof onAuthStateChanged !== 'undefined' && typeof fbAuth !== 'undefined') 
               const cloudDay=d.historyData[dateKey]||{};
               const localDay=historyData[dateKey]||{};
               historyData[dateKey]={
-                // Local wins on key collision: this device may have completions that
-                // have not yet finished round-tripping to cloud. Cloud-only keys are
-                // still absorbed so the other device's work appears here.
-                done:{...(cloudDay.done||{}),...(localDay.done||{})},
+                done:{...(localDay.done||{}),...(cloudDay.done||{})},
                 // alts kept read-only for old saved days from before the alts system
                 // was removed — nothing writes to it anymore, but old data isn't lost.
-                alts:{...(cloudDay.alts||{}),...(localDay.alts||{})},
-                foodLog:{...(cloudDay.foodLog||{}),...(localDay.foodLog||{})},
-                prayerLogs:{...(cloudDay.prayerLogs||{}),...(localDay.prayerLogs||{})},
+                alts:{...(localDay.alts||{}),...(cloudDay.alts||{})},
+                foodLog:{...(localDay.foodLog||{}),...(cloudDay.foodLog||{})},
+                prayerLogs:{...(localDay.prayerLogs||{}),...(cloudDay.prayerLogs||{})},
                 // Critical fix: Ensure penalty is explicitly null if it doesn't exist,
                 // preventing 'undefined' from being sent to Firestore.
                 penalty:cloudDay.penalty||localDay.penalty||null
@@ -20439,15 +20051,16 @@ if (typeof onAuthStateChanged !== 'undefined' && typeof fbAuth !== 'undefined') 
           // in flight).
           if(d.userSchedules) {
             const cloudSlots=deserializeAllSchedulesFromFirestore(d.userSchedules);
-            // Load path: deep-merge tasks so neither device loses schedule work.
-            USER_SCHEDULES=mergeScheduleSlotsPreferLocal(USER_SCHEDULES, cloudSlots, true);
+            // Prefer cloud slots, but keep any local-only slot the phone created
+            // offline after the last sync (won't wipe laptop slots either).
+            USER_SCHEDULES=mergeScheduleSlotsPreferLocal(USER_SCHEDULES, cloudSlots);
             // If cloud had real multi-slot data and local was bare default, take cloud fully.
             if(!isBareDefaultSchedules(cloudSlots) && isBareDefaultSchedules(USER_SCHEDULES)){
               USER_SCHEDULES=cloudSlots;
             }
             // Always prefer cloud's richer map when it has more slots than local.
             if(Object.keys(cloudSlots||{}).length > Object.keys(USER_SCHEDULES||{}).length){
-              USER_SCHEDULES=mergeScheduleSlotsPreferLocal(USER_SCHEDULES, cloudSlots, true);
+              USER_SCHEDULES=mergeScheduleSlotsPreferLocal(USER_SCHEDULES, cloudSlots);
             }
             ACTIVE_SCHEDULE_ID = d.activeScheduleId || ACTIVE_SCHEDULE_ID || 'default';
             if (USER_SCHEDULES[ACTIVE_SCHEDULE_ID]) {
@@ -20575,7 +20188,7 @@ if (typeof onAuthStateChanged !== 'undefined' && typeof fbAuth !== 'undefined') 
               }
               if(d2.userSchedules){
                 const cloudSlots=deserializeAllSchedulesFromFirestore(d2.userSchedules);
-                USER_SCHEDULES=mergeScheduleSlotsPreferLocal(USER_SCHEDULES, cloudSlots, true);
+                USER_SCHEDULES=mergeScheduleSlotsPreferLocal(USER_SCHEDULES, cloudSlots);
                 ACTIVE_SCHEDULE_ID=d2.activeScheduleId||ACTIVE_SCHEDULE_ID||'default';
                 if(USER_SCHEDULES[ACTIVE_SCHEDULE_ID]) USER_SCHEDULE=USER_SCHEDULES[ACTIVE_SCHEDULE_ID].sched;
                 LAST_KNOWN_CLOUD_SCHEDULES=JSON.parse(JSON.stringify(cloudSlots));
