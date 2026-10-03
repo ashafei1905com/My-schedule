@@ -1,6 +1,6 @@
 <!DOCTYPE html>
 <html lang="en" dir="ltr">
-<!-- cache-bust: 2026-10-03-cat-refresh -->
+<!-- cache-bust: 2026-10-03-day-delete-dim -->
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1.0,maximum-scale=1.0,user-scalable=no">
@@ -377,6 +377,17 @@ html[dir="rtl"] .tc{animation-name:tcEnterRtl}
 .tc.tc-prio-high .tcname{font-weight:900}
 .tc.tc-prio-low{filter:saturate(.85)}
 .tc.tc-prio-low .tcname{font-weight:600;color:color-mix(in srgb,var(--tx) 82%, var(--mu))}
+.tc.tc-day-deleted{
+  pointer-events:auto;
+  border-style:dashed;
+  border-color:rgba(148,163,184,.35);
+}
+.tc.tc-day-deleted .tcname{
+  text-decoration:line-through solid rgba(148,163,184,.55);
+  text-decoration-thickness:1.5px;
+  color:color-mix(in srgb,var(--tx) 55%, var(--mu));
+}
+.tc.tc-day-deleted .tcdesc{color:var(--mu)}
 /* Edit-mode polish */
 body.schedule-edit-live .tc.tc-edit-mode{
   box-shadow:0 0 0 1px color-mix(in srgb, var(--ac) 22%, transparent);
@@ -8133,7 +8144,7 @@ async function stHandleDelete(jd,taskId){
       if(!USER_EDITS.dayDeletes[iso]) USER_EDITS.dayDeletes[iso]={};
       USER_EDITS.dayDeletes[iso][taskId]=true;
       try{ if(typeof saveUserEdits==='function') await saveUserEdits(); }catch(e){}
-      showToast(en?'🗑️ Hidden for today only':'🗑️ اتخفت لليوم فقط',2200);
+      showToast(en?'🗑️ Skipped for today (still shown, dimmed)':'🗑️ متخطّاة لليوم (لسه ظاهرة، باهتة)',2400);
     }else{
       // Forever: remove from weekly USER_SCHEDULE if present, else permanent soft-delete overlay
       if(inUserSched){
@@ -9904,7 +9915,10 @@ function getReqTasks(jd,iso){
   const showPrayers=!!USER_SETTINGS.trackPrayers;
   const prayers=showPrayers?buildPTasks(jd):[];
   const base=[...prayers,...(d?.ts||[])].filter(t=>!t[9]&&t[6]>0&&t[2]!=='snack');
-  return applyUserEditsToTasks(base,effIso).filter(t=>!t._deleted).sort((a,b)=>sortKey(a,effIso,jd)-sortKey(b,effIso,jd));
+  // Required tasks for points/punishment: skip permanent deletes AND today-only skips
+  return applyUserEditsToTasks(base,effIso)
+    .filter(t=>!t._deleted && !t._dayDeleted)
+    .sort((a,b)=>sortKey(a,effIso,jd)-sortKey(b,effIso,jd));
 }
 
 // ===== State =====
@@ -10341,7 +10355,10 @@ function applyUserEditsToTasks(baseTasks, iso){
     if(USER_EDITS.pointOverrides[id]!==undefined) tt[6]=USER_EDITS.pointOverrides[id];
     if(mv && mv.toTime) tt[1]=mv.toTime;
     if(USER_EDITS.deletes[id]) tt._deleted=true;
-    if(USER_EDITS.dayDeletes && USER_EDITS.dayDeletes[iso] && USER_EDITS.dayDeletes[iso][id]) tt._deleted=true;
+    // Today-only hide: stay on the timeline, dimmed — not removed from the list
+    if(USER_EDITS.dayDeletes && USER_EDITS.dayDeletes[iso] && USER_EDITS.dayDeletes[iso][id]){
+      tt._dayDeleted=true;
+    }
     const dayOv=USER_EDITS.dayOverrides && USER_EDITS.dayOverrides[iso] && USER_EDITS.dayOverrides[iso][id];
     if(dayOv){
       if(dayOv.time!=null) tt[1]=dayOv.time;
@@ -13833,15 +13850,20 @@ function renderCard(task,isToday,jd){
 
   const hwH=hw?`<div class="hwtag">⏰ ${hw}</div>`:'';
 
-  // Edit-overlay badges — soft-deleted tasks stay visible (greyed) rather than
-  // vanishing, per spec; moved tasks show where they came from; custom tasks are
-  // flagged so it's clear they were added by you (or via the assistant), not SCHED.
+  // Today-only skips stay visible (dimmed); permanent soft-deletes also stay greyed if present.
+  const isDayDeleted=!!task._dayDeleted;
   const isDeleted=!!task._deleted;
   const enBadge=(USER_SETTINGS&&USER_SETTINGS.lang)==='en';
   const movedBadge=task._movedFrom?`<div class="hwtag" style="background:rgba(59,130,246,.15);border-color:rgba(59,130,246,.3);color:#60a5fa">🔀 ${enBadge?'Moved from':'نُقلت من'} ${task._movedFrom}</div>`:'';
   const customBadge=task._custom?`<div class="hwtag" style="background:rgba(139,92,246,.15);border-color:rgba(139,92,246,.3);color:#a78bfa">✨ ${enBadge?'Custom task':'مهمة مخصصة'}</div>`:'';
-  const deletedBadge=isDeleted?`<div class="hwtag">🗑️ ${enBadge?'Deleted':'محذوفة'}</div>`:'';
-  if(isDeleted) act=`<div class="cbtn exp" style="opacity:.6">🗑️ ${enBadge?'Deleted':'محذوفة'}</div>`;
+  const deletedBadge=isDayDeleted
+    ?`<div class="hwtag" style="background:rgba(148,163,184,.12);border-color:rgba(148,163,184,.35);color:#94a3b8">⏭️ ${enBadge?'Skipped today':'متخطّاة اليوم'}</div>`
+    :(isDeleted?`<div class="hwtag">🗑️ ${enBadge?'Deleted':'محذوفة'}</div>`:'');
+  if(isDayDeleted){
+    act=`<button type="button" class="cbtn" data-action="restoreDayDelete" data-id="${id}" style="padding:6px 10px;font-size:.72rem;opacity:.95;background:rgba(148,163,184,.12);border-color:rgba(148,163,184,.4);color:#cbd5e1">${enBadge?'Restore':'إرجاع'}</button>`;
+  }else if(isDeleted){
+    act=`<div class="cbtn exp" style="opacity:.6">🗑️ ${enBadge?'Deleted':'محذوفة'}</div>`;
+  }
 
   // If a food entry was actually logged, show its computed macros under the
   // description as a compact badge — makes the card itself carry the real intake,
@@ -13871,13 +13893,14 @@ function renderCard(task,isToday,jd){
   // Medium = default, no badge (keeps the timeline clean)
 
   const prioCardClass = taskPrio==='high'?' tc-prio-high':(taskPrio==='low'?' tc-prio-low':'');
-  const prioBorder = taskPrio==='high'
-    ? (isDeleted?'opacity:.5':`box-shadow:inset 3px 0 0 0 #ef4444,0 0 18px rgba(239,68,68,.12);`)
-    : (taskPrio==='low'
-      ? (isDeleted?'opacity:.5':`opacity:.88;`)
-      : (isDeleted?'opacity:.5':''));
+  const dimmed=isDayDeleted||isDeleted;
+  const prioBorder = dimmed
+    ? 'opacity:.42;filter:grayscale(.55);'
+    : (taskPrio==='high'
+      ? `box-shadow:inset 3px 0 0 0 #ef4444,0 0 18px rgba(239,68,68,.12);`
+      : (taskPrio==='low' ? 'opacity:.88;' : ''));
 
-  return`<div class="tc${isDone?' done':''}${isEx?' excx':''}${isDeleted?' excx':''}${window.SCHEDULE_EDIT_MODE?' tc-edit-mode':''}${prioCardClass}" data-c="${catInfo.id}" data-cat="${catInfo.id}" id="c-${id}" data-task-id="${id}" data-jd="${jd}" style="border-inline-start:3.5px solid ${taskPrio==='high'?'#ef4444':cardColor};${prioBorder}">
+  return`<div class="tc${isDone?' done':''}${isEx?' excx':''}${isDeleted?' excx':''}${isDayDeleted?' tc-day-deleted':''}${window.SCHEDULE_EDIT_MODE?' tc-edit-mode':''}${prioCardClass}" data-c="${catInfo.id}" data-cat="${catInfo.id}" id="c-${id}" data-task-id="${id}" data-jd="${jd}" style="border-inline-start:3.5px solid ${taskPrio==='high'&&!dimmed?'#ef4444':cardColor};${prioBorder}">
     <div class="tctime">${arTime}</div>
     <div class="tcico" style="background:color-mix(in srgb, ${cardColor} 12%, transparent);border-color:color-mix(in srgb, ${cardColor} 28%, transparent);color:${cardColor}">${cardIcon}</div>
     <div class="tcbody">
@@ -13960,10 +13983,9 @@ function renderPanel(jd){
     pills.push(`<div class="ppill${dn?' done':''}" id="pp-${pid}"><div class="pnam">${tn(pm.ar)}</div><div class="ptim">${fmt24(PRYT[pk]||FALLBK[pk])}</div></div>`);
   }
 
-  // Soft-deleted tasks stay in USER_EDITS.deletes (so AI restoreTask still works)
-  // but are hidden from the day timeline — showing greyed "Deleted" cards forever
-  // after a one-time delete was the reported bug.
-  const tasks=getAllTasks(jd).filter(t=>!t||!t._deleted);
+  // Permanent deletes (_deleted) stay out of the main list.
+  // Today-only skips (_dayDeleted) stay visible and dimmed so you can still see them.
+  const tasks=getAllTasks(jd).filter(t=>t&&!t._deleted);
   const addTaskBtn='';
   const en=(USER_SETTINGS.lang==='en');
   let dhm=en
@@ -19535,6 +19557,25 @@ document.body.addEventListener('click',async e=>{
     const taskId=delSchedBtn.getAttribute('data-id');
     try{ pushEditSnapshot('delete-one'); }catch(e){}
     await stHandleDelete(jd,taskId);
+    return;
+  }
+  const restoreDayBtn=closest('[data-action="restoreDayDelete"]');
+  if(restoreDayBtn){
+    const taskId=restoreDayBtn.getAttribute('data-id');
+    const iso=SELECTED_DATE||TODAY;
+    const enR=(USER_SETTINGS&&USER_SETTINGS.lang)==='en';
+    try{
+      if(USER_EDITS&&USER_EDITS.dayDeletes&&USER_EDITS.dayDeletes[iso]){
+        delete USER_EDITS.dayDeletes[iso][taskId];
+        if(!Object.keys(USER_EDITS.dayDeletes[iso]).length) delete USER_EDITS.dayDeletes[iso];
+      }
+      if(typeof saveUserEdits==='function') await saveUserEdits();
+      try{ renderTabs();renderPanels();switchDay(getJDfromISO(SELECTED_DATE));updateUI(); }catch(e){}
+      showToast(enR?'✅ Restored for today':'✅ رجعت لليوم',1800);
+    }catch(e){
+      console.warn('restoreDayDelete',e);
+      showToast(enR?'Could not restore':'تعذر الإرجاع',2000,'warn');
+    }
     return;
   }
 
