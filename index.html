@@ -1,6 +1,6 @@
 <!DOCTYPE html>
 <html lang="en" dir="ltr">
-<!-- cache-bust: 2026-10-03-cat-priority -->
+<!-- cache-bust: 2026-10-03-cat-refresh -->
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1.0,maximum-scale=1.0,user-scalable=no">
@@ -7153,8 +7153,10 @@ function getTaskCategory(catKey, task){
   }
 
   const nameVal = typeof found.name === 'object' ? (found.name[en ? 'en' : 'ar'] || found.name.en || found.id) : (found.name || found.id);
-  const colorVal = (task && task[10]) || found.color || '#6366f1';
-  const iconVal = (task && task[3]) || found.icon || '✨';
+  // Category definition is source of truth so Settings → category color/icon/name
+  // show up immediately on the schedule (task tuple is fallback only).
+  const colorVal = found.color || (task && task[10]) || '#6366f1';
+  const iconVal = found.icon || (task && task[3]) || '✨';
 
   return {
     id: found.id || normalizedKey,
@@ -7163,6 +7165,55 @@ function getTaskCategory(catKey, task){
     color: colorVal,
     isCustom: !!found.isCustom || String(found.id).startsWith('cat_')
   };
+}
+
+/** Full schedule redraw — needed after category edits so the open day updates without switching tabs. */
+function refreshScheduleUI(){
+  try{
+    const jd=(typeof SELECTED_DATE!=='undefined'&&SELECTED_DATE)
+      ? getJDfromISO(SELECTED_DATE)
+      : (typeof todayJD==='function'?todayJD():0);
+    if(typeof renderTabs==='function') renderTabs();
+    if(typeof renderPanels==='function') renderPanels();
+    if(typeof switchDay==='function') switchDay(jd);
+    if(typeof updateUI==='function') updateUI();
+  }catch(e){ console.warn('refreshScheduleUI',e); }
+}
+
+/** Push icon/color from a category onto every matching task in the weekly schedule. */
+async function propagateCategoryStyleToTasks(catId, icon, color){
+  let touched=0;
+  try{
+    for(let jd=0;jd<7;jd++){
+      if(!USER_SCHEDULE[jd]||!Array.isArray(USER_SCHEDULE[jd].ts)) continue;
+      for(const t of USER_SCHEDULE[jd].ts){
+        if(!t) continue;
+        const tid=getTaskCategoryId(t);
+        if(tid===catId || t[2]===catId || t[14]===catId){
+          if(icon!=null) t[3]=icon;
+          if(color!=null) t[10]=color;
+          touched++;
+        }
+      }
+    }
+    if(USER_EDITS&&Array.isArray(USER_EDITS.customTasks)){
+      for(const ct of USER_EDITS.customTasks){
+        if(!ct) continue;
+        const id=Array.isArray(ct)?ct[0]:ct.id;
+        const c=Array.isArray(ct)?(ct[14]||ct[2]):(ct.cat||ct.category);
+        if(c===catId){
+          if(Array.isArray(ct)){ if(icon!=null) ct[3]=icon; if(color!=null) ct[10]=color; }
+          else{ if(icon!=null) ct.icon=icon; if(color!=null) ct.color=color; }
+          touched++;
+        }
+      }
+    }
+    if(touched){
+      if(typeof saveUserSchedule==='function') await saveUserSchedule();
+      try{ if(typeof saveUserEdits==='function') await saveUserEdits(); }catch(e){}
+    }
+  }catch(e){ console.warn('propagateCategoryStyleToTasks',e); }
+  return touched;
 }
 
 let ST_SELECTED_CATEGORY = 'routine';
@@ -7250,17 +7301,27 @@ function stRenderColorChips(){
 function stApplyCategoryChoice(catId, opts){
   opts=opts||{};
   const all=getAllCategories();
-  const cat=all.find(c=>c.id===catId)||all.find(c=>c.id==='routine')||all[0];
+  const rawId=(catId&&typeof catId==='object')?(catId.id||catId.cat||'routine'):catId;
+  const cat=all.find(c=>c.id===rawId)||all.find(c=>c.id==='routine')||all[0];
   if(!cat) return;
   ST_SELECTED_CATEGORY=cat.id;
   const catEl=document.getElementById('stCategory');
   if(catEl) catEl.value=cat.id;
   const sel=document.getElementById('stCatSelect');
   if(sel) sel.value=cat.id;
-  // Icon + color follow the category (unless editing and keeping existing without force)
+  // Icon + color follow the category immediately when picking a category on a new/edit task
   if(opts.syncVisual!==false){
-    ST_SELECTED_ICON=cat.icon;
-    ST_SELECTED_COLOR=cat.color;
+    ST_SELECTED_ICON=cat.icon||'✨';
+    ST_SELECTED_COLOR=cat.color||OB_TASK_COLORS[0];
+  }
+  // Category default priority applies unless caller is restoring an existing task's own priority
+  if(opts.syncPriority!==false){
+    const catPrio=(USER_SETTINGS&&USER_SETTINGS.categoryPriorities&&USER_SETTINGS.categoryPriorities[cat.id])||null;
+    if(catPrio==='high'||catPrio==='medium'||catPrio==='low'){
+      try{ stSelectPriority(catPrio); }catch(e){}
+    }else if(opts.forceMediumPriority){
+      try{ stSelectPriority('medium'); }catch(e){}
+    }
   }
   // Food log checkbox when food category chosen
   const foodEl=document.getElementById('stFoodLog');
@@ -7268,6 +7329,9 @@ function stApplyCategoryChoice(catId, opts){
   if(cat.id==='food'){
     if(foodRow) foodRow.style.display='flex';
     if(foodEl) foodEl.checked=true;
+  }else if(opts.clearFoodIfNotFood){
+    if(foodRow) foodRow.style.display='none';
+    if(foodEl) foodEl.checked=false;
   }
   stRenderCategoryChips();
   try{ stRenderIconRow(); }catch(e){}
@@ -7350,8 +7414,10 @@ async function editCustomCategory(id, {name, icon, color}={}){
   if(color!=null && String(color).trim()) cat.color=String(color).trim();
   USER_SETTINGS.customCategories[idx]=cat;
   try{ await saveUserSettings(); }catch(e){}
+  try{ await propagateCategoryStyleToTasks(id, cat.icon, cat.color); }catch(e){}
   try{ stRenderCategoryChips(); }catch(e){}
   try{ renderCategoryManager(); }catch(e){}
+  try{ refreshScheduleUI(); }catch(e){}
   return true;
 }
 async function deleteCustomCategory(id){
@@ -7600,17 +7666,8 @@ function renderCategoryManager(){
           if(!USER_SETTINGS.categoryOverrides) USER_SETTINGS.categoryOverrides={};
           USER_SETTINGS.categoryOverrides[eid]={name:{en:name,ar:name},icon,color};
           try{ await saveUserSettings(); }catch(err){}
-          // Propagate icon/color to existing tasks in this category
-          try{
-            for(let jd=0;jd<7;jd++){
-              if(!USER_SCHEDULE[jd]?.ts) continue;
-              for(const t of USER_SCHEDULE[jd].ts){
-                if(t&&(t[2]===eid||t[14]===eid)){ t[3]=icon; t[10]=color; }
-              }
-            }
-            if(typeof saveUserSchedule==='function') await saveUserSchedule();
-          }catch(err){}
-          try{ renderPanels(); }catch(err){}
+          try{ await propagateCategoryStyleToTasks(eid, icon, color); }catch(err){}
+          try{ refreshScheduleUI(); }catch(err){}
         }else{
           await editCustomCategory(eid,{name,icon,color});
         }
@@ -7624,6 +7681,7 @@ function renderCategoryManager(){
       const iconEl=document.getElementById('catMgrIcon');
       if(iconEl) iconEl.value='🏷️';
       renderCategoryManager();
+      try{ refreshScheduleUI(); }catch(err){}
     };
   }
 }
@@ -7676,7 +7734,10 @@ function openScheduleTaskEditor(jd,existingTask,opts){
   ST_RETURN_TO_SETTINGS=!!opts.fromSettings || !!document.getElementById('settingsScreen')?.classList.contains('open');
   ST_ACTIVE_JD=jd;
   ST_ACTIVE_TASK_ID=existingTask?existingTask[0]:null;
-  ST_SELECTED_CATEGORY=(existingTask&&(existingTask[14]||existingTask[2]))||'routine';
+  {
+    const rawCat=existingTask&&(existingTask[14]||existingTask[2]);
+    ST_SELECTED_CATEGORY=(rawCat&&typeof rawCat==='object')?(rawCat.id||'routine'):(rawCat||'routine');
+  }
   const initCatInfo=getTaskCategory(ST_SELECTED_CATEGORY,existingTask);
   ST_SELECTED_COLOR=(existingTask&&existingTask[10])||initCatInfo.color||OB_TASK_COLORS[0];
   ST_SELECTED_ICON=(existingTask&&existingTask[3])||initCatInfo.icon||'✨';
@@ -7858,6 +7919,13 @@ function openScheduleTaskEditor(jd,existingTask,opts){
   stRenderCategoryChips();
   stRenderColorChips();
   stRenderIconRow();
+  // New task: apply selected category visuals + category default priority right away
+  if(!existingTask){
+    try{ stApplyCategoryChoice(ST_SELECTED_CATEGORY||'routine',{syncVisual:true,syncPriority:true}); }catch(e){}
+  }else{
+    // Keep chips in sync without overriding the task's own priority
+    try{ stApplyCategoryChoice(ST_SELECTED_CATEGORY||'routine',{syncVisual:false,syncPriority:false}); }catch(e){}
+  }
   document.getElementById('schedTaskModal')?.classList.add('open');
   setTimeout(()=>nameEl?.focus(),80);
 }
@@ -15681,6 +15749,8 @@ function closeSettingsScreen(){
   }
   document.body.classList.remove('settings-open');
   try{ const fab=document.getElementById('aiFab'); if(fab) fab.classList.remove('hidden'); }catch(e){}
+  // Category / settings edits must show on the open day without needing a day switch
+  try{ refreshScheduleUI(); }catch(e){}
 }
 function setAppLang(lang){
   // prestige/mythic shop strings follow USER_SETTINGS.lang via updatePrestigeUI
