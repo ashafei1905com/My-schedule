@@ -1,6 +1,6 @@
 <!DOCTYPE html>
 <html lang="en" dir="ltr">
-<!-- cache-bust: 2026-09-28-ticket-space -->
+<!-- cache-bust: 2026-10-03-en-lang -->
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1.0,maximum-scale=1.0,user-scalable=no">
@@ -5628,8 +5628,8 @@ function setFirebaseOnline(){
   updateNetworkBadge();
 }
 
-window.addEventListener('online',()=>{ setFirebaseOnline(); showToast('✅ الاتصال عاد الآن',2500); });
-window.addEventListener('offline',()=>{ updateNetworkBadge(); showToast('⚠️ لقد فقدت الاتصال بالإنترنت',3000,'warn'); });
+window.addEventListener('online',()=>{ setFirebaseOnline(); showToast(uiIsEn()?'✅ Back online':'✅ الاتصال عاد الآن',2500); });
+window.addEventListener('offline',()=>{ updateNetworkBadge(); showToast(uiIsEn()?'⚠️ You are offline':'⚠️ لقد فقدت الاتصال بالإنترنت',3000,'warn'); });
 
 // --- UTC-Based Date Utility Functions ---
 // All date logic now uses UTC to prevent any timezone-related bugs.
@@ -7959,11 +7959,17 @@ async function stHandleDelete(jd,taskId){
 // predate the toggle existing at all.
 let USER_SETTINGS={trackPrayers:true,showTracking:true,lang:'en',appIcon:'🏋️',fitness_tracking_enabled:undefined,fitness_metrics:null};
 let AI_REPLY_LANG='en';
+/** UI language is the source of truth for every user-visible string. */
+function uiIsEn(){ return !(USER_SETTINGS && USER_SETTINGS.lang==='ar'); }
+function uiLang(){ return uiIsEn()?'en':'ar'; }
 function detectTextLang(text){
+  // When the app is set to English, always treat replies as English — never flip
+  // to Arabic mid-session just because a message contained an Arabic prayer name.
+  if(uiIsEn()) return 'en';
   const s=String(text||'');
   const ar=(s.match(/[\u0600-\u06FF]/g)||[]).length;
   const lat=(s.match(/[A-Za-z]/g)||[]).length;
-  if(ar===0&&lat===0) return (USER_SETTINGS&&USER_SETTINGS.lang)||'en';
+  if(ar===0&&lat===0) return 'ar';
   return ar>=lat?'ar':'en';
 }
 
@@ -8103,13 +8109,14 @@ function tn(text){
   if((USER_SETTINGS&&USER_SETTINGS.lang)!=='en') return text;
   return TASK_EN[text]||text;
 }
-function arEn(ar,en){ return (USER_SETTINGS&&USER_SETTINGS.lang)==='en'?en:ar; }
-// Auto-translate AI bot replies when language is English.
+function arEn(ar,en){ return uiIsEn()?en:ar; }
+// Auto-translate AI bot replies when UI language is English.
 function translateAiReply(text){
-  // Reply language follows the USER MESSAGE language (not the UI language setting).
+  // UI language wins: English app setting → English replies even if the model
+  // slipped into Arabic. Arabic app setting keeps Arabic.
   if(text==null||text===undefined) return '';
   text=String(text);
-  if(!text || AI_REPLY_LANG!=='en') return text;
+  if(!text || !uiIsEn()) return text;
   const pairs=[
     [/مش لاقي صلاة (.+) في جدول يوم (.+)\./g,"Can't find prayer $1 on $2."],
     [/صلاة (.+) يوم (.+) مسجلة كمُنجزة بالفعل\. لو عايز تعدّلها، لازم تشيلها الأول من الجدول\./g,'Prayer $1 on $2 is already marked done. To change it, remove it from the schedule first.'],
@@ -11526,8 +11533,8 @@ async function finishPrayerFlow(){
   if(!historyData[dk]) historyData[dk]={};
   if(!historyData[dk].prayerLogs) historyData[dk].prayerLogs={};
   historyData[dk].prayerLogs[activePrayer.id]={name:activePrayer.name,total:awardedPr,log:activePrayer.log,late:activePrayer.late};
-  if(activePrayer.late){showToast(`⏰ صليت متأخر شوي بس صليت — كمّل كذا`,3200,'late');cardEffect(activePrayer.id,'late');}
-  else{showToast(`🕌 صلاة في وقتها، الله يتقبل`,3000);cardEffect(activePrayer.id,'ontime');}
+  if(activePrayer.late){showToast(uiIsEn()?'⏰ A bit late, but you prayed — keep it up':'⏰ صليت متأخر شوي بس صليت — كمّل كذا',3200,'late');cardEffect(activePrayer.id,'late');}
+  else{showToast(uiIsEn()?'🕌 On time — may it be accepted':'🕌 صلاة في وقتها، الله يتقبل',3000);cardEffect(activePrayer.id,'ontime');}
   // Same save-guarantee as confirm/qada: a throw in checkStreak() must never
   // prevent the actual prayer completion from being persisted.
   try{ checkStreak(); }catch(err){ console.error('checkStreak failed, saving anyway:',err); }
@@ -11535,7 +11542,7 @@ async function finishPrayerFlow(){
     await saveAll();
   }catch(err){
     console.error('saveAll failed after prayer completion:',err);
-    showToast('⚠️ حصل خطأ أثناء حفظ الصلاة — جرب تاني أو أعد تحميل الصفحة',4000,'warn');
+    showToast(uiIsEn()?'⚠️ Could not save the prayer — try again or reload':'⚠️ حصل خطأ أثناء حفظ الصلاة — جرب تاني أو أعد تحميل الصفحة',4000,'warn');
   }
   try{
     renderPanels();switchDay(getJDfromISO(SELECTED_DATE));updateUI();
@@ -15398,13 +15405,18 @@ function aiParsePrayerDetail(raw,low){
   const dKey=DKEYS[targetJd];
   const taskId=`pr-${dKey}-${pk}`;
   const task=aiFindTaskByIdOnDate(taskId,targetIso);
+  const pName=uiIsEn()?(PMETA[pk]?.en||PMETA[pk]?.ar||pk):(PMETA[pk]?.ar||pk);
   if(!task){
-    return{action:'unrecognizedTask',reply:`مش لاقي صلاة ${PMETA[pk]?.ar||pk} في جدول يوم ${targetIso}.`};
+    return{action:'unrecognizedTask',reply:uiIsEn()
+      ?`Can't find ${pName} prayer on ${targetIso}.`
+      :`مش لاقي صلاة ${PMETA[pk]?.ar||pk} في جدول يوم ${targetIso}.`};
   }
 
   const existingDone=(historyData[targetIso]||{}).done?.[taskId];
   if(existingDone!==undefined && existingDone!==false){
-    return{action:'alreadyDone',reply:`صلاة ${PMETA[pk]?.ar||task[4]} يوم ${targetIso} مسجلة كمُنجزة بالفعل. لو عايز تعدّلها، لازم تشيلها الأول من الجدول.`};
+    return{action:'alreadyDone',reply:uiIsEn()
+      ?`${pName} on ${targetIso} is already marked done. To change it, clear it from the schedule first.`
+      :`صلاة ${PMETA[pk]?.ar||task[4]} يوم ${targetIso} مسجلة كمُنجزة بالفعل. لو عايز تعدّلها، لازم تشيلها الأول من الجدول.`};
   }
 
   const wantsMax=/max|أقصى|اقصى|كامل النقاط|كل النقاط|maximum/.test(low);
@@ -15412,8 +15424,12 @@ function aiParsePrayerDetail(raw,low){
 
   return{action:'openPrayerModal',task,iso:targetIso,parsedLog,
     reply:parsedLog.length
-      ?`فتحت لك نافذة تأكيد ${PMETA[pk]?.ar||task[4]} ومعبّي اللي قلته — كمّل باقي الأسئلة وأكّد 🕌`
-      :`فتحت لك نافذة تأكيد ${PMETA[pk]?.ar||task[4]} — جاوب على الأسئلة عشان تاخد النقاط الصح 🕌`};
+      ?(uiIsEn()
+        ?`Opened confirmation for ${pName} with what you said — finish the questions and confirm 🕌`
+        :`فتحت لك نافذة تأكيد ${PMETA[pk]?.ar||task[4]} ومعبّي اللي قلته — كمّل باقي الأسئلة وأكّد 🕌`)
+      :(uiIsEn()
+        ?`Opened confirmation for ${pName} — answer the questions for correct points 🕌`
+        :`فتحت لك نافذة تأكيد ${PMETA[pk]?.ar||task[4]} — جاوب على الأسئلة عشان تاخد النقاط الصح 🕌`)};
 }
 
 function aiParseIntent(msg){
@@ -15426,7 +15442,9 @@ function aiParseIntent(msg){
   const rememberMatch=raw.match(/^(?:افتكر|اتذكر|سجل عني|تذكر)\s*(?:إن|ان|أن)?\s*(.+)$/i) || raw.match(/^remember\s+that\s+(.+)$/i);
   if(rememberMatch && rememberMatch[1] && rememberMatch[1].trim().length>2){
     return{action:'rememberFact',fact:rememberMatch[1].trim(),
-      reply:`تمام، هفتكر إن ${rememberMatch[1].trim()} ✅`};
+      reply:uiIsEn()
+        ?`Got it — I'll remember that ${rememberMatch[1].trim()} ✅`
+        :`تمام، هفتكر إن ${rememberMatch[1].trim()} ✅`};
   }
 
   // 1. Prayer completion with detail — "صليت المغرب جماعة في المسجد وقريت الأذكار
@@ -15454,7 +15472,9 @@ function aiParseIntent(msg){
   // completion phrased with "أكلت" instead of "عملت"/"خلصت".
   if(/عملت|خلصت|سويت|انجزت|أنجزت|أكلت|اكلت|كلت|شربت|i did|done|completed|finished|ate|drank|mark.*as\s*done|mark.*done|set.*(to\s*)?done|check\s*off|marked\s*as\s*done/.test(low)){
     const found=aiFindTask(raw,SELECTED_DATE);
-    if(!found) return{action:'unrecognizedTask',reply:'مش لاقي المهمة دي في الجدول. ممكن تقولي اسمها بالظبط زي ما هي ظاهرة؟'};
+    if(!found) return{action:'unrecognizedTask',reply:uiIsEn()
+      ?"Can't find that task on the schedule. Use the exact name as shown."
+      :'مش لاقي المهمة دي في الجدول. ممكن تقولي اسمها بالظبط زي ما هي ظاهرة؟'};
     // Food/snack tasks need macro computation (protein/carbs/fat/calories), not a
     // flat point award — markDone never touched foodLog at all, so even when the
     // verb DID match before, completing a meal through chat silently skipped
@@ -15484,7 +15504,7 @@ function aiParseIntent(msg){
   // 2. Move a task — "انقل الجيم لبكرة الساعة ٨" / "move gym to tomorrow 8pm"
   if(/انقل|حرك|غير وقت|move|reschedule/.test(low)){
     const found=aiFindTask(raw,SELECTED_DATE);
-    if(!found) return{action:'unrecognizedTask',reply:'مش لاقي المهمة دي. جرب تكتب اسمها زي ما هو ظاهر في الجدول.'};
+    if(!found) return{action:'unrecognizedTask',reply:uiIsEn()?"Can't find that task. Use the name as shown on the schedule.":'مش لاقي المهمة دي. جرب تكتب اسمها زي ما هو ظاهر في الجدول.'};
     const newDate=aiResolveDate(raw);
     const newTime=aiResolveTime(raw);
     if(!newDate) return{action:'needMoreInfo',reply:`لأي يوم عايز تنقل "${found.task[4]}"؟ (مثلاً: بكرة، الأربعاء...)`};
@@ -15544,7 +15564,7 @@ function aiParseIntent(msg){
   // overlap them, but placed here for locality with delete.
   if(/رجعها|رجّعها|ارجع|رجع|الغي.*(حذف|delete)|استرجع|تراجع عن.*(حذف|delete)|undo.*(delete|remove)|restore|bring.*back/.test(low)){
     const found=aiFindTask(raw,SELECTED_DATE);
-    if(!found) return{action:'unrecognizedTask',reply:'مش لاقي مهمة محذوفة بالاسم ده. جرب تكتب اسمها زي ما هي ظاهرة في الجدول.'};
+    if(!found) return{action:'unrecognizedTask',reply:uiIsEn()?"Can't find a deleted task with that name.":'مش لاقي مهمة محذوفة بالاسم ده. جرب تكتب اسمها زي ما هي ظاهرة في الجدول.'};
     if(!found.task._deleted){
       return{action:'needMoreInfo',reply:`"${found.task[4]}" مش محذوفة أصلاً — مفيش حاجة أرجعها.`};
     }
@@ -15558,7 +15578,7 @@ function aiParseIntent(msg){
   // (e.g. the Isha/dinner mixup) could never actually be corrected through chat.
   if(/الغي.*(انجاز|إنجاز|تسجيل)|امسح.*(انجاز|إنجاز|تسجيل)|مش صح.*سجلت|غلط.*سجلت|unmark|undo.*(done|complete)|mark.*(not\s*done|undone)/.test(low)){
     const found=aiFindTask(raw,SELECTED_DATE);
-    if(!found) return{action:'unrecognizedTask',reply:'مش لاقي المهمة دي. جرب تكتب اسمها زي ما هي ظاهرة في الجدول.'};
+    if(!found) return{action:'unrecognizedTask',reply:uiIsEn()?"Can't find that task. Use the name as shown on the schedule.":'مش لاقي المهمة دي. جرب تكتب اسمها زي ما هي ظاهرة في الجدول.'};
     const existingDone=(historyData[found.iso]||{}).done?.[found.task[0]];
     if(existingDone===undefined || existingDone===false){
       return{action:'needMoreInfo',reply:`"${found.task[4]}" مش مسجلة كمُنجزة أصلاً في ${found.iso}.`};
@@ -16084,7 +16104,7 @@ SCIENTIFIC STANDARDS:
 ==================================================
 1. CORE IDENTITY & BILINGUAL EXECUTION
 ==================================================
-- Language: Detect and match the user's language instantly (English or Arabic). If Arabic, use clear, modern, encouraging Arabic suitable for UI cards and conversational chat. NEVER mix languages in one reply — pure English OR pure Arabic matching the user.
+- Language (CRITICAL): App UI language is ${isAr ? 'Arabic' : 'English'}. ALL replies MUST be pure ${isAr ? 'Arabic (clear modern dialect, not stiff فصحى)' : 'English'}. NEVER mix languages. NEVER reply in Arabic when UI is English. NEVER reply in English when UI is Arabic.
 - Tone: High-energy, supportive, objective, and action-oriented. Never judge, debate, or invalidate the user's choices.
 - Talk like a real coach in a chat app: punchy, clear, helpful. No corporate fluff.
 
@@ -16917,12 +16937,16 @@ async function flPickSavedOption(idx){
 //      real nutrition API. It NEVER invents p/c/f/k numbers itself — those always come
 //      from flLookupNutrition() below, which calls the real API.
 function flBuildExtractionPrompt(){
-  return `You are a friendly, casual nutrition assistant embedded in a personal habit-tracking app. Abdullah will describe a meal in his own words — Gulf/Khaleeji Arabic, Egyptian Arabic, formal Arabic, or informal English, any mix. Talk back to him the way a real friend who happens to know nutrition would — casual, warm, short sentences, never stiff or overly formal Arabic (فصحى معقدة). No lectures.
+  const enFl=uiIsEn();
+  const langLine=enFl
+    ?'App UI language is ENGLISH. Any followUpQuestion MUST be pure English — never Arabic.'
+    :'App UI language is ARABIC. Any followUpQuestion MUST be pure casual Arabic dialect — never English.';
+  return `You are a friendly, casual nutrition assistant embedded in a personal habit-tracking app. The user may describe a meal in Arabic or English. ${langLine}
 
-Your ONLY job is to figure out WHAT he ate and HOW MUCH, precisely enough to look up in a nutrition database. You never estimate or state calorie/macro numbers yourself — that always comes from a real lookup done separately.
+Your ONLY job is to figure out WHAT was eaten and HOW MUCH, precisely enough to look up in a nutrition database. You never estimate or state calorie/macro numbers yourself — that always comes from a real lookup done separately.
 
 Respond with ONLY a raw JSON object, nothing else — no markdown fences, no text outside the JSON:
-{"status":"needs_info" | "ready","followUpQuestion":"<if needs_info: ONE short casual question in his own dialect/language asking for the missing detail — otherwise empty string>","items":[{"food":"<plain English food name, e.g. 'grilled chicken breast'>","qty":<number>,"unit":"<e.g. 'g','oz','cup','piece','tbsp'>"}]}
+{"status":"needs_info" | "ready","followUpQuestion":"<if needs_info: ONE short casual question asking for the missing detail — language MUST match app UI language below — otherwise empty string>","items":[{"food":"<plain English food name, e.g. 'grilled chicken breast'>","qty":<number>,"unit":"<e.g. 'g','oz','cup','piece','tbsp'>"}]}
 
 HARD RULE — QUANTITY FIRST (do not invent amounts):
 - If the message has NO quantity signal at all (no number, no count word, no size word like طبق/حصة/رغيف/قطعة/حبة, no volume/weight unit), status MUST be "needs_info". You are FORBIDDEN from inventing a default portion (no silent 100g, no silent "1 serving", no silent "medium plate", no silent "1 piece") just to mark ready. Ask one short question about amount instead.
@@ -16936,11 +16960,24 @@ HARD RULE — QUANTITY FIRST (do not invent amounts):
 - Never ask more than ONE combined question per turn.
 - Once qty + (method if relevant) are known for every item, status is "ready" and items must use plain English food-database names.
 
+HARD RULE — STRICT INGREDIENT MATCHING (do not invent extras):
+- Only log components the user explicitly named OR that are intrinsic to the exact named menu item. NEVER add optional toppings, extra sauces, oils, sides, rice, dessert toppings, or "assumed" extras.
+- Generic "sandwich" / "ساندويتش" without fillings named → do NOT invent oil, tomato base, side salad, fries, or cheese. Ask what is inside, or log only what was stated.
+- "KFC Twister" / twister = 1 tortilla + fried chicken breast/tenders + lettuce + mayonnaise/twister sauce ONLY. Never add fried rice, dessert toppings, extra sides.
+- Conjunctions "مع" / "with" / "and" between a food and a drink are SEPARATORS: "ساندويتش مع حليب" = sandwich item(s) + milk as independent log lines — never merge milk into the sandwich.
+
+ARABIC TRANSLATION & DIALECT MAPPING (when converting to English food names on "ready"):
+- حليب / كوباية حليب / كأس حليب / كوب حليب → "whole milk" (or the specified milk type). NEVER map milk to dessert topping, pudding, powdered mix, or ice cream.
+- خبز لبناني / خبز عربي → "pita bread".
+- خبز أسمر → "whole wheat pita bread".
+- جبنة دمياطي / جبنة دمياطي → "Domiati cheese" or "feta cheese".
+- لبن / زبادي → yogurt (not milk) unless the user clearly meant drinking milk.
+
 REGIONAL / EGYPTIAN FOOD RULES (when converting to items on "ready"):
 - Hawawshi / حواوشي: ALWAYS treat as the FULL sandwich (seasoned ground meat + baladi bread wrapper), not raw meat alone. Standard full loaf ≈ 200–250g total. Scale fractions (e.g. رغيف وربع = 1.25×). Prefer food names like "hawawshi sandwich" or "ground beef in baladi bread".
 - Green salad / سلطة خضراء: raw vegetables only (lettuce, cucumber, tomato, parsley, rocket, etc.). NEVER map to creamy American dressings (Green Goddess, Caesar, mayo) unless the user explicitly named a dressing or mayo.
-- Oil / olive oil / زيت inside a salad or dish with NO weight given: if you somehow already have quantity context for the dish and must include oil, use a culinary teaspoon/tablespoon amount (5–15g), NEVER 100g. Prefer asking if oil is mentioned as its own free-floating item with no amount.
-- Composite plated dishes (كشري، مندي، كبسة، etc.): prefer plate size (صغير/وسط/كبير) when asking; on ready, emit a single gram total for that plate size.
+- Oil / olive oil / زيت: ONLY if the user mentioned oil. Never invent oil on a sandwich or salad. If oil is named with no weight, use a culinary 5–15g (tsp/tbsp), NEVER 100g — or ask.
+- Composite plated dishes (كشري، مندي، كبسة، etc.): prefer plate size (صغير/وسط/كبير) when asking; on ready, emit a single gram total for that plate size. Do not invent unmentioned sides.
 
 CRITICAL — MULTI-TURN CONTEXT: if an earlier user message named a food and your prior turn asked a follow-up, the LATEST user message answers that question — combine them. Example: "أكلت فراخ" then you asked method/qty, then "مشوي، 200 جرام" → ready with grilled chicken 200g. Never re-ask what was already answered.
 
@@ -17015,15 +17052,15 @@ async function flExtractMealInfo(description,priorTurns){
       body:JSON.stringify({system:sys,messages})
     });
     const data=await res.json();
-    if(!res.ok || data.error) return{ok:false,error:'⚠️ حصل خطأ من السيرفر — جرب تاني.'};
+    if(!res.ok || data.error) return{ok:false,error:uiIsEn()?'⚠️ Server error — try again.':'⚠️ حصل خطأ من السيرفر — جرب تاني.'};
     let raw=(data.text||'').trim().replace(/^```json\s*|```$/g,'').trim();
     let parsed;
-    try{ parsed=JSON.parse(raw); }catch{ return{ok:false,error:'⚠️ مش فاهم الوصف ده كويس — جرب تكتبه بشكل أوضح.'}; }
+    try{ parsed=JSON.parse(raw); }catch{ return{ok:false,error:uiIsEn()?'⚠️ Could not understand that description — try rephrasing.':'⚠️ مش فاهم الوصف ده كويس — جرب تكتبه بشكل أوضح.'}; }
     if(parsed.status==='needs_info'){
       return{ok:true,needsInfo:true,question:parsed.followUpQuestion||flBuildMissingQtyQuestion(description),rawModelText:data.text};
     }
     if(!Array.isArray(parsed.items) || !parsed.items.length){
-      return{ok:false,error:'⚠️ مش قادر أحدد إيه اللي اتاكل بالظبط — جرب توصف تاني.'};
+      return{ok:false,error:uiIsEn()?'⚠️ Could not identify what was eaten — try describing it again.':'⚠️ مش قادر أحدد إيه اللي اتاكل بالظبط — جرب توصف تاني.'};
     }
     // Safety net: model returned "ready" with invented amounts when the user never
     // stated quantity. Force a single quantity question instead of logging a guess.
@@ -17099,12 +17136,18 @@ async function flLookupNutrition(items){
       // more specific" text as a real outage. Only the true no-match case tells you
       // to rephrase; everything else says what actually happened.
       if(res.status===404 || data.error==='No matching foods found'){
-        return{ok:false,error:'⚠️ مش لاقي بيانات غذائية دقيقة للوصف ده — جرب تبسطه أكتر (مثلاً: "200 جرام فراخ مشوية").'};
+        return{ok:false,error:uiIsEn()
+          ?'⚠️ No accurate nutrition data for that description — try simpler wording (e.g. "200g grilled chicken").'
+          :'⚠️ مش لاقي بيانات غذائية دقيقة للوصف ده — جرب تبسطه أكتر (مثلاً: "200 جرام فراخ مشوية").'};
       }
       if(res.status>=500){
-        return{ok:false,error:'⚠️ السيرفر واقع أو فيه مشكلة مؤقتة — جرب تاني بعد شوية (مش مشكلة في الوصف اللي كتبته).'};
+        return{ok:false,error:uiIsEn()
+          ?'⚠️ Server issue — try again in a moment (not a problem with what you typed).'
+          :'⚠️ السيرفر واقع أو فيه مشكلة مؤقتة — جرب تاني بعد شوية (مش مشكلة في الوصف اللي كتبته).'};
       }
-      return{ok:false,error:`⚠️ حصل خطأ (${data.error||res.status}) — جرب تاني، ولو تكرر قولّي.`};
+      return{ok:false,error:uiIsEn()
+        ?`⚠️ Error (${data.error||res.status}) — try again.`
+        :`⚠️ حصل خطأ (${data.error||res.status}) — جرب تاني، ولو تكرر قولّي.`};
     }
     // Client-side sanity gate — independent of whatever validation the Worker does
     // (or fails to do, e.g. an un-deployed fix). This is the actual backstop against
@@ -17126,16 +17169,20 @@ async function flLookupNutrition(items){
       // from the carb figure).
       if(expectedKcal>0 && Math.abs(m.k-expectedKcal)/Math.max(expectedKcal,m.k)>0.6){
         console.error('nutrition response failed kcal-consistency check',m);
-        return{ok:false,error:'⚠️ القيم اللي رجعت من السيرفر مش منطقية — جرب توصف الوجبة بشكل مختلف أو أبسط.'};
+        return{ok:false,error:uiIsEn()
+          ?'⚠️ Server returned implausible values — try a different or simpler description.'
+          :'⚠️ القيم اللي رجعت من السيرفر مش منطقية — جرب توصف الوجبة بشكل مختلف أو أبسط.'};
       }
     }else{
       console.error('nutrition response failed client-side sanity check',m);
-      return{ok:false,error:'⚠️ القيم اللي رجعت من السيرفر مش منطقية — جرب توصف الوجبة بشكل مختلف أو أبسط.'};
+      return{ok:false,error:uiIsEn()
+        ?'⚠️ Server returned implausible values — try a different or simpler description.'
+        :'⚠️ القيم اللي رجعت من السيرفر مش منطقية — جرب توصف الوجبة بشكل مختلف أو أبسط.'};
     }
     return{ok:true,macro:data.macro,items:data.items,anyRejected:!!data.anyRejected};
   }catch(e){
     console.error('nutrition lookup request failed',e);
-    return{ok:false,error:'⚠️ مش قادر أوصل للسيرفر دلوقتي.'};
+    return{ok:false,error:uiIsEn()?'⚠️ Cannot reach the server right now.':'⚠️ مش قادر أوصل للسيرفر دلوقتي.'};
   }
 }
 
@@ -17153,17 +17200,24 @@ async function flGetVerdict(task,macro,dayTarget,dayConsumed){
   // unrecognized task shape.
   const cat=task[2]||'';
   const nameForSlot=task[4]||'';
-  let mealSlotHint='وجبة';
-  if(cat==='snack') mealSlotHint='سناك (وجبة خفيفة اختيارية)';
-  else if(/فطار/.test(nameForSlot)) mealSlotHint='الفطار (أول وجبة في اليوم)';
-  else if(/غدا/.test(nameForSlot)) mealSlotHint='الغدا (الوجبة الرئيسية في النص)';
-  else if(/عشا/.test(nameForSlot)) mealSlotHint='العشا (آخر وجبة في اليوم)';
+  const enV=uiIsEn();
+  let mealSlotHint=enV?'a meal':'وجبة';
+  if(cat==='snack') mealSlotHint=enV?'a snack (optional light meal)':'سناك (وجبة خفيفة اختيارية)';
+  else if(/فطار|breakfast/i.test(nameForSlot)) mealSlotHint=enV?'breakfast (first meal of the day)':'الفطار (أول وجبة في اليوم)';
+  else if(/غدا|lunch/i.test(nameForSlot)) mealSlotHint=enV?'lunch (main midday meal)':'الغدا (الوجبة الرئيسية في النص)';
+  else if(/عشا|dinner/i.test(nameForSlot)) mealSlotHint=enV?'dinner (last meal of the day)':'العشا (آخر وجبة في اليوم)';
   const macroWithFiber={...macro, b: macro.b || 0};
-  const sys=`You are a friendly, casual nutrition buddy (not formal, not lecture-y) for Abdullah, embedded in his habit app. He just logged a real, precisely-measured meal for "${task[4]}" — this is ${mealSlotHint}. Full macro breakdown of THIS meal (grams unless noted): ${JSON.stringify(macroWithFiber)}. His remaining target for the REST of today after this meal: ${JSON.stringify(remaining)}.
+  const langRule=enV
+    ?'Reply in pure ENGLISH only (casual, friendly, no Arabic words at all).'
+    :'Reply in casual Egyptian/Gulf Arabic only (not formal فصحى), pure Arabic.';
+  const fiberExample=enV
+    ?'e.g. "add a side of veggies or a small salad" or "a spoon of chia seeds would bump fiber"'
+    :'e.g. "زود شوية خضار أو سلطة على جنب" or "لو حبيت تزود الألياف ملعقة بذور شيا أو طبق سلطة"';
+  const sys=`You are a friendly, casual nutrition buddy (not formal, not lecture-y) embedded in a habit app. The user just logged a precisely-measured meal for "${task[4]}" — this is ${mealSlotHint}. Full macro breakdown of THIS meal (grams unless noted): ${JSON.stringify(macroWithFiber)}. Remaining target for the REST of today after this meal: ${JSON.stringify(remaining)}.
 
-Reply in 2-3 short casual sentences, in the same dialect/language he'd naturally expect (default Egyptian/Gulf-friendly Arabic, casual not فصحى), covering BOTH of these — do not skip either one:
-1. Whether this meal fits his remaining daily budget (be direct and specific with real numbers, not generic praise).
-2. Whether this meal is NUTRITIONALLY APPROPRIATE for what it is (${mealSlotHint}) — judged on its own, not just against the daily total. Specifically check: does it have real protein for a main meal (breakfast/lunch/dinner should have meaningful protein, a snack doesn't need to)? Does it have essentially zero fiber (b field near 0) when it's a main meal — if so, say so directly and suggest ONE concrete, easy addition (e.g. "زود شوية خضار أو سلطة على جنب" or "لو حبيت تزود الألياف كل ما تحتاجه ملعقة بذور شيا أو طبق سلطة"). If the meal IS nutritionally solid for what it is, say that plainly instead of inventing a problem — never manufacture a complaint just to fill the second point.
+${langRule} Write 2-3 short casual sentences covering BOTH of these — do not skip either one:
+1. Whether this meal fits the remaining daily budget (be direct and specific with real numbers, not generic praise).
+2. Whether this meal is NUTRITIONALLY APPROPRIATE for what it is (${mealSlotHint}) — judged on its own, not just against the daily total. Specifically check: does it have real protein for a main meal (breakfast/lunch/dinner should have meaningful protein, a snack doesn't need to)? Does it have essentially zero fiber (b field near 0) when it's a main meal — if so, say so directly and suggest ONE concrete, easy addition (${fiberExample}). If the meal IS nutritionally solid for what it is, say that plainly instead of inventing a problem — never manufacture a complaint just to fill the second point.
 
 Be specific to the actual numbers given, never generic filler. Output ONLY the sentences, no JSON, no labels, no markdown.${aiMemoryBlock()}`;
   try{
@@ -17201,6 +17255,9 @@ Be specific to the actual numbers given, never generic filler. Output ONLY the s
 // ever needed, this only removes a single stray token, not the whole sentence).
 function cleanVerdictText(text){
   if(!text) return text;
+  // When UI is English, keep Latin text intact — only strip garbled Latin tokens
+  // from otherwise-Arabic verdicts (legacy model artifact).
+  if(uiIsEn()) return String(text).trim();
   return text
     .replace(/\b[a-zA-Z]{2,}\b/g,'')   // drop stray Latin-script words
     .replace(/\s{2,}/g,' ')             // collapse resulting double spaces
@@ -17325,7 +17382,9 @@ async function flRunLookupAndFinalize(task,description,items){
     // the total on the server. Surfacing this explicitly is the actual fix for "the
     // numbers are wrong and I can't tell why" — previously a partial/undercounted
     // total looked identical to a fully correct one.
-    showToast('⚠️ في عنصر واحد على الأقل من الوجبة معرفتش أحسبه بدقة — القيم اللي هتظهر ناقصة العنصر ده. شوف التفاصيل تحت.',4500,'warn');
+    showToast(uiIsEn()
+      ?'⚠️ At least one item could not be calculated accurately — totals below may be incomplete. Check the breakdown.'
+      :'⚠️ في عنصر واحد على الأقل من الوجبة معرفتش أحسبه بدقة — القيم اللي هتظهر ناقصة العنصر ده. شوف التفاصيل تحت.',4500,'warn');
   }
   const jd=getJDfromISO(SELECTED_DATE);
   const{target,consumed}=computeDayMacros(jd,SELECTED_DATE);
@@ -17337,7 +17396,7 @@ async function flRunLookupAndFinalize(task,description,items){
 async function flHandleSubmit(){
   if(!FL_ACTIVE_TASK) return;
   const text=document.getElementById('flFreeText').value.trim();
-  if(!text){showToast('اكتب إيه اللي أكلته الأول',2200,'warn');return;}
+  if(!text){showToast(uiIsEn()?'Type what you ate first':'اكتب إيه اللي أكلته الأول',2200,'warn');return;}
 
   document.getElementById('flChooseStep').style.display='none';
   document.getElementById('flLoadingStep').style.display='block';
@@ -17359,7 +17418,9 @@ async function flHandleSubmit(){
       // the per-item breakdown shown after lookup lets him see and fix a wrong guess
       // directly instead of getting stuck in another round-trip.
       document.getElementById('flLoadingStep').style.display='none';
-      showToast('كملنا بأفضل تفسير للوصف من غير سؤال تاني — راجع التفاصيل بعد الحساب ولو حاجة غلط عدّل الوصف واحسب تاني',3800,'warn');
+      showToast(uiIsEn()
+        ?'Using the best interpretation without another question — review the details after calculation and edit if needed'
+        :'كملنا بأفضل تفسير للوصف من غير سؤال تاني — راجع التفاصيل بعد الحساب ولو حاجة غلط عدّل الوصف واحسب تاني',3800,'warn');
       // Re-extract in "force ready" spirit isn't available without changing the
       // model contract, so fall back to a direct lookup pass using the raw text as
       // a single best-guess item is not reliable either — instead, ask the model
@@ -17371,7 +17432,9 @@ async function flHandleSubmit(){
       ]);
       if(!forcedResult.ok || !forcedResult.items || !forcedResult.items.length){
         document.getElementById('flChooseStep').style.display='block';
-        showToast('مش قادر أحسب الوصف ده — جرب تبسطه أكتر (مثلاً: ٢٠٠ جرام فراخ مشوي)',4000,'warn');
+        showToast(uiIsEn()
+          ?'Could not calculate that description — try something simpler (e.g. "200g grilled chicken")'
+          :'مش قادر أحسب الوصف ده — جرب تبسطه أكتر (مثلاً: ٢٠٠ جرام فراخ مشوي)',4000,'warn');
         return;
       }
       await flRunLookupAndFinalize(FL_ACTIVE_TASK,text,forcedResult.items);
@@ -17396,7 +17459,7 @@ async function flHandleAskAnswer(){
   if(!FL_ACTIVE_TASK) return;
   const askStep=document.getElementById('flAskStep');
   const answer=document.getElementById('flAskAnswer').value.trim();
-  if(!answer){showToast('اكتب إجابتك الأول',2000,'warn');return;}
+  if(!answer){showToast(uiIsEn()?'Type your answer first':'اكتب إجابتك الأول',2000,'warn');return;}
   const origText=askStep.dataset.origText||'';
   const priorQuestion=document.getElementById('flAskQuestion').textContent;
 
@@ -17422,7 +17485,9 @@ async function flHandleAskAnswer(){
     document.getElementById('flChooseStep').style.display='block';
     const freeText=document.getElementById('flFreeText');
     if(freeText) freeText.value=`${origText}، ${answer}`;
-    showToast('لسه مش واضح 100% — كملت الوصف تحت باللي قلته، ضيف التفصيلة الناقصة وابعت تاني',4200,'warn');
+    showToast(uiIsEn()
+      ?'Still not fully clear — I filled the description with what you said; add the missing detail and submit again'
+      :'لسه مش واضح 100% — كملت الوصف تحت باللي قلته، ضيف التفصيلة الناقصة وابعت تاني',4200,'warn');
     return;
   }
 
@@ -17440,7 +17505,7 @@ async function flHandleSaveOptYes(){
   if(entry && mealKey){
     addMealOption(mealKey,entry.description,entry.macro);
     try{ await saveMealOptions(); }catch(e){ console.warn('saveMealOptions failed',e); }
-    showToast('💾 اتحفظت كخيار سريع لنفس الوجبة دي',2400);
+    showToast(uiIsEn()?'💾 Saved as a quick option for this meal':'💾 اتحفظت كخيار سريع لنفس الوجبة دي',2400);
   }
   document.getElementById('flSaveOptRow').style.display='none';
 }
@@ -17832,7 +17897,8 @@ async function aiHandleSend(){
   if(!text && !pendingImg) return;
   input.value='';
   input.style.height='auto';
-  AI_REPLY_LANG=detectTextLang(text||'photo');
+  // UI language is authoritative: English settings → English AI replies always.
+  AI_REPLY_LANG=uiIsEn()?'en':detectTextLang(text||'photo');
 
   const user=fbAuth.currentUser;
   const session=aiGetActiveSession();
@@ -18089,21 +18155,22 @@ document.body.addEventListener('click',async e=>{
   if(undoBtn){
     const uid=undoBtn.getAttribute('data-undo-id');
     const snap=AI_UNDO_SNAPSHOTS.get(uid);
+    const enU=uiIsEn();
     if(!snap){
-      showToast('⚠️ التراجع ده مش متاح دلوقتي (يمكن الصفحة اتحدثت من ساعتها)',3200,'warn');
+      showToast(enU?'⚠️ Undo is no longer available (page may have refreshed)':'⚠️ التراجع ده مش متاح دلوقتي (يمكن الصفحة اتحدثت من ساعتها)',3200,'warn');
       return;
     }
     undoBtn.disabled=true;
-    undoBtn.textContent='...جاري التراجع';
+    undoBtn.textContent=enU?'…Undoing':'...جاري التراجع';
     const ok=await aiRestoreSnapshot(snap);
     if(ok){
       AI_UNDO_SNAPSHOTS.delete(uid); // one-time use — prevents undoing an undo into a confusing double-revert
-      undoBtn.textContent='✅ اتراجع';
-      showToast('↩️ تم التراجع عن التغيير',2400);
+      undoBtn.textContent=enU?'✅ Undone':'✅ اتراجع';
+      showToast(enU?'↩️ Change undone':'↩️ تم التراجع عن التغيير',2400);
     }else{
       undoBtn.disabled=false;
-      undoBtn.textContent='↩️ تراجع';
-      showToast('⚠️ فشل التراجع — جرب تاني',3000,'warn');
+      undoBtn.textContent=enU?'↩️ Undo':'↩️ تراجع';
+      showToast(enU?'⚠️ Undo failed — try again':'⚠️ فشل التراجع — جرب تاني',3000,'warn');
     }
     return;
   }
