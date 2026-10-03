@@ -1,6 +1,6 @@
 <!DOCTYPE html>
 <html lang="en" dir="ltr">
-<!-- cache-bust: 2026-10-03-ai-screen-nav -->
+<!-- cache-bust: 2026-10-03-edit-ux-prayer-end -->
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1.0,maximum-scale=1.0,user-scalable=no">
@@ -373,6 +373,62 @@ html[dir="rtl"] .tc{animation-name:tcEnterRtl}
 .tl{position:relative;padding-right:20px}
 .tl::before{content:'';position:absolute;right:7px;top:0;bottom:0;width:2px;background:linear-gradient(to bottom,var(--ac),transparent);border-radius:2px}
 .tc{position:relative;margin-bottom:8px;padding:12px 14px;background:var(--c);border:1px solid var(--br);border-radius:12px;display:flex;align-items:flex-start;gap:10px;animation:tcEnter var(--duration-snappy) var(--ease-snappy) both;transition:opacity .45s cubic-bezier(0.4,0,0.2,1),background .35s ease,border-color .35s ease,filter .45s ease,transform var(--duration-snappy) var(--ease-snappy),box-shadow var(--duration-snappy) var(--ease-snappy)}
+/* Edit-mode polish */
+body.schedule-edit-live .tc.tc-edit-mode{
+  box-shadow:0 0 0 1px color-mix(in srgb, var(--ac) 22%, transparent);
+  animation:tcEditPulse .55s var(--ease-snappy,cubic-bezier(.2,.8,.2,1)) both;
+}
+@keyframes tcEditPulse{
+  from{transform:translateY(6px);opacity:.55}
+  to{transform:none;opacity:1}
+}
+.edit-act-cluster{
+  display:flex;gap:6px;flex-shrink:0;align-items:center;flex-wrap:wrap;
+  animation:editClusterIn .35s ease both;
+}
+@keyframes editClusterIn{
+  from{opacity:0;transform:translateX(8px)}
+  to{opacity:1;transform:none}
+}
+html[dir="rtl"] .edit-act-cluster{animation-name:editClusterInRtl}
+@keyframes editClusterInRtl{
+  from{opacity:0;transform:translateX(-8px)}
+  to{opacity:1;transform:none}
+}
+.edit-sel-chip{
+  display:flex;align-items:center;justify-content:center;
+  width:34px;height:34px;border-radius:10px;cursor:pointer;
+  border:1.5px solid var(--br);background:rgba(255,255,255,.03);
+  transition:border-color .2s,background .2s,transform .15s;
+}
+.edit-sel-chip:hover{border-color:var(--ac);transform:scale(1.04)}
+.edit-sel-chip.on{
+  border-color:var(--ac);
+  background:color-mix(in srgb, var(--ac) 20%, transparent);
+  box-shadow:0 0 0 3px color-mix(in srgb, var(--ac) 18%, transparent);
+}
+.edit-sel-chip input{width:16px;height:16px;accent-color:var(--ac);margin:0;pointer-events:none}
+.edit-ico-btn{
+  width:34px;height:34px;border-radius:10px;border:1.5px solid var(--br);
+  background:rgba(255,255,255,.04);color:var(--tx);cursor:pointer;
+  font-size:.9rem;display:inline-flex;align-items:center;justify-content:center;
+  transition:transform .15s ease,border-color .2s,background .2s,box-shadow .2s;
+}
+.edit-ico-btn:hover{transform:translateY(-1px) scale(1.05)}
+.edit-ico-btn:active{transform:scale(.96)}
+.edit-ico-edit:hover{border-color:rgba(59,130,246,.55);background:rgba(59,130,246,.12);box-shadow:0 4px 14px rgba(59,130,246,.2)}
+.edit-ico-del{border-color:rgba(239,68,68,.35);color:#f87171}
+.edit-ico-del:hover{background:rgba(239,68,68,.14);box-shadow:0 4px 14px rgba(239,68,68,.2)}
+#editModeBar.edit-bar-in{animation:editBarIn .32s cubic-bezier(.2,.8,.2,1) both}
+#editModeBar.edit-bar-out{animation:editBarOut .22s ease both}
+@keyframes editBarIn{
+  from{opacity:0;transform:translateX(-50%) translateY(16px) scale(.96)}
+  to{opacity:1;transform:translateX(-50%) translateY(0) scale(1)}
+}
+@keyframes editBarOut{
+  from{opacity:1;transform:translateX(-50%) translateY(0)}
+  to{opacity:0;transform:translateX(-50%) translateY(12px)}
+}
 .tc:hover{transform:translateY(-2px) scale(1.012);box-shadow:0 10px 28px -6px rgba(0,0,0,.42),0 0 18px -4px color-mix(in srgb,var(--accent-color,var(--ac)) 22%,transparent);border-color:color-mix(in srgb,var(--accent-color,var(--ac)) 40%,var(--br))}
 .tc-drag-handle{display:inline-flex;align-items:center;justify-content:center;width:22px;height:32px;cursor:grab;color:var(--mu);opacity:.45;transition:opacity .2s ease,color .2s ease,transform .2s ease,background .2s;user-select:none;-webkit-user-select:none;touch-action:none;flex-shrink:0;margin-top:2px;border-radius:8px}
 .tc-drag-handle:hover{opacity:1;color:var(--ac);transform:scale(1.08);background:color-mix(in srgb, var(--ac) 12%, transparent)}
@@ -4633,6 +4689,10 @@ body.theme-matrix .tctime{
         <label for="stNotify" id="stNotifyLbl" style="font-size:.82rem;font-weight:700">🔔 Notify me about this task</label>
         <input type="checkbox" id="stNotify" checked style="width:20px;height:20px;accent-color:var(--ac)">
       </div>
+      <div class="set-row" style="border:none;padding:8px 0">
+        <label for="stDetailPlan" id="stDetailPlanLbl" style="font-size:.82rem;font-weight:700">📋 Detailed plan (sections &amp; items)</label>
+        <input type="checkbox" id="stDetailPlan" style="width:20px;height:20px;accent-color:var(--ac)">
+      </div>
       <div id="stFoodLogRow" class="set-row" style="border:none;padding:8px 0;display:none">
         <label for="stFoodLog" id="stFoodLogLbl" style="font-size:.82rem;font-weight:700">🍽️ Log food for this task?</label>
         <input type="checkbox" id="stFoodLog" style="width:20px;height:20px;accent-color:var(--ac)">
@@ -5159,6 +5219,21 @@ body.theme-matrix .tctime{
         <button type="button" class="ptour-btn ptour-next" id="ptourNext">Next</button>
       </div>
     </div>
+  </div>
+</div>
+
+<!-- Nested task plan (sessions → exercises: machine / sets / reps / rest / technique) -->
+<div id="taskPlanModal" class="modal-overlay" style="z-index:10220">
+  <div class="modal-box" style="max-width:480px;max-height:88vh;display:flex;flex-direction:column;padding:0;overflow:hidden">
+    <div style="padding:14px 16px 10px;border-bottom:1px solid var(--br);display:flex;align-items:center;justify-content:space-between;gap:10px;flex-shrink:0">
+      <div>
+        <div class="modal-title" id="tpTitle" style="margin:0;font-size:1rem;text-align:start">Task plan</div>
+        <div id="tpSubtitle" style="font-size:.72rem;color:var(--mu);margin-top:2px;text-align:start"></div>
+      </div>
+      <button type="button" id="tpCloseBtn" class="modal-back-btn" style="margin:0;padding:6px 12px">Close</button>
+    </div>
+    <div id="tpBody" style="padding:12px 14px;overflow-y:auto;flex:1;-webkit-overflow-scrolling:touch"></div>
+    <div id="tpFooter" style="padding:10px 14px 14px;border-top:1px solid var(--br);flex-shrink:0;display:flex;gap:8px;flex-wrap:wrap"></div>
   </div>
 </div>
 
@@ -7141,6 +7216,7 @@ async function saveScheduleTask(jd,existingId,{time,name,desc,pts,color,foodLog,
   USER_SETTINGS.taskNotif[id]={...prev,enabled:notify!==false};
   try{ await saveUserSettings(); }catch(e){}
   await saveUserSchedule();
+  return id;
 }
 
 async function deleteScheduleTask(jd,taskId){
@@ -7587,6 +7663,7 @@ function openScheduleTaskEditor(jd,existingTask,opts){
   setLbl('stIconLbl','Task icon','أيقونة المهمة');
   setLbl('stColorLbl','Color','اللون');
   setLbl('stNotifyLbl','🔔 Notify me about this task','🔔 ذكّرني بهذه المهمة');
+  setLbl('stDetailPlanLbl','📋 Detailed plan (sections & items)','📋 خطة تفصيلية (أقسام وعناصر)');
   setLbl('stFoodLogLbl','🍽️ Log food for this task?','🍽️ تسجيل أكل لهذه المهمة؟');
 
   // Priority row wiring and labels
@@ -7713,6 +7790,12 @@ function openScheduleTaskEditor(jd,existingTask,opts){
       else{ b.style.borderColor=''; b.style.color=''; }
     };
   }
+  const planToggle=document.getElementById('stDetailPlan');
+  if(planToggle){
+    const tid=existingTask?existingTask[0]:null;
+    const enabled=!!(tid && USER_EDITS && USER_EDITS.taskPlans && USER_EDITS.taskPlans[tid] && USER_EDITS.taskPlans[tid].enabled);
+    planToggle.checked=enabled;
+  }
   const notifyEl=document.getElementById('stNotify');
   if(notifyEl){
     const cfg=existingTask?getTaskNotifConfig(existingTask[0]):{enabled:true};
@@ -7776,6 +7859,7 @@ async function stHandleSave(){
   if(!days.length) days.push(ST_ACTIVE_JD);
   const notify=!!document.getElementById('stNotify')?.checked;
   const foodLog=!!document.getElementById('stFoodLog')?.checked;
+  const detailPlanOn=!!document.getElementById('stDetailPlan')?.checked;
   const returnToSettings=ST_RETURN_TO_SETTINGS;
   const selectedCat = ST_SELECTED_CATEGORY || document.getElementById('stCategory')?.value || (foodLog ? 'food' : 'routine');
   const enSave=(USER_SETTINGS&&USER_SETTINGS.lang)==='en';
@@ -7830,7 +7914,8 @@ async function stHandleSave(){
       try{ if(typeof saveUserEdits==='function') await saveUserEdits(); }catch(e){}
     }else if(editScope==='weekday' && ST_ACTIVE_TASK_ID){
       // Only the weekday being viewed (ST_ACTIVE_JD), not all selected days
-      await saveScheduleTask(ST_ACTIVE_JD,ST_ACTIVE_TASK_ID,{time:displayTime,name,desc,pts,color:ST_SELECTED_COLOR,foodLog,endTime:displayEnd,days:[ST_ACTIVE_JD],notify,cat:selectedCat,icon:ST_SELECTED_ICON,priority});
+      const savedId=await saveScheduleTask(ST_ACTIVE_JD,ST_ACTIVE_TASK_ID,{time:displayTime,name,desc,pts,color:ST_SELECTED_COLOR,foodLog,endTime:displayEnd,days:[ST_ACTIVE_JD],notify,cat:selectedCat,icon:ST_SELECTED_ICON,priority});
+      if(savedId) ST_ACTIVE_TASK_ID=savedId;
       if(USER_EDITS && USER_EDITS.dayOverrides){
         const iso=SELECTED_DATE||TODAY;
         if(USER_EDITS.dayOverrides[iso] && USER_EDITS.dayOverrides[iso][ST_ACTIVE_TASK_ID]){
@@ -7839,7 +7924,8 @@ async function stHandleSave(){
         try{ if(typeof saveUserEdits==='function') await saveUserEdits(); }catch(e){}
       }
     }else{
-      await saveScheduleTask(ST_ACTIVE_JD,ST_ACTIVE_TASK_ID,{time:displayTime,name,desc,pts,color:ST_SELECTED_COLOR,foodLog,endTime:displayEnd,days,notify,cat:selectedCat,icon:ST_SELECTED_ICON,priority});
+      const savedId=await saveScheduleTask(ST_ACTIVE_JD,ST_ACTIVE_TASK_ID,{time:displayTime,name,desc,pts,color:ST_SELECTED_COLOR,foodLog,endTime:displayEnd,days,notify,cat:selectedCat,icon:ST_SELECTED_ICON,priority});
+      if(savedId) ST_ACTIVE_TASK_ID=savedId;
       // Clear any day-only override for this task if promoting to forever
       if(ST_ACTIVE_TASK_ID && USER_EDITS && USER_EDITS.dayOverrides){
         for(const iso of Object.keys(USER_EDITS.dayOverrides)){
@@ -7855,6 +7941,16 @@ async function stHandleSave(){
     if(errEl){ errEl.textContent='⚠️ Save failed'; errEl.style.display='block'; }
     return;
   }
+  // Per-task detailed plan on/off (any category — gym, study, work, etc.)
+  try{
+    const planTaskId=ST_ACTIVE_TASK_ID;
+    if(planTaskId){
+      const plan=tpEnsurePlan(planTaskId);
+      plan.enabled=!!detailPlanOn;
+      if(!plan.sessions) plan.sessions=[];
+      await tpSave();
+    }
+  }catch(e){ console.warn('detail plan toggle save',e); }
   // Close modal without auto-restoring settings yet — we re-open after schedule re-render.
   document.getElementById('schedTaskModal')?.classList.remove('open');
   ST_ACTIVE_JD=null;
@@ -9546,6 +9642,16 @@ async function obFinish(){
   }
 }
 
+/** End of prayer window = start of next prayer (same logic as lateness/Qada). */
+function getPrayerEndTime24(pk, taskId){
+  if(taskId && String(taskId).includes('fri-jm')) return PRYT.Asr||FALLBK.Asr;
+  if(pk==='Fajr') return PRYT.Sunrise||FALLBK.Sunrise;
+  if(pk==='Dhuhr'||pk==='Jumua') return PRYT.Asr||FALLBK.Asr;
+  if(pk==='Asr') return PRYT.Maghrib||FALLBK.Maghrib;
+  if(pk==='Maghrib') return PRYT.Isha||FALLBK.Isha;
+  if(pk==='Isha') return null; // until midnight / next Fajr — show soft label
+  return null;
+}
 function buildPTasks(jd){
   const k=DKEYS ? DKEYS[jd] : ['sun','mon','tue','wed','thu','fri','sat'][jd];
   const en=(USER_SETTINGS&&USER_SETTINGS.lang)==='en';
@@ -9555,11 +9661,18 @@ function buildPTasks(jd){
     .map(([pk,pm])=>{
       const t24=PRYT[pk]||FALLBK[pk];
       const timeStr=fmt24(t24);
+      const end24=getPrayerEndTime24(pk);
+      const endDisp=end24?displayTime(end24):null;
+      const startDisp=displayTime(t24);
       let desc;
       if(en){
-        desc=pk==='Fajr'?`${timeStr} · Rest/Sleep after ✓`:`Prayer Time: ${timeStr}`;
+        if(pk==='Isha') desc=`Ends by midnight · starts ${startDisp}`;
+        else if(pk==='Fajr') desc=`Ends at ${endDisp||'sunrise'} · rest after ✓`;
+        else desc=`Ends at ${endDisp||'—'} · starts ${startDisp}`;
       }else{
-        desc=pk==='Fajr'?`${timeStr} · ارجع نام بعدها ✓`:`وقت الصلاة: ${timeStr}`;
+        if(pk==='Isha') desc=`تنتهي قبل منتصف الليل · تبدأ ${startDisp}`;
+        else if(pk==='Fajr') desc=`تنتهي عند ${endDisp||'الشروق'} · ارجع نام بعدها ✓`;
+        else desc=`تنتهي عند ${endDisp||'—'} · تبدأ ${startDisp}`;
       }
       return[`pr-${k}-${pk}`,timeStr,'prayer',pm.ic,pm.ar,desc,pm.pts,null,null,false,t24];
     });
@@ -9659,9 +9772,243 @@ let FIRST_SEEN=null; // 'YYYY-MM-DD' — the first day this account/browser ever
 //   pointOverrides: { [taskId]: number }
 //   customTasks: [ { id, date, time, cat, ico, name, desc, pts, createdAt } ]
 //   order: { [dateIsoOrJd]: [taskId1, taskId2, ...] }
-let USER_EDITS={moves:{},deletes:{},dayDeletes:{},dayOverrides:{},pointOverrides:{},customTasks:[],order:{}};
+let USER_EDITS={moves:{},deletes:{},dayDeletes:{},dayOverrides:{},pointOverrides:{},customTasks:[],order:{},taskPlans:{}};
 
-function emptyUserEdits(){return{moves:{},deletes:{},dayDeletes:{},dayOverrides:{},pointOverrides:{},customTasks:[],order:{}};}
+function emptyUserEdits(){return{moves:{},deletes:{},dayDeletes:{},dayOverrides:{},pointOverrides:{},customTasks:[],order:{},taskPlans:{}};}
+
+// ===== Nested task plans (sessions → exercises) =====
+// Gym example: Gym task → Pull Day session → Lat Pulldown {machine, sets, reps, rest, technique}
+const TP_TECHNIQUES=[
+  {id:'normal',en:'Normal',ar:'عادي'},
+  {id:'superset',en:'Superset',ar:'سوبرسيت'},
+  {id:'dropset',en:'Drop set',ar:'دروب سيت'},
+  {id:'pyramid',en:'Pyramid',ar:'هرمي'},
+  {id:'restpause',en:'Rest-pause',ar:'رست-بوز'},
+  {id:'circuit',en:'Circuit',ar:'دائري'}
+];
+let TP_ACTIVE={taskId:null,taskName:'',view:'sessions',sessionId:null};
+
+function tpEnsurePlan(taskId){
+  if(!USER_EDITS) USER_EDITS=emptyUserEdits();
+  if(!USER_EDITS.taskPlans) USER_EDITS.taskPlans={};
+  if(!USER_EDITS.taskPlans[taskId]) USER_EDITS.taskPlans[taskId]={enabled:false,sessions:[]};
+  if(USER_EDITS.taskPlans[taskId].enabled==null) USER_EDITS.taskPlans[taskId].enabled=false;
+  if(!Array.isArray(USER_EDITS.taskPlans[taskId].sessions)) USER_EDITS.taskPlans[taskId].sessions=[];
+  return USER_EDITS.taskPlans[taskId];
+}
+function tpUid(prefix){ return (prefix||'tp')+'_'+Date.now().toString(36)+Math.random().toString(36).slice(2,7); }
+function tpTechLabel(id){
+  const t=TP_TECHNIQUES.find(x=>x.id===id)||TP_TECHNIQUES[0];
+  return uiIsEn()?t.en:t.ar;
+}
+async function tpSave(){
+  try{ if(typeof saveUserEdits==='function') await saveUserEdits(); }catch(e){ console.warn('tpSave',e); }
+  try{ if(typeof renderPanels==='function'){ renderPanels(); switchDay(getJDfromISO(SELECTED_DATE)); } }catch(e){}
+}
+
+function openTaskPlan(taskId,taskName){
+  TP_ACTIVE={taskId,taskName:taskName||taskId,view:'sessions',sessionId:null};
+  tpEnsurePlan(taskId);
+  const modal=document.getElementById('taskPlanModal');
+  if(modal) modal.classList.add('open');
+  tpRender();
+}
+function closeTaskPlan(){
+  document.getElementById('taskPlanModal')?.classList.remove('open');
+  TP_ACTIVE={taskId:null,taskName:'',view:'sessions',sessionId:null};
+}
+function tpRender(){
+  const en=uiIsEn();
+  const title=document.getElementById('tpTitle');
+  const sub=document.getElementById('tpSubtitle');
+  const body=document.getElementById('tpBody');
+  const foot=document.getElementById('tpFooter');
+  if(!body||!TP_ACTIVE.taskId) return;
+  const plan=tpEnsurePlan(TP_ACTIVE.taskId);
+
+  // Enable/disable is always available at the top of the plan modal
+  const enabledToggle=`<label style="display:flex;align-items:center;justify-content:space-between;gap:10px;padding:10px 12px;margin-bottom:12px;border-radius:10px;border:1px solid var(--br);background:rgba(255,255,255,.03);font-size:.8rem;font-weight:700;cursor:pointer">
+    <span>${en?'Detailed plan enabled for this task':'الخطة التفصيلية مفعّلة لهذه المهمة'}</span>
+    <input type="checkbox" id="tpEnabledToggle" ${plan.enabled?'checked':''} style="width:18px;height:18px;accent-color:var(--ac)">
+  </label>`;
+
+  if(TP_ACTIVE.view==='sessions'){
+    if(title) title.textContent=en?`Plan · ${TP_ACTIVE.taskName}`:`خطة · ${TP_ACTIVE.taskName}`;
+    if(sub) sub.textContent=en?'Sections under this task (study blocks, workout days, steps…)':'أقسام تحت المهمة (بلوكات مذاكرة، أيام تمرين، خطوات…)';
+    if(!plan.enabled){
+      body.innerHTML=enabledToggle+`<div style="text-align:center;padding:20px 12px;color:var(--mu);font-size:.85rem;line-height:1.6">${en
+        ?'Turn the switch on to build nested details for <strong>any</strong> task — not only gym.'
+        :'فعّل المفتاح عشان تبني تفاصيل متداخلة لأي مهمة — مش الجيم بس.'}</div>`;
+      if(foot) foot.innerHTML='';
+      return;
+    }
+    if(!plan.sessions.length){
+      body.innerHTML=enabledToggle+`<div style="text-align:center;padding:28px 12px;color:var(--mu);font-size:.85rem;line-height:1.6">${en
+        ?'No sections yet.<br>Add a section (e.g. <strong>Pull Day</strong>, <strong>Chapter 3</strong>), then open it to add detail items.'
+        :'مفيش أقسام لسه.<br>ضيف قسم (مثلاً <strong>يوم سحب</strong> أو <strong>باب ٣</strong>)، وبعدين افتحه عشان تضيف عناصر تفصيلية.'}</div>`;
+    }else{
+      body.innerHTML=enabledToggle+plan.sessions.map(s=>{
+        const n=(s.exercises||[]).length;
+        return `<button type="button" class="tp-sess-row" data-tp-open-sess="${s.id}" style="width:100%;text-align:start;display:flex;align-items:center;justify-content:space-between;gap:10px;padding:12px 14px;margin-bottom:8px;border-radius:12px;border:1px solid var(--br);background:rgba(255,255,255,.03);color:var(--tx);cursor:pointer;font-family:inherit">
+          <span style="display:flex;flex-direction:column;gap:2px;min-width:0">
+            <span style="font-weight:800;font-size:.9rem">${String(s.name||'').replace(/</g,'&lt;')}</span>
+            <span style="font-size:.7rem;color:var(--mu)">${n} ${en?(n===1?'item':'items'):(n===1?'عنصر':'عناصر')}</span>
+          </span>
+          <span style="display:flex;gap:6px;align-items:center;flex-shrink:0">
+            <span data-tp-del-sess="${s.id}" style="padding:6px 8px;border-radius:8px;border:1px solid rgba(239,68,68,.35);color:#f87171;font-size:.75rem" title="${en?'Delete':'حذف'}">🗑️</span>
+            <span style="opacity:.5">›</span>
+          </span>
+        </button>`;
+      }).join('');
+    }
+    if(foot) foot.innerHTML=`<button type="button" id="tpAddSessionBtn" class="fl-submit-btn" style="flex:1;margin:0">${en?'+ Add section':'＋ إضافة قسم'}</button>`;
+  }else{
+    const sess=(plan.sessions||[]).find(s=>s.id===TP_ACTIVE.sessionId);
+    if(!sess){ TP_ACTIVE.view='sessions'; tpRender(); return; }
+    if(title) title.textContent=String(sess.name||(en?'Section':'قسم'));
+    if(sub) sub.textContent=en?`Detail items · ${TP_ACTIVE.taskName}`:`عناصر تفصيلية · ${TP_ACTIVE.taskName}`;
+    const exs=sess.exercises||[];
+    if(!exs.length){
+      body.innerHTML=`<div style="text-align:center;padding:24px 12px;color:var(--mu);font-size:.85rem">${en
+        ?'No detail items yet. Add anything: topics, machines, steps — optional sets/reps/rest for workouts.'
+        :'مفيش عناصر لسه. ضيف أي حاجة: مواضيع، أجهزة، خطوات — والمجموعات اختيارية للجيم.'}</div>`;
+    }else{
+      body.innerHTML=exs.map(ex=>{
+        const tech=ex.technique?tpTechLabel(ex.technique):'';
+        const chips=[];
+        if(ex.sets) chips.push(`<span style="padding:3px 8px;border-radius:6px;background:rgba(59,130,246,.12);border:1px solid rgba(59,130,246,.3);color:#93c5fd">${ex.sets} ${en?'sets':'مج'}</span>`);
+        if(ex.reps) chips.push(`<span style="padding:3px 8px;border-radius:6px;background:rgba(16,185,129,.12);border:1px solid rgba(16,185,129,.3);color:#6ee7b7">${ex.reps} ${en?'reps':'تكرار'}</span>`);
+        if(ex.restSec!=null&&ex.restSec!=='') chips.push(`<span style="padding:3px 8px;border-radius:6px;background:rgba(245,158,11,.12);border:1px solid rgba(245,158,11,.3);color:#fcd34d">${ex.restSec}s ${en?'rest':'راحة'}</span>`);
+        if(tech) chips.push(`<span style="padding:3px 8px;border-radius:6px;background:rgba(139,92,246,.12);border:1px solid rgba(139,92,246,.3);color:#c4b5fd">${tech}</span>`);
+        return `<div class="tp-ex-card" data-ex-id="${ex.id}" style="padding:12px 14px;margin-bottom:10px;border-radius:12px;border:1px solid var(--br);background:rgba(255,255,255,.03)">
+          <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:8px;margin-bottom:8px">
+            <div style="min-width:0">
+              <div style="font-weight:800;font-size:.9rem">${String(ex.name||'').replace(/</g,'&lt;')}</div>
+              ${ex.machine?`<div style="font-size:.72rem;color:var(--mu);margin-top:2px">${String(ex.machine).replace(/</g,'&lt;')}</div>`:''}
+            </div>
+            <div style="display:flex;gap:4px;flex-shrink:0">
+              <button type="button" data-tp-edit-ex="${ex.id}" style="padding:5px 8px;border-radius:8px;border:1px solid var(--br);background:transparent;color:var(--tx);cursor:pointer;font-size:.72rem">✏️</button>
+              <button type="button" data-tp-del-ex="${ex.id}" style="padding:5px 8px;border-radius:8px;border:1px solid rgba(239,68,68,.35);background:transparent;color:#f87171;cursor:pointer;font-size:.72rem">🗑️</button>
+            </div>
+          </div>
+          ${chips.length?`<div style="display:flex;flex-wrap:wrap;gap:6px;font-size:.72rem">${chips.join('')}</div>`:''}
+          ${ex.notes?`<div style="margin-top:8px;font-size:.72rem;color:var(--so);line-height:1.5">${String(ex.notes).replace(/</g,'&lt;')}</div>`:''}
+        </div>`;
+      }).join('');
+    }
+    if(foot) foot.innerHTML=`
+      <button type="button" id="tpBackSessionsBtn" class="modal-back-btn" style="margin:0">${en?'← Sections':'→ الأقسام'}</button>
+      <button type="button" id="tpAddExerciseBtn" class="fl-submit-btn" style="flex:1;margin:0">${en?'+ Add detail item':'＋ إضافة عنصر'}</button>`;
+  }
+}
+
+function tpPromptSession(){
+  const en=uiIsEn();
+  const name=prompt(en?'Section name (e.g. Pull Day, Chapter 3, Morning block)':'اسم القسم (مثلاً يوم سحب، باب ٣، بلوك الصبح)');
+  if(!name||!name.trim()) return;
+  const plan=tpEnsurePlan(TP_ACTIVE.taskId);
+  plan.enabled=true;
+  plan.sessions.push({id:tpUid('sess'),name:name.trim(),exercises:[]});
+  tpSave().then(()=>tpRender());
+}
+function tpPromptExercise(existing){
+  const en=uiIsEn();
+  const name=prompt(en?'Detail item name (topic, machine, step…)':'اسم العنصر (موضوع، جهاز، خطوة…)',existing?.name||'');
+  if(name===null) return null;
+  if(!String(name).trim()){ showToast(en?'Name is required':'الاسم مطلوب',2000,'warn'); return null; }
+  const machine=prompt(en?'Extra label / place / tool (optional)':'تسمية إضافية / مكان / أداة (اختياري)',existing?.machine||'')||'';
+  // Gym-style fields are optional — leave blank for study/other tasks
+  const setsRaw=prompt(en?'Sets (optional — leave empty if N/A)':'مجموعات (اختياري — اتركه فاضي لو مش مطلوب)',existing?.sets!=null&&existing.sets!==''?String(existing.sets):'');
+  const reps=prompt(en?'Reps or amount (optional)':'تكرارات أو كمية (اختياري)',existing?.reps||'')||'';
+  const restRaw=prompt(en?'Rest seconds (optional)':'راحة بالثواني (اختياري)',existing?.restSec!=null&&existing.restSec!==''?String(existing.restSec):'');
+  const techList=['0. '+(en?'None':'بدون')].concat(TP_TECHNIQUES.map((t,i)=>`${i+1}. ${en?t.en:t.ar}`)).join('\n');
+  const techRaw=prompt((en?'Technique (optional):\n':'الأسلوب (اختياري):\n')+techList+'\n'+(en?'0 = skip':'0 = تخطي'),existing?.technique?String(TP_TECHNIQUES.findIndex(t=>t.id===existing.technique)+1):'0');
+  const techNum=parseInt(techRaw,10);
+  const technique=(techNum>=1&&techNum<=TP_TECHNIQUES.length)?TP_TECHNIQUES[techNum-1].id:'';
+  const notes=prompt(en?'Notes (optional)':'ملاحظات (اختياري)',existing?.notes||'')||'';
+  const setsN=setsRaw!=null&&String(setsRaw).trim()!==''?Math.max(1,parseInt(setsRaw,10)||0):'';
+  const restN=restRaw!=null&&String(restRaw).trim()!==''?Math.max(0,parseInt(restRaw,10)||0):'';
+  return {
+    id:existing?.id||tpUid('ex'),
+    name:String(name).trim(),
+    machine:String(machine).trim(),
+    sets:setsN||'',
+    reps:String(reps).trim(),
+    restSec:restN===''?'':restN,
+    technique,
+    notes:String(notes).trim()
+  };
+}
+
+// Wire plan modal once
+(function wireTaskPlanModal(){
+  const modal=document.getElementById('taskPlanModal');
+  if(!modal||modal._tpWired) return;
+  modal._tpWired=true;
+  document.getElementById('tpCloseBtn')?.addEventListener('click',closeTaskPlan);
+  modal.addEventListener('click',e=>{ if(e.target===modal) closeTaskPlan(); });
+  document.getElementById('tpBody')?.addEventListener('change',async e=>{
+    if(e.target&&e.target.id==='tpEnabledToggle'){
+      const plan=tpEnsurePlan(TP_ACTIVE.taskId);
+      plan.enabled=!!e.target.checked;
+      await tpSave();
+      tpRender();
+    }
+  });
+  document.getElementById('tpBody')?.addEventListener('click',async e=>{
+    const delS=e.target.closest('[data-tp-del-sess]');
+    if(delS){
+      e.stopPropagation();
+      const sid=delS.getAttribute('data-tp-del-sess');
+      const en=uiIsEn();
+      if(!confirm(en?'Delete this section and all its items?':'حذف القسم وكل عناصره؟')) return;
+      const plan=tpEnsurePlan(TP_ACTIVE.taskId);
+      plan.sessions=plan.sessions.filter(s=>s.id!==sid);
+      await tpSave(); tpRender(); return;
+    }
+    const openS=e.target.closest('[data-tp-open-sess]');
+    if(openS){
+      TP_ACTIVE.view='exercises';
+      TP_ACTIVE.sessionId=openS.getAttribute('data-tp-open-sess');
+      tpRender(); return;
+    }
+    const delEx=e.target.closest('[data-tp-del-ex]');
+    if(delEx){
+      const eid=delEx.getAttribute('data-tp-del-ex');
+      const plan=tpEnsurePlan(TP_ACTIVE.taskId);
+      const sess=plan.sessions.find(s=>s.id===TP_ACTIVE.sessionId);
+      if(sess){ sess.exercises=(sess.exercises||[]).filter(x=>x.id!==eid); await tpSave(); tpRender(); }
+      return;
+    }
+    const editEx=e.target.closest('[data-tp-edit-ex]');
+    if(editEx){
+      const eid=editEx.getAttribute('data-tp-edit-ex');
+      const plan=tpEnsurePlan(TP_ACTIVE.taskId);
+      const sess=plan.sessions.find(s=>s.id===TP_ACTIVE.sessionId);
+      const ex=(sess?.exercises||[]).find(x=>x.id===eid);
+      if(!ex) return;
+      const updated=tpPromptExercise(ex);
+      if(!updated) return;
+      Object.assign(ex,updated);
+      await tpSave(); tpRender();
+    }
+  });
+  document.getElementById('tpFooter')?.addEventListener('click',async e=>{
+    if(e.target.closest('#tpAddSessionBtn')){ tpPromptSession(); return; }
+    if(e.target.closest('#tpBackSessionsBtn')){ TP_ACTIVE.view='sessions'; TP_ACTIVE.sessionId=null; tpRender(); return; }
+    if(e.target.closest('#tpAddExerciseBtn')){
+      const plan=tpEnsurePlan(TP_ACTIVE.taskId);
+      const sess=plan.sessions.find(s=>s.id===TP_ACTIVE.sessionId);
+      if(!sess) return;
+      const ex=tpPromptExercise(null);
+      if(!ex) return;
+      if(!sess.exercises) sess.exercises=[];
+      sess.exercises.push(ex);
+      await tpSave(); tpRender();
+    }
+  });
+})();
+
 window.SCHEDULE_EDIT_MODE=false;
 window.SELECTED_EDIT_TASKS=new Set();
 window.EDIT_UNDO_STACK=[];
@@ -9715,9 +10062,17 @@ function setScheduleEditMode(on){
   const bar=document.getElementById('editModeBar');
   const en=(USER_SETTINGS&&USER_SETTINGS.lang)==='en';
   if(bar){
-    bar.style.display=window.SCHEDULE_EDIT_MODE?'flex':'none';
+    if(window.SCHEDULE_EDIT_MODE){
+      bar.style.display='flex';
+      bar.classList.remove('edit-bar-out');
+      bar.classList.add('edit-bar-in');
+    }else{
+      bar.classList.remove('edit-bar-in');
+      bar.classList.add('edit-bar-out');
+      setTimeout(()=>{ if(!window.SCHEDULE_EDIT_MODE) bar.style.display='none'; },220);
+    }
     const lab=document.getElementById('editModeBarLabel');
-    if(lab) lab.textContent=en?'Edit mode — select tasks to delete':'وضع التعديل — اختر مهام للحذف';
+    if(lab) lab.textContent=en?'Edit mode — tap a card to edit':'وضع التعديل — اضغط على بطاقة للتعديل';
     const u=document.getElementById('editUndoBtn'); if(u) u.textContent=en?'↶ Undo':'↶ تراجع';
     const r=document.getElementById('editRedoBtn'); if(r) r.textContent=en?'↷ Redo':'↷ إعادة';
     const d=document.getElementById('editMultiDeleteBtn'); if(d) d.textContent=en?'🗑️ Delete selected':'🗑️ حذف المحدد';
@@ -9725,6 +10080,18 @@ function setScheduleEditMode(on){
   }
   const editModeEl=document.getElementById('setScheduleEditMode');
   if(editModeEl) editModeEl.checked=!!window.SCHEDULE_EDIT_MODE;
+  // Leaving settings is part of the edit experience — land on the live schedule.
+  if(window.SCHEDULE_EDIT_MODE){
+    try{ closeSettingsScreen(); }catch(e){}
+    try{
+      document.body.classList.add('schedule-edit-live');
+      const main=document.querySelector('main')||document.getElementById('panels');
+      if(main&&main.scrollIntoView) main.scrollIntoView({behavior:'smooth',block:'start'});
+      else window.scrollTo({top:0,behavior:'smooth'});
+    }catch(e){}
+  }else{
+    document.body.classList.remove('schedule-edit-live');
+  }
   try{ renderTabs(); renderPanels(); switchDay(getJDfromISO(SELECTED_DATE||TODAY)); updateUI(); }catch(e){}
 }
 function wireEditModeBar(){
@@ -11438,6 +11805,11 @@ function getPrayerLocationOptions(en){
   return base;
 }
 
+function isJumuaPrayer(id,name,pk){
+  const blob=`${id||''} ${name||''} ${pk||''}`.toLowerCase();
+  return /fri-jm|jumaa|jumua|jumuah|friday\s*prayer|صلاة\s*الجمعة|الجمعة/.test(blob);
+}
+
 function startPrayerFlow(id,name,basePts,x,y,late){
   const parts=String(id||'').split('-');
   // Prefer explicit PMETA key from id (e.g. pr-sun-Maghrib → Maghrib, pr-Maghrib → Maghrib)
@@ -11449,13 +11821,17 @@ function startPrayerFlow(id,name,basePts,x,y,late){
   }
   const pkMatch=Object.keys(PMETA).find(k=>k.toLowerCase()===String(pk).toLowerCase());
   if(pkMatch) pk=pkMatch;
-  activePrayer={id,name,pk,basePts:parseInt(basePts,10),bonus:0,x,y,step:0,log:[],late:!!late};
+  const isJumua=isJumuaPrayer(id,name,pk);
+  // Friday prayer replaces Dhuhr — treat as its own key for labeling/sunnah rules
+  if(isJumua) pk='Jumua';
+  activePrayer={id,name,pk,isJumua,basePts:parseInt(basePts,10),bonus:0,x,y,step:0,log:[],late:!!late};
   showPrayerStep();
 }
 
 function showPrayerStep(){
-  const{pk,name,step}=activePrayer;
-  const hasSunnah=!!PMETA[pk]?.sunnah;
+  const{pk,name,step,isJumua}=activePrayer;
+  // Jumua has post-prayer sunnah (not the same as Dhuhr's before+after sunnah)
+  const hasSunnah=!!isJumua || !!PMETA[pk]?.sunnah;
   const totalSteps=hasSunnah?4:3;
   if(step>=totalSteps){finishPrayerFlow();return;}
   const en=(USER_SETTINGS&&USER_SETTINGS.lang)==='en';
@@ -11477,13 +11853,14 @@ function showPrayerStep(){
   const subEl=document.getElementById('modalSub');
 
   if(step===0){
+    // Same first question for all prayers including Jumua
     if(qEl) qEl.textContent=en?'Where did you pray?':'أين صليت؟';
     if(subEl) subEl.textContent=en?'Choose the place of prayer':'اختر مكان الصلاة';
     renderOpts(getPrayerLocationOptions(en),'location');
   }else if(step===1){
-    // Prefer English canonical name from pk when lang=en (card name is often Arabic)
-    const prayerNameEn={Fajr:'Fajr',Sunrise:'Sunrise',Dhuhr:'Dhuhr',Asr:'Asr',Maghrib:'Maghrib',Isha:'Isha'}[pk]||dispName||pk;
-    const prayerNameAr=PMETA[pk]?.ar||name||pk;
+    const prayerNameEn=isJumua?'Friday prayer (Jumuʿah)'
+      :({Fajr:'Fajr',Sunrise:'Sunrise',Dhuhr:'Dhuhr',Asr:'Asr',Maghrib:'Maghrib',Isha:'Isha'}[pk]||dispName||pk);
+    const prayerNameAr=isJumua?'الجمعة':(PMETA[pk]?.ar||name||pk);
     if(qEl) qEl.textContent=en?`How did you pray ${prayerNameEn}?`:`كيف أديت صلاة ${prayerNameAr}؟`;
     if(subEl) subEl.textContent=en?'Choose how you prayed':'اختر طريقة الأداء';
     renderOpts(en
@@ -11496,27 +11873,49 @@ function showPrayerStep(){
       ?[{label:'Yes ✅',pts:3,gold:true},{label:'No ❌',pts:1,gold:false}]
       :[{label:'نعم ✅',pts:3,gold:true},{label:'لا ❌',pts:1,gold:false}],'dhikr');
   }else if(step===3){
-    // Hard-coded English sunnah phrases — NEVER interpolate PMETA[pk].sunnah (Arabic) when en
-    const SUNNAH_EN={
-      Fajr:'Fajr sunnah (2 rakah before)',
-      Dhuhr:'Dhuhr sunnah (4 before + 2 after)',
-      Maghrib:'Maghrib sunnah (2 rakah after)',
-      Isha:'Isha sunnah (2 rakah after)'
-    };
-    const SUNNAH_AR={
-      Fajr:'سنة الفجر (ركعتان قبل)',
-      Dhuhr:'سنة الظهر (٤ قبل + ٢ بعد)',
-      Maghrib:'سنة المغرب (ركعتان بعد)',
-      Isha:'سنة العشاء (ركعتان بعد)'
-    };
-    const sunnahText=en
-      ?(SUNNAH_EN[pk]||`the regular sunnah of ${dispName||pk}`)
-      :(SUNNAH_AR[pk]||PMETA[pk]?.sunnah||`سنة ${name||pk}`);
-    if(qEl) qEl.textContent=en?`Did you pray ${sunnahText}?`:`هل صليت ${sunnahText}؟`;
-    if(subEl) subEl.textContent=en?'The regular sunnah':'السنة الراتبة';
-    renderOpts(en
-      ?[{label:'Yes ✅',pts:3,gold:true},{label:'No ❌',pts:1,gold:false}]
-      :[{label:'نعم ✅',pts:3,gold:true},{label:'لا ❌',pts:1,gold:false}],'sunnah');
+    if(isJumua){
+      // السنة البعدية لصلاة الجمعة:
+      // أقلها ركعتان · أكملها وأفضلها أربع ركعات بتسليمتين (ركعتين ركعتين)
+      if(qEl) qEl.textContent=en
+        ?'How many rakʿahs of the post-Jumuʿah sunnah did you pray?'
+        :'كم صليت من السنة البعدية لصلاة الجمعة؟';
+      if(subEl) subEl.textContent=en
+        ?'Minimum: 2 · Best & most complete: 4 (two sets of 2 with two taslīms)'
+        :'أقلها: ركعتان · أكملها وأفضلها: أربع ركعات بتسليمتين (ركعتين ركعتين)';
+      renderOpts(en
+        ?[
+          {label:'4 rakʿahs (best) ✅',pts:3,gold:true},
+          {label:'2 rakʿahs (minimum)',pts:2,gold:false},
+          {label:'None ❌',pts:0,gold:false}
+        ]
+        :[
+          {label:'أربع ركعات (الأكمل) ✅',pts:3,gold:true},
+          {label:'ركعتان (الأقل)',pts:2,gold:false},
+          {label:'لم أصلِها ❌',pts:0,gold:false}
+        ],'sunnah');
+    }else{
+      // Hard-coded English sunnah phrases — NEVER interpolate PMETA[pk].sunnah (Arabic) when en
+      const SUNNAH_EN={
+        Fajr:'Fajr sunnah (2 rakah before)',
+        Dhuhr:'Dhuhr sunnah (4 before + 2 after)',
+        Maghrib:'Maghrib sunnah (2 rakah after)',
+        Isha:'Isha sunnah (2 rakah after)'
+      };
+      const SUNNAH_AR={
+        Fajr:'سنة الفجر (ركعتان قبل)',
+        Dhuhr:'سنة الظهر (٤ قبل + ٢ بعد)',
+        Maghrib:'سنة المغرب (ركعتان بعد)',
+        Isha:'سنة العشاء (ركعتان بعد)'
+      };
+      const sunnahText=en
+        ?(SUNNAH_EN[pk]||`the regular sunnah of ${dispName||pk}`)
+        :(SUNNAH_AR[pk]||PMETA[pk]?.sunnah||`سنة ${name||pk}`);
+      if(qEl) qEl.textContent=en?`Did you pray ${sunnahText}?`:`هل صليت ${sunnahText}؟`;
+      if(subEl) subEl.textContent=en?'The regular sunnah':'السنة الراتبة';
+      renderOpts(en
+        ?[{label:'Yes ✅',pts:3,gold:true},{label:'No ❌',pts:1,gold:false}]
+        :[{label:'نعم ✅',pts:3,gold:true},{label:'لا ❌',pts:1,gold:false}],'sunnah');
+    }
   }
 }
 
@@ -13135,7 +13534,7 @@ function renderCard(task,isToday,jd){
     act=isDone? ((done && typeof done==='object' && done.skipped) ? `<div class="cbtn exp" style="opacity:0.7">⏩ ${en?'Skipped':'تم التخطي'}</div>` : renderDoneCheckBtn(done,en)) : (isSnack?`<div class="ptsbdg">🍎 ${pts}⭐ ${en?'optional':'اختياري'}</div>`:`<div class="ptsbdg">${pts}⭐</div>`);
   }
 
-  // Edit/delete in Settings → Edit mode for every task (custom + base schedule)
+  // Edit mode: polished action cluster on every card
   if(window.SCHEDULE_EDIT_MODE && !task._deleted){
     let customAct=act;
     if(cat==='free' && isToday && pts>0){
@@ -13143,13 +13542,13 @@ function renderCard(task,isToday,jd){
       else customAct=`<button class="cbtn" data-action="confirm" data-id="${id}" data-pts="${pts}">✓<span class="ptslbl">+${pts}⭐</span></button>`;
     }
     const sel=window.SELECTED_EDIT_TASKS&&window.SELECTED_EDIT_TASKS.has(id);
-    act=`<div style="display:flex;gap:4px;flex-shrink:0;align-items:center;flex-wrap:wrap">
-      <label style="display:flex;align-items:center;gap:4px;cursor:pointer;padding:4px 6px;border-radius:8px;border:1px solid ${sel?'var(--ac)':'var(--br)'};background:${sel?'color-mix(in srgb, var(--ac) 18%, transparent)':'transparent'}">
-        <input type="checkbox" data-action="toggleEditSelect" data-id="${id}" ${sel?'checked':''} style="width:16px;height:16px;accent-color:var(--ac)">
+    act=`<div class="edit-act-cluster">
+      <label class="edit-sel-chip${sel?' on':''}" title="${en?'Select':'تحديد'}">
+        <input type="checkbox" data-action="toggleEditSelect" data-id="${id}" ${sel?'checked':''}>
       </label>
       ${customAct}
-      <button class="cbtn" data-action="editSchedTask" data-id="${id}" data-jd="${jd}" style="padding:5px 9px;font-size:.68rem" title="${en?'Edit':'تعديل'}">✏️</button>
-      <button class="cbtn" data-action="deleteSchedTask" data-id="${id}" data-jd="${jd}" style="padding:5px 9px;font-size:.68rem;background:rgba(239,68,68,.1);border-color:rgba(239,68,68,.4);color:#ef4444" title="${en?'Delete':'حذف'}">🗑️</button>
+      <button class="edit-ico-btn edit-ico-edit" data-action="editSchedTask" data-id="${id}" data-jd="${jd}" type="button" title="${en?'Edit':'تعديل'}">✏️</button>
+      <button class="edit-ico-btn edit-ico-del" data-action="deleteSchedTask" data-id="${id}" data-jd="${jd}" type="button" title="${en?'Delete':'حذف'}">🗑️</button>
     </div>`;
   }
 
@@ -13171,6 +13570,16 @@ function renderCard(task,isToday,jd){
   const loggedMacro=(historyData[SELECTED_DATE||TODAY]||{}).foodLog?.[id]?.macro;
   const loggedBadge=loggedMacro?`<div class="hwtag" style="background:rgba(16,185,129,.12);border-color:rgba(16,185,129,.3);color:#34d399;display:inline-flex;align-items:center;gap:4px">🍽️ ${formatMacroString(loggedMacro.k,loggedMacro.p,loggedMacro.c,loggedMacro.f,loggedMacro.b||0)}</div>`:'';
 
+  // Nested detailed plan — any task, only when enabled for that task
+  const planObj=(USER_EDITS&&USER_EDITS.taskPlans&&USER_EDITS.taskPlans[id])||null;
+  const planEnabled=!!(planObj&&planObj.enabled);
+  const planSessCount=((planObj&&planObj.sessions)||[]).length;
+  const planBadge=planEnabled
+    ?(planSessCount
+      ?`<button type="button" class="hwtag" data-action="openTaskPlan" data-id="${id}" data-name="${String(dispName).replace(/"/g,'&quot;')}" style="background:rgba(139,92,246,.12);border-color:rgba(139,92,246,.35);color:#c4b5fd;cursor:pointer;font-family:inherit">📋 ${planSessCount} ${enBadge?(planSessCount===1?'section':'sections'):(planSessCount===1?'قسم':'أقسام')}</button>`
+      :`<button type="button" class="hwtag" data-action="openTaskPlan" data-id="${id}" data-name="${String(dispName).replace(/"/g,'&quot;')}" style="background:rgba(255,255,255,.04);border-color:var(--br);color:var(--mu);cursor:pointer;font-family:inherit">📋 ${enBadge?'Plan':'+ خطة'}</button>`)
+    :'';
+
   const catBadgeHtml=`<span class="tc-cat-badge" style="background:color-mix(in srgb, ${cardColor} 14%, transparent);color:${cardColor};border:1px solid color-mix(in srgb, ${cardColor} 30%, transparent)"><span class="tc-cat-badge-ico">${cardIcon}</span><span>${catName}</span></span>`;
 
   const taskPrio = task.priority || task[15];
@@ -13183,14 +13592,14 @@ function renderCard(task,isToday,jd){
     prioBadgeHtml = `<span class="tc-prio-badge prio-med" style="display:inline-flex;align-items:center;gap:3px;padding:2px 7px;border-radius:6px;font-size:.62rem;font-weight:800;background:rgba(245,158,11,.15);border:1px solid rgba(245,158,11,.35);color:#fbbf24">🟡 ${enBadge?'Medium':'متوسطة'}</span>`;
   }
 
-  return`<div class="tc${isDone?' done':''}${isEx?' excx':''}${isDeleted?' excx':''}" data-c="${catInfo.id}" data-cat="${catInfo.id}" id="c-${id}" data-task-id="${id}" data-jd="${jd}" style="border-inline-start:3.5px solid ${cardColor};${isDeleted?'opacity:.5':''}">
+  return`<div class="tc${isDone?' done':''}${isEx?' excx':''}${isDeleted?' excx':''}${window.SCHEDULE_EDIT_MODE?' tc-edit-mode':''}" data-c="${catInfo.id}" data-cat="${catInfo.id}" id="c-${id}" data-task-id="${id}" data-jd="${jd}" style="border-inline-start:3.5px solid ${cardColor};${isDeleted?'opacity:.5':''}">
     <div class="tctime">${arTime}</div>
     <div class="tcico" style="background:color-mix(in srgb, ${cardColor} 12%, transparent);border-color:color-mix(in srgb, ${cardColor} 28%, transparent);color:${cardColor}">${cardIcon}</div>
     <div class="tcbody">
       <div class="tcname" ${isCustom?`style="color:${cardColor}"`:''}>${dispName}</div>
       <div class="tcdesc">${getDisplayDesc(task,SELECTED_DATE||TODAY)}</div>
       <div style="display:flex;align-items:center;gap:5px;flex-wrap:wrap;margin-top:2px">
-        ${catBadgeHtml}${prioBadgeHtml}${hwH}${movedBadge}${customBadge}${deletedBadge}${loggedBadge}
+        ${catBadgeHtml}${prioBadgeHtml}${planBadge}${hwH}${movedBadge}${customBadge}${deletedBadge}${loggedBadge}
       </div>
     </div>
     ${act}
@@ -14936,7 +15345,10 @@ function openSettingsScreen(){
       editModeEl.addEventListener('change',()=>{
         setScheduleEditMode(!!editModeEl.checked);
         const en=(USER_SETTINGS&&USER_SETTINGS.lang)==='en';
-        showToast(window.SCHEDULE_EDIT_MODE?(en?'Edit mode on — use Done when finished':'وضع التعديل مفعّل — اضغط تم عند الانتهاء'):(en?'Edit mode off':'وضع التعديل متوقف'),1800);
+        showToast(window.SCHEDULE_EDIT_MODE
+          ?(en?'Edit mode on — schedule opened. Use Done when finished.'
+              :'وضع التعديل مفعّل — فتحنا الجدول. اضغط تم عند الانتهاء')
+          :(en?'Edit mode off':'وضع التعديل متوقف'),2200);
       });
     }
   }
@@ -15396,10 +15808,12 @@ function aiOpenPrayerFlowPrefilled(task,iso,parsedLog){
   }
   const pkMatch=Object.keys(PMETA).find(k=>k.toLowerCase()===String(pk).toLowerCase());
   if(pkMatch) pk=pkMatch;
+  const isJumua=isJumuaPrayer(id,task[4],pk);
+  if(isJumua) pk='Jumua';
   const pts=task[6];
   let bonus=0;
   for(const l of parsedLog) bonus+=l.pts;
-  activePrayer={id,name:task[4],pk,basePts:parseInt(pts,10),bonus,x:window.innerWidth/2,y:window.innerHeight/2,
+  activePrayer={id,name:task[4],pk,isJumua,basePts:parseInt(pts,10),bonus,x:window.innerWidth/2,y:window.innerHeight/2,
     step:parsedLog.length,log:[...parsedLog],late:false};
   // If the parsed log already answered every applicable step (incl. sunnah where it
   // exists), finishPrayerFlow's own step>=totalSteps check in showPrayerStep will fire
@@ -18796,6 +19210,13 @@ document.body.addEventListener('click',async e=>{
     openScheduleTaskEditor(jd,null);
     return;
   }
+  const openPlanBtn=closest('[data-action="openTaskPlan"]');
+  if(openPlanBtn){
+    const tid=openPlanBtn.getAttribute('data-id');
+    const tname=openPlanBtn.getAttribute('data-name')||tid;
+    if(tid) openTaskPlan(tid,tname);
+    return;
+  }
   const editSchedBtn=closest('[data-action="editSchedTask"]');
   if(editSchedBtn){
     const jd=parseInt(editSchedBtn.getAttribute('data-jd'),10);
@@ -20525,7 +20946,13 @@ if (typeof onAuthStateChanged !== 'undefined' && typeof fbAuth !== 'undefined') 
           // Cloud userEdits is authoritative once it exists — this is what makes an
           // edit made on your phone show up on your laptop. If the cloud doc has no
           // userEdits yet (brand-new account), keep whatever local value we have.
-          if(d.userEdits) USER_EDITS={...emptyUserEdits(),...d.userEdits,dayDeletes:{...(emptyUserEdits().dayDeletes),...((d.userEdits&&d.userEdits.dayDeletes)||{})},dayOverrides:{...(emptyUserEdits().dayOverrides),...((d.userEdits&&d.userEdits.dayOverrides)||{})}};
+          if(d.userEdits) USER_EDITS={
+            ...emptyUserEdits(),
+            ...d.userEdits,
+            dayDeletes:{...(emptyUserEdits().dayDeletes),...((d.userEdits&&d.userEdits.dayDeletes)||{})},
+            dayOverrides:{...(emptyUserEdits().dayOverrides),...((d.userEdits&&d.userEdits.dayOverrides)||{})},
+            taskPlans:{...(emptyUserEdits().taskPlans),...((d.userEdits&&d.userEdits.taskPlans)||{}),...((USER_EDITS&&USER_EDITS.taskPlans)||{})}
+          };
           // Cloud userSchedule is authoritative once it exists — same reasoning as
           // userEdits above (an edit/migration on one device must show up on
           // another). If the cloud doc has none yet, keep whatever local value we
