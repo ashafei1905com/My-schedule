@@ -1,6 +1,6 @@
 <!DOCTYPE html>
 <html lang="en" dir="ltr">
-<!-- cache-bust: 2026-10-03-no-edit-toast -->
+<!-- cache-bust: 2026-10-03-cat-priority -->
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1.0,maximum-scale=1.0,user-scalable=no">
@@ -373,6 +373,10 @@ html[dir="rtl"] .tc{animation-name:tcEnterRtl}
 .tl{position:relative;padding-right:20px}
 .tl::before{content:'';position:absolute;right:7px;top:0;bottom:0;width:2px;background:linear-gradient(to bottom,var(--ac),transparent);border-radius:2px}
 .tc{position:relative;margin-bottom:8px;padding:12px 14px;background:var(--c);border:1px solid var(--br);border-radius:12px;display:flex;align-items:flex-start;gap:10px;animation:tcEnter var(--duration-snappy) var(--ease-snappy) both;transition:opacity .45s cubic-bezier(0.4,0,0.2,1),background .35s ease,border-color .35s ease,filter .45s ease,transform var(--duration-snappy) var(--ease-snappy),box-shadow var(--duration-snappy) var(--ease-snappy)}
+.tc.tc-prio-high{border-color:rgba(239,68,68,.35)}
+.tc.tc-prio-high .tcname{font-weight:900}
+.tc.tc-prio-low{filter:saturate(.85)}
+.tc.tc-prio-low .tcname{font-weight:600;color:color-mix(in srgb,var(--tx) 82%, var(--mu))}
 /* Edit-mode polish */
 body.schedule-edit-live .tc.tc-edit-mode{
   box-shadow:0 0 0 1px color-mix(in srgb, var(--ac) 22%, transparent);
@@ -7373,11 +7377,14 @@ function renderCategoryManager(){
   const desc=document.getElementById('catManagerDesc');
   if(title) title.textContent=en?'Your categories':'فئاتك';
   if(desc) desc.textContent=en
-    ?'Edit any category — name, emoji, color. Expand to see tasks and move them into this category.'
-    :'عدّل أي فئة — الاسم والإيموجي واللون. وسّع لترى المهام وانقلها لهذه الفئة.';
+    ?'Edit categories, set a default priority for all tasks in a category, and override individual tasks as exceptions.'
+    :'عدّل الفئات، عيّن أولوية افتراضية لكل مهام الفئة، ويمكنك استثناء مهمة معيّنة.';
   const addBtn=document.getElementById('catMgrAddBtn');
   const editId=(document.getElementById('catMgrEditId')||{}).value||'';
   if(addBtn) addBtn.textContent=editId?(en?'Save changes':'حفظ التعديل'):(en?'+ Add':'+ إضافة');
+
+  if(!USER_SETTINGS.categoryPriorities) USER_SETTINGS.categoryPriorities={};
+  if(!USER_SETTINGS.taskPriorityExceptions) USER_SETTINGS.taskPriorityExceptions={};
 
   // Build task index by category id across the week
   const tasksByCat={};
@@ -7387,13 +7394,22 @@ function renderCategoryManager(){
       const tasks=(typeof getAllTasks==='function')?getAllTasks(jd,iso||TODAY):((USER_SCHEDULE[jd]&&USER_SCHEDULE[jd].ts)||[]);
       for(const t of tasks){
         if(!t||t._deleted) continue;
-        const catId=String((t[14]&&t[14].id)||t[2]||'routine');
+        const catId=getTaskCategoryId(t);
         if(!tasksByCat[catId]) tasksByCat[catId]=[];
         // dedupe by task id
         if(!tasksByCat[catId].some(x=>x[0]===t[0])) tasksByCat[catId].push(t);
       }
     }
   }catch(e){}
+
+  const prioOpts=(selected,isException)=>{
+    const s=selected||'inherit';
+    return `
+      <option value="inherit" ${s==='inherit'?'selected':''}>${isException?(en?'Same as category':'مثل الفئة'):(en?'Default (medium)':'افتراضي (متوسط)')}</option>
+      <option value="high" ${s==='high'?'selected':''}>🔴 ${en?'High':'عالية'}</option>
+      <option value="medium" ${s==='medium'?'selected':''}>🟡 ${en?'Medium':'متوسطة'}</option>
+      <option value="low" ${s==='low'?'selected':''}>🟢 ${en?'Low':'منخفضة'}</option>`;
+  };
 
   const all=getAllCategories();
   list.innerHTML=all.map(cat=>{
@@ -7404,12 +7420,18 @@ function renderCategoryManager(){
       :`<span style="font-size:.62rem;font-weight:800;color:#a78bfa;background:rgba(139,92,246,.12);padding:2px 6px;border-radius:6px">${en?'Custom':'مخصصة'}</span>`;
     const delBtn=`<button type="button" class="altbtn" data-cat-del="${cat.id}" data-cat-builtin="${isBuiltIn?'1':'0'}" style="padding:6px 10px;font-size:.72rem;color:#f87171;border-color:rgba(239,68,68,.4)">${en?'Delete':'حذف'}</button>`;
     const catTasks=tasksByCat[cat.id]||[];
+    const catPrio=USER_SETTINGS.categoryPriorities[cat.id]||'inherit';
     const taskRows=catTasks.length
       ? catTasks.map(t=>{
           const tname=(typeof tn==='function'?tn(t[4]):t[4])||t[4]||t[0];
-          return `<div style="display:flex;align-items:center;gap:8px;padding:6px 8px;border-radius:8px;background:rgba(0,0,0,.18);margin-top:4px">
+          const ex=USER_SETTINGS.taskPriorityExceptions[t[0]]||'inherit';
+          const isPr=t[2]==='prayer'||(t[0]&&String(t[0]).includes('fri-jm'));
+          return `<div style="display:flex;align-items:center;gap:8px;padding:6px 8px;border-radius:8px;background:rgba(0,0,0,.18);margin-top:4px;flex-wrap:wrap">
             <span style="font-size:1rem">${t[3]||'•'}</span>
-            <span style="flex:1;font-size:.78rem;font-weight:700;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${tname}</span>
+            <span style="flex:1;min-width:80px;font-size:.78rem;font-weight:700;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${tname}${isPr?' 🔒':''}</span>
+            <select data-task-prio-exception="${t[0]}" ${isPr?'disabled':''} title="${en?'Exception priority for this task':'أولوية استثنائية لهذه المهمة'}" style="max-width:130px;padding:4px 6px;border-radius:8px;border:1px solid var(--br);background:var(--c2);color:var(--tx);font-size:.68rem;font-weight:700;opacity:${isPr?0.6:1}">
+              ${prioOpts(ex,true)}
+            </select>
             <select data-cat-reassign="${t[0]}" data-from-cat="${cat.id}" style="max-width:120px;padding:4px 6px;border-radius:8px;border:1px solid var(--br);background:var(--c2);color:var(--tx);font-size:.68rem;font-weight:700">
               ${all.map(opt=>{
                 const on=typeof opt.name==='object'?(opt.name[en?'en':'ar']||opt.name.en||opt.id):opt.name;
@@ -7420,18 +7442,24 @@ function renderCategoryManager(){
         }).join('')
       : `<div style="font-size:.72rem;color:var(--mu);padding:6px 2px">${en?'No tasks in this category yet.':'لا مهام في هذه الفئة بعد.'}</div>`;
     return `<div class="cat-mgr-row" data-cat-id="${cat.id}" style="border:1px solid var(--br);border-radius:14px;background:var(--c2);margin-bottom:10px;overflow:hidden">
-      <div style="display:flex;align-items:center;gap:10px;padding:12px 12px">
+      <div style="display:flex;align-items:center;gap:10px;padding:12px 12px;flex-wrap:wrap">
         <span style="width:40px;height:40px;border-radius:12px;display:flex;align-items:center;justify-content:center;background:color-mix(in srgb, ${cat.color||'#3b82f6'} 22%, transparent);border:1px solid ${cat.color||'#3b82f6'};font-size:1.2rem">${cat.icon||'🏷️'}</span>
         <div style="flex:1;min-width:0">
           <div style="font-weight:800;font-size:.9rem;display:flex;align-items:center;gap:6px;flex-wrap:wrap">${nm} ${badge}</div>
-          <div style="font-size:.68rem;color:var(--mu)">${cat.color||''} · ${catTasks.length} ${en?'tasks':'مهام'}</div>
+          <div style="font-size:.68rem;color:var(--mu)">${catTasks.length} ${en?'tasks':'مهام'}</div>
         </div>
+        <label style="display:flex;flex-direction:column;gap:2px;font-size:.62rem;font-weight:800;color:var(--so)">
+          <span>${en?'Category priority':'أولوية الفئة'}</span>
+          <select data-cat-priority="${cat.id}" style="padding:6px 8px;border-radius:8px;border:1px solid var(--br);background:var(--c);color:var(--tx);font-size:.72rem;font-weight:800;min-width:120px">
+            ${prioOpts(catPrio,false)}
+          </select>
+        </label>
         <button type="button" class="altbtn" data-cat-edit="${cat.id}" style="padding:6px 10px;font-size:.72rem">${en?'Edit':'تعديل'}</button>
         <button type="button" class="altbtn" data-cat-expand="${cat.id}" style="padding:6px 10px;font-size:.72rem">${en?'Tasks':'المهام'}</button>
         ${delBtn}
       </div>
       <div data-cat-tasks-panel="${cat.id}" style="display:none;padding:0 12px 12px;border-top:1px solid var(--br)">
-        <div style="font-size:.72rem;font-weight:800;color:var(--so);margin:10px 0 4px">${en?'Tasks in this category — change dropdown to move':'مهام هذه الفئة — غيّر القائمة للنقل'}</div>
+        <div style="font-size:.72rem;font-weight:800;color:var(--so);margin:10px 0 4px">${en?'Tasks — set an exception priority, or move category':'المهام — استثناء أولوية أو نقل فئة'}</div>
         ${taskRows}
       </div>
     </div>`;
@@ -7494,11 +7522,29 @@ function renderCategoryManager(){
       }
     });
     list.addEventListener('change', async e=>{
+      const en2=(USER_SETTINGS&&USER_SETTINGS.lang)==='en';
+      const catPrioSel=e.target.closest('[data-cat-priority]');
+      if(catPrioSel){
+        const catId=catPrioSel.getAttribute('data-cat-priority');
+        const val=catPrioSel.value;
+        await setCategoryPriority(catId, val==='inherit'?null:val);
+        showToast(en2?'Category priority saved — applies to all tasks in it':'تم حفظ أولوية الفئة — تطبق على كل مهامها',1800);
+        try{ if(typeof triggerAutoPushSync==='function') triggerAutoPushSync(600); }catch(err){}
+        return;
+      }
+      const taskPrioSel=e.target.closest('[data-task-prio-exception]');
+      if(taskPrioSel){
+        const taskId=taskPrioSel.getAttribute('data-task-prio-exception');
+        const val=taskPrioSel.value;
+        await setTaskPriorityException(taskId, val==='inherit'?null:val);
+        showToast(en2?(val==='inherit'?'Exception cleared — uses category priority':'Exception saved for this task'):(val==='inherit'?'أُلغي الاستثناء — تتبع أولوية الفئة':'تم حفظ استثناء هذه المهمة'),1800);
+        try{ if(typeof triggerAutoPushSync==='function') triggerAutoPushSync(600); }catch(err){}
+        return;
+      }
       const sel=e.target.closest('[data-cat-reassign]');
       if(!sel) return;
       const taskId=sel.getAttribute('data-cat-reassign');
       const newCat=sel.value;
-      const en2=(USER_SETTINGS&&USER_SETTINGS.lang)==='en';
       const catInfo=getAllCategories().find(x=>x.id===newCat);
       const icon=catInfo?.icon||'✨';
       const color=catInfo?.color||'#6366f1';
@@ -7656,7 +7702,7 @@ function openScheduleTaskEditor(jd,existingTask,opts){
   setLbl('stNewCatTitle','Create Custom Category','إنشاء فئة مخصصة');
   setLbl('stTimeLbl','Start time','وقت البداية');
   setLbl('stEndTimeLbl','End time','وقت النهاية');
-  setLbl('stPriorityLbl','Task Priority','أولوية المهمة');
+  setLbl('stPriorityLbl','Task Priority — High stands out & sorts first at the same time; Low is quieter','أولوية المهمة — العالية أوضح وتُرتَّب أولاً عند نفس الوقت؛ المنخفضة أهدأ');
   setLbl('stDescLbl','Description (optional)','وصف (اختياري)');
   setLbl('stDaysLbl','Days of week','أيام الأسبوع');
   setLbl('stPtsLbl','Task Difficulty / Intensity','صعوبة / شدة المهمة');
@@ -7676,7 +7722,7 @@ function openScheduleTaskEditor(jd,existingTask,opts){
       stSelectPriority(b.getAttribute('data-priority'));
     });
   }
-  const initPrio=existingTask?.priority||(existingTask&&existingTask[15])||'medium';
+  const initPrio=existingTask?(getTaskPriority(existingTask)||'medium'):'medium';
   stSelectPriority(initPrio);
   const prioTexts=document.querySelectorAll('#stPriorityRow .st-prio-text');
   if(prioTexts.length===3){
@@ -7849,6 +7895,13 @@ async function stHandleSave(){
   const desc=(document.getElementById('stDesc')?.value||'').trim();
   let checkedPoints=Math.min(parseInt(document.getElementById('stPts')?.value,10)||5,30); if(![5,15,30].includes(checkedPoints)) checkedPoints=checkedPoints>=30?30:(checkedPoints>=15?15:5); const pts=checkedPoints;
   const priority=document.getElementById('stPriority')?.value||ST_SELECTED_PRIORITY||'medium';
+  // Task editor priority becomes a per-task exception (overrides category default).
+  try{
+    if(ST_ACTIVE_TASK_ID){
+      if(!USER_SETTINGS.taskPriorityExceptions) USER_SETTINGS.taskPriorityExceptions={};
+      USER_SETTINGS.taskPriorityExceptions[ST_ACTIVE_TASK_ID]=priority;
+    }
+  }catch(e){}
 
   if(ST_ACTIVE_JD===null){
     if(errEl){ errEl.textContent='⚠️ Error — reopen the task'; errEl.style.display='block'; }
@@ -9674,15 +9727,72 @@ function buildPTasks(jd){
         else if(pk==='Fajr') desc=`تنتهي عند ${endDisp||'الشروق'} · ارجع نام بعدها ✓`;
         else desc=`تنتهي عند ${endDisp||'—'} · تبدأ ${startDisp}`;
       }
-      return[`pr-${k}-${pk}`,timeStr,'prayer',pm.ic,pm.ar,desc,pm.pts,null,null,false,t24];
+      // Index 15 = priority — prayers are always highest priority
+      const tuple=[`pr-${k}-${pk}`,timeStr,'prayer',pm.ic,pm.ar,desc,pm.pts,null,null,false,t24,null,null,null,'prayer','high'];
+      tuple.priority='high';
+      return tuple;
     });
 }
 function getTaskSortTimeMinutes(t){
   if(typeof t[10]==='string' && /^\d{1,2}:\d{2}$/.test(t[10])) return toMin(t[10]);
   return toMin(t[1]);
 }
+function normalizeTaskNameKey(name){
+  return String(name||'').trim().toLowerCase().replace(/\s+/g,' ');
+}
+function getTaskCategoryId(t){
+  if(!t) return 'routine';
+  if(t[14]&&typeof t[14]==='object'&&t[14].id) return String(t[14].id);
+  if(typeof t[14]==='string'&&t[14]) return String(t[14]);
+  return String(t[2]||'routine');
+}
+/** Resolve priority: prayer → high; per-task exception → category default → task field → medium */
+function getTaskPriority(t){
+  if(!t) return 'medium';
+  // Prayers (incl. Jumuʿah) are always highest priority — no user override.
+  if(t[2]==='prayer' || (typeof isPrayer==='function'&&isPrayer(t)) || (t[0]&&String(t[0]).includes('fri-jm'))) return 'high';
+
+  if(!USER_SETTINGS) USER_SETTINGS={};
+  if(!USER_SETTINGS.taskPriorityExceptions) USER_SETTINGS.taskPriorityExceptions={};
+  if(!USER_SETTINGS.categoryPriorities) USER_SETTINGS.categoryPriorities={};
+
+  const id=t[0];
+  // 1) Explicit exception for this task id (set from Categories panel or task editor)
+  const ex=USER_SETTINGS.taskPriorityExceptions[id];
+  if(ex==='high'||ex==='medium'||ex==='low') return ex;
+
+  // 2) Category-wide default (Settings → Categories)
+  const catId=getTaskCategoryId(t);
+  const catP=USER_SETTINGS.categoryPriorities[catId];
+  if(catP==='high'||catP==='medium'||catP==='low') return catP;
+
+  // 3) Stored on the task tuple itself
+  const p=t.priority||t[15];
+  if(p==='high'||p==='low'||p==='medium') return p;
+  return 'medium';
+}
+async function setCategoryPriority(catId,priority){
+  if(!USER_SETTINGS.categoryPriorities) USER_SETTINGS.categoryPriorities={};
+  if(priority==='high'||priority==='medium'||priority==='low'){
+    USER_SETTINGS.categoryPriorities[catId]=priority;
+  }else{
+    delete USER_SETTINGS.categoryPriorities[catId];
+  }
+  try{ await saveUserSettings(); }catch(e){}
+  try{ renderPanels(); switchDay(getJDfromISO(SELECTED_DATE||TODAY)); updateUI(); }catch(e){}
+}
+async function setTaskPriorityException(taskId,priority){
+  if(!USER_SETTINGS.taskPriorityExceptions) USER_SETTINGS.taskPriorityExceptions={};
+  if(priority==='high'||priority==='medium'||priority==='low'){
+    USER_SETTINGS.taskPriorityExceptions[taskId]=priority;
+  }else{
+    delete USER_SETTINGS.taskPriorityExceptions[taskId];
+  }
+  try{ await saveUserSettings(); }catch(e){}
+  try{ renderPanels(); switchDay(getJDfromISO(SELECTED_DATE||TODAY)); updateUI(); }catch(e){}
+}
 function taskPriorityRank(t){
-  const p=(t&&(t.priority||t[15]))||'medium';
+  const p=getTaskPriority(t);
   if(p==='high') return 0;
   if(p==='low') return 2;
   return 1; // medium / default
@@ -11328,6 +11438,47 @@ function getTaskNotifConfig(taskId){
     endLeadMin:Math.max(1,parseInt(raw.endLeadMin,10)||30)
   };
 }
+function notifTaskDisplayName(t){
+  const raw=t[4]||'';
+  const en=(USER_SETTINGS&&USER_SETTINGS.lang)==='en';
+  if(!en) return raw;
+  try{ return (typeof tn==='function'?tn(raw):null)||raw; }catch(e){ return raw; }
+}
+function buildReminderCopy(type, taskName, cfg, priority){
+  const en=(USER_SETTINGS&&USER_SETTINGS.lang)==='en';
+  const p=priority||'medium';
+  const leadM=cfg&&cfg.leadMin?cfg.leadMin:15;
+  const endM=cfg&&cfg.endLeadMin?cfg.endLeadMin:30;
+  if(type==='lead'){
+    return {
+      title: en
+        ?(p==='high'?`🔴 In ${leadM} min · ${taskName}`:`⏳ Upcoming · ${taskName}`)
+        :(p==='high'?`🔴 بعد ${leadM} د · ${taskName}`:`⏳ اقترب الموعد · ${taskName}`),
+      body: en
+        ?(p==='high'?`High priority — starts in ${leadM} minutes`:`Starts in ${leadM} minutes`)
+        :(p==='high'?`أولوية عالية — تبدأ خلال ${leadM} دقيقة`:`هتبدأ خلال ${leadM} دقيقة`)
+    };
+  }
+  if(type==='ending'){
+    return {
+      title: en
+        ?(p==='high'?`🔴 Ending soon · ${taskName}`:`⌛ Ending soon · ${taskName}`)
+        :(p==='high'?`🔴 هتخلص قريب · ${taskName}`:`⌛ اقتربت النهاية · ${taskName}`),
+      body: en
+        ?(`${endM} minutes remaining`)
+        :(`متبقي ${endM} دقيقة`)
+    };
+  }
+  // start
+  return {
+    title: en
+      ?(p==='high'?`🔴 NOW · ${taskName}`:`⏰ Time for · ${taskName}`)
+      :(p==='high'?`🔴 الآن · ${taskName}`:`⏰ حان الوقت · ${taskName}`),
+    body: en
+      ?(p==='high'?`High priority — start now`:(p==='low'?`Low priority — when you can`:`Scheduled to start now`))
+      :(p==='high'?`أولوية عالية — ابدأ الآن`:(p==='low'?`أولوية منخفضة — لما تقدر`:`الموعد بدأ الآن`))
+  };
+}
 function buildUpcomingReminderPayload(daysAhead = 30){
   const reminders=[];
   const minToHHMM=m=>{
@@ -11335,6 +11486,7 @@ function buildUpcomingReminderPayload(daysAhead = 30){
     const h=Math.floor(m/60),mm=m%60;
     return `${String(h).padStart(2,'0')}:${String(mm).padStart(2,'0')}`;
   };
+  const lang=(USER_SETTINGS&&USER_SETTINGS.lang)==='en'?'en':'ar';
 
   const days = Math.max(1, Math.min(30, daysAhead || 30));
   for(let offset = 0; offset < days; offset++){
@@ -11351,20 +11503,35 @@ function buildUpcomingReminderPayload(daysAhead = 30){
       const cfg=getTaskNotifConfig(id);
       if(!cfg.enabled) continue;
       const startMin=toMin(t[10]||t[1]);
+      const taskName=notifTaskDisplayName(t);
+      const priority=(typeof getTaskPriority==='function'?getTaskPriority(t):'medium')||'medium';
+
+      const pushOne=(type,time)=>{
+        const copy=buildReminderCopy(type,taskName,cfg,priority);
+        reminders.push({
+          taskId:id,
+          taskName,
+          type,
+          date:targetDate,
+          time,
+          lang,
+          priority,
+          title:copy.title,
+          body:copy.body
+        });
+      };
 
       if(cfg.leadEnabled){
         const leadAt=startMin-cfg.leadMin;
-        if(leadAt>=0) reminders.push({taskId:id,taskName:t[4],type:'lead',date:targetDate,time:minToHHMM(leadAt)});
+        if(leadAt>=0) pushOne('lead',minToHHMM(leadAt));
       }
       if(cfg.startEnabled){
-        reminders.push({taskId:id,taskName:t[4],type:'start',date:targetDate,time:minToHHMM(startMin)});
+        pushOne('start',minToHHMM(startMin));
       }
       if(cfg.endLeadEnabled && t[2]!=='sleep'){
         const endMin=notifTaskEndMin(t);
         const endLeadMin=endMin-cfg.endLeadMin;
-        if(endLeadMin>startMin){
-          reminders.push({taskId:id,taskName:t[4],type:'ending',date:targetDate,time:minToHHMM(endLeadMin)});
-        }
+        if(endLeadMin>startMin) pushOne('ending',minToHHMM(endLeadMin));
       }
     }
   }
@@ -11628,14 +11795,18 @@ async function syncPushSchedule(forceRenew = false, silent = true){
   }
 }
 
-async function triggerDeviceNotification(title, body, tag){
+async function triggerDeviceNotification(title, body, tag, priority){
+  const p=priority||'medium';
+  const vibrate = p==='high' ? [280,120,280,120,400] : (p==='low' ? [120] : [200,100,200]);
   const options = {
     body,
     tag: tag || ('notif-' + Date.now()),
     icon: 'data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"%3E%3Ctext y="75" font-size="80"%3E%F0%9F%8F%8B%EF%B8%8F%3C/text%3E%3C/svg%3E',
     badge: 'data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"%3E%3Ctext y="75" font-size="80"%3E%F0%9F%94%94%3C/text%3E%3C/svg%3E',
-    vibrate: [200, 100, 200],
-    data: { url: './' }
+    vibrate,
+    requireInteraction: p==='high',
+    silent: p==='low',
+    data: { url: './', priority: p }
   };
   try {
     const reg = await navigator.serviceWorker.getRegistration();
@@ -11663,6 +11834,9 @@ let _lastNotifTickMin = -1;
 function runLocalNotificationTick(){
   if(typeof Notification === 'undefined' || Notification.permission !== 'granted') return;
   if(typeof NOTIF_ENABLED !== 'undefined' && !NOTIF_ENABLED) return;
+  // Cloud push already covers the same events — running both caused Arabic + English doubles.
+  // Local tick is only a fallback when no push subscription is registered.
+  if(typeof PUSH_SUBSCRIPTION !== 'undefined' && PUSH_SUBSCRIPTION) return;
 
   const nowMin = typeof getKuwaitNow === 'function' ? getKuwaitNow() : (new Date().getHours()*60 + new Date().getMinutes());
   if(nowMin === _lastNotifTickMin) return;
@@ -11679,11 +11853,10 @@ function runLocalNotificationTick(){
     if(raw) firedSet = new Set(JSON.parse(raw));
   } catch(e) {}
 
-  const isEn = (USER_SETTINGS && USER_SETTINGS.lang) === 'en';
-
   tasks.forEach(t => {
     const id = t[0];
-    const taskName = t[4] || '';
+    const taskName = notifTaskDisplayName(t);
+    const priority = (typeof getTaskPriority === 'function' ? getTaskPriority(t) : 'medium') || 'medium';
     if(typeof DONE !== 'undefined' && DONE[id] !== undefined && DONE[id] !== false) return;
 
     const cfg = typeof getTaskNotifConfig === 'function' ? getTaskNotifConfig(id) : { enabled: true, startEnabled: true, leadEnabled: false, endLeadEnabled: false };
@@ -11692,44 +11865,32 @@ function runLocalNotificationTick(){
     const startMin = toMin(t[10] || t[1]);
     const endMin = typeof notifTaskEndMin === 'function' ? notifTaskEndMin(t) : (startMin + 60);
 
-    // 1. Lead notification (e.g. 15-30 min before start)
     if(cfg.leadEnabled){
       const leadAt = startMin - (cfg.leadMin || 15);
       const leadKey = id + '_lead';
       if(leadAt >= 0 && nowMin >= leadAt && nowMin < leadAt + 3 && !firedSet.has(leadKey)){
         firedSet.add(leadKey);
-        triggerDeviceNotification(
-          isEn ? `⏳ Upcoming: ${taskName}` : `⏳ اقترب الموعد: ${taskName}`,
-          isEn ? `Starts in ${cfg.leadMin || 15} minutes` : `هتبدأ خلال ${cfg.leadMin || 15} دقيقة`,
-          leadKey
-        );
+        const copy = buildReminderCopy('lead', taskName, cfg, priority);
+        triggerDeviceNotification(copy.title, copy.body, leadKey, priority);
       }
     }
 
-    // 2. Start notification (at start time)
     if(cfg.startEnabled){
       const startKey = id + '_start';
       if(nowMin >= startMin && nowMin < startMin + 3 && !firedSet.has(startKey)){
         firedSet.add(startKey);
-        triggerDeviceNotification(
-          isEn ? `⏰ Time for: ${taskName}` : `⏰ حان الوقت: ${taskName}`,
-          isEn ? `Scheduled to start now` : `الموعد المحدد بدأ الآن`,
-          startKey
-        );
+        const copy = buildReminderCopy('start', taskName, cfg, priority);
+        triggerDeviceNotification(copy.title, copy.body, startKey, priority);
       }
     }
 
-    // 3. Ending notification
     if(cfg.endLeadEnabled && t[2] !== 'sleep'){
       const endLeadMin = endMin - (cfg.endLeadMin || 30);
       const endKey = id + '_ending';
       if(endLeadMin > startMin && nowMin >= endLeadMin && nowMin < endLeadMin + 3 && !firedSet.has(endKey)){
         firedSet.add(endKey);
-        triggerDeviceNotification(
-          isEn ? `⌛ Ending soon: ${taskName}` : `⌛ اقتربت نهاية: ${taskName}`,
-          isEn ? `${cfg.endLeadMin || 30} minutes remaining` : `متبقي ${cfg.endLeadMin || 30} دقيقة على الانتهاء`,
-          endKey
-        );
+        const copy = buildReminderCopy('ending', taskName, cfg, priority);
+        triggerDeviceNotification(copy.title, copy.body, endKey, priority);
       }
     }
   });
@@ -13632,17 +13793,23 @@ function renderCard(task,isToday,jd){
 
   const catBadgeHtml=`<span class="tc-cat-badge" style="background:color-mix(in srgb, ${cardColor} 14%, transparent);color:${cardColor};border:1px solid color-mix(in srgb, ${cardColor} 30%, transparent)"><span class="tc-cat-badge-ico">${cardIcon}</span><span>${catName}</span></span>`;
 
-  const taskPrio = task.priority || task[15];
+  const taskPrio = getTaskPriority(task);
   let prioBadgeHtml = '';
   if(taskPrio === 'high'){
     prioBadgeHtml = `<span class="tc-prio-badge prio-high" style="display:inline-flex;align-items:center;gap:3px;padding:2px 7px;border-radius:6px;font-size:.62rem;font-weight:800;background:rgba(239,68,68,.15);border:1px solid rgba(239,68,68,.35);color:#f87171">🔴 ${enBadge?'High':'عالية'}</span>`;
   } else if(taskPrio === 'low'){
     prioBadgeHtml = `<span class="tc-prio-badge prio-low" style="display:inline-flex;align-items:center;gap:3px;padding:2px 7px;border-radius:6px;font-size:.62rem;font-weight:800;background:rgba(16,185,129,.15);border:1px solid rgba(16,185,129,.35);color:#34d399">🟢 ${enBadge?'Low':'منخفضة'}</span>`;
-  } else if(taskPrio === 'medium'){
-    prioBadgeHtml = `<span class="tc-prio-badge prio-med" style="display:inline-flex;align-items:center;gap:3px;padding:2px 7px;border-radius:6px;font-size:.62rem;font-weight:800;background:rgba(245,158,11,.15);border:1px solid rgba(245,158,11,.35);color:#fbbf24">🟡 ${enBadge?'Medium':'متوسطة'}</span>`;
   }
+  // Medium = default, no badge (keeps the timeline clean)
 
-  return`<div class="tc${isDone?' done':''}${isEx?' excx':''}${isDeleted?' excx':''}${window.SCHEDULE_EDIT_MODE?' tc-edit-mode':''}" data-c="${catInfo.id}" data-cat="${catInfo.id}" id="c-${id}" data-task-id="${id}" data-jd="${jd}" style="border-inline-start:3.5px solid ${cardColor};${isDeleted?'opacity:.5':''}">
+  const prioCardClass = taskPrio==='high'?' tc-prio-high':(taskPrio==='low'?' tc-prio-low':'');
+  const prioBorder = taskPrio==='high'
+    ? (isDeleted?'opacity:.5':`box-shadow:inset 3px 0 0 0 #ef4444,0 0 18px rgba(239,68,68,.12);`)
+    : (taskPrio==='low'
+      ? (isDeleted?'opacity:.5':`opacity:.88;`)
+      : (isDeleted?'opacity:.5':''));
+
+  return`<div class="tc${isDone?' done':''}${isEx?' excx':''}${isDeleted?' excx':''}${window.SCHEDULE_EDIT_MODE?' tc-edit-mode':''}${prioCardClass}" data-c="${catInfo.id}" data-cat="${catInfo.id}" id="c-${id}" data-task-id="${id}" data-jd="${jd}" style="border-inline-start:3.5px solid ${taskPrio==='high'?'#ef4444':cardColor};${prioBorder}">
     <div class="tctime">${arTime}</div>
     <div class="tcico" style="background:color-mix(in srgb, ${cardColor} 12%, transparent);border-color:color-mix(in srgb, ${cardColor} 28%, transparent);color:${cardColor}">${cardIcon}</div>
     <div class="tcbody">
@@ -15527,6 +15694,8 @@ function setAppLang(lang){
   updateAuthUI(fbAuth?.currentUser||null);
   try{ renderTabs();renderPanels();switchDay(typeof SELECTED_DATE!=='undefined'?getJDfromISO(SELECTED_DATE):todayJD());updateUI(); }catch(e){}
   try{ if(typeof aiRenderMessages==='function') aiRenderMessages(); }catch(e){}
+  // Re-queue cloud reminders in the new language only (prevents AR+EN doubles).
+  try{ if(typeof triggerAutoPushSync==='function') triggerAutoPushSync(800); }catch(e){}
   showToast(USER_SETTINGS.lang==='en'?'Switched to English':'تم التحويل للعربية',1800);
 }
 
