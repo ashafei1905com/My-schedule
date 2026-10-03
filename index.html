@@ -1,6 +1,6 @@
 <!DOCTYPE html>
 <html lang="en" dir="ltr">
-<!-- cache-bust: 2026-10-03-edit-ux-prayer-end -->
+<!-- cache-bust: 2026-10-03-no-edit-toast -->
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1.0,maximum-scale=1.0,user-scalable=no">
@@ -10738,17 +10738,61 @@ async function applyPunishmentOnce(){
     // Brand-new account/browser: never punish on the very session that created it.
     if(IS_BRAND_NEW_SESSION)return;
     const yesterday=dateOff(-1);
-    // Multi-device guard: any of these means yesterday was already processed —
-    // never deduct twice when phone + laptop both open the app.
+
+    // Heal ledger from any day that already has a penalty record (local or last cloud snapshot).
+    try{
+      if(historyData[yesterday]?.penalty) penalizedDates[yesterday]=true;
+      if(LAST_KNOWN_CLOUD_HISTORY && LAST_KNOWN_CLOUD_HISTORY[yesterday]?.penalty){
+        penalizedDates[yesterday]=true;
+        if(!historyData[yesterday]) historyData[yesterday]={};
+        if(!historyData[yesterday].penalty) historyData[yesterday].penalty=LAST_KNOWN_CLOUD_HISTORY[yesterday].penalty;
+      }
+    }catch(e){}
+
+    // Multi-device guard: already processed → never deduct again.
     if(penalizedDates[yesterday])return;
     if(historyData[yesterday] && historyData[yesterday].penalty){
       penalizedDates[yesterday]=true;
+      try{ await sSet(LS.penalized,penalizedDates); }catch(e){}
       return;
     }
     if(FIRST_SEEN && yesterday<FIRST_SEEN)return;
 
-    // Stamp ledger IMMEDIATELY (before computing/deducting) so a second device
-    // that hydrates mid-flight still sees the flag after cloud merge.
+    // Signed-in: one quick cloud re-check before deducting so phone + laptop
+    // opening at the same second don't both charge.
+    const user=typeof fbAuth!=='undefined'?fbAuth.currentUser:null;
+    if(user && typeof getDoc!=='undefined' && typeof doc!=='undefined' && typeof fbDb!=='undefined'){
+      try{
+        const snap=await Promise.race([
+          getDoc(doc(fbDb,'users',user.uid)),
+          new Promise((_,rej)=>setTimeout(()=>rej(new Error('punish-check-timeout')),5000))
+        ]);
+        if(snap && snap.exists()){
+          const d=snap.data()||{};
+          if(d.penalizedDates && d.penalizedDates[yesterday]){
+            penalizedDates={...penalizedDates,...d.penalizedDates};
+            try{ await sSet(LS.penalized,penalizedDates); }catch(e){}
+            return;
+          }
+          if(d.historyData && d.historyData[yesterday] && d.historyData[yesterday].penalty){
+            penalizedDates[yesterday]=true;
+            if(!historyData[yesterday]) historyData[yesterday]={};
+            historyData[yesterday].penalty=d.historyData[yesterday].penalty;
+            try{ await sSet(LS.penalized,penalizedDates); }catch(e){}
+            return;
+          }
+          // Align points with cloud before we deduct so we never stack on a stale high balance.
+          if(d.stats){
+            STATS=mergeStatsPreferRicher(STATS, d.stats);
+            LAST_KNOWN_CLOUD_STATS=JSON.parse(JSON.stringify(d.stats));
+          }
+        }
+      }catch(e){ console.warn('punishment cloud pre-check',e); }
+      // Re-check after await (another tab may have stamped local storage).
+      if(penalizedDates[yesterday]) return;
+    }
+
+    // Stamp ledger IMMEDIATELY (before computing/deducting).
     penalizedDates[yesterday]=true;
     try{ await sSet(LS.penalized,penalizedDates); }catch(e){}
 
@@ -10772,6 +10816,12 @@ async function applyPunishmentOnce(){
       if(!historyData[yesterday])historyData[yesterday]={};
       historyData[yesterday].penalty={rate,ded,missedCount,at:Date.now()};
     }
+    // Update known cloud snapshot so a later max-merge cannot restore pre-penalty points.
+    try{
+      LAST_KNOWN_CLOUD_STATS=JSON.parse(JSON.stringify(STATS));
+      if(!LAST_KNOWN_CLOUD_HISTORY) LAST_KNOWN_CLOUD_HISTORY={};
+      LAST_KNOWN_CLOUD_HISTORY[yesterday]=JSON.parse(JSON.stringify(historyData[yesterday]||{}));
+    }catch(e){}
     await saveAll(); // persists ledger + history so other devices cannot re-apply
   }catch(e){console.error(e);}
   finally{ PUNISHMENT_IN_PROGRESS=false; }
@@ -15344,11 +15394,11 @@ function openSettingsScreen(){
       editModeEl._wired=true;
       editModeEl.addEventListener('change',()=>{
         setScheduleEditMode(!!editModeEl.checked);
-        const en=(USER_SETTINGS&&USER_SETTINGS.lang)==='en';
-        showToast(window.SCHEDULE_EDIT_MODE
-          ?(en?'Edit mode on — schedule opened. Use Done when finished.'
-              :'وضع التعديل مفعّل — فتحنا الجدول. اضغط تم عند الانتهاء')
-          :(en?'Edit mode off':'وضع التعديل متوقف'),2200);
+        // No toast when turning ON — floating edit bar is the only indicator.
+        if(!window.SCHEDULE_EDIT_MODE){
+          const en=(USER_SETTINGS&&USER_SETTINGS.lang)==='en';
+          showToast(en?'Edit mode off':'وضع التعديل متوقف',1400);
+        }
       });
     }
   }
@@ -20943,6 +20993,14 @@ if (typeof onAuthStateChanged !== 'undefined' && typeof fbAuth !== 'undefined') 
             }
           }
           if(d.penalizedDates) penalizedDates={...penalizedDates,...d.penalizedDates};
+          // Any day that already has a penalty in history is treated as charged —
+          // stops phone/laptop from deducting again when ledger keys were missing.
+          try{
+            for(const dk of Object.keys(historyData||{})){
+              if(historyData[dk] && historyData[dk].penalty) penalizedDates[dk]=true;
+            }
+            await sSet(LS.penalized,penalizedDates);
+          }catch(e){}
           // Cloud userEdits is authoritative once it exists — this is what makes an
           // edit made on your phone show up on your laptop. If the cloud doc has no
           // userEdits yet (brand-new account), keep whatever local value we have.
