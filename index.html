@@ -1,6 +1,6 @@
 <!DOCTYPE html>
 <html lang="en" dir="ltr">
-<!-- cache-bust: 2026-10-03-day-delete-dim -->
+<!-- cache-bust: 2026-10-03-cat-color-icon -->
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1.0,maximum-scale=1.0,user-scalable=no">
@@ -6355,8 +6355,14 @@ function barGoldFlash(){const el=document.getElementById('progBox');if(!el)retur
 // Short haptic "tick" on task complete — ignored on desktop / unsupported browsers.
 function hapticComplete(){try{if(navigator.vibrate)navigator.vibrate([12,30,18]);}catch(e){}}
 
-const ENCOURAGE_WIN=['🎉 يوم كامل! أنت وحش اليوم','💪 استمرار رهيب، كمّل كذا','🔥 كل يوم بتقوى أكثر','⚡ الانضباط ده هو الفرق','🏅 يوم موثق بالكامل، فخور فيك'];
-const ENCOURAGE_MISS=['بكرة نرجع أقوى، ما تستسلمش 💪','يوم واحد مش نهاية الطريق، كمّل 🔥','خصم اليوم مش نهاية الاستريك، ثبّت بكرة ✊','خد نفس وابدأ من جديد النهاردة 🌱'];
+const ENCOURAGE_WIN_AR=['🎉 يوم كامل! أنت وحش اليوم','💪 استمرار رهيب، كمّل كذا','🔥 كل يوم بتقوى أكثر','⚡ الانضباط ده هو الفرق','🏅 يوم موثق بالكامل، فخور فيك'];
+const ENCOURAGE_MISS_AR=['بكرة نرجع أقوى، ما تستسلمش 💪','يوم واحد مش نهاية الطريق، كمّل 🔥','خصم اليوم مش نهاية الاستريك، ثبّت بكرة ✊','خد نفس وابدأ من جديد النهاردة 🌱'];
+const ENCOURAGE_WIN_EN=['🎉 Perfect day — you crushed it','💪 Streak solid — keep going','🔥 Getting stronger every day','⚡ Discipline is the difference','🏅 Full day logged — proud of you'];
+const ENCOURAGE_MISS_EN=['Tomorrow we come back stronger 💪','One day is not the end — keep going 🔥','Today’s miss doesn’t end the journey ✊','Breathe, reset, start again today 🌱'];
+const ENCOURAGE_WIN=ENCOURAGE_WIN_AR; // default; pickRandom callers should prefer lang-aware helpers
+const ENCOURAGE_MISS=ENCOURAGE_MISS_AR;
+function pickEncourageWin(){ return pickRandom(((USER_SETTINGS&&USER_SETTINGS.lang)==='en')?ENCOURAGE_WIN_EN:ENCOURAGE_WIN_AR); }
+function pickEncourageMiss(){ return pickRandom(((USER_SETTINGS&&USER_SETTINGS.lang)==='en')?ENCOURAGE_MISS_EN:ENCOURAGE_MISS_AR); }
 function pickRandom(arr){return arr[Math.floor(Math.random()*arr.length)];}
 
 // ===== Schedule =====
@@ -7229,7 +7235,7 @@ async function propagateCategoryStyleToTasks(catId, icon, color){
 
 let ST_SELECTED_CATEGORY = 'routine';
 
-const OB_TASK_COLORS=['#3b82f6','#10b981','#f59e0b','#ef4444','#8b5cf6','#06b6d4','#ec4899','#fbbf24'];
+const OB_TASK_COLORS=['#3b82f6','#10b981','#f59e0b','#ef4444','#8b5cf6','#06b6d4','#ec4899','#fbbf24','#6366f1','#14b8a6','#f43f5e','#84cc16','#a855f7','#64748b'];
 
 function scheduleGenTaskId(){return `custom-${Date.now()}-${Math.floor(Math.random()*9999)}`;}
 
@@ -7242,6 +7248,68 @@ function scheduleEnsureDay(jd){
     USER_SCHEDULE[jd]={n:DSHORT[jd],wk:((USER_SETTINGS&&USER_SETTINGS.lang)==='en'?'9:00 AM':'9:00 ص'),bd:((USER_SETTINGS&&USER_SETTINGS.lang)==='en'?'11:00 PM':'11:00 م'),gm:null,ts:[]};
   }
   if(!Array.isArray(USER_SCHEDULE[jd].ts)) USER_SCHEDULE[jd].ts=[];
+}
+
+// First materializing edit of a template/demo task must NOT leave USER_SCHEDULE as a
+// single-day, single-task week. getEffectiveSched prefers any non-empty USER_SCHEDULE
+// over static SCHED — so writing only the edited task made every other card vanish
+// (classic report: "I changed the category and the task disappeared" / whole day blank).
+// Seed a deep copy of the currently-visible week first (guest SCHED, or whatever
+// getEffectiveSched already returns for each weekday).
+function materializeUserScheduleFromVisibleWeekIfNeeded(existingId){
+  if(!USER_SCHEDULE) USER_SCHEDULE={};
+  const hasAny=Object.keys(USER_SCHEDULE).some(k=>{
+    const d=USER_SCHEDULE[k];
+    return d && Array.isArray(d.ts) && d.ts.length>0;
+  });
+  // Empty USER_SCHEDULE (guest first edit, or signed-in mid-onboarding blank): adopt full week.
+  if(!hasAny){
+    for(let d=0;d<7;d++){
+      let src=null;
+      try{
+        // Prefer static SCHED for guests so demo tasks stay; for signed-in empty accounts
+        // SCHED is intentionally not used by getEffectiveSched, but copying an empty
+        // BLANK day is still correct.
+        if(typeof SCHED!=='undefined' && SCHED && SCHED[d]) src=SCHED[d];
+        else if(typeof getEffectiveSched==='function') src=getEffectiveSched(d);
+      }catch(e){}
+      if(src && Array.isArray(src.ts)){
+        USER_SCHEDULE[d]={
+          n:src.n||(typeof DSHORT!=='undefined'?DSHORT[d]:''),
+          wk:src.wk||'9:00 AM',
+          bd:src.bd||'11:00 PM',
+          gm:src.gm||null,
+          ts:(src.ts||[]).map(t=>Array.isArray(t)?[...t]:t)
+        };
+      }else{
+        scheduleEnsureDay(d);
+      }
+    }
+    return;
+  }
+  // USER_SCHEDULE already has content, but this existingId lives only on the template
+  // side (prayer/free/SCHED leftover). Before we push a lone copy onto one day, copy
+  // the visible day's full task list into any weekday that is still empty.
+  if(!existingId) return;
+  let found=false;
+  for(let d=0;d<7;d++){
+    if((USER_SCHEDULE[d]?.ts||[]).some(t=>t&&t[0]===existingId)){ found=true; break; }
+  }
+  if(found) return;
+  for(let d=0;d<7;d++){
+    scheduleEnsureDay(d);
+    let srcTs=[];
+    try{
+      if(typeof getEffectiveSched==='function'){
+        const eff=getEffectiveSched(d);
+        srcTs=(eff&&Array.isArray(eff.ts))?eff.ts:[];
+      }
+    }catch(e){}
+    // Only seed when this weekday still has no user tasks — avoid clobbering real edits.
+    if(USER_SCHEDULE[d].ts.length===0 && srcTs.length){
+      USER_SCHEDULE[d].ts=srcTs.map(t=>Array.isArray(t)?[...t]:t);
+    }
+  }
 }
 
 // Adds or updates a task tuple in USER_SCHEDULE[jd].ts. existingId null/undefined
@@ -7262,6 +7330,8 @@ async function saveScheduleTask(jd,existingId,{time,name,desc,pts,color,foodLog,
   const tuple=[id,time,category,ico,name,desc||'',pts||0,null,null,false,color||null,macros,mealKey,endTime||null,category,prio];
   tuple.priority=prio;
   const dayList=(Array.isArray(days)&&days.length)?days:[jd];
+  // Materialize template week BEFORE ensure/mutate so one category edit cannot blank the schedule.
+  try{ materializeUserScheduleFromVisibleWeekIfNeeded(existingId); }catch(e){ console.warn('materializeUserSchedule',e); }
   for(const d of dayList){
     scheduleEnsureDay(d);
     const ts=USER_SCHEDULE[d].ts;
@@ -7296,17 +7366,40 @@ let ST_ACTIVE_JD=null;
 let ST_ACTIVE_TASK_ID=null;
 let ST_SELECTED_COLOR=OB_TASK_COLORS[0];
 
+function stNormColor(c){
+  return String(c||'').trim().toLowerCase();
+}
 function stRenderColorChips(){
   const row=document.getElementById('stColorRow');
   if(!row) return;
   row.innerHTML='';
-  OB_TASK_COLORS.forEach(color=>{
+  // Always include the active color (category colors may not be in the base palette)
+  const palette=[];
+  const seen=new Set();
+  const add=(c)=>{
+    const n=stNormColor(c);
+    if(!n||seen.has(n)) return;
+    seen.add(n);
+    palette.push(c.startsWith('#')?c:n);
+  };
+  add(ST_SELECTED_COLOR);
+  OB_TASK_COLORS.forEach(add);
+  try{
+    getAllCategories().forEach(cat=>add(cat.color));
+  }catch(e){}
+  palette.forEach(color=>{
     const chip=document.createElement('div');
-    const isSel=ST_SELECTED_COLOR===color;
-    chip.style.cssText=`width:34px;height:34px;border-radius:10px;cursor:pointer;background:${color};border:3px solid ${isSel?'#fff':'transparent'};box-shadow:${isSel?'0 0 0 2px '+color:'none'};transition:all .15s`;
+    const isSel=stNormColor(ST_SELECTED_COLOR)===stNormColor(color);
+    chip.style.cssText=`width:34px;height:34px;border-radius:10px;cursor:pointer;background:${color};border:3px solid ${isSel?'#fff':'transparent'};box-shadow:${isSel?'0 0 0 2px '+color:'none'};transition:all .15s;flex-shrink:0`;
+    chip.title=color;
     chip.onclick=()=>{ ST_SELECTED_COLOR=color; stRenderColorChips(); };
     row.appendChild(chip);
   });
+  // Live preview swatch
+  const prev=document.createElement('div');
+  prev.style.cssText=`margin-inline-start:6px;padding:6px 10px;border-radius:10px;border:1px solid var(--br);background:color-mix(in srgb, ${ST_SELECTED_COLOR||'#6366f1'} 22%, transparent);color:var(--tx);font-size:.72rem;font-weight:800;display:flex;align-items:center;gap:6px`;
+  prev.innerHTML=`<span style="width:12px;height:12px;border-radius:4px;background:${ST_SELECTED_COLOR||'#6366f1'};display:inline-block"></span>${ST_SELECTED_COLOR||''}`;
+  row.appendChild(prev);
 }
 
 function stApplyCategoryChoice(catId, opts){
@@ -7320,10 +7413,11 @@ function stApplyCategoryChoice(catId, opts){
   if(catEl) catEl.value=cat.id;
   const sel=document.getElementById('stCatSelect');
   if(sel) sel.value=cat.id;
-  // Icon + color follow the category immediately when picking a category on a new/edit task
+  // Icon + color always follow the category when the user picks one (this is the
+  // expected behavior — priority already did; color/emoji must match).
   if(opts.syncVisual!==false){
-    ST_SELECTED_ICON=cat.icon||'✨';
-    ST_SELECTED_COLOR=cat.color||OB_TASK_COLORS[0];
+    ST_SELECTED_ICON=String(cat.icon||'✨');
+    ST_SELECTED_COLOR=String(cat.color||OB_TASK_COLORS[0]);
   }
   // Category default priority applies unless caller is restoring an existing task's own priority
   if(opts.syncPriority!==false){
@@ -7345,8 +7439,14 @@ function stApplyCategoryChoice(catId, opts){
     if(foodEl) foodEl.checked=false;
   }
   stRenderCategoryChips();
+  // Re-render icon + color AFTER state is set so the selected chip/emoji is visible
   try{ stRenderIconRow(); }catch(e){}
   try{ stRenderColorChips(); }catch(e){}
+  // Sync custom-emoji field if present
+  try{
+    const em=document.getElementById('stCustomEmojiInput');
+    if(em) em.value=ST_SELECTED_ICON||'';
+  }catch(e){}
 }
 function stRenderCategoryChips(){
   const row=document.getElementById('stCatChipsRow');
@@ -8083,6 +8183,15 @@ async function stHandleSave(){
       await tpSave();
     }
   }catch(e){ console.warn('detail plan toggle save',e); }
+  // If a category chip filter is active for this day and the task moved to another
+  // category, keep the task visible by resetting the day filter to "all".
+  try{
+    const filterJd=(ST_ACTIVE_JD!=null)?ST_ACTIVE_JD:getJDfromISO(SELECTED_DATE||TODAY);
+    if(window.SCHEDULE_CAT_FILTER && window.SCHEDULE_CAT_FILTER[filterJd] && window.SCHEDULE_CAT_FILTER[filterJd]!=='all'){
+      window.SCHEDULE_CAT_FILTER[filterJd]='all';
+      if(USER_SETTINGS&&USER_SETTINGS.scheduleCatFilter) USER_SETTINGS.scheduleCatFilter[filterJd]='all';
+    }
+  }catch(e){}
   // Close modal without auto-restoring settings yet — we re-open after schedule re-render.
   document.getElementById('schedTaskModal')?.classList.remove('open');
   ST_ACTIVE_JD=null;
@@ -8935,7 +9044,19 @@ function stRenderIconRow(){
   const row=document.getElementById('stIconRow');
   if(!row) return;
   row.innerHTML='';
-  TASK_ICON_PRESETS.forEach(ic=>{
+  const icons=[];
+  const seen=new Set();
+  const addIc=(ic)=>{
+    const s=String(ic||'').trim();
+    if(!s||seen.has(s)) return;
+    seen.add(s);
+    icons.push(s);
+  };
+  // Selected (category) icon first so it is always visible & highlighted
+  addIc(ST_SELECTED_ICON);
+  (typeof TASK_ICON_PRESETS!=='undefined'?TASK_ICON_PRESETS:[]).forEach(addIc);
+  try{ getAllCategories().forEach(c=>addIc(c.icon)); }catch(e){}
+  icons.forEach(ic=>{
     const b=document.createElement('button');
     b.type='button';
     b.className='task-icon-btn'+(ic===ST_SELECTED_ICON?' sel':'');
@@ -8954,14 +9075,19 @@ function stRenderIconRow(){
   inp.id='stCustomEmojiInput';
   inp.maxLength=8;
   inp.placeholder='🎯';
-  inp.value=TASK_ICON_PRESETS.includes(ST_SELECTED_ICON)?'':(ST_SELECTED_ICON||'');
+  inp.value=ST_SELECTED_ICON||'';
   inp.style.cssText='width:72px;padding:8px 10px;border-radius:10px;border:1.5px solid var(--br);background:var(--c);color:var(--tx);font-size:1.2rem;text-align:center;font-family:inherit';
   inp.oninput=()=>{
     const v=String(inp.value||'').trim();
-    if(v){ ST_SELECTED_ICON=v; }
+    if(v){ ST_SELECTED_ICON=v; stRenderIconRow(); }
   };
   wrap.appendChild(lab);
   wrap.appendChild(inp);
+  // Preview chip
+  const prev=document.createElement('span');
+  prev.style.cssText='font-size:1.35rem;padding:4px 8px;border-radius:10px;border:1px solid var(--br);background:rgba(255,255,255,.04)';
+  prev.textContent=ST_SELECTED_ICON||'✨';
+  wrap.appendChild(prev);
   row.appendChild(wrap);
 }
 function renderIconPresets(){
@@ -9915,9 +10041,13 @@ function getReqTasks(jd,iso){
   const showPrayers=!!USER_SETTINGS.trackPrayers;
   const prayers=showPrayers?buildPTasks(jd):[];
   const base=[...prayers,...(d?.ts||[])].filter(t=>!t[9]&&t[6]>0&&t[2]!=='snack');
-  // Required tasks for points/punishment: skip permanent deletes AND today-only skips
+  // Required for streak / points / punishment:
+  //  - permanent deletes (_deleted) and today-only skips (_dayDeleted) do NOT count
+  //  - custom tasks from USER_EDITS are included by applyUserEditsToTasks, then
+  //    re-filtered so 0-pt / snack / exception tasks never block a perfect day
   return applyUserEditsToTasks(base,effIso)
     .filter(t=>!t._deleted && !t._dayDeleted)
+    .filter(t=>!t[9] && (t[6]>0) && t[2]!=='snack')
     .sort((a,b)=>sortKey(a,effIso,jd)-sortKey(b,effIso,jd));
 }
 
@@ -11025,44 +11155,56 @@ async function applyPunishmentOnce(){
 // ===== Streak =====
 const MILESTONES=[5,10,15,20,25,30,40,50];
 
+function isTaskMarkedDone(doneMap, id){
+  if(!doneMap || id==null) return false;
+  const v=doneMap[id];
+  // Awarded points (number), 'qada', true, or any non-false sentinel counts as done.
+  return v!==undefined && v!==null && v!==false;
+}
+
 function checkStreak(){
+  const en=(typeof uiIsEn==='function')?uiIsEn():((USER_SETTINGS&&USER_SETTINGS.lang)==='en');
   const jd=todayJD();
-  const req=getReqTasks(jd);
-  const todayDone=(historyData[TODAY]||{}).done||DONE;
-  const allDone=req.length>0 && req.every(t=>todayDone[t[0]]);
+  // Required list already excludes forever-deletes (_deleted) and today-only skips
+  // (_dayDeleted). Added tasks with pts>0 are included via applyUserEditsToTasks.
+  const req=getReqTasks(jd, TODAY);
+  // CRITICAL: merge live DONE on top of historyData. Completing a task sets DONE[id]
+  // first, then calls checkStreak(), then saveAll(). Using only historyData[TODAY].done
+  // here missed the task just completed, so allDone never became true and the streak
+  // never advanced (no toast, no +1) even when every card was green.
+  const todayDone=Object.assign({}, (historyData[TODAY]||{}).done||{}, DONE||{});
+  // Empty required list (all tasks deleted forever / skipped today) counts as a
+  // complete day — user intentionally cleared the board.
+  const allDone=req.every(t=>isTaskMarkedDone(todayDone, t[0]));
   const yesterday=dateOff(-1);
 
   // The "did the streak break" checks below are inherently about YESTERDAY's
   // completion, not today's — so they must evaluate yesterday's own required-task
   // list against yesterday's own historyData, never today's `allDone`/`req`.
-  //
-  // The previous version reused today's `allDone` (computed above, for TODAY's task
-  // list) as a stand-in for "was yesterday finished?". Since checkStreak() runs once
-  // per day on load — BEFORE the user has completed anything today — `allDone` for
-  // today is almost always false at that moment. That false was then wrongly read as
-  // "yesterday was incomplete", breaking a streak that was actually completed in
-  // full the day before. This is the exact mechanism behind "streak broke after 1
-  // day" despite every task from the prior day being done.
   const yesterdayJd=getJDfromISO(yesterday);
-  const yesterdayReq=getReqTasks(yesterdayJd,yesterday);
+  const yesterdayReq=getReqTasks(yesterdayJd, yesterday);
   const yesterdayDoneMap=(historyData[yesterday]||{}).done||{};
   const yesterdayHasAnyHistory=!!(historyData[yesterday] && (
     Object.keys(yesterdayDoneMap).length>0
     || (historyData[yesterday].prayerLogs && Object.keys(historyData[yesterday].prayerLogs).length>0)
     || (historyData[yesterday].foodLog && Object.keys(historyData[yesterday].foodLog).length>0)
   ));
-  const yesterdayAllDone=yesterdayReq.length>0 && yesterdayReq.every(t=>yesterdayDoneMap[t[0]]);
+  // Same rule: empty required list yesterday = complete (user cleared the day).
+  const yesterdayAllDone=yesterdayReq.every(t=>isTaskMarkedDone(yesterdayDoneMap, t[0]));
 
   // iPhone first-open: historyData may still be empty while STATS.cur/lf already
-  // came from cloud. Treating "no local history" as "missed yesterday" zeroed the
-  // streak and then saveAll pushed the broken streak to Firestore. Only break a
-  // streak when we have real evidence for yesterday, not missing data.
+  // came from cloud. Only break a streak when we have real evidence for yesterday.
   const canJudgeYesterday=yesterdayHasAnyHistory || yesterdayReq.length===0;
 
   if(STATS.lc!==TODAY){
     if(canJudgeYesterday && STATS.lf===yesterday && !yesterdayAllDone){
       STATS.best=Math.max(STATS.best,STATS.cur);
-      if(STATS.cur>0){showToast(`💔 انكسر الاستريك بعد ${STATS.cur} يوم\n${pickRandom(ENCOURAGE_MISS)}`,3800,'warn');shakeStreakBroken();}
+      if(STATS.cur>0){
+        showToast(en
+          ? `💔 Streak broken after ${STATS.cur} day${STATS.cur===1?'':'s'}\n${pickEncourageMiss()}`
+          : `💔 انكسر الاستريك بعد ${STATS.cur} يوم\n${pickEncourageMiss()}`,3800,'warn');
+        shakeStreakBroken();
+      }
       STATS.cur=0;
     }
     STATS.lc=TODAY;
@@ -11073,21 +11215,27 @@ function checkStreak(){
     STATS.lf=TODAY;
     STATS.best=Math.max(STATS.best,STATS.cur);
     if(MILESTONES.includes(STATS.cur)){
-      showToast(`🏆 ${STATS.cur} يوم متواصل! إنجاز كبير جداً 🎊`,5000,'gold');
+      showToast(en
+        ? `🏆 ${STATS.cur}-day streak! Huge milestone 🎊`
+        : `🏆 ${STATS.cur} يوم متواصل! إنجاز كبير جداً 🎊`,5000,'gold');
       hitMilestone();barGoldFlash();
     }else{
-      showToast(`${pickRandom(ENCOURAGE_WIN)}\nاستريك: ${STATS.cur} يوم 🔥`,4000);
+      showToast(en
+        ? `${pickEncourageWin()}\nStreak: ${STATS.cur} day${STATS.cur===1?'':'s'} 🔥`
+        : `${pickEncourageWin()}\nاستريك: ${STATS.cur} يوم 🔥`,4000);
     }
     pulseStreakWin();barGoldFlash();
   }
 
-  // This branch previously fired on almost every load before the user did any task
-  // today (since `!allDone` was near-always true for a freshly-started day), which
-  // is the second half of the same false-break bug — now correctly scoped to
   // "yesterday, which the streak claims was completed, actually wasn't."
   if(canJudgeYesterday && !yesterdayAllDone && STATS.lf===yesterday){
     STATS.best=Math.max(STATS.best,STATS.cur);
-    if(STATS.cur>0){showToast(`💔 انكسر الاستريك بعد ${STATS.cur} يوم\n${pickRandom(ENCOURAGE_MISS)}`,3800,'warn');shakeStreakBroken();}
+    if(STATS.cur>0){
+      showToast(en
+        ? `💔 Streak broken after ${STATS.cur} day${STATS.cur===1?'':'s'}\n${pickEncourageMiss()}`
+        : `💔 انكسر الاستريك بعد ${STATS.cur} يوم\n${pickEncourageMiss()}`,3800,'warn');
+      shakeStreakBroken();
+    }
     STATS.cur=0;STATS.lf=null;
   }
 }
@@ -13684,6 +13832,8 @@ function showMacroTrendsModal(date){
 
   const doMount = ()=>{
     if(mount && window.MacroTrends && typeof window.MacroTrends.mount === 'function'){
+      // Bundle day-axis labels also read window.__MACRO_TRENDS_LANG / USER_SETTINGS.lang
+      try{ window.__MACRO_TRENDS_LANG = en ? 'en' : 'ar'; }catch(e){}
       window.MacroTrends.mount(mount, {
         userSettings: USER_SETTINGS,
         selectedDate: targetDate,
@@ -14589,12 +14739,28 @@ function computeDayMacros(jd,iso){
 // Macro Trends (Recharts) bundle reads these off window — they are module-scoped
 // above, so without this bridge getDayMacroStats always sees zeros even when the
 // main #macroBox bars are correct. Keep in sync if computeDayMacros signature changes.
+//
+// CRITICAL: USER_SETTINGS must be a live getter. The bundle builds day-axis labels
+// with `window.USER_SETTINGS?.lang === "en" ? enShort : arShort`. USER_SETTINGS is
+// module-scoped and gets reassigned on loadAll/cloud merge — a one-shot
+// `window.USER_SETTINGS = USER_SETTINGS` would stay stuck on the initial empty
+// object, so English UI still got Arabic weekday labels (سبت/أحد/…) on the charts.
 try{
   window.computeDayMacros = computeDayMacros;
   window.getJDfromISO = getJDfromISO;
   window.TODAY = TODAY;
+  if(typeof dateOff === 'function') window.dateOff = dateOff;
+  if(typeof currentWeekStartISO === 'function') window.currentWeekStartISO = currentWeekStartISO;
   Object.defineProperty(window, 'SELECTED_DATE', {
     get(){ return (typeof SELECTED_DATE !== 'undefined') ? SELECTED_DATE : TODAY; },
+    configurable: true
+  });
+  Object.defineProperty(window, 'USER_SETTINGS', {
+    get(){ return (typeof USER_SETTINGS !== 'undefined' && USER_SETTINGS) ? USER_SETTINGS : {lang:'en'}; },
+    configurable: true
+  });
+  Object.defineProperty(window, 'historyData', {
+    get(){ return (typeof historyData !== 'undefined' && historyData) ? historyData : {}; },
     configurable: true
   });
 }catch(e){ console.warn('macro trends window bridge failed', e); }
@@ -15013,13 +15179,26 @@ function renderFitnessSettingsStats(){
   const ratioText = document.getElementById('fwMacroRatioText');
   if(ratioText) ratioText.textContent = `Protein ${pPct}% · Fats ${fPct}% · Carbs ${cPct}%`;
 
-  // Current weight vs target weight progress
+  // Current weight vs target weight progress + auto ideal-weight suggestion
   const isEn = (USER_SETTINGS && USER_SETTINGS.lang) === 'en';
   try{
+    const idealW = calc.ideal_weight || (typeof calculateIdealBodyWeight==='function'
+      ? calculateIdealBodyWeight({gender: calc.gender||m.gender, height: calc.height||m.height||height, weight, body_fat: calc.body_fat||m.body_fat, goal})
+      : null);
     const targetInp=document.getElementById('setTargetWeight');
     const storedTarget=Number(m.target_weight)||Number(USER_SETTINGS.target_weight)||null;
-    if(targetInp && storedTarget && !targetInp.value) targetInp.value=storedTarget;
-    const targetW=Number(targetInp?.value)||storedTarget||null;
+    // Pre-fill empty target with calculated ideal so "perfect weight" is never a blank field
+    if(targetInp && !targetInp.value){
+      if(storedTarget) targetInp.value=storedTarget;
+      else if(idealW) targetInp.value=idealW;
+    }
+    if(targetInp && idealW){
+      targetInp.placeholder = isEn ? `Ideal ≈ ${idealW} kg` : `المثالي ≈ ${idealW} كجم`;
+      targetInp.title = isEn
+        ? `Suggested ideal weight from your height/gender${calc.body_fat?'/body fat':''}: ${idealW} kg (Devine + BMI 22)`
+        : `الوزن المثالي المقترح من طولك وجنسك: ${idealW} كجم`;
+    }
+    const targetW=Number(targetInp?.value)||storedTarget||idealW||null;
     let box=document.getElementById('fwWeightProgressBox');
     if(!box && previewCard){
       box=document.createElement('div');
@@ -15033,21 +15212,25 @@ function renderFitnessSettingsStats(){
         const span=Math.abs(startW-targetW)||1;
         const moved=Math.abs(startW-weight);
         let pctDone=Math.max(0, Math.min(100, Math.round((moved/span)*100)));
-        // If already past target, show 100%
         if((goal==='fat_loss' && weight<=targetW) || (goal==='muscle' && weight>=targetW) || (goal==='recomp' && Math.abs(weight-targetW)<0.5)){
           pctDone=100;
         }
         const diff=(weight-targetW);
         const diffTxt=diff===0?(isEn?'On target':'على الهدف'):(diff>0?`+${diff.toFixed(1)} kg`:`${diff.toFixed(1)} kg`);
+        const idealNote = idealW
+          ? (isEn ? ` · Ideal ≈ ${idealW} kg` : ` · المثالي ≈ ${idealW} كجم`)
+          : '';
         box.innerHTML=`<div class="fw-weight-progress-head">
           <span class="fw-weight-progress-title">${isEn?'Weight progress':'تقدم الوزن'}</span>
           <span class="fw-weight-progress-nums">${weight} → ${targetW} kg</span>
         </div>
         <div class="fw-weight-bar-track"><div class="fw-weight-bar-fill" style="width:${pctDone}%"></div></div>
-        <div class="fw-weight-progress-sub">${isEn?`Current vs target: ${diffTxt} · ${pctDone}% of path`:`الحالي مقابل الهدف: ${diffTxt} · ${pctDone}% من الطريق`}</div>`;
+        <div class="fw-weight-progress-sub">${isEn?`Current vs target: ${diffTxt} · ${pctDone}% of path${idealNote}`:`الحالي مقابل الهدف: ${diffTxt} · ${pctDone}% من الطريق${idealNote}`}</div>`;
         box.style.display='block';
       }else{
-        box.innerHTML=`<div class="fw-weight-progress-sub">${isEn?'Set a target weight above to track progress toward your goal.':'حدد وزن الهدف بالأعلى لتتبع التقدم نحو هدفك.'}</div>`;
+        box.innerHTML=`<div class="fw-weight-progress-sub">${idealW
+          ? (isEn?`Suggested ideal weight: <b>${idealW} kg</b> (from your height & profile). Save to use it as target.`:`الوزن المثالي المقترح: <b>${idealW} كجم</b> (من طولك وبياناتك). احفظ لاعتماده كهدف.`)
+          : (isEn?'Set a target weight above to track progress toward your goal.':'حدد وزن الهدف بالأعلى لتتبع التقدم نحو هدفك.')}</div>`;
         box.style.display='block';
       }
     }
@@ -15554,7 +15737,15 @@ async function handleFitnessWizardSave(){
 }
 
 async function handleSettingsFitnessSave(){
-  const ftChecked = document.getElementById('setFitnessTrackingEnabledSec')?.checked ?? true;
+  // Saving targets implies the user wants fitness tracking ON. The checkbox often
+  // stays unchecked in the DOM even after a prior save, which previously wrote
+  // fitness_tracking_enabled=false and made computeDayMacros ignore the new numbers
+  // on the main page (classic "I clicked Save targets and nothing changed").
+  const ftEl = document.getElementById('setFitnessTrackingEnabledSec');
+  const ftChecked = true;
+  if(ftEl) ftEl.checked = true;
+  const syncTop = document.getElementById('setFitnessTrackingEnabled');
+  if(syncTop) syncTop.checked = true;
   const gender = (document.getElementById('setGenderFemale')?.classList.contains('fw-chip-sel')) ? 'female' : 'male';
   const age = Math.max(14, Math.min(100, Number(document.getElementById('setAge')?.value) || 25));
   const weight = Math.max(30, Math.min(250, Number(document.getElementById('setWeight')?.value) || 75));
@@ -15567,16 +15758,23 @@ async function handleSettingsFitnessSave(){
   const bodyFat = bfVal ? Number(bfVal) : null;
 
   const calculated = calculateFitnessTargets({gender, age, weight, height, activity, goal, body_fat: bodyFat});
+  // Ideal weight is always computed from profile; manual field overrides if filled.
+  const idealW = calculated.ideal_weight || calculateIdealBodyWeight({gender, height, weight, body_fat: bodyFat, goal});
   const targetWeightRaw=document.getElementById('setTargetWeight')?.value;
-  const targetWeight=targetWeightRaw?Math.max(30, Math.min(250, Number(targetWeightRaw))):null;
-  if(targetWeight){
-    calculated.target_weight=targetWeight;
-    if(!calculated.start_weight) calculated.start_weight=weight;
+  let targetWeight=targetWeightRaw?Math.max(30, Math.min(250, Number(targetWeightRaw))):null;
+  if(!targetWeight || !Number.isFinite(targetWeight)){
+    targetWeight = idealW;
+    const twEl=document.getElementById('setTargetWeight');
+    if(twEl) twEl.value = String(idealW);
   }
+  calculated.ideal_weight = idealW;
+  calculated.target_weight = targetWeight;
+  if(!calculated.start_weight) calculated.start_weight = weight;
 
   USER_SETTINGS.fitness_tracking_enabled = ftChecked;
   USER_SETTINGS.fitness_metrics = calculated;
   USER_SETTINGS.target_weight = targetWeight;
+  USER_SETTINGS.ideal_weight = idealW;
 
   USER_SETTINGS.gender = calculated.gender;
   USER_SETTINGS.age = calculated.age;
@@ -15603,11 +15801,19 @@ async function handleSettingsFitnessSave(){
 
   const syncCheck1 = document.getElementById('setFitnessTrackingEnabled');
   if(syncCheck1) syncCheck1.checked = ftChecked;
+  const configBlock = document.getElementById('setFitnessConfigBlock');
+  if(configBlock) configBlock.style.opacity = '1';
 
-  try{ await saveUserSettings(); }catch(e){}
-  updateUI();
-  renderFitnessSettingsStats();
-  showToast(USER_SETTINGS.lang==='en' ? 'Fitness targets saved' : 'تم حفظ أهداف اللياقة', 2200);
+  try{ await saveUserSettings(); }catch(e){ console.warn('saveUserSettings after fitness save', e); }
+  try{ updateUI(); }catch(e){}
+  // updateUI already calls updateMacroUI, but call it again explicitly so the main
+  // #macroBox bars always pick up the freshly written fitness_metrics targets.
+  try{ if(typeof updateMacroUI==='function') updateMacroUI(); }catch(e){}
+  try{ renderFitnessSettingsStats(); }catch(e){}
+  const enSave=(USER_SETTINGS&&USER_SETTINGS.lang)==='en';
+  showToast(enSave
+    ? `Fitness targets saved · ${calculated.target_protein}g P / ${calculated.target_carbs}g C / ${calculated.target_fats}g F · ideal ${idealW} kg`
+    : `تم حفظ أهداف اللياقة · ${calculated.target_protein}جم بروتين · الوزن المثالي ${idealW} كجم`, 2800);
 }
 
 function openSettingsScreen(){
@@ -16683,6 +16889,35 @@ if (!window.AI_WORKER_URL || window.AI_WORKER_URL === window.location.origin || 
 try { /* reaffirm */ } catch (e) {}
 
 // Chaos Coordinator AI: Elite Personal Assistant, Sports Nutritionist & Behavioral Habit Coach.
+
+// Ideal / "perfect" body weight from gender + height (and optional BF%).
+// Devine formula blended with BMI≈22 (healthy midpoint). With body-fat %, also
+// derives a lean-mass target at a healthy BF band (12% ♂ / 20% ♀) and averages it in.
+function calculateIdealBodyWeight({gender, height, weight, body_fat, goal}={}){
+  const g=(gender||'male').toLowerCase();
+  const hCm=Number(height)||175;
+  const hIn=hCm/2.54;
+  const hm=hCm/100;
+  let devine = g==='female'
+    ? 45.5 + 2.3*Math.max(0, hIn-60)
+    : 50 + 2.3*Math.max(0, hIn-60);
+  const bmi22 = 22 * hm * hm;
+  let ideal = (devine + bmi22) / 2;
+  const bf=Number(body_fat);
+  if(Number.isFinite(bf) && bf>=4 && bf<=60 && weight>0){
+    const lean = weight * (1 - bf/100);
+    const healthyBf = g==='female' ? 20 : 12;
+    const fromLean = lean / (1 - healthyBf/100);
+    ideal = (ideal + fromLean) / 2;
+  }
+  if(goal==='fat_loss') ideal *= 0.98;
+  else if(goal==='muscle') ideal *= 1.02;
+  const minW = 18.5 * hm * hm;
+  const maxW = 27 * hm * hm;
+  ideal = Math.max(minW, Math.min(maxW, ideal));
+  return Math.round(ideal*10)/10;
+}
+
 function calculateFitnessTargets(m){
   const gender = (m?.gender || 'male').toLowerCase();
   const age = Number(m?.age) || 25;
@@ -16691,6 +16926,7 @@ function calculateFitnessTargets(m){
   const activity = Number(m?.activity) || 1.55;
   const goal = m?.goal || 'recomp';
   const bodyFat = (m?.body_fat !== undefined && m?.body_fat !== null && m?.body_fat !== '') ? Number(m.body_fat) : null;
+  const idealWeight = calculateIdealBodyWeight({gender, height, weight, body_fat: bodyFat, goal});
 
   let bmr = 0;
   let formulaKey = 'mifflin';
@@ -16794,6 +17030,7 @@ function calculateFitnessTargets(m){
     activity_level: activity,
     goal,
     body_fat: bodyFat,
+    ideal_weight: idealWeight,
     formula_key: formulaKey,
     formula_name: formulaName,
     formulaName: formulaName
