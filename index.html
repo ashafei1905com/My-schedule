@@ -6681,6 +6681,19 @@ let LAST_KNOWN_CLOUD_SCHEDULES=null;
 // from weekly-reset/punishment, merge:true replaced cloud stats with zeros.
 let CLOUD_DATA_HYDRATED=false;
 let LAST_KNOWN_CLOUD_STATS=null;
+// If the user completes something before the first cloud getDoc finishes, saveAll
+// marks this so we flush to Firestore as soon as hydrate is done (phone→laptop path).
+window.__pendingCloudSaveAfterHydrate=false;
+function flushPendingCloudSaveAfterHydrate(){
+  if(!window.__pendingCloudSaveAfterHydrate) return;
+  if(!CLOUD_DATA_HYDRATED) return;
+  window.__pendingCloudSaveAfterHydrate=false;
+  try{
+    if(typeof saveAll==='function'){
+      Promise.resolve(saveAll()).catch(e=>console.warn('deferred cloud save failed',e));
+    }
+  }catch(e){ console.warn('deferred cloud save threw',e); }
+}
 
 // Merge per-task done maps across devices. Prefer the richer award (higher number).
 // Never let a missing/false/0 local entry wipe a positive cloud completion — that is
@@ -11218,7 +11231,11 @@ async function saveAll(){
     // HARD RULE: while signed in, never push to cloud until the first getDoc has
     // finished. Pre-hydrate saveAll was replacing cloud stats with phone zeros.
     if(!CLOUD_DATA_HYDRATED){
-      console.warn('saveAll: cloud write skipped — waiting for first hydrate');
+      // Phone/laptop can complete tasks before the first getDoc finishes. Queue a
+      // cloud flush for the moment hydrate completes — otherwise phone work stays
+      // local-only forever and never reaches the laptop.
+      window.__pendingCloudSaveAfterHydrate=true;
+      console.warn('saveAll: cloud write deferred — waiting for first hydrate');
       return null;
     }
     // CRITICAL: setDoc({merge:true}) REPLACES the whole historyData / stats fields.
@@ -14636,42 +14653,79 @@ function switchDay(jd){
 // Smooth-scroll the schedule to the task that matches "right now" (Kuwait time):
 // prefer the block covering the current minute; if already done, jump to the next
 // incomplete task; otherwise the most recent pending task.
-function scrollToCurrentTask(){
-  // Hard gate: only the initial app open may scroll. Completions re-render
-  // via renderPanels/switchDay/updateUI and must NOT yank the viewport.
-  // Flag is set immediately so any concurrent/late call is blocked.
-  if(window.__didInitialScroll) return;
-  window.__didInitialScroll=true;
-  if(SELECTED_DATE!==TODAY) return;
-  if(document.getElementById('settingsScreen')?.classList.contains('open')) return;
+//
+// IMPORTANT: do NOT set __didInitialScroll until a real card is found and scrolled.
+// Old code set the flag first, then returned early if the DOM/DONE was not ready —
+// so the phone stayed stuck on the first task forever even after hydrate finished.
+function scrollToCurrentTask(opts){
+  const force=!!(opts&&opts.force);
+  // Hard gate after a successful initial scroll (completions must not yank viewport).
+  if(window.__didInitialScroll && !force) return false;
+  if(SELECTED_DATE!==TODAY) return false;
+  if(document.getElementById('settingsScreen')?.classList.contains('open')) return false;
   const jd=todayJD();
-  const tasks=(typeof getAllTasks==='function'?getAllTasks(jd):[]).filter(t=>t&&!t._deleted);
-  if(!tasks.length) return;
-  const now=getKuwaitNow();
+  // Prefer live DONE, but also honor historyData for today in case loadDay lagged.
+  const todayDone=Object.assign({}, (historyData[TODAY]||{}).done||{}, DONE||{});
+  const tasks=(typeof getAllTasks==='function'?getAllTasks(jd,TODAY):[]).filter(t=>t&&!t._deleted);
+  if(!tasks.length) return false;
+  const now=(typeof getKuwaitNow==='function')?getKuwaitNow():(new Date().getHours()*60+new Date().getMinutes());
   const sorted=[...tasks].sort((a,b)=>toMin(a[10]||a[1])-toMin(b[10]||b[1]));
-  const isDone=id=>{const v=DONE[id];return v!==undefined&&v!==false;};
+  const isDone=id=>{const v=todayDone[id];return v!==undefined&&v!==false;};
   let target=null;
   // Latest task that has already started
   for(const t of sorted){
     if(toMin(t[10]||t[1])<=now) target=t;
     else break;
   }
-  // If that one is done, prefer next incomplete
+  // If that one is done, prefer next incomplete (this is the normal "most of the
+  // day is done" case — without it we keep landing on an early completed card).
   if(target&&isDone(target[0])){
-    const next=sorted.find(t=>toMin(t[10]||t[1])>toMin(target[10]||target[1])&&!isDone(t[0]));
+    const next=sorted.find(t=>toMin(t[10]||t[1])>=toMin(target[10]||target[1])&&!isDone(t[0]));
     if(next) target=next;
   }
-  // Fallback: first incomplete of the day, else first task
-  if(!target||(isDone(target[0])&&!sorted.some(t=>!isDone(t[0])))){
+  // Nothing has started yet → first incomplete (or first task)
+  if(!target){
     target=sorted.find(t=>!isDone(t[0]))||sorted[0];
   }
-  if(!target) return;
+  // Everything from "now" backward is done and there is no later incomplete →
+  // still jump to the last completed so the user is not left at Fajr.
+  if(target&&isDone(target[0])){
+    const nextIncomplete=sorted.find(t=>!isDone(t[0]));
+    if(nextIncomplete) target=nextIncomplete;
+  }
+  if(!target) return false;
   const el=document.getElementById('c-'+target[0]);
-  if(!el) return;
+  if(!el) return false; // DOM not ready — caller may retry; do NOT lock the flag
+  // Ensure today's panel is the active one before scrolling
+  try{
+    document.querySelectorAll('.pan').forEach(p=>p.classList.remove('act'));
+    const pan=document.getElementById(`pan-${DKEYS[jd]}`);
+    if(pan) pan.classList.add('act');
+  }catch(e){}
   document.querySelectorAll('.current-task-highlight').forEach(n=>n.classList.remove('current-task-highlight'));
   el.classList.add('current-task-highlight');
   el.scrollIntoView({behavior:'smooth',block:'center',inline:'nearest'});
   setTimeout(()=>el.classList.remove('current-task-highlight'),2800);
+  window.__didInitialScroll=true;
+  return true;
+}
+
+// Retry initial scroll a few times: phone open often paints before DONE/cloud merge
+// finishes, so the first attempt targets the first card with empty DONE.
+function scheduleInitialScrollToCurrent(){
+  if(window.__didInitialScroll) return;
+  let attempts=0;
+  const tick=()=>{
+    if(window.__didInitialScroll) return;
+    attempts++;
+    const ok=scrollToCurrentTask();
+    if(ok || attempts>=12){
+      if(!ok) window.__didInitialScroll=true; // stop retrying after ~4s
+      return;
+    }
+    setTimeout(tick, 350);
+  };
+  setTimeout(tick, 180);
 }
 
 function renderPanels(){
@@ -20667,6 +20721,9 @@ async function pullCloudUserDelta(reason){
     loadDay();
     try{ checkStreak(); }catch(e){}
     try{ renderTabs(); renderPanels(); switchDay(getJDfromISO(SELECTED_DATE||TODAY)); updateUI(); updatePrestigeUI(); }catch(e){}
+    try{ flushPendingCloudSaveAfterHydrate(); }catch(e){}
+    // Soft pull may arrive after first paint — re-aim to "now" if we never scrolled.
+    try{ if(!window.__didInitialScroll) scheduleInitialScrollToCurrent(); }catch(e){}
     if(changed){
       const en=uiIsEn();
       showToast(en?'🔄 Synced latest data from your other device':'🔄 تم مزامنة أحدث بيانات من جهازك التاني',2200);
@@ -20742,13 +20799,10 @@ function revealApp(){
     if(lc){ lc.setAttribute('dir','ltr'); lc.style.direction='ltr'; }
     applyI18n();
   }catch(e){}
-  // After the schedule paints, jump to the task for "right now" — once only.
-  if(!window.__didInitialScroll){
-    setTimeout(()=>{
-      try{ scrollToCurrentTask(); }catch(e){}
-      window.__didInitialScroll=true;
-    },200);
-  }
+  // After the schedule paints, jump to the task for "right now".
+  // Retries until DONE/DOM are ready — a single 200ms shot was landing on the first
+  // task on phones because cloud/local completions had not merged yet.
+  try{ scheduleInitialScrollToCurrent(); }catch(e){}
   // First-time interactive tour (ONLY for brand-new users finishing onboarding)
   try{
     if(window.__isBrandNewUserOnboarding){
@@ -22171,6 +22225,7 @@ if (typeof onAuthStateChanged !== 'undefined' && typeof fbAuth !== 'undefined') 
           CLOUD_DATA_HYDRATED=true;
           _lastCloudHydrateAt=Date.now();
           _lastCloudHydrateUid=user.uid;
+          try{ flushPendingCloudSaveAfterHydrate(); }catch(e){}
           try{ updateUI(); updatePrestigeUI(); }catch(e){}
           // FIX: this used to be a flat overwrite (savedReports=d.reports), which is
           // exactly what caused real, already-saved weekly reports to vanish: if
@@ -22379,6 +22434,9 @@ if (typeof onAuthStateChanged !== 'undefined' && typeof fbAuth !== 'undefined') 
           rescueFutureDatedEntries();
           migrateSavedReports();
           loadDay();
+          try{ flushPendingCloudSaveAfterHydrate(); }catch(e){}
+          // Hydrate may finish after first paint attempt — allow scroll retry with real DONE.
+          try{ if(!window.__didInitialScroll) scheduleInitialScrollToCurrent(); }catch(e){}
         }else{
           // Brand-new Firebase Auth account: no Firestore document exists for this
           // uid at all yet (first-ever sign-in, nothing has ever been saved). Still
@@ -22391,6 +22449,7 @@ if (typeof onAuthStateChanged !== 'undefined' && typeof fbAuth !== 'undefined') 
           // No cloud doc yet — safe to write whatever this device builds (onboarding).
           CLOUD_SCHEDULES_HYDRATED=true;
           CLOUD_DATA_HYDRATED=true;
+          try{ flushPendingCloudSaveAfterHydrate(); }catch(e){}
           PENDING_ONBOARDING = !USER_SCHEDULE || Object.keys(USER_SCHEDULE).length===0;
           if(USER_SETTINGS && USER_SETTINGS.onboardingComplete) PENDING_ONBOARDING=false;
           if(!PENDING_ONBOARDING){ lsSet('has_onboarded','true'); }
@@ -22434,9 +22493,11 @@ if (typeof onAuthStateChanged !== 'undefined' && typeof fbAuth !== 'undefined') 
               CLOUD_SCHEDULES_HYDRATED=true;
               CLOUD_DATA_HYDRATED=true;
               try{ await sSet(LS.stats,STATS); await sSet(LS.userSchedules,USER_SCHEDULES); await sSet(LS.userSchedule,USER_SCHEDULE); await sSet(LS.userSettings,USER_SETTINGS); }catch(e){}
+              try{ flushPendingCloudSaveAfterHydrate(); }catch(e){}
               dismissOnboardingIfReturningUser();
               try{ checkStreak(); }catch(e){}
               try{ renderTabs(); renderPanels(); switchDay(todayJD()); updateUI(); applyTheme(); renderSlotsUI(); updatePrestigeUI(); }catch(e){}
+              try{ if(!window.__didInitialScroll) scheduleInitialScrollToCurrent(); }catch(e){}
               if(FIREBASE_ONLINE===false) setFirebaseOnline();
             }
           }catch(e){ console.warn('delayed cloud hydrate failed',e); }
