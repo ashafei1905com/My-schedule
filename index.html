@@ -10257,39 +10257,56 @@ function tpRender(){
     const sess=(plan.sessions||[]).find(s=>s.id===TP_ACTIVE.sessionId);
     if(!sess){ TP_ACTIVE.view='sessions'; tpRender(); return; }
     if(title) title.textContent=String(sess.name||(en?'Section':'قسم'));
-    if(sub) sub.textContent=en?`Detail items · ${TP_ACTIVE.taskName}`:`عناصر تفصيلية · ${TP_ACTIVE.taskName}`;
+    const nEx=(sess.exercises||[]).length;
+    if(sub) sub.textContent=en
+      ?`${nEx} exercise${nEx===1?'':'s'} in this section · ${TP_ACTIVE.taskName}`
+      :`${nEx} تمرين في هذا القسم · ${TP_ACTIVE.taskName}`;
+    const closeBtn=document.getElementById('tpCloseBtn');
+    if(closeBtn) closeBtn.textContent=en?'Close':'إغلاق';
     const exs=sess.exercises||[];
     if(!exs.length){
-      body.innerHTML=`<div style="text-align:center;padding:24px 12px;color:var(--mu);font-size:.85rem">${en
-        ?'No detail items yet. Add anything: topics, machines, steps — optional sets/reps/rest for workouts.'
-        :'مفيش عناصر لسه. ضيف أي حاجة: مواضيع، أجهزة، خطوات — والمجموعات اختيارية للجيم.'}</div>`;
+      body.innerHTML=`<div style="text-align:center;padding:28px 16px;color:var(--mu);font-size:.88rem;line-height:1.65">${en
+        ?'No exercises yet.<br>Tap <strong>+ Add exercise</strong> and fill name, sets, reps, rest.'
+        :'مفيش تمارين لسه.<br>اضغط <strong>＋ إضافة تمرين</strong> واملأ الاسم والمجموعات والتكرارات.'}</div>`;
     }else{
-      body.innerHTML=exs.map(ex=>{
+      body.innerHTML=`<div style="display:flex;flex-direction:column;gap:12px">${exs.map((ex,idx)=>{
         const tech=ex.technique?tpTechLabel(ex.technique):'';
-        const chips=[];
-        if(ex.sets) chips.push(`<span style="padding:3px 8px;border-radius:6px;background:rgba(59,130,246,.12);border:1px solid rgba(59,130,246,.3);color:#93c5fd">${ex.sets} ${en?'sets':'مج'}</span>`);
-        if(ex.reps) chips.push(`<span style="padding:3px 8px;border-radius:6px;background:rgba(16,185,129,.12);border:1px solid rgba(16,185,129,.3);color:#6ee7b7">${ex.reps} ${en?'reps':'تكرار'}</span>`);
-        if(ex.restSec!=null&&ex.restSec!=='') chips.push(`<span style="padding:3px 8px;border-radius:6px;background:rgba(245,158,11,.12);border:1px solid rgba(245,158,11,.3);color:#fcd34d">${ex.restSec}s ${en?'rest':'راحة'}</span>`);
-        if(tech) chips.push(`<span style="padding:3px 8px;border-radius:6px;background:rgba(139,92,246,.12);border:1px solid rgba(139,92,246,.3);color:#c4b5fd">${tech}</span>`);
-        return `<div class="tp-ex-card" data-ex-id="${ex.id}" style="padding:12px 14px;margin-bottom:10px;border-radius:12px;border:1px solid var(--br);background:rgba(255,255,255,.03)">
-          <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:8px;margin-bottom:8px">
-            <div style="min-width:0">
-              <div style="font-weight:800;font-size:.9rem">${String(ex.name||'').replace(/</g,'&lt;')}</div>
-              ${ex.machine?`<div style="font-size:.72rem;color:var(--mu);margin-top:2px">${String(ex.machine).replace(/</g,'&lt;')}</div>`:''}
+        const esc=s=>String(s||'').replace(/</g,'&lt;');
+        const stat=(label,val,color)=>val!==''&&val!=null
+          ?`<div style="flex:1;min-width:70px;padding:8px 10px;border-radius:10px;background:color-mix(in srgb,${color} 12%,transparent);border:1px solid color-mix(in srgb,${color} 28%,transparent);text-align:center">
+              <div style="font-size:.62rem;font-weight:700;color:var(--mu);letter-spacing:.02em;text-transform:uppercase;margin-bottom:2px">${label}</div>
+              <div style="font-size:.88rem;font-weight:800;color:var(--tx)">${esc(val)}</div>
+            </div>`:'';
+        return `<div class="tp-ex-card" data-ex-id="${ex.id}" style="padding:14px 14px 12px;border-radius:14px;border:1px solid var(--br);background:linear-gradient(180deg,rgba(255,255,255,.04),rgba(255,255,255,.02));box-shadow:0 4px 14px rgba(0,0,0,.18)">
+          <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:10px;margin-bottom:10px">
+            <div style="display:flex;gap:10px;min-width:0;align-items:flex-start">
+              <div style="width:28px;height:28px;border-radius:9px;background:color-mix(in srgb,var(--ac) 18%,transparent);border:1px solid color-mix(in srgb,var(--ac) 35%,transparent);display:flex;align-items:center;justify-content:center;font-weight:900;font-size:.78rem;color:var(--ac);flex-shrink:0">${idx+1}</div>
+              <div style="min-width:0">
+                <div style="font-weight:900;font-size:.95rem;color:var(--tx);line-height:1.25">${esc(ex.name)}</div>
+                ${ex.machine?`<div style="margin-top:4px;display:inline-flex;align-items:center;gap:4px;padding:2px 8px;border-radius:999px;background:rgba(255,255,255,.04);border:1px solid var(--br);font-size:.68rem;color:var(--so);font-weight:600">🎯 ${esc(ex.machine)}</div>`:''}
+              </div>
             </div>
-            <div style="display:flex;gap:4px;flex-shrink:0">
-              <button type="button" data-tp-edit-ex="${ex.id}" style="padding:5px 8px;border-radius:8px;border:1px solid var(--br);background:transparent;color:var(--tx);cursor:pointer;font-size:.72rem">✏️</button>
-              <button type="button" data-tp-del-ex="${ex.id}" style="padding:5px 8px;border-radius:8px;border:1px solid rgba(239,68,68,.35);background:transparent;color:#f87171;cursor:pointer;font-size:.72rem">🗑️</button>
+            <div style="display:flex;gap:6px;flex-shrink:0">
+              <button type="button" data-tp-edit-ex="${ex.id}" title="${en?'Edit':'تعديل'}" style="width:34px;height:34px;border-radius:10px;border:1px solid var(--br);background:rgba(255,255,255,.04);color:var(--tx);cursor:pointer;font-size:.85rem;display:flex;align-items:center;justify-content:center">✏️</button>
+              <button type="button" data-tp-del-ex="${ex.id}" title="${en?'Delete':'حذف'}" style="width:34px;height:34px;border-radius:10px;border:1px solid rgba(239,68,68,.35);background:rgba(239,68,68,.08);color:#f87171;cursor:pointer;font-size:.85rem;display:flex;align-items:center;justify-content:center">🗑</button>
             </div>
           </div>
-          ${chips.length?`<div style="display:flex;flex-wrap:wrap;gap:6px;font-size:.72rem">${chips.join('')}</div>`:''}
-          ${ex.notes?`<div style="margin-top:8px;font-size:.72rem;color:var(--so);line-height:1.5">${String(ex.notes).replace(/</g,'&lt;')}</div>`:''}
+          <div style="display:flex;flex-wrap:wrap;gap:8px">
+            ${stat(en?'Sets':'مجموعات',ex.sets,'#3b82f6')}
+            ${stat(en?'Reps':'تكرارات',ex.reps,'#10b981')}
+            ${stat(en?'Rest':'راحة',(ex.restSec!=null&&ex.restSec!=='')?(ex.restSec+(en?'s':' ث')):'','#f59e0b')}
+            ${stat(en?'Style':'أسلوب',tech,'#8b5cf6')}
+          </div>
+          ${ex.notes?`<div style="margin-top:10px;padding:10px 12px;border-radius:10px;background:rgba(0,0,0,.22);border:1px solid var(--br);font-size:.78rem;color:var(--so);line-height:1.55;direction:auto;text-align:start">
+            <div style="font-size:.62rem;font-weight:800;color:var(--mu);margin-bottom:4px;text-transform:uppercase;letter-spacing:.03em">${en?'Notes / cues':'ملاحظات / إرشادات'}</div>
+            ${esc(ex.notes)}
+          </div>`:''}
         </div>`;
-      }).join('');
+      }).join('')}</div>`;
     }
     if(foot) foot.innerHTML=`
       <button type="button" id="tpBackSessionsBtn" class="modal-back-btn" style="margin:0">${en?'← Sections':'→ الأقسام'}</button>
-      <button type="button" id="tpAddExerciseBtn" class="fl-submit-btn" style="flex:1;margin:0">${en?'+ Add detail item':'＋ إضافة عنصر'}</button>`;
+      <button type="button" id="tpAddExerciseBtn" class="fl-submit-btn" style="flex:1;margin:0">${en?'+ Add exercise':'＋ إضافة تمرين'}</button>`;
   }
 }
 
