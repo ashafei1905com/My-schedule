@@ -1,6 +1,6 @@
 <!DOCTYPE html>
 <html lang="en" dir="ltr">
-<!-- cache-bust: 2026-10-03-cat-color-icon -->
+<!-- cache-bust: 2026-10-04-firestore-rest -->
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1.0,maximum-scale=1.0,user-scalable=no">
@@ -5362,7 +5362,8 @@ import {
   getDoc,
   updateDoc,
   onSnapshot,
-  runTransaction
+  runTransaction,
+  enableNetwork
 } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
 
 const firebaseConfig = {
@@ -5373,6 +5374,7 @@ const firebaseConfig = {
   messagingSenderId:"814163254112",
   appId:"1:814163254112:web:c7b591228c727dd5db9c05"
 };
+window.__APP_SYNC_BUILD='2026-10-04-rest';
 const fbApp=initializeApp(firebaseConfig);
 // initializeAuth with an explicit popupRedirectResolver avoids the intermittent
 // "INTERNAL ASSERTION FAILED: Pending promise was never set" that getAuth()+popup
@@ -5696,9 +5698,125 @@ async function doGoogleSignIn(){
 // latency cost versus streaming. If sync issues ever return after this change, they
 // are a DIFFERENT root cause than this one — don't reach for the DNS/router theory
 // again, it was already disproven here.
-const fbDb=initializeFirestore(fbApp,{experimentalForceLongPolling:true});
+const fbDb=initializeFirestore(fbApp,{experimentalForceLongPolling:true, useFetchStreams:false});
 
 let FIREBASE_ONLINE=true;
+// When the Firestore JS SDK latches onto "client is offline" (WebChannel 10s timeout),
+// all getDoc/setDoc/runTransaction fail even though the browser has internet and Auth
+// still works. REST over HTTPS bypasses that broken channel for the rest of the session.
+window.__FIRESTORE_REST_ONLY=false;
+const FS_PROJECT='my-schedule-10a33';
+const FS_DOC=uid=>`https://firestore.googleapis.com/v1/projects/${FS_PROJECT}/databases/(default)/documents/users/${encodeURIComponent(uid)}`;
+
+function isFsOfflineErr(e){
+  const m=String((e&&e.message)||e||'');
+  const code=String((e&&e.code)||'');
+  return /offline|timeout|UNAVAILABLE|Failed to get document|Could not reach|deadline/i.test(m+' '+code);
+}
+function toFsValue(v){
+  if(v===null) return {nullValue:null};
+  if(v===undefined) return {nullValue:null};
+  if(typeof v==='boolean') return {booleanValue:v};
+  if(typeof v==='number'){
+    if(!Number.isFinite(v)) return {nullValue:null};
+    if(Number.isInteger(v) && Math.abs(v)<=Number.MAX_SAFE_INTEGER) return {integerValue:String(v)};
+    return {doubleValue:v};
+  }
+  if(typeof v==='string') return {stringValue:v};
+  if(Array.isArray(v)) return {arrayValue:{values:v.map(toFsValue)}};
+  if(typeof v==='object'){
+    const fields={};
+    for(const [k,val] of Object.entries(v)){
+      if(val===undefined) continue;
+      fields[k]=toFsValue(val);
+    }
+    return {mapValue:{fields}};
+  }
+  return {stringValue:String(v)};
+}
+function fromFsValue(v){
+  if(!v || typeof v!=='object') return null;
+  if('nullValue' in v) return null;
+  if('booleanValue' in v) return v.booleanValue;
+  if('integerValue' in v) return Number(v.integerValue);
+  if('doubleValue' in v) return v.doubleValue;
+  if('stringValue' in v) return v.stringValue;
+  if('timestampValue' in v) return v.timestampValue;
+  if('arrayValue' in v) return (v.arrayValue.values||[]).map(fromFsValue);
+  if('mapValue' in v){
+    const o={};
+    for(const [k,val] of Object.entries((v.mapValue&&v.mapValue.fields)||{})) o[k]=fromFsValue(val);
+    return o;
+  }
+  return null;
+}
+function fromFsDocument(docJson){
+  const o={};
+  for(const [k,val] of Object.entries((docJson&&docJson.fields)||{})) o[k]=fromFsValue(val);
+  return o;
+}
+async function restGetIdToken(){
+  const user=fbAuth&&fbAuth.currentUser;
+  if(!user) throw new Error('not signed in');
+  return user.getIdToken();
+}
+async function restGetUserDoc(uid){
+  const token=await restGetIdToken();
+  const res=await fetch(FS_DOC(uid),{headers:{Authorization:'Bearer '+token}});
+  if(res.status===404) return null;
+  if(!res.ok) throw new Error('REST get '+res.status+' '+await res.text().catch(()=>''));
+  return fromFsDocument(await res.json());
+}
+async function restPatchUserDoc(uid, data){
+  const token=await restGetIdToken();
+  const fields={};
+  for(const [k,v] of Object.entries(data||{})){
+    if(v===undefined) continue;
+    fields[k]=toFsValue(v);
+  }
+  const keys=Object.keys(fields);
+  if(!keys.length) return;
+  const mask=keys.map(k=>'updateMask.fieldPaths='+encodeURIComponent(k)).join('&');
+  const res=await fetch(FS_DOC(uid)+'?'+mask,{
+    method:'PATCH',
+    headers:{Authorization:'Bearer '+token,'Content-Type':'application/json'},
+    body:JSON.stringify({fields})
+  });
+  if(!res.ok) throw new Error('REST patch '+res.status+' '+await res.text().catch(()=>''));
+}
+async function fetchUserDocSmart(uid){
+  if(!window.__FIRESTORE_REST_ONLY){
+    try{
+      const t=new Promise((_,rej)=>setTimeout(()=>rej(new Error('SDK timeout')),6000));
+      const snap=await Promise.race([getDoc(doc(fbDb,'users',uid)), t]);
+      if(typeof setFirebaseOnline==='function') setFirebaseOnline();
+      return {exists:!!(snap&&snap.exists&&snap.exists()), data:(snap&&snap.exists&&snap.exists())?snap.data():null, via:'sdk'};
+    }catch(e){
+      console.warn('Firestore SDK get failed — using REST', e);
+      window.__FIRESTORE_REST_ONLY=true;
+      try{ if(typeof enableNetwork==='function') enableNetwork(fbDb); }catch(_){}
+    }
+  }
+  const data=await restGetUserDoc(uid);
+  if(typeof setFirebaseOnline==='function') setFirebaseOnline();
+  return {exists:!!data, data, via:'rest'};
+}
+async function writeUserDocSmart(uid, payload){
+  if(!window.__FIRESTORE_REST_ONLY){
+    try{
+      const t=new Promise((_,rej)=>setTimeout(()=>rej(new Error('SDK timeout')),8000));
+      await Promise.race([setDoc(doc(fbDb,'users',uid),payload,{merge:true}), t]);
+      if(typeof setFirebaseOnline==='function') setFirebaseOnline();
+      return 'sdk';
+    }catch(e){
+      console.warn('Firestore SDK write failed — using REST', e);
+      window.__FIRESTORE_REST_ONLY=true;
+    }
+  }
+  await restPatchUserDoc(uid, payload);
+  if(typeof setFirebaseOnline==='function') setFirebaseOnline();
+  return 'rest';
+}
 
 const KUWAIT_TZ='Asia/Kuwait';
 const p2=n=>String(n).padStart(2,'0');
@@ -6873,52 +6991,47 @@ function stopUserDocListener(){
 async function transactionalUserWrite(buildLocalPayload){
   const user=fbAuth?.currentUser;
   if(!user) return false;
-  if(typeof runTransaction!=='function'){
-    // Fallback if SDK import failed somehow
-    const payload=buildLocalPayload(null);
-    await setDoc(userDocRef(user.uid), payload, {merge:true});
-    _lastLocalWriteAt=Date.now();
-    return true;
+  const uid=user.uid;
+  // Always merge against the latest cloud copy (SDK or REST). Never runTransaction —
+  // transactions hang forever when the SDK is in "client is offline" mode.
+  let cloud={};
+  try{
+    const got=await fetchUserDocSmart(uid);
+    if(got&&got.data) cloud=got.data;
+  }catch(e){
+    console.warn('pre-write cloud read failed', e);
   }
-  await runTransaction(fbDb, async (transaction)=>{
-    const ref=userDocRef(user.uid);
-    const snap=await transaction.get(ref);
-    const cloud=snap.exists()? (snap.data()||{}) : {};
-    // Merge cloud into local memory first so buildLocalPayload sees the truth.
-    if(cloud.historyData) historyData=mergeFullHistory(cloud.historyData, historyData);
-    if(cloud.stats) STATS=mergeStatsPreferRicher(STATS, cloud.stats);
-    if(cloud.userEdits){
-      // keep existing USER_EDITS merge semantics via ingest piece
-      const cloudEd=cloud.userEdits, localEd=USER_EDITS||emptyUserEdits();
-      const cw=(a,b)=>({...(a||{}),...(b||{})});
-      USER_EDITS={...emptyUserEdits(),...localEd,...cloudEd,
-        deletes:cw(cloudEd.deletes, localEd.deletes),
-        dayDeletes:cw(cloudEd.dayDeletes, localEd.dayDeletes),
-        moves:cw(cloudEd.moves, localEd.moves),
-        dayOverrides:cw(cloudEd.dayOverrides, localEd.dayOverrides),
-        pointOverrides:cw(cloudEd.pointOverrides, localEd.pointOverrides),
-        taskPlans:cw(cloudEd.taskPlans, localEd.taskPlans)
-      };
-    }
-    if(cloud.userSettings){
-      USER_SETTINGS={...cloud.userSettings, ...USER_SETTINGS,
-        categoryOverrides:{...(cloud.userSettings.categoryOverrides||{}), ...(USER_SETTINGS.categoryOverrides||{})},
-        lang:USER_SETTINGS.lang||cloud.userSettings.lang||'en'
-      };
-    }
-    if(cloud.userSchedules){
-      try{
-        const cloudSlots=deserializeAllSchedulesFromFirestore(cloud.userSchedules);
-        // Local edits win inside a save transaction (this device just changed text).
-        USER_SCHEDULES=mergeScheduleSlotsPreferLocal(USER_SCHEDULES, cloudSlots, true);
-        if(USER_SCHEDULES[ACTIVE_SCHEDULE_ID]) USER_SCHEDULE=USER_SCHEDULES[ACTIVE_SCHEDULE_ID].sched||USER_SCHEDULE;
-        LAST_KNOWN_CLOUD_SCHEDULES=JSON.parse(JSON.stringify(cloudSlots));
-      }catch(e){}
-    }
-    const payload=buildLocalPayload(cloud);
-    payload.syncUpdatedAt=Date.now();
-    transaction.set(ref, payload, {merge:true});
-  });
+  if(cloud.historyData) historyData=mergeFullHistory(cloud.historyData, historyData);
+  if(cloud.stats) STATS=mergeStatsPreferRicher(STATS, cloud.stats);
+  if(cloud.userEdits){
+    const cloudEd=cloud.userEdits, localEd=USER_EDITS||emptyUserEdits();
+    const cw=(a,b)=>({...(a||{}),...(b||{})});
+    USER_EDITS={...emptyUserEdits(),...localEd,...cloudEd,
+      deletes:cw(cloudEd.deletes, localEd.deletes),
+      dayDeletes:cw(cloudEd.dayDeletes, localEd.dayDeletes),
+      moves:cw(cloudEd.moves, localEd.moves),
+      dayOverrides:cw(cloudEd.dayOverrides, localEd.dayOverrides),
+      pointOverrides:cw(cloudEd.pointOverrides, localEd.pointOverrides),
+      taskPlans:cw(cloudEd.taskPlans, localEd.taskPlans)
+    };
+  }
+  if(cloud.userSettings){
+    USER_SETTINGS={...cloud.userSettings, ...USER_SETTINGS,
+      categoryOverrides:{...(cloud.userSettings.categoryOverrides||{}), ...(USER_SETTINGS.categoryOverrides||{})},
+      lang:USER_SETTINGS.lang||cloud.userSettings.lang||'en'
+    };
+  }
+  if(cloud.userSchedules){
+    try{
+      const cloudSlots=deserializeAllSchedulesFromFirestore(cloud.userSchedules);
+      USER_SCHEDULES=mergeScheduleSlotsPreferLocal(USER_SCHEDULES, cloudSlots, true);
+      if(USER_SCHEDULES[ACTIVE_SCHEDULE_ID]) USER_SCHEDULE=USER_SCHEDULES[ACTIVE_SCHEDULE_ID].sched||USER_SCHEDULE;
+      LAST_KNOWN_CLOUD_SCHEDULES=JSON.parse(JSON.stringify(cloudSlots));
+    }catch(e){}
+  }
+  const payload=buildLocalPayload(cloud);
+  payload.syncUpdatedAt=Date.now();
+  await writeUserDocSmart(uid, payload);
   _lastLocalWriteAt=Date.now();
   LAST_KNOWN_CLOUD_HISTORY=JSON.parse(JSON.stringify(historyData));
   LAST_KNOWN_CLOUD_STATS=JSON.parse(JSON.stringify(STATS));
@@ -7137,11 +7250,11 @@ async function saveUserSchedule(){
         activeScheduleId:ACTIVE_SCHEDULE_ID
       }));
     }else{
-      await setDoc(doc(fbDb,'users',user.uid),{
+      await writeUserDocSmart(user.uid,{
         userSchedule:serializeScheduleForFirestore(USER_SCHEDULE),
         userSchedules:serializeAllSchedulesForFirestore(USER_SCHEDULES),
         activeScheduleId:ACTIVE_SCHEDULE_ID
-      },{merge:true});
+      });
       _lastLocalWriteAt=Date.now();
     }
     LAST_KNOWN_CLOUD_SCHEDULES=JSON.parse(JSON.stringify(USER_SCHEDULES));
@@ -9466,7 +9579,7 @@ async function saveUserSettings(){
     if(typeof transactionalUserWrite==='function' && CLOUD_DATA_HYDRATED){
       await transactionalUserWrite(()=>({userSettings:USER_SETTINGS}));
     }else{
-      await setDoc(doc(fbDb,'users',user.uid),{userSettings:USER_SETTINGS},{merge:true});
+      await writeUserDocSmart(user.uid,{userSettings:USER_SETTINGS});
       _lastLocalWriteAt=Date.now();
     }
   }catch(e){console.warn('userSettings cloud save failed',e);}
@@ -11050,7 +11163,7 @@ async function saveUserEdits(){
     if(typeof transactionalUserWrite==='function' && CLOUD_DATA_HYDRATED){
       await transactionalUserWrite(()=>({userEdits:USER_EDITS}));
     }else{
-      await setDoc(doc(fbDb,'users',user.uid),{userEdits:USER_EDITS},{merge:true});
+      await writeUserDocSmart(user.uid,{userEdits:USER_EDITS});
       _lastLocalWriteAt=Date.now();
     }
   }catch(e){console.warn('userEdits cloud save failed',e);}
@@ -11070,7 +11183,7 @@ async function saveMealOptions(){
   const user=fbAuth.currentUser;
   if(!user)return; // guests never sync saved options anywhere
   try{
-    await setDoc(doc(fbDb,'users',user.uid),{mealOptions:MEAL_OPTIONS},{merge:true});
+    await writeUserDocSmart(user.uid,{mealOptions:MEAL_OPTIONS});
   }catch(e){console.warn('mealOptions cloud save failed',e);}
 }
 
@@ -11237,10 +11350,10 @@ async function saveAiChat(){
   const user=fbAuth.currentUser;
   if(!user)return;
   try{
-    await setDoc(doc(fbDb,'users',user.uid),{
+    await writeUserDocSmart(user.uid,{
       aiChat:cleanSessions,
       aiActiveSessionId:AI_ACTIVE_SESSION_ID||null
-    },{merge:true});
+    });
   }catch(e){console.warn('aiChat cloud save failed',e);}
 }
 
@@ -11491,11 +11604,7 @@ async function saveAll(){
   // Permanent path: transactional merge against the LATEST cloud doc, then write.
   // Stale laptop/phone snapshots can no longer clobber the other device.
   const attemptSave=async()=>{
-    if(!CLOUD_DATA_HYDRATED){
-      window.__pendingCloudSaveAfterHydrate=true;
-      console.warn('saveAll: cloud write deferred — waiting for first hydrate');
-      return null;
-    }
+    // Do not skip cloud writes just because SDK hydrate failed — REST can still work.
     await transactionalUserWrite((cloud)=>{
       const payload={
         stats:STATS,
@@ -17527,7 +17636,7 @@ async function saveUserMemory(){
   const user=fbAuth.currentUser;
   if(!user)return;
   try{
-    await setDoc(doc(fbDb,'users',user.uid),{userMemory:USER_MEMORY},{merge:true});
+    await writeUserDocSmart(user.uid,{userMemory:USER_MEMORY});
   }catch(e){console.warn('userMemory cloud save failed',e);}
 }
 
@@ -20874,22 +20983,19 @@ function countDoneKeys(dayMap){
 async function pullCloudUserDelta(reason){
   try{
     if(typeof fbAuth==='undefined' || !fbAuth?.currentUser) return;
-    if(typeof getDoc==='undefined' || typeof doc==='undefined' || typeof fbDb==='undefined') return;
     const now=Date.now();
     if(_softCloudPullInFlight) return;
-    if(now-_lastSoftCloudPullAt < 30000) return;
+    if(now-_lastSoftCloudPullAt < 15000) return;
     _softCloudPullInFlight=true;
     _lastSoftCloudPullAt=now;
     const uid=fbAuth.currentUser.uid;
-    const ud=await getDoc(doc(fbDb,'users',uid));
-    if(ud && ud.exists()){
-      try{ ingestCloudUserData(ud.data()||{}, 'pull:'+reason); }catch(e){ console.warn(e); }
+    const got=await fetchUserDocSmart(uid);
+    if(got && got.exists && got.data){
+      try{ ingestCloudUserData(got.data, 'pull:'+reason); }catch(e){ console.warn(e); }
     }else{
       CLOUD_DATA_HYDRATED=true;
       try{ flushPendingCloudSaveAfterHydrate(); }catch(e){}
     }
-    // Ensure live listener is running
-    try{ startUserDocListener(uid); }catch(e){}
   }catch(e){
     console.warn('pullCloudUserDelta failed', reason, e);
   }finally{
@@ -22372,21 +22478,19 @@ if (typeof onAuthStateChanged !== 'undefined' && typeof fbAuth !== 'undefined') 
       // manual refresh to recover, and the banner only shows when the load has
       // genuinely failed twice in a row, not on the first blip.
       let ud = null;
-      // Mobile (especially iOS PWA on cellular) often needs >3.5s for the first
-      // Firestore getDoc after a cold WebChannel. The old 3.5s/2.5s caps made cloud
-      // hydrate fail silently → phone kept bare local slots + local pts and looked
-      // "totally out of sync" even when the account data was fine on the laptop.
       try{
-        const fetchTimeout = new Promise((_, rej) => setTimeout(() => rej(new Error('Firestore timeout')), 12000));
-        ud = await Promise.race([getDoc(doc(fbDb,'users',user.uid)), fetchTimeout]);
+        const got=await fetchUserDocSmart(user.uid);
+        if(got){
+          ud={ exists:()=>!!got.exists, data:()=>got.data||{} };
+        }
       }catch(e0){
-        console.warn('cloud load failed or timed out, retrying once',e0);
+        console.warn('cloud load failed, retrying via REST',e0);
         try{
-          await new Promise(r=>setTimeout(r,800));
-          const retryTimeout = new Promise((_, rej) => setTimeout(() => rej(new Error('Firestore retry timeout')), 15000));
-          ud = await Promise.race([getDoc(doc(fbDb,'users',user.uid)), retryTimeout]);
+          window.__FIRESTORE_REST_ONLY=true;
+          const got2=await fetchUserDocSmart(user.uid);
+          if(got2) ud={ exists:()=>!!got2.exists, data:()=>got2.data||{} };
         }catch(e1){
-          console.warn('cloud retry also failed or timed out', e1);
+          console.warn('cloud REST retry also failed', e1);
         }
       }
       try{
@@ -22664,9 +22768,9 @@ if (typeof onAuthStateChanged !== 'undefined' && typeof fbAuth !== 'undefined') 
         setTimeout(async ()=>{
           if(CLOUD_SCHEDULES_HYDRATED || !fbAuth?.currentUser) return;
           try{
-            const ud2=await getDoc(doc(fbDb,'users',fbAuth.currentUser.uid));
-            if(ud2 && ud2.exists()){
-              const d2=ud2.data();
+            const got2=await fetchUserDocSmart(fbAuth.currentUser.uid);
+            if(got2 && got2.exists && got2.data){
+              const d2=got2.data;
               if(d2.stats){
                 LAST_KNOWN_CLOUD_STATS=JSON.parse(JSON.stringify(d2.stats));
                 STATS=mergeStatsPreferRicher(STATS, d2.stats);
