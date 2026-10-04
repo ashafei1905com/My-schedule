@@ -10293,41 +10293,106 @@ function tpRender(){
   }
 }
 
-function tpPromptSession(){
+function tpShowFormModal({title, fields, initial}){
+  // Styled in-app form — replaces ugly browser prompt() chains
+  return new Promise(resolve=>{
+    const en=uiIsEn();
+    const existing=document.getElementById('tpFormModal');
+    if(existing) existing.remove();
+    const modal=document.createElement('div');
+    modal.id='tpFormModal';
+    modal.style.cssText='position:fixed;inset:0;z-index:14000;background:rgba(2,6,16,.78);display:flex;align-items:center;justify-content:center;padding:16px;backdrop-filter:blur(6px)';
+    const fieldHtml=fields.map(f=>{
+      const val=(initial&&initial[f.key]!=null)?String(initial[f.key]):(f.default||'');
+      if(f.type==='select'){
+        const opts=(f.options||[]).map(o=>`<option value="${o.value}" ${String(o.value)===val?'selected':''}>${o.label}</option>`).join('');
+        return `<label style="display:block;margin-bottom:12px">
+          <span style="display:block;font-size:.72rem;font-weight:700;color:var(--so);margin-bottom:5px">${f.label}</span>
+          <select data-tp-field="${f.key}" style="width:100%;padding:11px 12px;border-radius:11px;border:1.5px solid var(--br);background:var(--c,#0f172a);color:var(--tx);font-family:inherit;font-size:.9rem;font-weight:600">${opts}</select>
+        </label>`;
+      }
+      return `<label style="display:block;margin-bottom:12px">
+        <span style="display:block;font-size:.72rem;font-weight:700;color:var(--so);margin-bottom:5px">${f.label}${f.required?' *':''}</span>
+        <input data-tp-field="${f.key}" type="${f.type||'text'}" value="${String(val).replace(/"/g,'&quot;')}" placeholder="${(f.placeholder||'').replace(/"/g,'&quot;')}" style="width:100%;padding:11px 12px;border-radius:11px;border:1.5px solid var(--br);background:var(--c,#0f172a);color:var(--tx);font-family:inherit;font-size:.9rem;font-weight:600;box-sizing:border-box">
+      </label>`;
+    }).join('');
+    modal.innerHTML=`<div style="background:var(--c2,#111827);border:1.5px solid color-mix(in srgb, var(--ac) 35%, var(--br));border-radius:18px;max-width:420px;width:100%;padding:18px 16px 14px;box-shadow:0 24px 60px rgba(0,0,0,.55);max-height:90vh;overflow-y:auto">
+      <div style="font-weight:900;font-size:1.05rem;color:var(--tx);margin-bottom:14px">${title}</div>
+      <form id="tpFormInner">${fieldHtml}
+        <div style="display:flex;gap:8px;margin-top:6px">
+          <button type="submit" style="flex:1;padding:12px;border-radius:12px;border:none;background:linear-gradient(135deg,var(--ac),#7c3aed);color:#fff;font-family:inherit;font-weight:800;font-size:.9rem;cursor:pointer">${en?'Save':'حفظ'}</button>
+          <button type="button" data-tp-cancel style="padding:12px 16px;border-radius:12px;border:1px solid var(--br);background:transparent;color:var(--mu);font-family:inherit;font-weight:700;cursor:pointer">${en?'Cancel':'إلغاء'}</button>
+        </div>
+      </form>
+    </div>`;
+    document.body.appendChild(modal);
+    const first=modal.querySelector('[data-tp-field]');
+    if(first) setTimeout(()=>first.focus(),50);
+    const finish=val=>{ modal.remove(); resolve(val); };
+    modal.addEventListener('click',e=>{ if(e.target===modal) finish(null); });
+    modal.querySelector('[data-tp-cancel]')?.addEventListener('click',()=>finish(null));
+    modal.querySelector('#tpFormInner')?.addEventListener('submit',e=>{
+      e.preventDefault();
+      const data={};
+      modal.querySelectorAll('[data-tp-field]').forEach(el=>{ data[el.getAttribute('data-tp-field')]=el.value; });
+      const req=fields.find(f=>f.required && !String(data[f.key]||'').trim());
+      if(req){ showToast(en?`${req.label} is required`:`${req.label} مطلوب`,2000,'warn'); return; }
+      finish(data);
+    });
+  });
+}
+
+async function tpPromptSession(){
   const en=uiIsEn();
-  const name=prompt(en?'Section name (e.g. Pull Day, Chapter 3, Morning block)':'اسم القسم (مثلاً يوم سحب، باب ٣، بلوك الصبح)');
-  if(!name||!name.trim()) return;
+  const data=await tpShowFormModal({
+    title:en?'New section':'قسم جديد',
+    fields:[{key:'name',label:en?'Section name':'اسم القسم',placeholder:en?'e.g. Pull Day, Chapter 3':'مثلاً يوم سحب، باب ٣',required:true}]
+  });
+  if(!data||!data.name.trim()) return;
   const plan=tpEnsurePlan(TP_ACTIVE.taskId);
   plan.enabled=true;
-  plan.sessions.push({id:tpUid('sess'),name:name.trim(),exercises:[]});
-  tpSave().then(()=>tpRender());
+  plan.sessions.push({id:tpUid('sess'),name:data.name.trim(),exercises:[]});
+  await tpSave();
+  tpRender();
 }
-function tpPromptExercise(existing){
+
+async function tpPromptExercise(existing){
   const en=uiIsEn();
-  const name=prompt(en?'Detail item name (topic, machine, step…)':'اسم العنصر (موضوع، جهاز، خطوة…)',existing?.name||'');
-  if(name===null) return null;
-  if(!String(name).trim()){ showToast(en?'Name is required':'الاسم مطلوب',2000,'warn'); return null; }
-  const machine=prompt(en?'Extra label / place / tool (optional)':'تسمية إضافية / مكان / أداة (اختياري)',existing?.machine||'')||'';
-  // Gym-style fields are optional — leave blank for study/other tasks
-  const setsRaw=prompt(en?'Sets (optional — leave empty if N/A)':'مجموعات (اختياري — اتركه فاضي لو مش مطلوب)',existing?.sets!=null&&existing.sets!==''?String(existing.sets):'');
-  const reps=prompt(en?'Reps or amount (optional)':'تكرارات أو كمية (اختياري)',existing?.reps||'')||'';
-  const restRaw=prompt(en?'Rest seconds (optional)':'راحة بالثواني (اختياري)',existing?.restSec!=null&&existing.restSec!==''?String(existing.restSec):'');
-  const techList=['0. '+(en?'None':'بدون')].concat(TP_TECHNIQUES.map((t,i)=>`${i+1}. ${en?t.en:t.ar}`)).join('\n');
-  const techRaw=prompt((en?'Technique (optional):\n':'الأسلوب (اختياري):\n')+techList+'\n'+(en?'0 = skip':'0 = تخطي'),existing?.technique?String(TP_TECHNIQUES.findIndex(t=>t.id===existing.technique)+1):'0');
-  const techNum=parseInt(techRaw,10);
-  const technique=(techNum>=1&&techNum<=TP_TECHNIQUES.length)?TP_TECHNIQUES[techNum-1].id:'';
-  const notes=prompt(en?'Notes (optional)':'ملاحظات (اختياري)',existing?.notes||'')||'';
-  const setsN=setsRaw!=null&&String(setsRaw).trim()!==''?Math.max(1,parseInt(setsRaw,10)||0):'';
-  const restN=restRaw!=null&&String(restRaw).trim()!==''?Math.max(0,parseInt(restRaw,10)||0):'';
+  const techOpts=[{value:'',label:en?'None':'بدون'}].concat(TP_TECHNIQUES.map(t=>({value:t.id,label:en?t.en:t.ar})));
+  const data=await tpShowFormModal({
+    title:existing?(en?'Edit detail item':'تعديل عنصر'):(en?'Add detail item':'إضافة عنصر'),
+    initial:{
+      name:existing?.name||'',
+      machine:existing?.machine||'',
+      sets:existing?.sets!=null&&existing.sets!==''?String(existing.sets):'',
+      reps:existing?.reps||'',
+      restSec:existing?.restSec!=null&&existing.restSec!==''?String(existing.restSec):'',
+      technique:existing?.technique||'',
+      notes:existing?.notes||''
+    },
+    fields:[
+      {key:'name',label:en?'Name (exercise, topic, step…)':'الاسم (تمرين، موضوع، خطوة…)',placeholder:en?'Bench press':'بنش بريس',required:true},
+      {key:'machine',label:en?'Machine / place / tool (optional)':'الجهاز / المكان / الأداة (اختياري)',placeholder:en?'e.g. Smith machine':'مثلاً سميث'},
+      {key:'sets',label:en?'Sets (optional)':'مجموعات (اختياري)',type:'number',placeholder:'3'},
+      {key:'reps',label:en?'Reps / amount (optional)':'تكرارات / كمية (اختياري)',placeholder:en?'15-12-10 or 8':'15-12-10'},
+      {key:'restSec',label:en?'Rest seconds (optional)':'راحة بالثواني (اختياري)',type:'number',placeholder:'90'},
+      {key:'technique',label:en?'Technique (optional)':'الأسلوب (اختياري)',type:'select',options:techOpts},
+      {key:'notes',label:en?'Notes (optional)':'ملاحظات (اختياري)',placeholder:en?'Form cues, tempo…':'ملاحظات تقنية…'}
+    ]
+  });
+  if(!data) return null;
+  if(!String(data.name||'').trim()){ showToast(en?'Name is required':'الاسم مطلوب',2000,'warn'); return null; }
+  const setsN=String(data.sets||'').trim()!==''?Math.max(1,parseInt(data.sets,10)||0):'';
+  const restN=String(data.restSec||'').trim()!==''?Math.max(0,parseInt(data.restSec,10)||0):'';
   return {
     id:existing?.id||tpUid('ex'),
-    name:String(name).trim(),
-    machine:String(machine).trim(),
+    name:String(data.name).trim(),
+    machine:String(data.machine||'').trim(),
     sets:setsN||'',
-    reps:String(reps).trim(),
+    reps:String(data.reps||'').trim(),
     restSec:restN===''?'':restN,
-    technique,
-    notes:String(notes).trim()
+    technique:String(data.technique||'').trim(),
+    notes:String(data.notes||'').trim()
   };
 }
 
@@ -10378,20 +10443,20 @@ function tpPromptExercise(existing){
       const sess=plan.sessions.find(s=>s.id===TP_ACTIVE.sessionId);
       const ex=(sess?.exercises||[]).find(x=>x.id===eid);
       if(!ex) return;
-      const updated=tpPromptExercise(ex);
+      const updated=await tpPromptExercise(ex);
       if(!updated) return;
       Object.assign(ex,updated);
       await tpSave(); tpRender();
     }
   });
   document.getElementById('tpFooter')?.addEventListener('click',async e=>{
-    if(e.target.closest('#tpAddSessionBtn')){ tpPromptSession(); return; }
+    if(e.target.closest('#tpAddSessionBtn')){ await tpPromptSession(); return; }
     if(e.target.closest('#tpBackSessionsBtn')){ TP_ACTIVE.view='sessions'; TP_ACTIVE.sessionId=null; tpRender(); return; }
     if(e.target.closest('#tpAddExerciseBtn')){
       const plan=tpEnsurePlan(TP_ACTIVE.taskId);
       const sess=plan.sessions.find(s=>s.id===TP_ACTIVE.sessionId);
       if(!sess) return;
-      const ex=tpPromptExercise(null);
+      const ex=await tpPromptExercise(null);
       if(!ex) return;
       if(!sess.exercises) sess.exercises=[];
       sess.exercises.push(ex);
@@ -21643,11 +21708,19 @@ function initAppFlow(user){
 // domain config can be checked directly in the Firebase Console.
 
 
+// Tracks last full cloud hydrate so token-refresh / tab-focus auth re-fires
+// don't clobber in-progress laptop work with a slightly older snapshot.
+let _lastCloudHydrateAt=0;
+let _lastCloudHydrateUid=null;
+
 if (typeof onAuthStateChanged !== 'undefined' && typeof fbAuth !== 'undefined') {
   onAuthStateChanged(fbAuth, async user => {
     await loadAll();
 
     if(user && typeof getDoc !== 'undefined' && typeof doc !== 'undefined' && typeof fbDb !== 'undefined'){
+      // Soft re-entry: same user, already hydrated recently → only merge stats
+      // lightly later; still fetch but mark so destructive slot switches are skipped.
+      const recentHydrate=(_lastCloudHydrateUid===user.uid && (Date.now()-_lastCloudHydrateAt)<120000 && CLOUD_DATA_HYDRATED);
       // Retry once after a short delay before giving up — mirrors the same pattern
       // already used for saveAll()'s cloud write (see attemptSave/e1/e2 above). The
       // root cause of the recurring "غير متزامن" flakiness (a stale WebChannel session
@@ -21697,6 +21770,8 @@ if (typeof onAuthStateChanged !== 'undefined' && typeof fbAuth !== 'undefined') 
             try{ await sSet(LS.stats,STATS); }catch(e){}
           }
           CLOUD_DATA_HYDRATED=true;
+          _lastCloudHydrateAt=Date.now();
+          _lastCloudHydrateUid=user.uid;
           try{ updateUI(); updatePrestigeUI(); }catch(e){}
           // FIX: this used to be a flat overwrite (savedReports=d.reports), which is
           // exactly what caused real, already-saved weekly reports to vanish: if
@@ -21761,16 +21836,46 @@ if (typeof onAuthStateChanged !== 'undefined' && typeof fbAuth !== 'undefined') 
             }
             await sSet(LS.penalized,penalizedDates);
           }catch(e){}
-          // Cloud userEdits is authoritative once it exists — this is what makes an
-          // edit made on your phone show up on your laptop. If the cloud doc has no
-          // userEdits yet (brand-new account), keep whatever local value we have.
-          if(d.userEdits) USER_EDITS={
-            ...emptyUserEdits(),
-            ...d.userEdits,
-            dayDeletes:{...(emptyUserEdits().dayDeletes),...((d.userEdits&&d.userEdits.dayDeletes)||{})},
-            dayOverrides:{...(emptyUserEdits().dayOverrides),...((d.userEdits&&d.userEdits.dayOverrides)||{})},
-            taskPlans:{...(emptyUserEdits().taskPlans),...((d.userEdits&&d.userEdits.taskPlans)||{}),...((USER_EDITS&&USER_EDITS.taskPlans)||{})}
-          };
+          // Merge userEdits: never wipe local work (task plans, deletes, moves) when a
+          // tab re-fires onAuthStateChanged / cloud hydrate with a slightly older
+          // snapshot — that was making laptop tab switches look like "everything
+          // I did on the website disappeared".
+          if(d.userEdits){
+            const cloudEd=d.userEdits||{};
+            const localEd=USER_EDITS||emptyUserEdits();
+            const mergeMaps=(a,b)=>({...(a||{}),...(b||{})});
+            const mergeTaskPlans=(cloudPlans, localPlans)=>{
+              const out={...(cloudPlans||{})};
+              for(const [tid, lp] of Object.entries(localPlans||{})){
+                const cp=out[tid];
+                if(!cp){ out[tid]=lp; continue; }
+                // Prefer the side that has more sessions / is enabled
+                const lSess=(lp.sessions&&lp.sessions.length)||0;
+                const cSess=(cp.sessions&&cp.sessions.length)||0;
+                if(lSess>cSess || (lp.enabled && !cp.enabled) || (lSess===cSess && lp.enabled)){
+                  out[tid]=lp;
+                }
+              }
+              return out;
+            };
+            USER_EDITS={
+              ...emptyUserEdits(),
+              ...cloudEd,
+              ...localEd,
+              deletes:mergeMaps(cloudEd.deletes, localEd.deletes),
+              moves:mergeMaps(cloudEd.moves, localEd.moves),
+              dayDeletes:mergeMaps(cloudEd.dayDeletes, localEd.dayDeletes),
+              dayOverrides:mergeMaps(cloudEd.dayOverrides, localEd.dayOverrides),
+              pointOverrides:mergeMaps(cloudEd.pointOverrides, localEd.pointOverrides),
+              order:mergeMaps(cloudEd.order, localEd.order),
+              customTasks:[
+                ...((cloudEd.customTasks)||[]),
+                ...((localEd.customTasks)||[]).filter(t=>!(cloudEd.customTasks||[]).some(c=>c&&t&&c.id===t.id))
+              ],
+              taskPlans:mergeTaskPlans(cloudEd.taskPlans, localEd.taskPlans)
+            };
+            try{ await sSet(LS.userEdits, USER_EDITS); }catch(e){}
+          }
           // Cloud userSchedule is authoritative once it exists — same reasoning as
           // userEdits above (an edit/migration on one device must show up on
           // another). If the cloud doc has none yet, keep whatever local value we
@@ -21789,7 +21894,12 @@ if (typeof onAuthStateChanged !== 'undefined' && typeof fbAuth !== 'undefined') 
             if(Object.keys(cloudSlots||{}).length > Object.keys(USER_SCHEDULES||{}).length){
               USER_SCHEDULES=mergeScheduleSlotsPreferLocal(USER_SCHEDULES, cloudSlots, true);
             }
-            ACTIVE_SCHEDULE_ID = d.activeScheduleId || ACTIVE_SCHEDULE_ID || 'default';
+            // Keep the workspace the user is currently viewing on this device.
+            // Forcing cloud activeScheduleId on every auth re-fire made laptop tab
+            // switches jump to another slot and look like "all my work vanished".
+            if(!ACTIVE_SCHEDULE_ID || !USER_SCHEDULES[ACTIVE_SCHEDULE_ID]){
+              ACTIVE_SCHEDULE_ID = d.activeScheduleId || Object.keys(USER_SCHEDULES||{})[0] || 'default';
+            }
             if (USER_SCHEDULES[ACTIVE_SCHEDULE_ID]) {
               USER_SCHEDULE = USER_SCHEDULES[ACTIVE_SCHEDULE_ID].sched;
             }
