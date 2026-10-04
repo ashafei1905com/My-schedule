@@ -6700,6 +6700,21 @@ function mergeDoneMaps(cloudDone, localDone){
   return out;
 }
 
+// Prefer the prayer log that has more detail / higher points — same wipe protection
+// as mergeDoneMaps. Laptop with empty prayerLogs must not erase phone's Isha log.
+function mergePrayerLogsMaps(cloudPL, localPL){
+  const out={...(cloudPL||{})};
+  for(const [id, val] of Object.entries(localPL||{})){
+    if(!val){ continue; }
+    const c=out[id];
+    if(!c){ out[id]=val; continue; }
+    const lScore=(Array.isArray(val.log)?val.log.length:0)+(Number(val.total)||0);
+    const cScore=(Array.isArray(c.log)?c.log.length:0)+(Number(c.total)||0);
+    out[id]=lScore>=cScore?val:c;
+  }
+  return out;
+}
+
 function mergeStatsPreferRicher(localS, cloudS){
   const L=localS||{};
   const C=cloudS||{};
@@ -11182,14 +11197,9 @@ async function saveAll(){
         done:mergeDoneMaps(cloudDay.done, localDay.done),
         alts:{...(cloudDay.alts||{}),...(localDay.alts||{})},
         foodLog:{...(cloudDay.foodLog||{}),...(localDay.foodLog||{})},
-        prayerLogs:{...(cloudDay.prayerLogs||{}),...(localDay.prayerLogs||{})},
+        prayerLogs:mergePrayerLogsMaps(cloudDay.prayerLogs, localDay.prayerLogs),
         penalty:localDay.penalty||cloudDay.penalty||null
       };
-    }
-    // Also absorb any local-only dates not present in the last cloud snapshot.
-    for(const dateKey of Object.keys(historyData)){
-      if(LAST_KNOWN_CLOUD_HISTORY[dateKey]) continue;
-      // leave local-only days as-is
     }
     await sSet(LS.history,historyData); // persist the just-merged-in data locally too
   }
@@ -11211,10 +11221,62 @@ async function saveAll(){
       console.warn('saveAll: cloud write skipped — waiting for first hydrate');
       return null;
     }
+    // CRITICAL: setDoc({merge:true}) REPLACES the whole historyData / stats fields.
+    // If LAST_KNOWN_CLOUD_* is older than another device's write (phone completed
+    // Isha, laptop still has an empty snapshot), merging only against that stale
+    // cache then writing will wipe the phone's completion. Refresh the snapshot
+    // from live Firestore right before write when the cache is older than a few
+    // seconds. Failures fall through to last-known cache (still better than nothing).
+    try{
+      const cacheAge=Date.now()-(_lastSoftCloudPullAt||0);
+      if(cacheAge>4000 && typeof getDoc!=='undefined' && typeof doc!=='undefined' && typeof fbDb!=='undefined'){
+        const freshTimeout=new Promise((_,rej)=>setTimeout(()=>rej(new Error('pre-save hydrate timeout')),6000));
+        const udFresh=await Promise.race([getDoc(doc(fbDb,'users',user.uid)), freshTimeout]);
+        if(udFresh && udFresh.exists()){
+          const fd=udFresh.data()||{};
+          if(fd.historyData){
+            LAST_KNOWN_CLOUD_HISTORY=JSON.parse(JSON.stringify(fd.historyData));
+            for(const dateKey of Object.keys(fd.historyData)){
+              const cloudDay=fd.historyData[dateKey]||{};
+              const localDay=historyData[dateKey]||{};
+              historyData[dateKey]={
+                done:mergeDoneMaps(cloudDay.done, localDay.done),
+                alts:{...(cloudDay.alts||{}),...(localDay.alts||{})},
+                foodLog:{...(cloudDay.foodLog||{}),...(localDay.foodLog||{})},
+                prayerLogs:mergePrayerLogsMaps(cloudDay.prayerLogs, localDay.prayerLogs),
+                penalty:localDay.penalty||cloudDay.penalty||null
+              };
+            }
+            try{ await sSet(LS.history,historyData); }catch(e){}
+          }
+          if(fd.stats){
+            LAST_KNOWN_CLOUD_STATS=JSON.parse(JSON.stringify(fd.stats));
+            STATS=mergeStatsPreferRicher(STATS, fd.stats);
+          }
+          _lastSoftCloudPullAt=Date.now();
+        }
+      }
+    }catch(e){
+      console.warn('pre-save cloud refresh skipped', e);
+    }
     // Never write stats weaker than the last known cloud snapshot.
     if(LAST_KNOWN_CLOUD_STATS){
       STATS=mergeStatsPreferRicher(STATS, LAST_KNOWN_CLOUD_STATS);
       try{ await sSet(LS.stats,STATS); }catch(e){}
+    }
+    // Re-merge history against (possibly just-refreshed) last-known cloud before write.
+    if(LAST_KNOWN_CLOUD_HISTORY){
+      for(const dateKey of Object.keys(LAST_KNOWN_CLOUD_HISTORY)){
+        const cloudDay=LAST_KNOWN_CLOUD_HISTORY[dateKey]||{};
+        const localDay=historyData[dateKey]||{};
+        historyData[dateKey]={
+          done:mergeDoneMaps(cloudDay.done, localDay.done),
+          alts:{...(cloudDay.alts||{}),...(localDay.alts||{})},
+          foodLog:{...(cloudDay.foodLog||{}),...(localDay.foodLog||{})},
+          prayerLogs:mergePrayerLogsMaps(cloudDay.prayerLogs, localDay.prayerLogs),
+          penalty:localDay.penalty||cloudDay.penalty||null
+        };
+      }
     }
     const payload={
       stats:STATS,
@@ -20546,7 +20608,7 @@ async function pullCloudUserDelta(reason){
     if(typeof getDoc==='undefined' || typeof doc==='undefined' || typeof fbDb==='undefined') return;
     const now=Date.now();
     if(_softCloudPullInFlight) return;
-    if(now-_lastSoftCloudPullAt < 12000) return; // min 12s between soft pulls
+    if(now-_lastSoftCloudPullAt < 5000) return; // min 5s between soft pulls
     _softCloudPullInFlight=true;
     _lastSoftCloudPullAt=now;
     const uid=fbAuth.currentUser.uid;
@@ -20556,9 +20618,10 @@ async function pullCloudUserDelta(reason){
     let changed=false;
     if(d.stats){
       const beforePts=STATS.pts||0;
+      const beforeXp=STATS.lifetime_xp||0;
       LAST_KNOWN_CLOUD_STATS=JSON.parse(JSON.stringify(d.stats));
       STATS=mergeStatsPreferRicher(STATS, d.stats);
-      if((STATS.pts||0)!==beforePts) changed=true;
+      if((STATS.pts||0)!==beforePts || (STATS.lifetime_xp||0)!==beforeXp) changed=true;
       try{ await sSet(LS.stats,STATS); }catch(e){}
     }
     if(d.historyData){
@@ -20567,15 +20630,17 @@ async function pullCloudUserDelta(reason){
         const cloudDay=d.historyData[dateKey]||{};
         const localDay=historyData[dateKey]||{};
         const mergedDone=mergeDoneMaps(cloudDay.done, localDay.done);
+        const mergedPL=mergePrayerLogsMaps(cloudDay.prayerLogs, localDay.prayerLogs);
         const prevDone=JSON.stringify(localDay.done||{});
+        const prevPL=JSON.stringify(localDay.prayerLogs||{});
         historyData[dateKey]={
           done:mergedDone,
           alts:{...(cloudDay.alts||{}),...(localDay.alts||{})},
           foodLog:{...(cloudDay.foodLog||{}),...(localDay.foodLog||{})},
-          prayerLogs:{...(cloudDay.prayerLogs||{}),...(localDay.prayerLogs||{})},
+          prayerLogs:mergedPL,
           penalty:localDay.penalty||cloudDay.penalty||null
         };
-        if(JSON.stringify(mergedDone)!==prevDone) changed=true;
+        if(JSON.stringify(mergedDone)!==prevDone || JSON.stringify(mergedPL)!==prevPL) changed=true;
       }
       try{ await sSet(LS.history,historyData); }catch(e){}
     }
@@ -22153,7 +22218,7 @@ if (typeof onAuthStateChanged !== 'undefined' && typeof fbAuth !== 'undefined') 
                 // was removed — nothing writes to it anymore, but old data isn't lost.
                 alts:{...(cloudDay.alts||{}),...(localDay.alts||{})},
                 foodLog:{...(cloudDay.foodLog||{}),...(localDay.foodLog||{})},
-                prayerLogs:{...(cloudDay.prayerLogs||{}),...(localDay.prayerLogs||{})},
+                prayerLogs:mergePrayerLogsMaps(cloudDay.prayerLogs, localDay.prayerLogs),
                 // Critical fix: Ensure penalty is explicitly null if it doesn't exist,
                 // preventing 'undefined' from being sent to Firestore.
                 penalty:cloudDay.penalty||localDay.penalty||null
