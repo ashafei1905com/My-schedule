@@ -6838,47 +6838,32 @@ function ingestCloudUserData(d, source){
     sSet(LS.userSchedule,USER_SCHEDULE);
   }catch(e){}
 
+  // Only touch the DOM when completions/points actually changed. Always preserve scroll.
   if(meaningful){
+    const scrollY=window.scrollY||0;
     try{ loadDay(); }catch(e){}
     try{ checkStreak(); }catch(e){}
     try{
       renderTabs(); renderPanels();
       switchDay(getJDfromISO(SELECTED_DATE||TODAY));
       updateUI(); updatePrestigeUI();
-      if(typeof applyI18n==='function') applyI18n();
     }catch(e){}
+    try{ window.scrollTo(0, scrollY); }catch(e){}
   }else{
     try{ loadDay(); }catch(e){}
   }
   try{ flushPendingCloudSaveAfterHydrate(); }catch(e){}
-  try{ if(!window.__didInitialScroll && typeof scheduleInitialScrollToCurrent==='function') scheduleInitialScrollToCurrent(); }catch(e){}
+  // Never auto-scroll from a background ingest — only initial open may scroll.
   return {meaningful, source};
 }
 
-// Real-time listener — the permanent replacement for focus/visibility soft-pull spam.
+// onSnapshot was causing visible UI thrash / "page keeps refreshing" while
+// Firestore flapped offline. Disabled. Sync = transactional write + explicit pull
+// on tab visible only (no live listener, no interval).
 function startUserDocListener(uid){
-  if(!uid || typeof onSnapshot!=='function') return;
+  // no-op on purpose — do not attach onSnapshot
   try{ if(_userDocUnsub){ _userDocUnsub(); _userDocUnsub=null; } }catch(e){}
-  const ref=userDocRef(uid);
-  _userDocUnsub=onSnapshot(ref, (snap)=>{
-    if(!snap.exists()){
-      CLOUD_DATA_HYDRATED=true;
-      CLOUD_SCHEDULES_HYDRATED=true;
-      try{ flushPendingCloudSaveAfterHydrate(); }catch(e){}
-      return;
-    }
-    // Ignore echo of our own write for a short window, but still max-merge so we
-    // never drop data the other device wrote in the same second.
-    const d=snap.data()||{};
-    clearTimeout(_snapshotApplyTimer);
-    _snapshotApplyTimer=setTimeout(()=>{
-      try{ ingestCloudUserData(d, 'onSnapshot'); }catch(e){ console.warn('onSnapshot ingest failed',e); }
-    }, (Date.now()-_lastLocalWriteAt)<800 ? 600 : 0);
-  }, (err)=>{
-    console.warn('user doc onSnapshot error', err);
-  });
 }
-
 function stopUserDocListener(){
   try{ if(_userDocUnsub){ _userDocUnsub(); _userDocUnsub=null; } }catch(e){}
 }
@@ -12527,6 +12512,11 @@ async function syncPushSchedule(forceRenew = false, silent = true){
   ? window.AI_WORKER_URL.replace(/\/$/, '')
   : 'https://falling-frost-7656.ashafei1905.workers.dev';
 
+  // Back off hard on 500s — the old path logged this every visibility/focus and
+  // flooded the console while the Worker was down.
+  if(window.__pushSyncBackoffUntil && Date.now()<window.__pushSyncBackoffUntil){
+    return;
+  }
   try{
     const res = await fetch(workerUrl + '/api/save-subscription',{
       method:'POST',
@@ -12534,12 +12524,19 @@ async function syncPushSchedule(forceRenew = false, silent = true){
       body:JSON.stringify({uid, subscription:PUSH_SUBSCRIPTION, reminders})
     });
     if(!res.ok){
-      console.warn('push schedule sync: server rejected',res.status);
-      if(!silent){
+      const fails=(window.__pushSyncFailCount||0)+1;
+      window.__pushSyncFailCount=fails;
+      // 1m, 2m, 5m, 10m max
+      const wait=Math.min(600000, 60000*Math.pow(2, Math.min(fails-1, 4)));
+      window.__pushSyncBackoffUntil=Date.now()+wait;
+      if(fails<=2) console.warn('push schedule sync: server rejected',res.status,'(backoff',Math.round(wait/1000)+'s)');
+      if(!silent && fails<=1){
         const en=(USER_SETTINGS&&USER_SETTINGS.lang)==='en';
         showToast(en?`⚠️ Server refused saving reminders (${res.status}). Try Renew again.`:`⚠️ السيرفر رفض حفظ التذكيرات (${res.status}) — جرب التجديد تاني`,3500,'warn');
       }
     } else {
+      window.__pushSyncFailCount=0;
+      window.__pushSyncBackoffUntil=0;
       const badge = document.getElementById('notif-sync-badge');
       if(badge){
         const en=(USER_SETTINGS&&USER_SETTINGS.lang)==='en';
@@ -12549,8 +12546,10 @@ async function syncPushSchedule(forceRenew = false, silent = true){
       }
     }
   }catch(e){
-    console.warn('push schedule sync failed',e);
-    if(!silent) showToast('⚠️ فشل الاتصال بالسيرفر لحفظ التذكيرات',3500,'warn');
+    window.__pushSyncFailCount=(window.__pushSyncFailCount||0)+1;
+    window.__pushSyncBackoffUntil=Date.now()+Math.min(600000, 60000*window.__pushSyncFailCount);
+    if(window.__pushSyncFailCount<=2) console.warn('push schedule sync failed',e);
+    if(!silent && window.__pushSyncFailCount<=1) showToast('⚠️ فشل الاتصال بالسيرفر لحفظ التذكيرات',3500,'warn');
   }
 }
 
