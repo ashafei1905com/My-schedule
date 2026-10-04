@@ -6682,6 +6682,24 @@ let LAST_KNOWN_CLOUD_SCHEDULES=null;
 let CLOUD_DATA_HYDRATED=false;
 let LAST_KNOWN_CLOUD_STATS=null;
 
+// Merge per-task done maps across devices. Prefer the richer award (higher number).
+// Never let a missing/false/0 local entry wipe a positive cloud completion — that is
+// the exact laptop-tab-left-open failure mode: phone completes tasks → cloud has
+// points in historyData.done, laptop still has empty/false local keys, a naive
+// {...cloud,...local} then erases the phone's work the moment the laptop saves.
+function mergeDoneMaps(cloudDone, localDone){
+  const out={...(cloudDone||{})};
+  for(const [id, val] of Object.entries(localDone||{})){
+    const c=out[id];
+    const ln=typeof val==='number'?val:(val?1:0);
+    const cn=typeof c==='number'?c:(c?1:0);
+    if(c===undefined){ out[id]=val; continue; }
+    // Prefer higher award; if equal, keep local (this device just wrote it).
+    out[id]=ln>=cn?val:c;
+  }
+  return out;
+}
+
 function mergeStatsPreferRicher(localS, cloudS){
   const L=localS||{};
   const C=cloudS||{};
@@ -10609,18 +10627,25 @@ function setScheduleEditMode(on){
   const editModeEl=document.getElementById('setScheduleEditMode');
   if(editModeEl) editModeEl.checked=!!window.SCHEDULE_EDIT_MODE;
   // Leaving settings is part of the edit experience — land on the live schedule.
+  // Preserve the user's scroll position: jumping to the top on every edit-mode
+  // entry was the #1 annoyance when editing a mid/late-day task.
+  const _editScrollY=(typeof window.scrollY==='number')?window.scrollY:(document.documentElement.scrollTop||0);
   if(window.SCHEDULE_EDIT_MODE){
     try{ closeSettingsScreen(); }catch(e){}
-    try{
-      document.body.classList.add('schedule-edit-live');
-      const main=document.querySelector('main')||document.getElementById('panels');
-      if(main&&main.scrollIntoView) main.scrollIntoView({behavior:'smooth',block:'start'});
-      else window.scrollTo({top:0,behavior:'smooth'});
-    }catch(e){}
+    try{ document.body.classList.add('schedule-edit-live'); }catch(e){}
   }else{
     document.body.classList.remove('schedule-edit-live');
   }
   try{ renderTabs(); renderPanels(); switchDay(getJDfromISO(SELECTED_DATE||TODAY)); updateUI(); }catch(e){}
+  // Restore scroll after re-render (renderPanels rebuilds the list and resets position).
+  // Never force top — that was the annoyance when editing mid-day tasks.
+  try{
+    requestAnimationFrame(()=>{
+      try{ window.scrollTo(0, _editScrollY); }catch(e){}
+      // Second frame: some mobile browsers reflow after fonts/cards paint.
+      requestAnimationFrame(()=>{ try{ window.scrollTo(0, _editScrollY); }catch(e){} });
+    });
+  }catch(e){}
 }
 function wireEditModeBar(){
   if(window._editBarWired) return;
@@ -11154,12 +11179,17 @@ async function saveAll(){
       const cloudDay=LAST_KNOWN_CLOUD_HISTORY[dateKey]||{};
       const localDay=historyData[dateKey]||{};
       historyData[dateKey]={
-        done:{...(cloudDay.done||{}),...(localDay.done||{})},
+        done:mergeDoneMaps(cloudDay.done, localDay.done),
         alts:{...(cloudDay.alts||{}),...(localDay.alts||{})},
         foodLog:{...(cloudDay.foodLog||{}),...(localDay.foodLog||{})},
         prayerLogs:{...(cloudDay.prayerLogs||{}),...(localDay.prayerLogs||{})},
         penalty:localDay.penalty||cloudDay.penalty||null
       };
+    }
+    // Also absorb any local-only dates not present in the last cloud snapshot.
+    for(const dateKey of Object.keys(historyData)){
+      if(LAST_KNOWN_CLOUD_HISTORY[dateKey]) continue;
+      // leave local-only days as-is
     }
     await sSet(LS.history,historyData); // persist the just-merged-in data locally too
   }
@@ -20504,22 +20534,108 @@ document.body.addEventListener('keydown',async e=>{
   }
 });
 
+// Soft cloud pull when the user returns to a tab/PWA that stayed open while
+// another device (phone) completed tasks. Without this, laptop keeps stale
+// localStorage history forever — only a full reload re-ran onAuth hydrate.
+// Debounced so flipping tabs does not spam getDoc.
+let _lastSoftCloudPullAt=0;
+let _softCloudPullInFlight=false;
+async function pullCloudUserDelta(reason){
+  try{
+    if(typeof fbAuth==='undefined' || !fbAuth?.currentUser) return;
+    if(typeof getDoc==='undefined' || typeof doc==='undefined' || typeof fbDb==='undefined') return;
+    const now=Date.now();
+    if(_softCloudPullInFlight) return;
+    if(now-_lastSoftCloudPullAt < 12000) return; // min 12s between soft pulls
+    _softCloudPullInFlight=true;
+    _lastSoftCloudPullAt=now;
+    const uid=fbAuth.currentUser.uid;
+    const ud=await getDoc(doc(fbDb,'users',uid));
+    if(!ud || !ud.exists()){ _softCloudPullInFlight=false; return; }
+    const d=ud.data()||{};
+    let changed=false;
+    if(d.stats){
+      const beforePts=STATS.pts||0;
+      LAST_KNOWN_CLOUD_STATS=JSON.parse(JSON.stringify(d.stats));
+      STATS=mergeStatsPreferRicher(STATS, d.stats);
+      if((STATS.pts||0)!==beforePts) changed=true;
+      try{ await sSet(LS.stats,STATS); }catch(e){}
+    }
+    if(d.historyData){
+      LAST_KNOWN_CLOUD_HISTORY=JSON.parse(JSON.stringify(d.historyData));
+      for(const dateKey of Object.keys(d.historyData)){
+        const cloudDay=d.historyData[dateKey]||{};
+        const localDay=historyData[dateKey]||{};
+        const mergedDone=mergeDoneMaps(cloudDay.done, localDay.done);
+        const prevDone=JSON.stringify(localDay.done||{});
+        historyData[dateKey]={
+          done:mergedDone,
+          alts:{...(cloudDay.alts||{}),...(localDay.alts||{})},
+          foodLog:{...(cloudDay.foodLog||{}),...(localDay.foodLog||{})},
+          prayerLogs:{...(cloudDay.prayerLogs||{}),...(localDay.prayerLogs||{})},
+          penalty:localDay.penalty||cloudDay.penalty||null
+        };
+        if(JSON.stringify(mergedDone)!==prevDone) changed=true;
+      }
+      try{ await sSet(LS.history,historyData); }catch(e){}
+    }
+    if(d.userEdits){
+      const cloudEd=d.userEdits||{};
+      const localEd=USER_EDITS||emptyUserEdits();
+      const mergeMaps=(a,b)=>({...(a||{}),...(b||{})});
+      USER_EDITS={
+        ...emptyUserEdits(),
+        ...cloudEd,
+        ...localEd,
+        deletes:mergeMaps(cloudEd.deletes, localEd.deletes),
+        dayDeletes:mergeMaps(cloudEd.dayDeletes, localEd.dayDeletes),
+        moves:mergeMaps(cloudEd.moves, localEd.moves),
+        dayOverrides:mergeMaps(cloudEd.dayOverrides, localEd.dayOverrides),
+        pointOverrides:mergeMaps(cloudEd.pointOverrides, localEd.pointOverrides),
+        taskPlans:mergeMaps(cloudEd.taskPlans, localEd.taskPlans)
+      };
+      try{ await sSet(LS.userEdits,USER_EDITS); }catch(e){}
+    }
+    CLOUD_DATA_HYDRATED=true;
+    _lastCloudHydrateAt=Date.now();
+    _lastCloudHydrateUid=uid;
+    loadDay();
+    try{ checkStreak(); }catch(e){}
+    try{ renderTabs(); renderPanels(); switchDay(getJDfromISO(SELECTED_DATE||TODAY)); updateUI(); updatePrestigeUI(); }catch(e){}
+    if(changed){
+      const en=uiIsEn();
+      showToast(en?'🔄 Synced latest data from your other device':'🔄 تم مزامنة أحدث بيانات من جهازك التاني',2200);
+    }
+  }catch(e){
+    console.warn('pullCloudUserDelta failed', reason, e);
+  }finally{
+    _softCloudPullInFlight=false;
+  }
+}
+
 // Auto-check and re-sync push notifications whenever user returns to the tab/PWA
 document.addEventListener('visibilitychange', () => {
-  if (document.visibilityState === 'visible' && NOTIF_ENABLED) {
-    try {
-      if (typeof syncPushSchedule === 'function') {
-        syncPushSchedule(false, true);
+  if (document.visibilityState === 'visible') {
+    if (NOTIF_ENABLED) {
+      try {
+        if (typeof syncPushSchedule === 'function') {
+          syncPushSchedule(false, true);
+        }
+      } catch(e) {
+        console.warn('visibilitychange syncPushSchedule error:', e);
       }
-    } catch(e) {
-      console.warn('visibilitychange syncPushSchedule error:', e);
     }
+    try{ pullCloudUserDelta('visibilitychange'); }catch(e){}
   }
 });
 window.addEventListener('focus', () => {
   if (NOTIF_ENABLED && typeof triggerAutoPushSync === 'function') {
     triggerAutoPushSync(1500);
   }
+  try{ pullCloudUserDelta('focus'); }catch(e){}
+});
+window.addEventListener('pageshow', () => {
+  try{ pullCloudUserDelta('pageshow'); }catch(e){}
 });
 
 // ===== Init =====
@@ -22030,10 +22146,9 @@ if (typeof onAuthStateChanged !== 'undefined' && typeof fbAuth !== 'undefined') 
               const cloudDay=d.historyData[dateKey]||{};
               const localDay=historyData[dateKey]||{};
               historyData[dateKey]={
-                // Local wins on key collision: this device may have completions that
-                // have not yet finished round-tripping to cloud. Cloud-only keys are
-                // still absorbed so the other device's work appears here.
-                done:{...(cloudDay.done||{}),...(localDay.done||{})},
+                // Prefer richer completion awards; never let empty/false local wipe
+                // phone completions that already landed in cloud.
+                done:mergeDoneMaps(cloudDay.done, localDay.done),
                 // alts kept read-only for old saved days from before the alts system
                 // was removed — nothing writes to it anymore, but old data isn't lost.
                 alts:{...(cloudDay.alts||{}),...(localDay.alts||{})},
