@@ -5355,7 +5355,15 @@ import {
   getRedirectResult,
   onAuthStateChanged
 } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
-import { initializeFirestore, doc, setDoc, getDoc } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
+import {
+  initializeFirestore,
+  doc,
+  setDoc,
+  getDoc,
+  updateDoc,
+  onSnapshot,
+  runTransaction
+} from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
 
 const firebaseConfig = {
   apiKey:"AIzaSyDevk9uUTTiXaNKA5UrGN7KrbCtWgqAnYk",
@@ -6695,6 +6703,244 @@ function flushPendingCloudSaveAfterHydrate(){
   }catch(e){ console.warn('deferred cloud save threw',e); }
 }
 
+// ===== Permanent cross-device sync layer =====
+// Root cause of years of phone↔laptop desync: setDoc({merge:true}) REPLACES whole
+// nested maps (historyData, stats, userSettings, userSchedules). A device with a
+// stale snapshot then overwrites the other device's work.
+// Fix: (1) every multi-field write goes through a Firestore TRANSACTION that reads
+// the latest cloud doc, merges with local, then writes; (2) a real-time onSnapshot
+// listener keeps both devices live without toast spam or minute-polling.
+let _userDocUnsub=null;
+let _lastLocalWriteAt=0;
+let _snapshotApplyTimer=null;
+
+function userDocRef(uid){
+  return doc(fbDb,'users',uid);
+}
+
+function mergeHistoryDay(cloudDay, localDay){
+  cloudDay=cloudDay||{}; localDay=localDay||{};
+  return {
+    done:mergeDoneMaps(cloudDay.done, localDay.done),
+    alts:{...(cloudDay.alts||{}),...(localDay.alts||{})},
+    foodLog:{...(cloudDay.foodLog||{}),...(localDay.foodLog||{})},
+    prayerLogs:mergePrayerLogsMaps(cloudDay.prayerLogs, localDay.prayerLogs),
+    penalty:localDay.penalty||cloudDay.penalty||null
+  };
+}
+
+function mergeFullHistory(cloudHist, localHist){
+  const out={};
+  const keys=new Set([...Object.keys(cloudHist||{}), ...Object.keys(localHist||{})]);
+  for(const k of keys) out[k]=mergeHistoryDay((cloudHist||{})[k], (localHist||{})[k]);
+  return out;
+}
+
+// Apply a cloud users/{uid} document into local memory. Safe to call from
+// onSnapshot and from the initial getDoc. Never reduces completion awards/points.
+function ingestCloudUserData(d, source){
+  if(!d || typeof d!=='object') return {meaningful:false};
+  const beforePts=STATS.pts||0;
+  const beforeToday=countDoneKeys((historyData[TODAY]||{}).done);
+  let settingsOrSchedChanged=false;
+
+  if(d.stats){
+    LAST_KNOWN_CLOUD_STATS=JSON.parse(JSON.stringify(d.stats));
+    STATS=mergeStatsPreferRicher(STATS, d.stats);
+  }
+  if(d.historyData){
+    LAST_KNOWN_CLOUD_HISTORY=JSON.parse(JSON.stringify(d.historyData));
+    historyData=mergeFullHistory(d.historyData, historyData);
+  }
+  if(d.penalizedDates) penalizedDates={...penalizedDates, ...d.penalizedDates};
+  if(d.userEdits){
+    const cloudEd=d.userEdits||{};
+    const localEd=USER_EDITS||emptyUserEdits();
+    const cloudWins=(a,b)=>({...(a||{}),...(b||{})});
+    const dayMapWins=(localM,cloudM)=>{
+      const out={...(localM||{})};
+      for(const [iso,cmap] of Object.entries(cloudM||{})) out[iso]={...(out[iso]||{}),...(cmap||{})};
+      return out;
+    };
+    USER_EDITS={
+      ...emptyUserEdits(),
+      ...localEd,
+      ...cloudEd,
+      deletes:cloudWins(localEd.deletes, cloudEd.deletes),
+      dayDeletes:dayMapWins(localEd.dayDeletes, cloudEd.dayDeletes),
+      moves:cloudWins(localEd.moves, cloudEd.moves),
+      dayOverrides:dayMapWins(localEd.dayOverrides, cloudEd.dayOverrides),
+      pointOverrides:cloudWins(localEd.pointOverrides, cloudEd.pointOverrides),
+      taskPlans:cloudWins(localEd.taskPlans, cloudEd.taskPlans)
+    };
+  }
+  if(d.userSettings && typeof d.userSettings==='object'){
+    const cloudS=d.userSettings, localS=USER_SETTINGS||{};
+    const prev=JSON.stringify({c:localS.categoryOverrides,x:localS.customCategories});
+    USER_SETTINGS={
+      ...cloudS,
+      ...localS,
+      categoryOverrides:{...(localS.categoryOverrides||{}), ...(cloudS.categoryOverrides||{})},
+      customCategories:(Array.isArray(cloudS.customCategories)&&cloudS.customCategories.length>=(localS.customCategories||[]).length)
+        ? cloudS.customCategories : (localS.customCategories||cloudS.customCategories||[]),
+      lang:localS.lang||cloudS.lang||'en',
+      onboardingComplete:!!(localS.onboardingComplete||cloudS.onboardingComplete)
+    };
+    if(JSON.stringify({c:USER_SETTINGS.categoryOverrides,x:USER_SETTINGS.customCategories})!==prev) settingsOrSchedChanged=true;
+  }
+  if(d.userSchedules){
+    try{
+      const cloudSlots=deserializeAllSchedulesFromFirestore(d.userSchedules);
+      USER_SCHEDULES=mergeScheduleSlotsPreferLocal(cloudSlots, USER_SCHEDULES, true);
+      LAST_KNOWN_CLOUD_SCHEDULES=JSON.parse(JSON.stringify(cloudSlots));
+      CLOUD_SCHEDULES_HYDRATED=true;
+      if(d.activeScheduleId) ACTIVE_SCHEDULE_ID=d.activeScheduleId;
+      if(USER_SCHEDULES[ACTIVE_SCHEDULE_ID]) USER_SCHEDULE=USER_SCHEDULES[ACTIVE_SCHEDULE_ID].sched||USER_SCHEDULE;
+      settingsOrSchedChanged=true;
+    }catch(e){ console.warn('ingest schedule failed',e); }
+  }else if(d.userSchedule){
+    try{
+      const cloudSched=deserializeScheduleFromFirestore(d.userSchedule);
+      USER_SCHEDULE=mergeSchedMapsPreferLocal(cloudSched, USER_SCHEDULE);
+      settingsOrSchedChanged=true;
+    }catch(e){}
+  }
+  if(d.reports && Array.isArray(d.reports)){
+    const mergedMap=new Map();
+    for(const r of savedReports){ if(r&&r.weekStart) mergedMap.set(r.weekStart,r); }
+    for(const r of d.reports){
+      if(!r||!r.weekStart) continue;
+      const existing=mergedMap.get(r.weekStart);
+      if(!existing || (r.totalPts||0)>=(existing.totalPts||0)) mergedMap.set(r.weekStart,r);
+    }
+    savedReports=Array.from(mergedMap.values()).sort((a,b)=>b.weekStart.localeCompare(a.weekStart));
+  }
+  if(d.firstSeen){ FIRST_SEEN=d.firstSeen; IS_BRAND_NEW_SESSION=false; }
+  if(d.mealOptions) MEAL_OPTIONS={...MEAL_OPTIONS, ...d.mealOptions};
+  if(d.weeklyPointsHistory) weeklyPointsHistory={...weeklyPointsHistory, ...d.weeklyPointsHistory};
+  if(d.userMemory) USER_MEMORY=d.userMemory;
+
+  CLOUD_DATA_HYDRATED=true;
+  _lastCloudHydrateAt=Date.now();
+  try{ if(fbAuth?.currentUser) _lastCloudHydrateUid=fbAuth.currentUser.uid; }catch(e){}
+
+  const afterPts=STATS.pts||0;
+  const afterToday=countDoneKeys((historyData[TODAY]||{}).done);
+  const meaningful=(afterToday>beforeToday)||(afterPts>beforePts)||settingsOrSchedChanged;
+
+  // Persist merged snapshot locally so a cold start still has the other device's work.
+  try{
+    sSet(LS.stats,STATS);
+    sSet(LS.history,historyData);
+    sSet(LS.userEdits,USER_EDITS);
+    sSet(LS.userSettings,USER_SETTINGS);
+    sSet(LS.userSchedules,USER_SCHEDULES);
+    sSet(LS.userSchedule,USER_SCHEDULE);
+  }catch(e){}
+
+  if(meaningful){
+    try{ loadDay(); }catch(e){}
+    try{ checkStreak(); }catch(e){}
+    try{
+      renderTabs(); renderPanels();
+      switchDay(getJDfromISO(SELECTED_DATE||TODAY));
+      updateUI(); updatePrestigeUI();
+      if(typeof applyI18n==='function') applyI18n();
+    }catch(e){}
+  }else{
+    try{ loadDay(); }catch(e){}
+  }
+  try{ flushPendingCloudSaveAfterHydrate(); }catch(e){}
+  try{ if(!window.__didInitialScroll && typeof scheduleInitialScrollToCurrent==='function') scheduleInitialScrollToCurrent(); }catch(e){}
+  return {meaningful, source};
+}
+
+// Real-time listener — the permanent replacement for focus/visibility soft-pull spam.
+function startUserDocListener(uid){
+  if(!uid || typeof onSnapshot!=='function') return;
+  try{ if(_userDocUnsub){ _userDocUnsub(); _userDocUnsub=null; } }catch(e){}
+  const ref=userDocRef(uid);
+  _userDocUnsub=onSnapshot(ref, (snap)=>{
+    if(!snap.exists()){
+      CLOUD_DATA_HYDRATED=true;
+      CLOUD_SCHEDULES_HYDRATED=true;
+      try{ flushPendingCloudSaveAfterHydrate(); }catch(e){}
+      return;
+    }
+    // Ignore echo of our own write for a short window, but still max-merge so we
+    // never drop data the other device wrote in the same second.
+    const d=snap.data()||{};
+    clearTimeout(_snapshotApplyTimer);
+    _snapshotApplyTimer=setTimeout(()=>{
+      try{ ingestCloudUserData(d, 'onSnapshot'); }catch(e){ console.warn('onSnapshot ingest failed',e); }
+    }, (Date.now()-_lastLocalWriteAt)<800 ? 600 : 0);
+  }, (err)=>{
+    console.warn('user doc onSnapshot error', err);
+  });
+}
+
+function stopUserDocListener(){
+  try{ if(_userDocUnsub){ _userDocUnsub(); _userDocUnsub=null; } }catch(e){}
+}
+
+// Transactional write of the full user payload. Always merges against the LATEST
+// cloud document inside the transaction so a stale laptop cannot wipe the phone.
+async function transactionalUserWrite(buildLocalPayload){
+  const user=fbAuth?.currentUser;
+  if(!user) return false;
+  if(typeof runTransaction!=='function'){
+    // Fallback if SDK import failed somehow
+    const payload=buildLocalPayload(null);
+    await setDoc(userDocRef(user.uid), payload, {merge:true});
+    _lastLocalWriteAt=Date.now();
+    return true;
+  }
+  await runTransaction(fbDb, async (transaction)=>{
+    const ref=userDocRef(user.uid);
+    const snap=await transaction.get(ref);
+    const cloud=snap.exists()? (snap.data()||{}) : {};
+    // Merge cloud into local memory first so buildLocalPayload sees the truth.
+    if(cloud.historyData) historyData=mergeFullHistory(cloud.historyData, historyData);
+    if(cloud.stats) STATS=mergeStatsPreferRicher(STATS, cloud.stats);
+    if(cloud.userEdits){
+      // keep existing USER_EDITS merge semantics via ingest piece
+      const cloudEd=cloud.userEdits, localEd=USER_EDITS||emptyUserEdits();
+      const cw=(a,b)=>({...(a||{}),...(b||{})});
+      USER_EDITS={...emptyUserEdits(),...localEd,...cloudEd,
+        deletes:cw(cloudEd.deletes, localEd.deletes),
+        dayDeletes:cw(cloudEd.dayDeletes, localEd.dayDeletes),
+        moves:cw(cloudEd.moves, localEd.moves),
+        dayOverrides:cw(cloudEd.dayOverrides, localEd.dayOverrides),
+        pointOverrides:cw(cloudEd.pointOverrides, localEd.pointOverrides),
+        taskPlans:cw(cloudEd.taskPlans, localEd.taskPlans)
+      };
+    }
+    if(cloud.userSettings){
+      USER_SETTINGS={...cloud.userSettings, ...USER_SETTINGS,
+        categoryOverrides:{...(cloud.userSettings.categoryOverrides||{}), ...(USER_SETTINGS.categoryOverrides||{})},
+        lang:USER_SETTINGS.lang||cloud.userSettings.lang||'en'
+      };
+    }
+    if(cloud.userSchedules){
+      try{
+        const cloudSlots=deserializeAllSchedulesFromFirestore(cloud.userSchedules);
+        // Local edits win inside a save transaction (this device just changed text).
+        USER_SCHEDULES=mergeScheduleSlotsPreferLocal(USER_SCHEDULES, cloudSlots, true);
+        if(USER_SCHEDULES[ACTIVE_SCHEDULE_ID]) USER_SCHEDULE=USER_SCHEDULES[ACTIVE_SCHEDULE_ID].sched||USER_SCHEDULE;
+        LAST_KNOWN_CLOUD_SCHEDULES=JSON.parse(JSON.stringify(cloudSlots));
+      }catch(e){}
+    }
+    const payload=buildLocalPayload(cloud);
+    payload.syncUpdatedAt=Date.now();
+    transaction.set(ref, payload, {merge:true});
+  });
+  _lastLocalWriteAt=Date.now();
+  LAST_KNOWN_CLOUD_HISTORY=JSON.parse(JSON.stringify(historyData));
+  LAST_KNOWN_CLOUD_STATS=JSON.parse(JSON.stringify(STATS));
+  CLOUD_DATA_HYDRATED=true;
+  return true;
+}
+
 // Merge per-task done maps across devices. Prefer the richer award (higher number).
 // Never let a missing/false/0 local entry wipe a positive cloud completion — that is
 // the exact laptop-tab-left-open failure mode: phone completes tasks → cloud has
@@ -6899,11 +7145,20 @@ async function saveUserSchedule(){
     return;
   }
   try{
-    await setDoc(doc(fbDb,'users',user.uid),{
-      userSchedule:serializeScheduleForFirestore(USER_SCHEDULE),
-      userSchedules:serializeAllSchedulesForFirestore(USER_SCHEDULES),
-      activeScheduleId:ACTIVE_SCHEDULE_ID
-    },{merge:true});
+    if(typeof transactionalUserWrite==='function' && CLOUD_DATA_HYDRATED){
+      await transactionalUserWrite(()=>({
+        userSchedule:serializeScheduleForFirestore(USER_SCHEDULE),
+        userSchedules:serializeAllSchedulesForFirestore(USER_SCHEDULES),
+        activeScheduleId:ACTIVE_SCHEDULE_ID
+      }));
+    }else{
+      await setDoc(doc(fbDb,'users',user.uid),{
+        userSchedule:serializeScheduleForFirestore(USER_SCHEDULE),
+        userSchedules:serializeAllSchedulesForFirestore(USER_SCHEDULES),
+        activeScheduleId:ACTIVE_SCHEDULE_ID
+      },{merge:true});
+      _lastLocalWriteAt=Date.now();
+    }
     LAST_KNOWN_CLOUD_SCHEDULES=JSON.parse(JSON.stringify(USER_SCHEDULES));
     CLOUD_SCHEDULES_HYDRATED=true;
   }catch(e){console.warn('userSchedule cloud save failed',e);}
@@ -9223,8 +9478,24 @@ async function saveUserSettings(){
   const user=fbAuth.currentUser;
   if(!user)return; // guests never sync settings anywhere
   try{
-    await setDoc(doc(fbDb,'users',user.uid),{userSettings:USER_SETTINGS},{merge:true});
+    if(typeof transactionalUserWrite==='function' && CLOUD_DATA_HYDRATED){
+      await transactionalUserWrite(()=>({userSettings:USER_SETTINGS}));
+    }else{
+      await setDoc(doc(fbDb,'users',user.uid),{userSettings:USER_SETTINGS},{merge:true});
+      _lastLocalWriteAt=Date.now();
+    }
   }catch(e){console.warn('userSettings cloud save failed',e);}
+}
+
+// Force a settings/schedule cloud push after local text customizations so the
+// other device can soft-pull them (same reliability path as task completions).
+async function forceSettingsAndScheduleCloudSync(){
+  try{
+    if(typeof fbAuth==='undefined' || !fbAuth?.currentUser) return;
+    if(typeof saveUserSettings==='function') await saveUserSettings();
+    if(typeof saveUserSchedule==='function') await saveUserSchedule();
+    if(typeof saveUserEdits==='function') await saveUserEdits();
+  }catch(e){ console.warn('forceSettingsAndScheduleCloudSync failed',e); }
 }
 
 // ===== Onboarding (Stage 1) =====
@@ -10791,7 +11062,12 @@ async function saveUserEdits(){
   const user=fbAuth.currentUser;
   if(!user)return; // guests never sync edits anywhere, and edits never touch guest localStorage reads
   try{
-    await setDoc(doc(fbDb,'users',user.uid),{userEdits:USER_EDITS},{merge:true});
+    if(typeof transactionalUserWrite==='function' && CLOUD_DATA_HYDRATED){
+      await transactionalUserWrite(()=>({userEdits:USER_EDITS}));
+    }else{
+      await setDoc(doc(fbDb,'users',user.uid),{userEdits:USER_EDITS},{merge:true});
+      _lastLocalWriteAt=Date.now();
+    }
   }catch(e){console.warn('userEdits cloud save failed',e);}
 }
 
@@ -11227,106 +11503,40 @@ async function saveAll(){
   // short delay covers the common transient case (a momentary drop, a slow
   // connection) without adding real complexity; a second consecutive failure
   // still surfaces the existing red badge + toast exactly as before.
+  // Permanent path: transactional merge against the LATEST cloud doc, then write.
+  // Stale laptop/phone snapshots can no longer clobber the other device.
   const attemptSave=async()=>{
-    // HARD RULE: while signed in, never push to cloud until the first getDoc has
-    // finished. Pre-hydrate saveAll was replacing cloud stats with phone zeros.
     if(!CLOUD_DATA_HYDRATED){
-      // Phone/laptop can complete tasks before the first getDoc finishes. Queue a
-      // cloud flush for the moment hydrate completes — otherwise phone work stays
-      // local-only forever and never reaches the laptop.
       window.__pendingCloudSaveAfterHydrate=true;
       console.warn('saveAll: cloud write deferred — waiting for first hydrate');
       return null;
     }
-    // CRITICAL: setDoc({merge:true}) REPLACES the whole historyData / stats fields.
-    // If LAST_KNOWN_CLOUD_* is older than another device's write (phone completed
-    // Isha, laptop still has an empty snapshot), merging only against that stale
-    // cache then writing will wipe the phone's completion. Refresh the snapshot
-    // from live Firestore right before write when the cache is older than a few
-    // seconds. Failures fall through to last-known cache (still better than nothing).
-    try{
-      const cacheAge=Date.now()-(_lastSoftCloudPullAt||0);
-      if(cacheAge>4000 && typeof getDoc!=='undefined' && typeof doc!=='undefined' && typeof fbDb!=='undefined'){
-        const freshTimeout=new Promise((_,rej)=>setTimeout(()=>rej(new Error('pre-save hydrate timeout')),6000));
-        const udFresh=await Promise.race([getDoc(doc(fbDb,'users',user.uid)), freshTimeout]);
-        if(udFresh && udFresh.exists()){
-          const fd=udFresh.data()||{};
-          if(fd.historyData){
-            LAST_KNOWN_CLOUD_HISTORY=JSON.parse(JSON.stringify(fd.historyData));
-            for(const dateKey of Object.keys(fd.historyData)){
-              const cloudDay=fd.historyData[dateKey]||{};
-              const localDay=historyData[dateKey]||{};
-              historyData[dateKey]={
-                done:mergeDoneMaps(cloudDay.done, localDay.done),
-                alts:{...(cloudDay.alts||{}),...(localDay.alts||{})},
-                foodLog:{...(cloudDay.foodLog||{}),...(localDay.foodLog||{})},
-                prayerLogs:mergePrayerLogsMaps(cloudDay.prayerLogs, localDay.prayerLogs),
-                penalty:localDay.penalty||cloudDay.penalty||null
-              };
-            }
-            try{ await sSet(LS.history,historyData); }catch(e){}
-          }
-          if(fd.stats){
-            LAST_KNOWN_CLOUD_STATS=JSON.parse(JSON.stringify(fd.stats));
-            STATS=mergeStatsPreferRicher(STATS, fd.stats);
-          }
-          _lastSoftCloudPullAt=Date.now();
-        }
+    await transactionalUserWrite((cloud)=>{
+      const payload={
+        stats:STATS,
+        reports:savedReports,
+        historyData:historyData,
+        penalizedDates:penalizedDates,
+        firstSeen:FIRST_SEEN,
+        userEdits:USER_EDITS,
+        mealOptions:MEAL_OPTIONS,
+        weeklyPointsHistory:weeklyPointsHistory,
+        userSettings:USER_SETTINGS
+      };
+      const canWriteSched=CLOUD_SCHEDULES_HYDRATED || !isBareDefaultSchedules(USER_SCHEDULES);
+      if(canWriteSched){
+        payload.userSchedule=serializeScheduleForFirestore(USER_SCHEDULE);
+        payload.userSchedules=serializeAllSchedulesForFirestore(USER_SCHEDULES);
+        payload.activeScheduleId=ACTIVE_SCHEDULE_ID;
       }
-    }catch(e){
-      console.warn('pre-save cloud refresh skipped', e);
-    }
-    // Never write stats weaker than the last known cloud snapshot.
-    if(LAST_KNOWN_CLOUD_STATS){
-      STATS=mergeStatsPreferRicher(STATS, LAST_KNOWN_CLOUD_STATS);
-      try{ await sSet(LS.stats,STATS); }catch(e){}
-    }
-    // Re-merge history against (possibly just-refreshed) last-known cloud before write.
-    if(LAST_KNOWN_CLOUD_HISTORY){
-      for(const dateKey of Object.keys(LAST_KNOWN_CLOUD_HISTORY)){
-        const cloudDay=LAST_KNOWN_CLOUD_HISTORY[dateKey]||{};
-        const localDay=historyData[dateKey]||{};
-        historyData[dateKey]={
-          done:mergeDoneMaps(cloudDay.done, localDay.done),
-          alts:{...(cloudDay.alts||{}),...(localDay.alts||{})},
-          foodLog:{...(cloudDay.foodLog||{}),...(localDay.foodLog||{})},
-          prayerLogs:mergePrayerLogsMaps(cloudDay.prayerLogs, localDay.prayerLogs),
-          penalty:localDay.penalty||cloudDay.penalty||null
-        };
-      }
-    }
-    const payload={
-      stats:STATS,
-      reports:savedReports,
-      historyData:historyData,
-      penalizedDates:penalizedDates,
-      firstSeen:FIRST_SEEN,
-      userEdits:USER_EDITS,
-      mealOptions:MEAL_OPTIONS,
-      weeklyPointsHistory:weeklyPointsHistory,
-      userSettings:USER_SETTINGS
-    };
-    const canWriteSched=CLOUD_SCHEDULES_HYDRATED || !isBareDefaultSchedules(USER_SCHEDULES);
-    if(canWriteSched){
-      if(LAST_KNOWN_CLOUD_SCHEDULES){
-        // Save path: preserve other workspaces only; local active slot stays authoritative.
-        USER_SCHEDULES=mergeScheduleSlotsPreferLocal(USER_SCHEDULES, LAST_KNOWN_CLOUD_SCHEDULES, false);
-      }
-      payload.userSchedule=serializeScheduleForFirestore(USER_SCHEDULE);
-      payload.userSchedules=serializeAllSchedulesForFirestore(USER_SCHEDULES);
-      payload.activeScheduleId=ACTIVE_SCHEDULE_ID;
-    }
-    return setDoc(doc(fbDb,'users',user.uid),payload,{merge:true});
+      return payload;
+    });
+    return true;
   };
   try{
     const wrote=await attemptSave();
-    if(wrote===null) return; // local-only; still waiting on first cloud hydrate
-    if(!FIREBASE_ONLINE) setFirebaseOnline(); // recovered from a prior failure — clear the stale red badge
-    // We just wrote this exact historyData to the cloud successfully, so it IS the
-    // new known-good cloud snapshot — update the cache directly rather than issuing
-    // a redundant getDoc() to re-confirm what we already know we just wrote.
-    LAST_KNOWN_CLOUD_HISTORY=JSON.parse(JSON.stringify(historyData));
-    LAST_KNOWN_CLOUD_STATS=JSON.parse(JSON.stringify(STATS));
+    if(wrote===null) return;
+    if(!FIREBASE_ONLINE) setFirebaseOnline();
   }catch(e1){
     console.warn('cloud save failed, retrying once',e1);
     await new Promise(r=>setTimeout(r,1500));
@@ -11334,8 +11544,6 @@ async function saveAll(){
       const wrote2=await attemptSave();
       if(wrote2===null) return;
       if(!FIREBASE_ONLINE) setFirebaseOnline();
-      LAST_KNOWN_CLOUD_HISTORY=JSON.parse(JSON.stringify(historyData));
-      LAST_KNOWN_CLOUD_STATS=JSON.parse(JSON.stringify(STATS));
     }catch(e2){
       console.warn('cloud save failed after retry',e2);
       setFirebaseOffline();
@@ -12724,6 +12932,7 @@ async function finishPrayerFlow(){
   try{ checkStreak(); }catch(err){ console.error('checkStreak failed, saving anyway:',err); }
   try{
     await saveAll();
+    try{ await forceCloudSyncAfterAction(); }catch(e){}
   }catch(err){
     console.error('saveAll failed after prayer completion:',err);
     showToast(uiIsEn()?'⚠️ Could not save the prayer — try again or reload':'⚠️ حصل خطأ أثناء حفظ الصلاة — جرب تاني أو أعد تحميل الصفحة',4000,'warn');
@@ -20557,6 +20766,7 @@ document.body.addEventListener('click',async e=>{
     try{ checkStreak(); }catch(err){ console.error('checkStreak failed, saving anyway:',err); }
     try{
       await saveAll();
+      try{ await forceCloudSyncAfterAction(); }catch(e){}
     }catch(err){
       console.error('saveAll failed after confirm:',err);
       showToast(enConfirm?'⚠️ Save failed — try again or reload':'⚠️ حصل خطأ أثناء الحفظ — جرب تاني أو أعد تحميل الصفحة',4000,'warn');
@@ -20595,6 +20805,7 @@ document.body.addEventListener('click',async e=>{
     try{ checkStreak(); }catch(err){ console.error('checkStreak failed, saving anyway:',err); }
     try{
       await saveAll();
+      try{ await forceCloudSyncAfterAction(); }catch(e){}
     }catch(err){
       console.error('saveAll failed after qada:',err);
       showToast('⚠️ حصل خطأ أثناء الحفظ — جرب تاني أو أعد تحميل الصفحة',4000,'warn');
@@ -20650,88 +20861,65 @@ document.body.addEventListener('keydown',async e=>{
   }
 });
 
-// Soft cloud pull when the user returns to a tab/PWA that stayed open while
-// another device (phone) completed tasks. Without this, laptop keeps stale
-// localStorage history forever — only a full reload re-ran onAuth hydrate.
-// Debounced so flipping tabs does not spam getDoc.
+// Fallback one-shot pull (listener is the primary path). Kept for rare cases where
+// onSnapshot is delayed after wake. No toast spam.
 let _lastSoftCloudPullAt=0;
 let _softCloudPullInFlight=false;
+function countDoneKeys(dayMap){
+  let n=0;
+  for(const v of Object.values(dayMap||{})){
+    if(v!==undefined && v!==false && v!==null) n++;
+  }
+  return n;
+}
 async function pullCloudUserDelta(reason){
   try{
     if(typeof fbAuth==='undefined' || !fbAuth?.currentUser) return;
     if(typeof getDoc==='undefined' || typeof doc==='undefined' || typeof fbDb==='undefined') return;
     const now=Date.now();
     if(_softCloudPullInFlight) return;
-    if(now-_lastSoftCloudPullAt < 5000) return; // min 5s between soft pulls
+    if(now-_lastSoftCloudPullAt < 30000) return;
     _softCloudPullInFlight=true;
     _lastSoftCloudPullAt=now;
     const uid=fbAuth.currentUser.uid;
     const ud=await getDoc(doc(fbDb,'users',uid));
-    if(!ud || !ud.exists()){ _softCloudPullInFlight=false; return; }
-    const d=ud.data()||{};
-    let changed=false;
-    if(d.stats){
-      const beforePts=STATS.pts||0;
-      const beforeXp=STATS.lifetime_xp||0;
-      LAST_KNOWN_CLOUD_STATS=JSON.parse(JSON.stringify(d.stats));
-      STATS=mergeStatsPreferRicher(STATS, d.stats);
-      if((STATS.pts||0)!==beforePts || (STATS.lifetime_xp||0)!==beforeXp) changed=true;
-      try{ await sSet(LS.stats,STATS); }catch(e){}
+    if(ud && ud.exists()){
+      try{ ingestCloudUserData(ud.data()||{}, 'pull:'+reason); }catch(e){ console.warn(e); }
+    }else{
+      CLOUD_DATA_HYDRATED=true;
+      try{ flushPendingCloudSaveAfterHydrate(); }catch(e){}
     }
-    if(d.historyData){
-      LAST_KNOWN_CLOUD_HISTORY=JSON.parse(JSON.stringify(d.historyData));
-      for(const dateKey of Object.keys(d.historyData)){
-        const cloudDay=d.historyData[dateKey]||{};
-        const localDay=historyData[dateKey]||{};
-        const mergedDone=mergeDoneMaps(cloudDay.done, localDay.done);
-        const mergedPL=mergePrayerLogsMaps(cloudDay.prayerLogs, localDay.prayerLogs);
-        const prevDone=JSON.stringify(localDay.done||{});
-        const prevPL=JSON.stringify(localDay.prayerLogs||{});
-        historyData[dateKey]={
-          done:mergedDone,
-          alts:{...(cloudDay.alts||{}),...(localDay.alts||{})},
-          foodLog:{...(cloudDay.foodLog||{}),...(localDay.foodLog||{})},
-          prayerLogs:mergedPL,
-          penalty:localDay.penalty||cloudDay.penalty||null
-        };
-        if(JSON.stringify(mergedDone)!==prevDone || JSON.stringify(mergedPL)!==prevPL) changed=true;
-      }
-      try{ await sSet(LS.history,historyData); }catch(e){}
-    }
-    if(d.userEdits){
-      const cloudEd=d.userEdits||{};
-      const localEd=USER_EDITS||emptyUserEdits();
-      const mergeMaps=(a,b)=>({...(a||{}),...(b||{})});
-      USER_EDITS={
-        ...emptyUserEdits(),
-        ...cloudEd,
-        ...localEd,
-        deletes:mergeMaps(cloudEd.deletes, localEd.deletes),
-        dayDeletes:mergeMaps(cloudEd.dayDeletes, localEd.dayDeletes),
-        moves:mergeMaps(cloudEd.moves, localEd.moves),
-        dayOverrides:mergeMaps(cloudEd.dayOverrides, localEd.dayOverrides),
-        pointOverrides:mergeMaps(cloudEd.pointOverrides, localEd.pointOverrides),
-        taskPlans:mergeMaps(cloudEd.taskPlans, localEd.taskPlans)
-      };
-      try{ await sSet(LS.userEdits,USER_EDITS); }catch(e){}
-    }
-    CLOUD_DATA_HYDRATED=true;
-    _lastCloudHydrateAt=Date.now();
-    _lastCloudHydrateUid=uid;
-    loadDay();
-    try{ checkStreak(); }catch(e){}
-    try{ renderTabs(); renderPanels(); switchDay(getJDfromISO(SELECTED_DATE||TODAY)); updateUI(); updatePrestigeUI(); }catch(e){}
-    try{ flushPendingCloudSaveAfterHydrate(); }catch(e){}
-    // Soft pull may arrive after first paint — re-aim to "now" if we never scrolled.
-    try{ if(!window.__didInitialScroll) scheduleInitialScrollToCurrent(); }catch(e){}
-    if(changed){
-      const en=uiIsEn();
-      showToast(en?'🔄 Synced latest data from your other device':'🔄 تم مزامنة أحدث بيانات من جهازك التاني',2200);
-    }
+    // Ensure live listener is running
+    try{ startUserDocListener(uid); }catch(e){}
   }catch(e){
     console.warn('pullCloudUserDelta failed', reason, e);
   }finally{
     _softCloudPullInFlight=false;
+  }
+}
+
+// After completing a task/prayer on this device, guarantee a cloud write reaches
+// Firestore so the other device can see it. Waits briefly for first hydrate if needed.
+async function forceCloudSyncAfterAction(){
+  try{
+    if(typeof fbAuth==='undefined' || !fbAuth?.currentUser) return false;
+    const deadline=Date.now()+18000;
+    while(!CLOUD_DATA_HYDRATED && Date.now()<deadline){
+      await new Promise(r=>setTimeout(r,400));
+    }
+    if(!CLOUD_DATA_HYDRATED){
+      window.__pendingCloudSaveAfterHydrate=true;
+      console.warn('forceCloudSyncAfterAction: still waiting on hydrate — queued');
+      return false;
+    }
+    // Force pre-save refresh path by aging the soft-pull cache.
+    _lastSoftCloudPullAt=0;
+    await saveAll();
+    return true;
+  }catch(e){
+    console.warn('forceCloudSyncAfterAction failed', e);
+    window.__pendingCloudSaveAfterHydrate=true;
+    return false;
   }
 }
 
@@ -20750,15 +20938,17 @@ document.addEventListener('visibilitychange', () => {
     try{ pullCloudUserDelta('visibilitychange'); }catch(e){}
   }
 });
+// focus alone used to double-fire with visibilitychange and re-pull every few seconds.
+// Only pull on focus if the tab was not already visible-driven recently.
 window.addEventListener('focus', () => {
   if (NOTIF_ENABLED && typeof triggerAutoPushSync === 'function') {
     triggerAutoPushSync(1500);
   }
-  try{ pullCloudUserDelta('focus'); }catch(e){}
+  try{
+    if(Date.now()-_lastSoftCloudPullAt > 25000) pullCloudUserDelta('focus');
+  }catch(e){}
 });
-window.addEventListener('pageshow', () => {
-  try{ pullCloudUserDelta('pageshow'); }catch(e){}
-});
+// No interval polling — onSnapshot is the permanent live path.
 
 // ===== Init =====
 // Single shared "app is ready" reveal — used by both the success and error paths of
@@ -22225,6 +22415,7 @@ if (typeof onAuthStateChanged !== 'undefined' && typeof fbAuth !== 'undefined') 
           CLOUD_DATA_HYDRATED=true;
           _lastCloudHydrateAt=Date.now();
           _lastCloudHydrateUid=user.uid;
+          try{ startUserDocListener(user.uid); }catch(e){}
           try{ flushPendingCloudSaveAfterHydrate(); }catch(e){}
           try{ updateUI(); updatePrestigeUI(); }catch(e){}
           // FIX: this used to be a flat overwrite (savedReports=d.reports), which is
@@ -22449,6 +22640,7 @@ if (typeof onAuthStateChanged !== 'undefined' && typeof fbAuth !== 'undefined') 
           // No cloud doc yet — safe to write whatever this device builds (onboarding).
           CLOUD_SCHEDULES_HYDRATED=true;
           CLOUD_DATA_HYDRATED=true;
+          try{ startUserDocListener(user.uid); }catch(e){}
           try{ flushPendingCloudSaveAfterHydrate(); }catch(e){}
           PENDING_ONBOARDING = !USER_SCHEDULE || Object.keys(USER_SCHEDULE).length===0;
           if(USER_SETTINGS && USER_SETTINGS.onboardingComplete) PENDING_ONBOARDING=false;
@@ -22493,6 +22685,7 @@ if (typeof onAuthStateChanged !== 'undefined' && typeof fbAuth !== 'undefined') 
               CLOUD_SCHEDULES_HYDRATED=true;
               CLOUD_DATA_HYDRATED=true;
               try{ await sSet(LS.stats,STATS); await sSet(LS.userSchedules,USER_SCHEDULES); await sSet(LS.userSchedule,USER_SCHEDULE); await sSet(LS.userSettings,USER_SETTINGS); }catch(e){}
+              try{ startUserDocListener(fbAuth.currentUser.uid); }catch(e){}
               try{ flushPendingCloudSaveAfterHydrate(); }catch(e){}
               dismissOnboardingIfReturningUser();
               try{ checkStreak(); }catch(e){}
