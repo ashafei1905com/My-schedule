@@ -5374,7 +5374,7 @@ const firebaseConfig = {
   messagingSenderId:"814163254112",
   appId:"1:814163254112:web:c7b591228c727dd5db9c05"
 };
-window.__APP_SYNC_BUILD='2026-10-04-rest';
+window.__APP_SYNC_BUILD='2026-10-04-rest2';
 const fbApp=initializeApp(firebaseConfig);
 // initializeAuth with an explicit popupRedirectResolver avoids the intermittent
 // "INTERNAL ASSERTION FAILED: Pending promise was never set" that getAuth()+popup
@@ -5704,7 +5704,7 @@ let FIREBASE_ONLINE=true;
 // When the Firestore JS SDK latches onto "client is offline" (WebChannel 10s timeout),
 // all getDoc/setDoc/runTransaction fail even though the browser has internet and Auth
 // still works. REST over HTTPS bypasses that broken channel for the rest of the session.
-window.__FIRESTORE_REST_ONLY=false;
+window.__FIRESTORE_REST_ONLY=true;
 const FS_PROJECT='my-schedule-10a33';
 const FS_DOC=uid=>`https://firestore.googleapis.com/v1/projects/${FS_PROJECT}/databases/(default)/documents/users/${encodeURIComponent(uid)}`;
 
@@ -5785,36 +5785,17 @@ async function restPatchUserDoc(uid, data){
   if(!res.ok) throw new Error('REST patch '+res.status+' '+await res.text().catch(()=>''));
 }
 async function fetchUserDocSmart(uid){
-  if(!window.__FIRESTORE_REST_ONLY){
-    try{
-      const t=new Promise((_,rej)=>setTimeout(()=>rej(new Error('SDK timeout')),6000));
-      const snap=await Promise.race([getDoc(doc(fbDb,'users',uid)), t]);
-      if(typeof setFirebaseOnline==='function') setFirebaseOnline();
-      return {exists:!!(snap&&snap.exists&&snap.exists()), data:(snap&&snap.exists&&snap.exists())?snap.data():null, via:'sdk'};
-    }catch(e){
-      console.warn('Firestore SDK get failed — using REST', e);
-      window.__FIRESTORE_REST_ONLY=true;
-      try{ if(typeof enableNetwork==='function') enableNetwork(fbDb); }catch(_){}
-    }
-  }
+  // Always REST. SDK getDoc often "succeeds" from a stale IndexedDB cache while the
+  // WebChannel is dead — that is how devices looked synced-to-old-data.
   const data=await restGetUserDoc(uid);
   if(typeof setFirebaseOnline==='function') setFirebaseOnline();
+  console.info('[sync] REST get', data?'ok':'empty');
   return {exists:!!data, data, via:'rest'};
 }
 async function writeUserDocSmart(uid, payload){
-  if(!window.__FIRESTORE_REST_ONLY){
-    try{
-      const t=new Promise((_,rej)=>setTimeout(()=>rej(new Error('SDK timeout')),8000));
-      await Promise.race([setDoc(doc(fbDb,'users',uid),payload,{merge:true}), t]);
-      if(typeof setFirebaseOnline==='function') setFirebaseOnline();
-      return 'sdk';
-    }catch(e){
-      console.warn('Firestore SDK write failed — using REST', e);
-      window.__FIRESTORE_REST_ONLY=true;
-    }
-  }
   await restPatchUserDoc(uid, payload);
   if(typeof setFirebaseOnline==='function') setFirebaseOnline();
+  console.info('[sync] REST write ok');
   return 'rest';
 }
 
