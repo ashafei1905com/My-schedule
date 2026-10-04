@@ -375,8 +375,10 @@ html[dir="rtl"] .tc{animation-name:tcEnterRtl}
 .tc{position:relative;margin-bottom:8px;padding:12px 14px;background:var(--c);border:1px solid var(--br);border-radius:12px;display:flex;align-items:flex-start;gap:10px;animation:tcEnter var(--duration-snappy) var(--ease-snappy) both;transition:opacity .45s cubic-bezier(0.4,0,0.2,1),background .35s ease,border-color .35s ease,filter .45s ease,transform var(--duration-snappy) var(--ease-snappy),box-shadow var(--duration-snappy) var(--ease-snappy)}
 .tc.tc-prio-high{border-color:rgba(239,68,68,.35)}
 .tc.tc-prio-high .tcname{font-weight:900}
-.tc.tc-prio-low{filter:saturate(.85)}
-.tc.tc-prio-low .tcname{font-weight:600;color:color-mix(in srgb,var(--tx) 82%, var(--mu))}
+.tc.tc-prio-med .tcname{font-weight:750}
+.tc.tc-prio-low{filter:saturate(.75);opacity:.85}
+.tc.tc-prio-low .tcname{font-weight:600;color:color-mix(in srgb,var(--tx) 78%, var(--mu))}
+.tc.tc-prio-low .tcdesc{opacity:.85}
 .tc.tc-day-deleted{
   pointer-events:auto;
   border-style:dashed;
@@ -4704,9 +4706,10 @@ body.theme-matrix .tctime{
         <label for="stNotify" id="stNotifyLbl" style="font-size:.82rem;font-weight:700">🔔 Notify me about this task</label>
         <input type="checkbox" id="stNotify" checked style="width:20px;height:20px;accent-color:var(--ac)">
       </div>
-      <div class="set-row" style="border:none;padding:8px 0">
-        <label for="stDetailPlan" id="stDetailPlanLbl" style="font-size:.82rem;font-weight:700">📋 Detailed plan (sections &amp; items)</label>
+      <div class="set-row" style="border:none;padding:8px 0;flex-wrap:wrap;gap:8px">
+        <label for="stDetailPlan" id="stDetailPlanLbl" style="font-size:.82rem;font-weight:700;flex:1">📋 Detailed plan (sections &amp; items)</label>
         <input type="checkbox" id="stDetailPlan" style="width:20px;height:20px;accent-color:var(--ac)">
+        <button type="button" id="stOpenPlanBtn" style="display:none;width:100%;margin-top:4px;padding:9px 12px;border-radius:10px;border:1px solid rgba(139,92,246,.4);background:rgba(139,92,246,.12);color:#c4b5fd;font-family:inherit;font-weight:800;font-size:.8rem;cursor:pointer">📋 Open plan editor</button>
       </div>
       <div id="stFoodLogRow" class="set-row" style="border:none;padding:8px 0;display:none">
         <label for="stFoodLog" id="stFoodLogLbl" style="font-size:.82rem;font-weight:700">🍽️ Log food for this task?</label>
@@ -6427,12 +6430,12 @@ const mkSnackB=(p,t='4:30 م',isGym)=>[p+'-sn2',t,'snack','🥤','سناك ٢ (�
 const mkSnackC=(p,t='9:30 م',isGym)=>[p+'-sn3',t,'snack','🍇','سناك ٣ (مسائي خفيف)','فاكهة خفيفة أو حفنة مكسرات — لو جعت قبل النوم',5,null,null,false,null,null,mealKeyFor('bedtimeSnack',isGym)];
 
 const PMETA={
-  Fajr:{ar:'الفجر',ic:'🌙',pts:10,sunnah:'سنة الفجر (ركعتان قبل)'},
-  Sunrise:{ar:'الشروق',ic:'🌅',pts:5,sunnah:null},
-  Dhuhr:{ar:'الظهر',ic:'☀️',pts:10,sunnah:'سنة الظهر (٤ قبل + ٢ بعد)'},
-  Asr:{ar:'العصر',ic:'🌤️',pts:10,sunnah:null},
-  Maghrib:{ar:'المغرب',ic:'🌅',pts:10,sunnah:'سنة المغرب (ركعتان بعد)'},
-  Isha:{ar:'العشاء',ic:'🌙',pts:10,sunnah:'سنة العشاء (ركعتان بعد)'}
+  Fajr:{ar:'الفجر',en:'Fajr',ic:'🌙',pts:10,sunnah:'سنة الفجر (ركعتان قبل)'},
+  Sunrise:{ar:'الشروق',en:'Sunrise',ic:'🌅',pts:5,sunnah:null},
+  Dhuhr:{ar:'الظهر',en:'Dhuhr',ic:'☀️',pts:10,sunnah:'سنة الظهر (٤ قبل + ٢ بعد)'},
+  Asr:{ar:'العصر',en:'Asr',ic:'🌤️',pts:10,sunnah:null},
+  Maghrib:{ar:'المغرب',en:'Maghrib',ic:'🌅',pts:10,sunnah:'سنة المغرب (ركعتان بعد)'},
+  Isha:{ar:'العشاء',en:'Isha',ic:'🌙',pts:10,sunnah:'سنة العشاء (ركعتان بعد)'}
 };
 const DKEYS=['sun','mon','tue','wed','thu','fri','sat'];
 const DSHORT=['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
@@ -7874,7 +7877,7 @@ function openScheduleTaskEditor(jd,existingTask,opts){
   setLbl('stNewCatTitle','Create Custom Category','إنشاء فئة مخصصة');
   setLbl('stTimeLbl','Start time','وقت البداية');
   setLbl('stEndTimeLbl','End time','وقت النهاية');
-  setLbl('stPriorityLbl','Task Priority — High stands out & sorts first at the same time; Low is quieter','أولوية المهمة — العالية أوضح وتُرتَّب أولاً عند نفس الوقت؛ المنخفضة أهدأ');
+  setLbl('stPriorityLbl','Priority: High = must-do (stands out). Medium = standard required. Low = optional for streak (still earns points if done).','الأولوية: عالية = إلزامية وبارزة. متوسطة = مطلوبة عادي. منخفضة = اختيارية للاستريك (تنال نقاط إن أُنجزت).');
   setLbl('stDescLbl','Description (optional)','وصف (اختياري)');
   setLbl('stDaysLbl','Days of week','أيام الأسبوع');
   setLbl('stPtsLbl','Task Difficulty / Intensity','صعوبة / شدة المهمة');
@@ -8009,10 +8012,33 @@ function openScheduleTaskEditor(jd,existingTask,opts){
     };
   }
   const planToggle=document.getElementById('stDetailPlan');
+  const openPlanBtn=document.getElementById('stOpenPlanBtn');
   if(planToggle){
     const tid=existingTask?existingTask[0]:null;
     const enabled=!!(tid && USER_EDITS && USER_EDITS.taskPlans && USER_EDITS.taskPlans[tid] && USER_EDITS.taskPlans[tid].enabled);
     planToggle.checked=enabled;
+    const syncOpenBtn=()=>{
+      if(!openPlanBtn) return;
+      const on=!!planToggle.checked && !!ST_ACTIVE_TASK_ID;
+      openPlanBtn.style.display=on?'block':'none';
+      openPlanBtn.textContent=en?'📋 Open plan editor — add sections & items':'📋 افتح محرر الخطة — أضف أقسام وعناصر';
+    };
+    syncOpenBtn();
+    planToggle.onchange=()=>syncOpenBtn();
+    if(openPlanBtn){
+      openPlanBtn.onclick=()=>{
+        if(!ST_ACTIVE_TASK_ID){
+          showToast(en?'Save the task first, then open the plan':'احفظ المهمة أولاً ثم افتح الخطة',2200,'warn');
+          return;
+        }
+        planToggle.checked=true;
+        const plan=tpEnsurePlan(ST_ACTIVE_TASK_ID);
+        plan.enabled=true;
+        try{ tpSave(); }catch(e){}
+        document.getElementById('schedTaskModal')?.classList.remove('open');
+        openTaskPlan(ST_ACTIVE_TASK_ID, (existingTask&&existingTask[4])||ST_ACTIVE_TASK_ID);
+      };
+    }
   }
   const notifyEl=document.getElementById('stNotify');
   if(notifyEl){
@@ -8174,13 +8200,26 @@ async function stHandleSave(){
     return;
   }
   // Per-task detailed plan on/off (any category — gym, study, work, etc.)
+  let openPlanAfterSave=false;
+  let planTaskIdForOpen=null;
+  let planTaskNameForOpen=name||'';
   try{
     const planTaskId=ST_ACTIVE_TASK_ID;
     if(planTaskId){
       const plan=tpEnsurePlan(planTaskId);
+      const wasEnabled=!!plan.enabled;
       plan.enabled=!!detailPlanOn;
       if(!plan.sessions) plan.sessions=[];
       await tpSave();
+      // Checking the box used to only flip a flag — never opened the editor, so
+      // users thought "Detailed plan" did nothing. Open the plan UI when enabled.
+      if(detailPlanOn){
+        openPlanAfterSave=true;
+        planTaskIdForOpen=planTaskId;
+        planTaskNameForOpen=name||planTaskNameForOpen;
+      }else if(wasEnabled && !detailPlanOn){
+        showToast(uiIsEn()?'Detailed plan turned off for this task':'تم إيقاف الخطة التفصيلية لهذه المهمة',1800);
+      }
     }
   }catch(e){ console.warn('detail plan toggle save',e); }
   // If a category chip filter is active for this day and the task moved to another
@@ -8202,6 +8241,9 @@ async function stHandleSave(){
     try{ openSettingsScreen(); }catch(e){}
   }
   showToast(t('task_saved'),2200);
+  if(openPlanAfterSave && planTaskIdForOpen && typeof openTaskPlan==='function'){
+    try{ openTaskPlan(planTaskIdForOpen, planTaskNameForOpen); }catch(e){ console.warn('open plan after save',e); }
+  }
 }
 
 window.openAddSchedTaskModal = function(jd){
@@ -8418,8 +8460,10 @@ function dayLabel(jd){
 // Built-in schedule strings → English when lang=en. Custom user text stays as typed.
 const TASK_EN={
   'الفجر':'Fajr','الشروق':'Sunrise','الظهر':'Dhuhr','العصر':'Asr','المغرب':'Maghrib','العشاء':'Isha',
-  'صلاة الجمعة':'Friday prayer','الفطار':'Breakfast','الفطور':'Breakfast','الغدا':'Lunch','الغداء':'Lunch','العشا':'Dinner',
-  'سناك منتصف النهار':'Midday snack','سناك':'Snack',
+  'صلاة الجمعة':'Friday prayer','الجمعة':'Friday prayer',
+  'صلاة الظهر':'Dhuhr','صلاة الفجر':'Fajr','صلاة العصر':'Asr','صلاة المغرب':'Maghrib','صلاة العشاء':'Isha',
+  'الفطار':'Breakfast','الفطور':'Breakfast','الغدا':'Lunch','الغداء':'Lunch','العشا':'Dinner',
+  'سناك منتصف النهار':'Midday snack','سناك':'Snack','استيقاظ':'Wake up',
   'الورد اليومي':'Daily Quran','الورد القرآني':'Daily Quran','الورد':'Daily Quran','ورد يومي':'Daily Quran',
   'تحضير درس الاثنين':'Prep Monday lesson','تحضير درس الأربعاء':'Prep Wednesday lesson',
   'تحضير البرمجة':'Programming prep','سيشن البرمجة':'Programming session','واجب البرمجة':'Programming homework',
@@ -8446,7 +8490,13 @@ const TASK_ALIASES={
 function tn(text){
   if(!text) return text;
   if((USER_SETTINGS&&USER_SETTINGS.lang)!=='en') return text;
-  return TASK_EN[text]||text;
+  if(TASK_EN[text]) return TASK_EN[text];
+  // Translate Arabic fragments inside mixed strings (AI replies, descriptions)
+  let out=String(text);
+  for(const [ar,en] of Object.entries(TASK_EN)){
+    if(ar && out.includes(ar)) out=out.split(ar).join(en);
+  }
+  return out;
 }
 function arEn(ar,en){ return uiIsEn()?en:ar; }
 // Auto-translate AI bot replies when UI language is English.
@@ -9933,7 +9983,9 @@ function buildPTasks(jd){
         else desc=`تنتهي عند ${endDisp||'—'} · تبدأ ${startDisp}`;
       }
       // Index 15 = priority — prayers are always highest priority
-      const tuple=[`pr-${k}-${pk}`,timeStr,'prayer',pm.ic,pm.ar,desc,pm.pts,null,null,false,t24,null,null,null,'prayer','high'];
+      // Name follows UI language so cards / AI replies never show Arabic while lang=en
+      const pName=en?(pm.en||pk):(pm.ar||pk);
+      const tuple=[`pr-${k}-${pk}`,timeStr,'prayer',pm.ic,pName,desc,pm.pts,null,null,false,t24,null,null,null,'prayer','high'];
       tuple.priority='high';
       return tuple;
     });
@@ -10052,13 +10104,19 @@ function getReqTasks(jd,iso){
   const showPrayers=!!USER_SETTINGS.trackPrayers;
   const prayers=showPrayers?buildPTasks(jd):[];
   const base=[...prayers,...(d?.ts||[])].filter(t=>!t[9]&&t[6]>0&&t[2]!=='snack');
-  // Required for streak / points / punishment:
+  // Required for streak / perfect day / punishment:
   //  - permanent deletes (_deleted) and today-only skips (_dayDeleted) do NOT count
-  //  - custom tasks from USER_EDITS are included by applyUserEditsToTasks, then
-  //    re-filtered so 0-pt / snack / exception tasks never block a perfect day
+  //  - Low priority is optional: still awards points if done, but does NOT block streak
+  //  - High + Medium (and prayers) remain required
   return applyUserEditsToTasks(base,effIso)
     .filter(t=>!t._deleted && !t._dayDeleted)
     .filter(t=>!t[9] && (t[6]>0) && t[2]!=='snack')
+    .filter(t=>{
+      try{
+        const p=typeof getTaskPriority==='function'?getTaskPriority(t):'medium';
+        return p!=='low';
+      }catch(e){ return true; }
+    })
     .sort((a,b)=>sortKey(a,effIso,jd)-sortKey(b,effIso,jd));
 }
 
@@ -11169,8 +11227,11 @@ const MILESTONES=[5,10,15,20,25,30,40,50];
 function isTaskMarkedDone(doneMap, id){
   if(!doneMap || id==null) return false;
   const v=doneMap[id];
-  // Awarded points (number), 'qada', true, or any non-false sentinel counts as done.
-  return v!==undefined && v!==null && v!==false;
+  if(v===undefined || v===null || v===false) return false;
+  // Explicit skip objects are NOT completions
+  if(typeof v==='object' && (v.skipped || v.skip)) return false;
+  // Awarded points (number), 'qada', true count as done
+  return true;
 }
 
 function checkStreak(){
@@ -14045,23 +14106,27 @@ function renderCard(task,isToday,jd){
   const catBadgeHtml=`<span class="tc-cat-badge" style="background:color-mix(in srgb, ${cardColor} 14%, transparent);color:${cardColor};border:1px solid color-mix(in srgb, ${cardColor} 30%, transparent)"><span class="tc-cat-badge-ico">${cardIcon}</span><span>${catName}</span></span>`;
 
   const taskPrio = getTaskPriority(task);
+  // Always show a priority chip so Low / Medium / High are visually distinct
   let prioBadgeHtml = '';
   if(taskPrio === 'high'){
-    prioBadgeHtml = `<span class="tc-prio-badge prio-high" style="display:inline-flex;align-items:center;gap:3px;padding:2px 7px;border-radius:6px;font-size:.62rem;font-weight:800;background:rgba(239,68,68,.15);border:1px solid rgba(239,68,68,.35);color:#f87171">🔴 ${enBadge?'High':'عالية'}</span>`;
+    prioBadgeHtml = `<span class="tc-prio-badge prio-high" style="display:inline-flex;align-items:center;gap:3px;padding:2px 7px;border-radius:6px;font-size:.62rem;font-weight:800;background:rgba(239,68,68,.18);border:1px solid rgba(239,68,68,.45);color:#f87171">🔴 ${enBadge?'High':'عالية'}</span>`;
   } else if(taskPrio === 'low'){
-    prioBadgeHtml = `<span class="tc-prio-badge prio-low" style="display:inline-flex;align-items:center;gap:3px;padding:2px 7px;border-radius:6px;font-size:.62rem;font-weight:800;background:rgba(16,185,129,.15);border:1px solid rgba(16,185,129,.35);color:#34d399">🟢 ${enBadge?'Low':'منخفضة'}</span>`;
+    prioBadgeHtml = `<span class="tc-prio-badge prio-low" style="display:inline-flex;align-items:center;gap:3px;padding:2px 7px;border-radius:6px;font-size:.62rem;font-weight:800;background:rgba(16,185,129,.12);border:1px solid rgba(16,185,129,.3);color:#34d399">🟢 ${enBadge?'Low · optional':'منخفضة · اختيارية'}</span>`;
+  } else {
+    prioBadgeHtml = `<span class="tc-prio-badge prio-med" style="display:inline-flex;align-items:center;gap:3px;padding:2px 7px;border-radius:6px;font-size:.62rem;font-weight:800;background:rgba(245,158,11,.12);border:1px solid rgba(245,158,11,.3);color:#fbbf24">🟡 ${enBadge?'Medium':'متوسطة'}</span>`;
   }
-  // Medium = default, no badge (keeps the timeline clean)
 
-  const prioCardClass = taskPrio==='high'?' tc-prio-high':(taskPrio==='low'?' tc-prio-low':'');
+  const prioCardClass = taskPrio==='high'?' tc-prio-high':(taskPrio==='low'?' tc-prio-low':(taskPrio==='medium'?' tc-prio-med':''));
   const dimmed=isDayDeleted||isDeleted;
+  const edgeColor = dimmed ? cardColor
+    : (taskPrio==='high' ? '#ef4444' : (taskPrio==='low' ? 'color-mix(in srgb, '+cardColor+' 55%, #64748b)' : cardColor));
   const prioBorder = dimmed
     ? 'opacity:.42;filter:grayscale(.55);'
     : (taskPrio==='high'
-      ? `box-shadow:inset 3px 0 0 0 #ef4444,0 0 18px rgba(239,68,68,.12);`
-      : (taskPrio==='low' ? 'opacity:.88;' : ''));
+      ? `box-shadow:inset 3px 0 0 0 #ef4444,0 0 18px rgba(239,68,68,.14);`
+      : (taskPrio==='low' ? 'opacity:.78;filter:saturate(.75);' : ''));
 
-  return`<div class="tc${isDone?' done':''}${isEx?' excx':''}${isDeleted?' excx':''}${isDayDeleted?' tc-day-deleted':''}${window.SCHEDULE_EDIT_MODE?' tc-edit-mode':''}${prioCardClass}" data-c="${catInfo.id}" data-cat="${catInfo.id}" id="c-${id}" data-task-id="${id}" data-jd="${jd}" style="border-inline-start:3.5px solid ${taskPrio==='high'&&!dimmed?'#ef4444':cardColor};${prioBorder}">
+  return`<div class="tc${isDone?' done':''}${isEx?' excx':''}${isDeleted?' excx':''}${isDayDeleted?' tc-day-deleted':''}${window.SCHEDULE_EDIT_MODE?' tc-edit-mode':''}${prioCardClass}" data-c="${catInfo.id}" data-cat="${catInfo.id}" data-prio="${taskPrio||'medium'}" id="c-${id}" data-task-id="${id}" data-jd="${jd}" style="border-inline-start:3.5px solid ${edgeColor};${prioBorder}">
     <div class="tctime">${arTime}</div>
     <div class="tcico" style="background:color-mix(in srgb, ${cardColor} 12%, transparent);border-color:color-mix(in srgb, ${cardColor} 28%, transparent);color:${cardColor}">${cardIcon}</div>
     <div class="tcbody">
@@ -14120,11 +14185,74 @@ window.toggleDailySummaryBreakdown = function(){
   }
 };
 
+function gymDayLabel(gm, en){
+  if(gm==='upper') return en ? 'Upper Body 💪' : 'تمارين علوي 💪';
+  if(gm==='lower') return en ? 'Lower Body 🦵' : 'تمارين سفلي 🦵';
+  return en ? 'Rest day 💤' : (t('rest_day') + ' 💤');
+}
+function gymDayClass(gm){
+  if(gm==='upper') return 'gbx gbu';
+  if(gm==='lower') return 'gbx gbl';
+  return 'gbx gbr';
+}
+// Persist Rest / Upper / Lower on USER_SCHEDULE[jd].gm — badge was previously read-only.
+window.setGymDayType = async function(jd, gm){
+  jd=parseInt(jd,10);
+  if(isNaN(jd) || jd<0 || jd>6) return;
+  const val=(gm==='upper'||gm==='lower')?gm:null;
+  try{
+    // Avoid blanking the week when USER_SCHEDULE was still template-only
+    try{ if(typeof materializeUserScheduleFromVisibleWeekIfNeeded==='function') materializeUserScheduleFromVisibleWeekIfNeeded(null); }catch(e){}
+    if(typeof scheduleEnsureDay==='function') scheduleEnsureDay(jd);
+    else if(!USER_SCHEDULE[jd]){
+      USER_SCHEDULE[jd]={n:(typeof DSHORT!=='undefined'?DSHORT[jd]:''),wk:'9:00 AM',bd:'11:00 PM',gm:null,ts:[]};
+    }
+    USER_SCHEDULE[jd].gm=val;
+    if(typeof saveUserSchedule==='function') await saveUserSchedule();
+    try{ renderTabs(); renderPanels(); switchDay(getJDfromISO(SELECTED_DATE||TODAY)); updateUI(); }catch(e){}
+    const en=(USER_SETTINGS&&USER_SETTINGS.lang)==='en';
+    showToast(en?('Day type: '+gymDayLabel(val,true)):('نوع اليوم: '+gymDayLabel(val,false)),1800);
+  }catch(e){ console.warn('setGymDayType failed',e); }
+};
+window.openGymDayPicker = function(jd){
+  const en=(USER_SETTINGS&&USER_SETTINGS.lang)==='en';
+  const existing=document.getElementById('gymDayPickerModal');
+  if(existing) existing.remove();
+  const d=typeof getEffectiveSched==='function'?getEffectiveSched(jd):null;
+  const cur=d&&d.gm;
+  const modal=document.createElement('div');
+  modal.id='gymDayPickerModal';
+  modal.style.cssText='position:fixed;inset:0;z-index:13000;background:rgba(2,6,16,.72);display:flex;align-items:center;justify-content:center;padding:16px;';
+  const opt=(val,label)=>{
+    const sel=(val===cur)||(val===null&&!cur);
+    return `<button type="button" data-gm="${val===null?'rest':val}" style="width:100%;margin-bottom:8px;padding:12px;border-radius:12px;font-family:inherit;font-weight:800;cursor:pointer;text-align:start;border:1.5px solid ${sel?'var(--ac)':'var(--br)'};background:${sel?'color-mix(in srgb, var(--ac) 18%, transparent)':'var(--c2,#111827)'};color:var(--tx)">${label}${sel?(en?' · current':' · الحالي'):''}</button>`;
+  };
+  modal.innerHTML=`<div style="background:var(--c2,#111827);border:1.5px solid color-mix(in srgb, var(--ac) 35%, var(--br));border-radius:16px;max-width:360px;width:100%;padding:18px 16px;box-shadow:0 20px 50px rgba(0,0,0,.5)">
+    <div style="font-weight:900;font-size:1rem;margin-bottom:6px;color:var(--tx)">${en?'Training day type':'نوع يوم التمرين'}</div>
+    <div style="font-size:.8rem;color:var(--so);margin-bottom:12px;line-height:1.45">${en?'Choose Rest, Upper Body, or Lower Body for this weekday. Saved to your schedule.':'اختار راحة أو علوي أو سفلي لهذا اليوم. يُحفظ في جدولك.'}</div>
+    ${opt(null, en?'💤 Rest day':'💤 يوم راحة')}
+    ${opt('upper', en?'💪 Upper Body':'💪 تمارين علوي')}
+    ${opt('lower', en?'🦵 Lower Body':'🦵 تمارين سفلي')}
+    <button type="button" data-gm="cancel" style="width:100%;padding:10px;border-radius:12px;border:1px solid var(--br);background:transparent;color:var(--mu);font-family:inherit;font-weight:700;cursor:pointer">${en?'Cancel':'إلغاء'}</button>
+  </div>`;
+  document.body.appendChild(modal);
+  modal.addEventListener('click',async e=>{
+    const btn=e.target.closest('[data-gm]');
+    if(!btn) return;
+    const v=btn.getAttribute('data-gm');
+    modal.remove();
+    if(v==='cancel') return;
+    await window.setGymDayType(jd, v==='rest'?null:v);
+  });
+};
+
 function renderPanel(jd){
   const d=getEffectiveSched(jd);if(!d)return'';
   const k=DKEYS[jd];
   const isToday=(SELECTED_DATE===TODAY)&&(jd===todayJD());
-  const gbLabel=d.gm?`<div class="gbx ${d.gm==='upper'?'gbu':'gbl'}">${d.gm==='upper'?'Upper Body 💪':'Lower Body 🦵'}</div>`:`<div class="gbx gbr">${t('rest_day')} 💤</div>`;
+  const enGym=(USER_SETTINGS&&USER_SETTINGS.lang)==='en';
+  // Clickable badge — opens Rest / Upper / Lower picker
+  const gbLabel=`<button type="button" class="${gymDayClass(d.gm)}" data-action="editGymDay" data-jd="${jd}" title="${enGym?'Change day type':'تغيير نوع اليوم'}" style="cursor:pointer;font-family:inherit;border:none;appearance:none;-webkit-appearance:none">${gymDayLabel(d.gm,enGym)} ▾</button>`;
 
   const pills=[];
   const schedList=d.ts||[];
@@ -16250,10 +16378,13 @@ function aiGenId(prefix){return`${prefix}-${Date.now()}-${Math.floor(Math.random
 // since it isn't one of the 5 daily prayers in PMETA and has no sunnah step.
 const AI_PRAYER_NAME_MAP={
   'الفجر':'Fajr','فجر':'Fajr','fajr':'Fajr',
-  'الظهر':'Dhuhr','ظهر':'Dhuhr','dhuhr':'Dhuhr','duhr':'Dhuhr','zuhr':'Dhuhr',
-  'العصر':'Asr','عصر':'Asr','asr':'Asr',
-  'المغرب':'Maghrib','مغرب':'Maghrib','maghrib':'Maghrib','maghreb':'Maghrib',
-  'العشاء':'Isha','العشا':'Isha','عشاء':'Isha','عشا':'Isha','isha':'Isha','ishaa':'Isha'
+  // "duhur" is the common English misspelling users type — was missing, so
+  // "i prayed al duhur" skipped the prayer modal and flat-marked via markDone.
+  'الظهر':'Dhuhr','ظهر':'Dhuhr','dhuhr':'Dhuhr','duhur':'Dhuhr','duhr':'Dhuhr',
+  'zuhr':'Dhuhr','zohr':'Dhuhr','thuhr':'Dhuhr','al dhuhr':'Dhuhr','al duhur':'Dhuhr',
+  'العصر':'Asr','عصر':'Asr','asr':'Asr','al asr':'Asr',
+  'المغرب':'Maghrib','مغرب':'Maghrib','maghrib':'Maghrib','maghreb':'Maghrib','al maghrib':'Maghrib',
+  'العشاء':'Isha','العشا':'Isha','عشاء':'Isha','عشا':'Isha','isha':'Isha','ishaa':'Isha','al isha':'Isha'
 };
 // "العشاء/العشا/عشا" is genuinely ambiguous — it means both the Isha PRAYER and the
 // DINNER meal, and both exist as separate tasks (pr-*-Isha vs *-dn/*-pm). Previously
@@ -16359,7 +16490,7 @@ function aiParsePrayerDetail(raw,low){
   const pk=aiDetectPrayerKey(low);
   if(!pk) return null;
 
-  const hasCompletionVerb=/صليت|صليتها|صلّيت|prayed|pray$|i prayed|mark.*(done|complete)|خلصت|عملت/.test(low);
+  const hasCompletionVerb=/صليت|صليتها|صلّيت|prayed|i\s*prayed|pray(?:ed)?\b|mark.*(done|complete)|خلصت|عملت/.test(low);
   const hasDetailWord=/مسجد|جامع|mosque|بيت|home|house|جيم|gym|جماعة|جماعه|congregation|منفرد|لوحدي|alone|أذكار|اذكار|dhikr|athkar|سنة|سنه|sunnah|max|أقصى|اقصى|كامل|كل النقاط/.test(low);
   if(!hasCompletionVerb && !hasDetailWord) return null; // just mentions a prayer name, not a completion
 
@@ -16714,12 +16845,25 @@ async function aiExecuteAction(intent){
   }
   if(action==='markDone'){
     const{task,iso}=intent;
+    // Prayers must never be flat-marked — always open the real prayer modal so
+    // location / congregation / dhikr / sunnah bonuses stay consistent.
+    const isPrayerTask=task&&(task[2]==='prayer'||String(task[0]||'').startsWith('pr-')||String(task[0]||'').includes('-jm'));
+    if(isPrayerTask){
+      if(iso!==SELECTED_DATE){
+        saveDay();
+        SELECTED_DATE=iso;
+        loadDay();
+        try{ renderTabs();renderPanels();switchDay(getJDfromISO(iso));updateUI(); }catch(e){}
+      }
+      aiOpenPrayerFlowPrefilled(task, iso, intent.parsedLog||[]);
+      return true;
+    }
     if(!historyData[iso]) historyData[iso]={};
     if(!historyData[iso].done) historyData[iso].done={};
     if(historyData[iso].done[task[0]]===undefined || historyData[iso].done[task[0]]===false){
-      historyData[iso].done[task[0]]=task[6]||true;
       const basePts=(typeof task[6]==='number'?task[6]:0);
       const awarded=(iso===TODAY)?awardTaskPoints(basePts):computeAwardedPoints(basePts);
+      historyData[iso].done[task[0]]=awarded||true;
       if(iso===SELECTED_DATE) DONE[task[0]]=awarded||true;
       if(iso!==TODAY) STATS.lifetime_xp=(STATS.lifetime_xp||0)+awarded;
       try{ checkStreak(); }catch(e){ console.error(e); }
@@ -17373,13 +17517,25 @@ function aiSnapshotState(){
 
 async function aiRestoreSnapshot(snap){
   if(!snap) return false;
-  USER_EDITS = snap.userEdits;
-  STATS = snap.stats;
-  DONE = snap.done;
-  historyData = snap.historyData;
-  MEAL_OPTIONS = snap.mealOptions;
-  SELECTED_DATE = snap.selectedDate;
+  // Re-clone so restored objects aren't shared with the Map entry (and so a second
+  // accidental undo can't mutate the stored snapshot).
   try{
+    USER_EDITS = JSON.parse(JSON.stringify(snap.userEdits||{moves:{},deletes:{},dayDeletes:{},customTasks:{},order:{}}));
+    STATS = JSON.parse(JSON.stringify(snap.stats||{cur:0,best:0,pts:0}));
+    historyData = JSON.parse(JSON.stringify(snap.historyData||{}));
+    MEAL_OPTIONS = JSON.parse(JSON.stringify(snap.mealOptions||{}));
+    SELECTED_DATE = snap.selectedDate || SELECTED_DATE;
+    // DONE must match history for the selected day — don't trust a stale DONE map
+    // that may have been mutated after the snapshot was taken.
+    const dayDone=(historyData[SELECTED_DATE]&&historyData[SELECTED_DATE].done)||{};
+    DONE = JSON.parse(JSON.stringify(dayDone));
+  }catch(e){
+    console.error('undo: failed to rehydrate snapshot',e);
+    return false;
+  }
+  try{
+    // Write restored state without merge-clobbering from a live DONE that still
+    // has the undone completion (saveDay merges DONE → historyData).
     await saveAll();
     await saveUserEdits();
     await saveMealOptions();
@@ -17433,6 +17589,7 @@ Rules:
 - STUDY PLAN FLOW: If the user wants a studying schedule: (1) createScheduleSlot if they asked for a new slot name, (2) read school lesson times from their text/photo, (3) build after-school study blocks for subjects that appear in the timetable (harder/exam subjects get longer focus blocks; protect meals, rest, sleep, prayers if tracked). Prefer Deep Work for study blocks.
 - If the user attaches a photo of a schedule, extract every readable block and return replaceWeeklySchedule (or addCustomTask for one-off items).
 - "logFood" is for ANY food/snack completion, however phrased — "أكلت", "اكلت", "خلصت الغدا", "ate", casual or formal, doesn't matter. Never use markDone for a food/snack task; always use logFood so nutrition gets tracked properly.
+- NEVER use markDone for prayer tasks (ids starting with "pr-" or category prayer, e.g. Fajr/Dhuhr/Asr/Maghrib/Isha/Jumua). The app opens the prayer confirmation modal itself for those. If the user says they prayed, still do NOT flat markDone — prefer tool "none" with reason "prayer completion needs modal" when the local path should handle it; if you must return a tool, unmarkDone is the only safe prayer-related tool.
 - If the message clearly refers to something ALREADY missing from the task list (e.g. asking to restore something not currently deleted, or edit a task that doesn't exist), still pick the closest tool and let validation reject it — do not use "none" just because you're not 100% certain, only use "none" for messages that are genuinely not instructions at all (questions, small talk, opinions).
 - If a date/day isn't stated, assume he means the currently selected/viewed date given below.
 - Be smart: infer intent from casual talk, dialect, mixed languages, typos. Prefer acting when the request is clear enough.`;
@@ -17710,15 +17867,27 @@ async function aiExecuteToolCall(v){
   const snapshot=aiSnapshotState();
   switch(v.tool){
     case 'markDone': {
-      if(!historyData[v.iso]) historyData[v.iso]={};
-      if(!historyData[v.iso].done) historyData[v.iso].done={};
       const jd=getJDfromISO(v.iso);
       const taskObj=getAllTasks(jd,v.iso).find(t=>t[0]===v.taskId);
+      // Prayer tasks → open confirmation modal (never silent flat points)
+      if(taskObj && (taskObj[2]==='prayer' || String(v.taskId||'').startsWith('pr-') || String(v.taskId||'').includes('-jm'))){
+        if(v.iso!==SELECTED_DATE){
+          saveDay();
+          SELECTED_DATE=v.iso;
+          loadDay();
+        }
+        aiOpenPrayerFlowPrefilled(taskObj, v.iso, []);
+        // No data mutation yet — snapshot still returned so UI can ignore undo for modal opens
+        break;
+      }
+      if(!historyData[v.iso]) historyData[v.iso]={};
+      if(!historyData[v.iso].done) historyData[v.iso].done={};
       const pts=taskObj?taskObj[6]:0;
       if(historyData[v.iso].done[v.taskId]===undefined || historyData[v.iso].done[v.taskId]===false){
-        historyData[v.iso].done[v.taskId]=pts||true;
-        if(v.iso===SELECTED_DATE) DONE[v.taskId]=pts||true;
-        if(v.iso===TODAY) STATS.pts=(STATS.pts||0)+(typeof pts==='number'?pts:0);
+        const awarded=(v.iso===TODAY)?awardTaskPoints(pts):computeAwardedPoints(pts);
+        historyData[v.iso].done[v.taskId]=awarded||true;
+        if(v.iso===SELECTED_DATE) DONE[v.taskId]=awarded||true;
+        if(v.iso!==TODAY) STATS.lifetime_xp=(STATS.lifetime_xp||0)+awarded;
         try{ checkStreak(); }catch(e){ console.error(e); }
       }
       await saveAll();
@@ -17914,6 +18083,8 @@ function openFoodLogModal(task,existingEntry,prefillText){
   if(stepInd) stepInd.textContent=en?'Food log':'تسجيل الأكل';
   const submitBtn=document.getElementById('flSubmitBtn');
   if(submitBtn) submitBtn.textContent=en?'Calculate & save ✅':'احسب واحفظ ✅';
+  const askSubmitBtn=document.getElementById('flAskSubmitBtn');
+  if(askSubmitBtn) askSubmitBtn.textContent=en?'Send ✅':'إرسال ✅';
   const cancelBtn=document.querySelector('#foodLogModal .modal-back-btn, #flCancelBtn');
   if(cancelBtn) cancelBtn.textContent=en?'Cancel':'إلغاء';
   const divEl=document.getElementById('flDividerText')||document.querySelector('#foodLogModal .fl-divider span');
@@ -18032,6 +18203,25 @@ HARD RULE — STRICT INGREDIENT MATCHING (do not invent extras):
 - Generic "sandwich" / "ساندويتش" without fillings named → do NOT invent oil, tomato base, side salad, fries, or cheese. Ask what is inside, or log only what was stated.
 - "KFC Twister" / twister = 1 tortilla + fried chicken breast/tenders + lettuce + mayonnaise/twister sauce ONLY. Never add fried rice, dessert toppings, extra sides.
 - Conjunctions "مع" / "with" / "and" between a food and a drink are SEPARATORS: "ساندويتش مع حليب" = sandwich item(s) + milk as independent log lines — never merge milk into the sandwich.
+
+HARD RULE — DEFAULT TO COMMON CUTS (never organ / specialty parts):
+- Generic "chicken" / "فراخ" / "دجاج" / "meat" / "لحم" / "beef" WITHOUT naming a specialty part → ALWAYS map to standard edible meat (chicken breast, chicken thigh, cooked chicken meat, or generic boiled/grilled chicken meat with skin as appropriate to cooking method).
+- NEVER choose chicken feet, gizzard, liver, neck, beak, heart, or other offal unless the user EXPLICITLY said those words (e.g. "chicken feet", "كوارع", "قوانص", "كبدة").
+- BAD example that must never happen: user said "chicken ... boiled" → items food "Chicken, feet, boiled". Correct: "chicken meat, boiled" or "boiled chicken breast/thigh".
+- Cooking method must match user words (boiled → boiled/poached, not fried/roasted).
+- Convert vague sizes ("half a medium plate", "small deep dish") into realistic gram estimates for THAT food before status "ready".
+
+HARD RULE — SERVING SIZE & UNIT CONVERSION (never inflate spoons/slices to 100g):
+- ALWAYS respect the volume/unit the user said (teaspoon, tbsp, slice, cup, ملعقة, شريحة, كوب). Do NOT default to a database "100g" entry when a specific unit is provided.
+- Convert small household units to realistic grams BEFORE lookup:
+  * 1 small spoon / teaspoon (tsp) of nut butter / jam / oil / sauce ≈ 10–15g (NEVER 100g).
+  * 1 tablespoon (tbsp) of nut butter / jam / oil / sauce ≈ 30g.
+  * 1 slice of sandwich bread ≈ 25–30g.
+  * 1 standard sandwich (2 slices of bread) ≈ 50–60g bread total (fillings separate).
+  * 1 tsp oil/butter ≈ 5g; 1 tbsp oil/butter ≈ 14g.
+  * 1 cup cooked rice ≈ 150–180g; 1 cup milk ≈ 240ml.
+- Prefer unit "g" with the converted number on "ready" when the original unit was a spoon/slice, so the nutrition API cannot mis-scale.
+- BAD: user said "1 teaspoon peanut butter" → 100g peanut butter. GOOD: qty 12, unit "g", food "peanut butter".
 
 ARABIC TRANSLATION & DIALECT MAPPING (when converting to English food names on "ready"):
 - حليب / كوباية حليب / كأس حليب / كوب حليب → "whole milk" (or the specified milk type). NEVER map milk to dessert topping, pudding, powdered mix, or ice cream.
@@ -18174,6 +18364,38 @@ async function flExtractMealInfo(description,priorTurns){
   }
 }
 
+// Guard against bad LLM extractions that pick organ/specialty parts for generic
+// "chicken" / "meat" queries (e.g. "Chicken, feet, boiled" for plain boiled chicken).
+function flSanitizeFoodItems(items){
+  if(!Array.isArray(items)) return [];
+  const OFFAL_RE=/\b(feet|foot|gizzard|liver|neck|beak|heart|offal|paws?|كوارع|قوانص|كبدة|رقبة)\b/i;
+  return items.map(it=>{
+    if(!it||typeof it!=='object') return it;
+    let food=String(it.food||'').trim();
+    // If the label is only organ parts without the user having said so in the original
+    // description, rewrite to standard meat. We can't always know user text here, so
+    // always rewrite pure "chicken feet" style labels to chicken meat when the string
+    // starts with chicken/meat + organ.
+    if(/\bchicken\b/i.test(food) && OFFAL_RE.test(food) && !/\b(feet|foot|gizzard|liver)\b.*\b(and|with)\b/i.test(food)){
+      // Keep cooking method if present
+      const boiled=/\bboil/i.test(food);
+      const grilled=/\bgrill/i.test(food);
+      const fried=/\bfried|fry/i.test(food);
+      const roasted=/\broast/i.test(food);
+      let method='cooked';
+      if(boiled) method='boiled';
+      else if(grilled) method='grilled';
+      else if(fried) method='fried';
+      else if(roasted) method='roasted';
+      food=`chicken meat, ${method}`;
+    }
+    if(/\b(beef|meat)\b/i.test(food) && OFFAL_RE.test(food)){
+      food=food.replace(OFFAL_RE,'meat').replace(/,\s*,/g,',').trim();
+    }
+    return Object.assign({},it,{food});
+  }).filter(it=>it&&it.food);
+}
+
 // Sends the extracted {food,qty,unit} items to the Worker's /api/nutrition endpoint,
 // which calls the real Nutritionix Natural Language API server-side (key never
 // touches the client) and returns real, measured macro totals — never AI-guessed.
@@ -18183,6 +18405,7 @@ async function flLookupNutrition(items){
       ?'⚠️ AI is not connected to the server. Set GEMINI_API_KEY and run the worker/server.'
       :'⚠️ المساعد الذكي لسه مش متوصل بالسيرفر.'};
   }
+  const cleanItems=flSanitizeFoodItems(items);
   // Sends structured {food,qty,unit} items rather than one joined string — the
   // Worker's /api/nutrition route (backed by API Ninjas, the platform CalorieNinjas
   // migrated into) queries each item separately server-side for more reliable
@@ -18191,7 +18414,7 @@ async function flLookupNutrition(items){
     const res=await fetch(AI_WORKER_URL+'/api/nutrition',{
       method:'POST',
       headers:{'Content-Type':'application/json'},
-      body:JSON.stringify({items})
+      body:JSON.stringify({items:cleanItems})
     });
     const data=await res.json();
     if(!res.ok || data.error){
@@ -19091,7 +19314,10 @@ async function aiHandleSend(){
 function aiToolCallReplyText(v){
   const en=(USER_SETTINGS&&USER_SETTINGS.lang)==='en';
   switch(v.tool){
-    case 'markDone': return en?`Marked "${v.taskName}" done on ${v.iso} ✅`:`تمام، سجلت "${v.taskName}" بتاريخ ${v.iso} كمُنجزة ✅`;
+    case 'markDone': {
+        const nm=typeof tn==='function'?tn(v.taskName):v.taskName;
+        return en?`Marked "${nm}" done on ${v.iso} ✅`:`تمام، سجلت "${v.taskName}" بتاريخ ${v.iso} كمُنجزة ✅`;
+      }
     case 'unmarkDone': return en?`Unmarked "${v.taskName}" on ${v.iso} ✅`:`تم إلغاء تسجيل "${v.taskName}" كمُنجزة في ${v.iso} ✅`;
     case 'skipTask': return en?`Skipped "${v.taskName}" for today only (still on the base schedule) ⏩`:`تم تخطي "${v.taskName}" لليوم فقط (لن يتم حذفها من الجدول الأساسي) ⏩`;
     case 'logFood': return v._chatReplyOverride?`🍽️ ${v._chatReplyOverride}`:(en?`Logged "${v.description}" under "${v.taskName}" ✅${v._nutritionWarning?`\n\n${v._nutritionWarning}`:''}`:`تم تسجيل "${v.description}" في "${v.taskName}" ✅${v._nutritionWarning?`\n\n${v._nutritionWarning}`:''}`);
@@ -19774,6 +20000,12 @@ document.body.addEventListener('click',async e=>{
     const tid=openPlanBtn.getAttribute('data-id');
     const tname=openPlanBtn.getAttribute('data-name')||tid;
     if(tid) openTaskPlan(tid,tname);
+    return;
+  }
+  const gymDayBtn=closest('[data-action="editGymDay"]');
+  if(gymDayBtn){
+    const jd=parseInt(gymDayBtn.getAttribute('data-jd'),10);
+    if(!isNaN(jd) && typeof window.openGymDayPicker==='function') window.openGymDayPicker(jd);
     return;
   }
   const editSchedBtn=closest('[data-action="editSchedTask"]');
