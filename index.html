@@ -10002,19 +10002,30 @@ function taskPriorityRank(t){
   if(p==='low') return 2;
   return 1; // medium / default
 }
+function isBedtimeSleepTask(t){
+  // "Sleep & Recovery" is used for BOTH wake-up and bedtime. Only bedtime should
+  // sort at the end of the day. Wake-up at 5:30 AM was getting +1440 minutes and
+  // landing under Dinner/Studying — the "wtf is that" timeline bug.
+  if(!t) return false;
+  const cat=String(getTaskCategoryId?getTaskCategoryId(t):(t[2]||'')).toLowerCase();
+  const name=String(t[4]||'').toLowerCase();
+  const mins=getTaskSortTimeMinutes(t);
+  // Explicit wake language → never treat as bedtime
+  if(/wake|استيقاظ|صحيان|نهوض|قوم|get\s*up/.test(name)) return false;
+  // Explicit bed/sleep language → bedtime
+  if(/sleep|bed|نوم|ننوم|أنام|انام|sleeping|bedtime/.test(name)) return true;
+  // Category sleep only counts as bedtime in the evening/night window (after 6 PM)
+  if(cat==='sleep' && mins>=18*60) return true;
+  return false;
+}
 function sortKey(t, iso, jd){
-  // Chronological by start time; within the same minute, High → Medium → Low.
-  // Drag-order only while edit mode is on.
-  if(window.SCHEDULE_EDIT_MODE){
-    const effIso = iso || (typeof SELECTED_DATE!=='undefined'?SELECTED_DATE:todayStr());
-    const dayOrder = (USER_EDITS?.order && (USER_EDITS.order[effIso] || (jd!=null && USER_EDITS.order['jd_'+jd]))) || null;
-    if(dayOrder && Array.isArray(dayOrder)){
-      const idx = dayOrder.indexOf(t[0]);
-      if(idx !== -1) return idx;
-    }
-  }
+  // Always chronological by start time. Drag-reorder is disabled (DND_DISABLED), so
+  // USER_EDITS.order is ignored — a stale manual order was freezing Wake up under
+  // evening tasks in edit mode even after the sleep +1440 bug was fixed.
   const base = getTaskSortTimeMinutes(t);
-  const timePart = t[2]==='sleep'?base+1440:base;
+  // Only true bedtime blocks sort after the rest of the day (overnight continuity).
+  // Wake-up / morning recovery stay in normal clock order.
+  const timePart = isBedtimeSleepTask(t) ? base+1440 : base;
   // Fractional secondary key so priority sorts inside equal times without breaking time order
   return timePart + (taskPriorityRank(t) * 0.01);
 }
