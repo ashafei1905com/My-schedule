@@ -5374,7 +5374,7 @@ const firebaseConfig = {
   messagingSenderId:"814163254112",
   appId:"1:814163254112:web:c7b591228c727dd5db9c05"
 };
-window.__APP_SYNC_BUILD='2026-10-04-rest2';
+window.__APP_SYNC_BUILD='2026-10-12-foodlog-en';
 const fbApp=initializeApp(firebaseConfig);
 // initializeAuth with an explicit popupRedirectResolver avoids the intermittent
 // "INTERNAL ASSERTION FAILED: Pending promise was never set" that getAuth()+popup
@@ -18788,7 +18788,9 @@ function flBuildExtractionPrompt(){
 Your ONLY job is to figure out WHAT was eaten and HOW MUCH, precisely enough to look up in a nutrition database. You never estimate or state calorie/macro numbers yourself — that always comes from a real lookup done separately.
 
 Respond with ONLY a raw JSON object, nothing else — no markdown fences, no text outside the JSON:
-{"status":"needs_info" | "ready","followUpQuestion":"<if needs_info: ONE short casual question asking for the missing detail — language MUST match app UI language below — otherwise empty string>","items":[{"food":"<plain English food name, e.g. 'grilled chicken breast'>","qty":<number>,"unit":"<e.g. 'g','oz','cup','piece','tbsp'>"}]}
+{"status":"needs_info" | "ready","followUpQuestion":"<if needs_info: ONE short casual question asking for the missing detail — language MUST match app UI language below — otherwise empty string>","items":[{"food":"<plain ENGLISH food name ONLY — never Arabic script in this field, e.g. 'grilled chicken breast', 'Domiati cheese sandwich', 'cucumber', 'whole milk'>","qty":<number>,"unit":"<English unit only: g, ml, cup, tbsp, tsp, piece, slice, plate, serving>"}]}
+
+CRITICAL: items[].food and items[].unit MUST be English/Latin even when the user wrote Arabic. followUpQuestion language follows UI language; item fields do NOT. Arabic food names cause the nutrition database lookup to fail.
 
 HARD RULE — QUANTITY FIRST (do not invent amounts):
 - If the message has NO quantity signal at all (no number, no count word, no size word like طبق/حصة/رغيف/قطعة/حبة, no volume/weight unit), status MUST be "needs_info". You are FORBIDDEN from inventing a default portion (no silent 100g, no silent "1 serving", no silent "medium plate", no silent "1 piece") just to mark ready. Ask one short question about amount instead.
@@ -18961,10 +18963,98 @@ async function flExtractMealInfo(description,priorTurns){
         };
       }
     }
-    return{ok:true,needsInfo:false,items:parsed.items};
+    // Nutrition DB is English-only. Model sometimes returns Arabic food/unit strings
+    // even when the prompt demands English — that produced live 404s and made food log
+    // look completely broken for Arabic meal descriptions.
+    const items=await flNormalizeItemsToEnglish(parsed.items, description);
+    if(!items.length){
+      return{ok:false,error:uiIsEn()
+        ?'⚠️ Could not identify what was eaten — try describing it again.'
+        :'⚠️ مش قادر أحدد إيه اللي اتاكل بالظبط — جرب توصف تاني.'};
+    }
+    return{ok:true,needsInfo:false,items};
   }catch(e){
     console.error('meal extraction failed',e);
     return {ok:false,error:(USER_SETTINGS&&USER_SETTINGS.lang)==='en'?'⚠️ Could not reach the server right now.':'⚠️ مش قادر أوصل للسيرفر دلوقتي.'};
+  }
+}
+
+// Map common Arabic units → English units the nutrition worker understands.
+function flMapUnitToEnglish(unit){
+  const u=String(unit||'').trim().toLowerCase();
+  if(!u) return 'g';
+  const map={
+    'جم':'g','جرام':'g','غرام':'g','غ':'g','ج':'g',
+    'كوب':'cup','كباية':'cup','فنجان':'cup',
+    'ملعقة':'tbsp','ملعقة كبيرة':'tbsp','معلقة':'tbsp',
+    'ملعقة صغيرة':'tsp',
+    'حبة':'piece','قطعة':'piece','قطع':'piece','حبات':'piece',
+    'شريحة':'slice','رغيف':'piece','ساندوتش':'piece','سندوتش':'piece',
+    'طبق':'plate','طبق صغير':'plate','طبق وسط':'plate','طبق كبير':'plate',
+    'حصة':'serving','علبة':'can','زجاجة':'bottle','كيس':'bag',
+    'مل':'ml','ملل':'ml','لتر':'l'
+  };
+  if(map[u]) return map[u];
+  if(/^(g|gram|grams|kg|oz|lb|cup|cups|tbsp|tsp|ml|l|piece|pieces|slice|slices|plate|serving|can|bottle)$/i.test(u)) return u;
+  return u;
+}
+function flItemsNeedEnglishNormalize(items){
+  return (items||[]).some(it=>{
+    const f=String(it&&it.food||'');
+    const u=String(it&&it.unit||'');
+    return /[\u0600-\u06FF]/.test(f) || /[\u0600-\u06FF]/.test(u);
+  });
+}
+// Ensures every item is USDA-searchable English. Local unit map first; if any Arabic
+// remains in food names, one AI conversion pass. Never invents macros — only names/units.
+async function flNormalizeItemsToEnglish(items, originalDescription){
+  if(!Array.isArray(items) || !items.length) return [];
+  let out=items.map(it=>{
+    if(!it||typeof it!=='object') return null;
+    const qty=Number(it.qty);
+    return {
+      food:String(it.food||'').trim(),
+      qty:Number.isFinite(qty)&&qty>0?qty:1,
+      unit:flMapUnitToEnglish(it.unit)
+    };
+  }).filter(it=>it&&it.food);
+  if(!out.length) return [];
+  if(!flItemsNeedEnglishNormalize(out)) return out;
+  if(!AI_WORKER_URL || AI_WORKER_URL==='REPLACE_WITH_YOUR_WORKER_URL') return out;
+  try{
+    const res=await fetch(AI_WORKER_URL,{
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({
+        system:'You convert meal line-items into short ENGLISH food names suitable for the USDA FoodData Central database. Keep quantities as numbers. Units must be one of: g, ml, cup, tbsp, tsp, piece, slice, plate, serving. Respond with ONLY JSON: {"items":[{"food":"grilled chicken breast","qty":150,"unit":"g"}]}. Never invent calories. Prefer plain English ingredient names (e.g. Domiati cheese sandwich → "white cheese sandwich on whole wheat bread").',
+        messages:[{
+          role:'user',
+          content:JSON.stringify({
+            originalDescription:String(originalDescription||'').slice(0,400),
+            items:out
+          })
+        }]
+      })
+    });
+    const data=await res.json();
+    if(!res.ok || data.error) return out;
+    let raw=(data.text||'').trim().replace(/^```json\s*|```$/g,'').trim();
+    let parsed;
+    try{ parsed=JSON.parse(raw); }catch{ return out; }
+    if(!Array.isArray(parsed.items) || !parsed.items.length) return out;
+    const normalized=parsed.items.map(it=>{
+      if(!it||!it.food) return null;
+      const qty=Number(it.qty);
+      return {
+        food:String(it.food).trim(),
+        qty:Number.isFinite(qty)&&qty>0?qty:1,
+        unit:flMapUnitToEnglish(it.unit||'g')
+      };
+    }).filter(it=>it&&it.food&&!/[\u0600-\u06FF]/.test(it.food));
+    return normalized.length?normalized:out;
+  }catch(e){
+    console.warn('flNormalizeItemsToEnglish failed',e);
+    return out;
   }
 }
 
@@ -19009,7 +19099,15 @@ async function flLookupNutrition(items){
       ?'⚠️ AI is not connected to the server. Set GEMINI_API_KEY and run the worker/server.'
       :'⚠️ المساعد الذكي لسه مش متوصل بالسيرفر.'};
   }
-  const cleanItems=flSanitizeFoodItems(items);
+  let cleanItems=flSanitizeFoodItems(items);
+  // Second pass: Arabic food/unit labels → English before hitting USDA (English-only).
+  // Without this, Arabic extraction lines 404 and the food log looks "broken".
+  try{ cleanItems=await flNormalizeItemsToEnglish(cleanItems, ''); }catch(e){ console.warn(e); }
+  if(!cleanItems.length){
+    return{ok:false,error:uiIsEn()
+      ?'⚠️ Could not prepare food names for lookup — try simpler wording with amounts.'
+      :'⚠️ مش قادر أحضّر أسماء الأكل للبحث — جرب وصف أبسط مع الكمية.'};
+  }
   // Sends structured {food,qty,unit} items rather than one joined string — the
   // Worker's /api/nutrition route (backed by API Ninjas, the platform CalorieNinjas
   // migrated into) queries each item separately server-side for more reliable
