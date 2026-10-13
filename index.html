@@ -5374,7 +5374,7 @@ const firebaseConfig = {
   messagingSenderId:"814163254112",
   appId:"1:814163254112:web:c7b591228c727dd5db9c05"
 };
-window.__APP_SYNC_BUILD='2026-10-12-foodlog-en';
+window.__APP_SYNC_BUILD='2026-10-13-common-foods';
 const fbApp=initializeApp(firebaseConfig);
 // initializeAuth with an explicit popupRedirectResolver avoids the intermittent
 // "INTERNAL ASSERTION FAILED: Pending promise was never set" that getAuth()+popup
@@ -18790,7 +18790,11 @@ Your ONLY job is to figure out WHAT was eaten and HOW MUCH, precisely enough to 
 Respond with ONLY a raw JSON object, nothing else — no markdown fences, no text outside the JSON:
 {"status":"needs_info" | "ready","followUpQuestion":"<if needs_info: ONE short casual question asking for the missing detail — language MUST match app UI language below — otherwise empty string>","items":[{"food":"<plain ENGLISH food name ONLY — never Arabic script in this field, e.g. 'grilled chicken breast', 'Domiati cheese sandwich', 'cucumber', 'whole milk'>","qty":<number>,"unit":"<English unit only: g, ml, cup, tbsp, tsp, piece, slice, plate, serving>"}]}
 
-CRITICAL: items[].food and items[].unit MUST be English/Latin even when the user wrote Arabic. followUpQuestion language follows UI language; item fields do NOT. Arabic food names cause the nutrition database lookup to fail.
+CRITICAL: items[].food and items[].unit MUST be English/Latin even when the user wrote Arabic.
+Always default to standard, fresh, whole-food variants (e.g. raw fruits, common meat cuts) unless a specific preparation method, processing type, or unusual cut is explicitly written in the user input.
+- banana / موز → "banana" or "banana raw" — NEVER dehydrated, powder, chips, or flour unless user said dried/powder.
+- chicken / دجاج without a cut → "chicken breast" or "chicken meat, cooked" — NEVER feet, gizzard, liver, neck, beak, heart, offal unless user explicitly said those words.
+Prefer common everyday forms over industrial, baby-food, or specialty by-products. followUpQuestion language follows UI language; item fields do NOT. Arabic food names cause the nutrition database lookup to fail.
 
 HARD RULE — QUANTITY FIRST (do not invent amounts):
 - If the message has NO quantity signal at all (no number, no count word, no size word like طبق/حصة/رغيف/قطعة/حبة, no volume/weight unit), status MUST be "needs_info". You are FORBIDDEN from inventing a default portion (no silent 100g, no silent "1 serving", no silent "medium plate", no silent "1 piece") just to mark ready. Ask one short question about amount instead.
@@ -19063,6 +19067,7 @@ async function flNormalizeItemsToEnglish(items, originalDescription){
 function flSanitizeFoodItems(items){
   if(!Array.isArray(items)) return [];
   const OFFAL_RE=/\b(feet|foot|gizzard|liver|neck|beak|heart|offal|paws?|كوارع|قوانص|كبدة|رقبة)\b/i;
+  const NICHE_PROCESS_RE=/\b(dehydrated|powder|powdered|freeze[-\s]?dried|banana powder|flour)\b/i;
   return items.map(it=>{
     if(!it||typeof it!=='object') return it;
     let food=String(it.food||'').trim();
@@ -19085,6 +19090,19 @@ function flSanitizeFoodItems(items){
     }
     if(/\b(beef|meat)\b/i.test(food) && OFFAL_RE.test(food)){
       food=food.replace(OFFAL_RE,'meat').replace(/,\s*,/g,',').trim();
+    }
+    // Generic fruit → never dehydrated/powder unless the name was only that industrial form
+    // from a bad model output (post-processing sanity filter).
+    if(/\bbananas?\b/i.test(food) && NICHE_PROCESS_RE.test(food) && !/\b(and|with)\b/i.test(food)){
+      food='banana raw';
+    }
+    if(/\bapples?\b/i.test(food) && NICHE_PROCESS_RE.test(food) && !/\b(and|with|sauce|juice)\b/i.test(food)){
+      food='apple raw';
+    }
+    // Plain "chicken" with no cut → steer to meat, not first USDA oddity
+    if(/^chicken\s*,?\s*(boiled|grilled|fried|cooked|roasted)?\s*$/i.test(food)){
+      const m=(food.match(/\b(boiled|grilled|fried|cooked|roasted)\b/i)||['','cooked'])[1].toLowerCase();
+      food = m==='grilled' ? 'chicken breast grilled' : `chicken meat, ${m||'cooked'}`;
     }
     return Object.assign({},it,{food});
   }).filter(it=>it&&it.food);
