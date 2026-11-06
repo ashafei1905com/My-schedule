@@ -6558,11 +6558,16 @@ const PMETA={
 const DKEYS=['sun','mon','tue','wed','thu','fri','sat'];
 const DSHORT=['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
 const WEEK_ORDER=[6,0,1,2,3,4,5];
-// Kuwait City method=9 ballpark (late Sep). Used ONLY when Aladhan is unreachable.
-// Old values (03:13 / 18:51 / 20:26) were non-Kuwait and matched the iPhone bug exactly
-// whenever fetchPrayers failed — so a network/geo timeout looked like "wrong city".
-const FALLBK={Fajr:'04:20',Sunrise:'05:39',Dhuhr:'11:39',Asr:'15:05',Maghrib:'17:39',Isha:'18:56'};
+// Emergency-only Kuwait City ballpark when Aladhan is unreachable AND no recent
+// successful cache exists. Values are early-November (method=9) — the previous
+// late-September set was ~25–40 minutes off Maghrib/Isha/Fajr in Nov/Dec and was
+// the exact source of "times stuck ~half an hour wrong vs any mosque app".
+const FALLBK={Fajr:'04:44',Sunrise:'06:05',Dhuhr:'11:32',Asr:'14:37',Maghrib:'16:58',Isha:'18:17'};
 let PRYT={...FALLBK};
+// Last successful Aladhan response — survives network blips so the UI never falls
+// all the way back to static FALLBK after the user has already received live times.
+const LS_PRAYER_CACHE='sc:prayerCache2';
+let _prayerFetchInFlight=null;
 
 const FREE_TIME={
   0:[{t:'6:00 م',d:'وقت حر'}],
@@ -11972,48 +11977,127 @@ function stripTimeSec(s){
   const m=String(s).match(/(\d{1,2}:\d{2})/);
   return m?m[1]:String(s);
 }
+function _prayerIsoKey(forIso){
+  try{
+    const iso=String(forIso||SELECTED_DATE||TODAY||'').slice(0,10);
+    return /^\d{4}-\d{2}-\d{2}$/.test(iso)?iso:(TODAY||'');
+  }catch(e){ return TODAY||''; }
+}
+function _isValidPryt(obj){
+  if(!obj||typeof obj!=='object') return false;
+  return ['Fajr','Sunrise','Dhuhr','Asr','Maghrib','Isha'].every(k=>{
+    const v=obj[k];
+    return typeof v==='string' && /^\d{1,2}:\d{2}$/.test(v);
+  });
+}
+async function _loadPrayerCache(iso){
+  try{
+    const all=await sGet(LS_PRAYER_CACHE);
+    if(!all||typeof all!=='object') return null;
+    const entry=all[iso];
+    if(entry && _isValidPryt(entry.timings)) return entry.timings;
+    // Same calendar day only — never reuse another day's times (seasonal drift).
+    return null;
+  }catch(e){ return null; }
+}
+async function _savePrayerCache(iso, timings){
+  try{
+    if(!_isValidPryt(timings)||!iso) return;
+    const all=(await sGet(LS_PRAYER_CACHE))||{};
+    all[iso]={timings:{...timings}, fetchedAt:Date.now()};
+    // Keep only ~14 recent days so localStorage stays small
+    const keys=Object.keys(all).sort();
+    while(keys.length>14){
+      const drop=keys.shift();
+      delete all[drop];
+    }
+    await sSet(LS_PRAYER_CACHE, all);
+  }catch(e){}
+}
+function _applyPrytAndRefresh(next){
+  if(!_isValidPryt(next)) return;
+  const prev=PRYT||{};
+  const changed=['Fajr','Sunrise','Dhuhr','Asr','Maghrib','Isha'].some(k=>prev[k]!==next[k]);
+  PRYT={...next};
+  if(!changed) return;
+  // Rebuild prayer cards + pills so the UI never keeps stale half-hour-off times
+  // after a successful (or recovered) fetch. Stay on the day the user is viewing.
+  try{
+    const jd=(typeof getJDfromISO==='function')?getJDfromISO(SELECTED_DATE||TODAY):(typeof todayJD==='function'?todayJD():0);
+    if(typeof renderPanels==='function') renderPanels();
+    if(typeof switchDay==='function') switchDay(jd);
+    if(typeof updateUI==='function') updateUI();
+  }catch(e){}
+}
 async function fetchPrayers(forIso){
+  const iso=_prayerIsoKey(forIso);
+  // Coalesce concurrent calls for the same day (tab switch + init race).
+  if(_prayerFetchInFlight && _prayerFetchInFlight.iso===iso){
+    return _prayerFetchInFlight.promise;
+  }
   const withTimeout=(promise,ms)=>Promise.race([
     promise,
     new Promise((_,rej)=>setTimeout(()=>rej(new Error('timeout')),ms))
   ]);
-  // Always resolve to some coords — never let a slow/denied GPS skip the Aladhan
-  // request. Previously a geo timeout threw into the outer catch and left the iPhone
-  // on static FALLBK (03:13/20:26) while desktop (which often denied geo instantly
-  // and used Kuwait City) got live method=9 times.
-  let lat=KUWAIT_CITY_FALLBACK.lat, lon=KUWAIT_CITY_FALLBACK.lon;
-  try{
-    const c=await withTimeout(getPrayerCoords(),4500);
-    if(c && c.lat!=null && c.lon!=null){ lat=+c.lat; lon=+c.lon; }
-  }catch(e){ /* keep Kuwait City */ }
-
-  try{
-    // Date-specific timings so each day shows its own prayer times
-    let datePart='';
+  const run=(async()=>{
+    // Prefer same-day successful cache immediately while network is in-flight so
+    // first paint is never stale FALLBK when we already fetched this day earlier.
     try{
-      const iso=forIso||SELECTED_DATE||TODAY;
-      const [y,m,d]=String(iso).split('-');
-      if(y&&m&&d) datePart=`/${d}-${m}-${y}`;
+      const cached=await _loadPrayerCache(iso);
+      if(cached) _applyPrytAndRefresh(cached);
     }catch(e){}
-    const url=datePart
-      ?`https://api.aladhan.com/v1/timings${datePart}?latitude=${lat}&longitude=${lon}&method=9&tune=${PRAYER_TUNE}`
-      :`https://api.aladhan.com/v1/timings?latitude=${lat}&longitude=${lon}&method=9&tune=${PRAYER_TUNE}`;
-    const res=await withTimeout(fetch(url),8000);
-    const json=await res.json();
-    if(json&&json.code===200){
-      const t=json.data.timings;
-      PRYT={
-        Fajr:stripTimeSec(t.Fajr),
-        Sunrise:stripTimeSec(t.Sunrise),
-        Dhuhr:stripTimeSec(t.Dhuhr),
-        Asr:stripTimeSec(t.Asr),
-        Maghrib:stripTimeSec(t.Maghrib),
-        Isha:stripTimeSec(t.Isha)
-      };
-    } else throw new Error('aladhan non-200');
-  }catch(e){
-    console.warn('fetchPrayers failed, using FALLBK', e);
-    PRYT={...FALLBK};
+
+    let lat=KUWAIT_CITY_FALLBACK.lat, lon=KUWAIT_CITY_FALLBACK.lon;
+    try{
+      const c=await withTimeout(getPrayerCoords(),4500);
+      if(c && c.lat!=null && c.lon!=null){ lat=+c.lat; lon=+c.lon; }
+    }catch(e){ /* keep Kuwait City */ }
+
+    try{
+      // Date-specific timings so each day shows its own prayer times (Aladhan path = DD-MM-YYYY).
+      let datePart='';
+      try{
+        const [y,m,d]=String(iso).split('-');
+        if(y&&m&&d) datePart=`/${d}-${m}-${y}`;
+      }catch(e){}
+      // method=9 = Kuwait (Ministry-aligned angles). Always pin timezone explicitly so
+      // a wrong device TZ cannot shift the returned clock times.
+      const url=datePart
+        ?`https://api.aladhan.com/v1/timings${datePart}?latitude=${lat}&longitude=${lon}&method=9&tune=${PRAYER_TUNE}&timezonestring=Asia/Kuwait`
+        :`https://api.aladhan.com/v1/timings?latitude=${lat}&longitude=${lon}&method=9&tune=${PRAYER_TUNE}&timezonestring=Asia/Kuwait`;
+      const res=await withTimeout(fetch(url,{cache:'no-store'}),9000);
+      const json=await res.json();
+      if(json&&json.code===200&&json.data&&json.data.timings){
+        const t=json.data.timings;
+        const next={
+          Fajr:stripTimeSec(t.Fajr),
+          Sunrise:stripTimeSec(t.Sunrise),
+          Dhuhr:stripTimeSec(t.Dhuhr),
+          Asr:stripTimeSec(t.Asr),
+          Maghrib:stripTimeSec(t.Maghrib),
+          Isha:stripTimeSec(t.Isha)
+        };
+        if(!_isValidPryt(next)) throw new Error('aladhan timings invalid shape');
+        await _savePrayerCache(iso, next);
+        _applyPrytAndRefresh(next);
+        return;
+      }
+      throw new Error('aladhan non-200');
+    }catch(e){
+      console.warn('fetchPrayers failed, recovering from cache/FALLBK', e);
+      // Never jump straight to static FALLBK if we have a same-day successful cache —
+      // that was the half-hour drift the user kept seeing after a flaky network.
+      const cached=await _loadPrayerCache(iso);
+      if(cached){
+        _applyPrytAndRefresh(cached);
+        return;
+      }
+      _applyPrytAndRefresh({...FALLBK});
+    }
+  })();
+  _prayerFetchInFlight={iso, promise:run};
+  try{ await run; }finally{
+    if(_prayerFetchInFlight && _prayerFetchInFlight.iso===iso) _prayerFetchInFlight=null;
   }
 }
 
@@ -18109,28 +18193,37 @@ Rules: Match the user's language (English or Arabic) in reasoning/error. "before
 // restores that exact snapshot wholesale. This guarantees the post-undo state is
 // byte-identical to pre-action, not a best-effort reverse-engineered guess.
 function aiSnapshotState(){
+  // Must include USER_SCHEDULE / slots — replaceWeeklySchedule and many schedule
+  // mutations never touch USER_EDITS alone, so undoing without these left the
+  // schedule permanently changed (the "رجوع مش شغال" bug).
   return {
-    userEdits: JSON.parse(JSON.stringify(USER_EDITS)),
-    stats: JSON.parse(JSON.stringify(STATS)),
-    done: JSON.parse(JSON.stringify(DONE)),
-    historyData: JSON.parse(JSON.stringify(historyData)),
-    mealOptions: JSON.parse(JSON.stringify(MEAL_OPTIONS)),
+    userEdits: JSON.parse(JSON.stringify(USER_EDITS||{})),
+    userSchedule: JSON.parse(JSON.stringify(USER_SCHEDULE||{})),
+    userSchedules: JSON.parse(JSON.stringify(USER_SCHEDULES||{})),
+    activeScheduleId: ACTIVE_SCHEDULE_ID,
+    stats: JSON.parse(JSON.stringify(STATS||{})),
+    done: JSON.parse(JSON.stringify(DONE||{})),
+    historyData: JSON.parse(JSON.stringify(historyData||{})),
+    mealOptions: JSON.parse(JSON.stringify(MEAL_OPTIONS||{})),
     selectedDate: SELECTED_DATE
   };
 }
 
 async function aiRestoreSnapshot(snap){
   if(!snap) return false;
-  // Re-clone so restored objects aren't shared with the Map entry (and so a second
-  // accidental undo can't mutate the stored snapshot).
   try{
-    USER_EDITS = JSON.parse(JSON.stringify(snap.userEdits||{moves:{},deletes:{},dayDeletes:{},customTasks:{},order:{}}));
+    USER_EDITS = JSON.parse(JSON.stringify(snap.userEdits||{moves:{},deletes:{},dayDeletes:{},dayOverrides:{},pointOverrides:{},customTasks:[],order:{},taskPlans:{}}));
+    if(snap.userSchedule && typeof snap.userSchedule==='object'){
+      USER_SCHEDULE = JSON.parse(JSON.stringify(snap.userSchedule));
+    }
+    if(snap.userSchedules && typeof snap.userSchedules==='object'){
+      USER_SCHEDULES = JSON.parse(JSON.stringify(snap.userSchedules));
+    }
+    if(snap.activeScheduleId) ACTIVE_SCHEDULE_ID = snap.activeScheduleId;
     STATS = JSON.parse(JSON.stringify(snap.stats||{cur:0,best:0,pts:0}));
     historyData = JSON.parse(JSON.stringify(snap.historyData||{}));
     MEAL_OPTIONS = JSON.parse(JSON.stringify(snap.mealOptions||{}));
     SELECTED_DATE = snap.selectedDate || SELECTED_DATE;
-    // DONE must match history for the selected day — don't trust a stale DONE map
-    // that may have been mutated after the snapshot was taken.
     const dayDone=(historyData[SELECTED_DATE]&&historyData[SELECTED_DATE].done)||{};
     DONE = JSON.parse(JSON.stringify(dayDone));
   }catch(e){
@@ -18138,10 +18231,9 @@ async function aiRestoreSnapshot(snap){
     return false;
   }
   try{
-    // Write restored state without merge-clobbering from a live DONE that still
-    // has the undone completion (saveDay merges DONE → historyData).
     await saveAll();
     await saveUserEdits();
+    try{ await saveUserSchedule(); }catch(e){ console.warn('undo: saveUserSchedule',e); }
     await saveMealOptions();
   }catch(e){
     console.error('undo: save after restore failed',e);
@@ -19131,12 +19223,20 @@ async function flLookupNutrition(items){
   // migrated into) queries each item separately server-side for more reliable
   // parsing than one long comma-joined multi-item string.
   try{
-    const res=await fetch(AI_WORKER_URL+'/api/nutrition',{
-      method:'POST',
-      headers:{'Content-Type':'application/json'},
-      body:JSON.stringify({items:cleanItems})
-    });
-    const data=await res.json();
+    let res, data;
+    try{
+      res=await fetch(AI_WORKER_URL+'/api/nutrition',{
+        method:'POST',
+        headers:{'Content-Type':'application/json'},
+        body:JSON.stringify({items:cleanItems})
+      });
+      data=await res.json().catch(()=>({}));
+    }catch(netErr){
+      console.error('nutrition fetch network error',netErr);
+      return{ok:false,error:uiIsEn()
+        ?'⚠️ Network error talking to nutrition server — check connection and try again.'
+        :'⚠️ مشكلة شبكة مع سيرفر التغذية — تأكد من الإنترنت وجرب تاني.'};
+    }
     if(!res.ok || data.error){
       console.error('nutrition lookup failed',data.error||res.status);
       // Distinguish an actual "couldn't find this food" result from a transient
@@ -19503,27 +19603,36 @@ async function flFinalizeLog(task,description,macro,verdict,showVerdictUI,itemsB
 // first-submit path and the after-clarification path so there's exactly one place
 // that turns "items" into a saved log entry.
 async function flRunLookupAndFinalize(task,description,items){
-  const lookup=await flLookupNutrition(items);
-  if(!lookup.ok){
-    document.getElementById('flLoadingStep').style.display='none';
-    document.getElementById('flChooseStep').style.display='block';
-    showToast(lookup.error,4200,'warn');
-    return;
-  }
-  if(lookup.anyRejected){
-    // At least one item couldn't be matched/validated and was silently dropped from
-    // the total on the server. Surfacing this explicitly is the actual fix for "the
-    // numbers are wrong and I can't tell why" — previously a partial/undercounted
-    // total looked identical to a fully correct one.
+  try{
+    const lookup=await flLookupNutrition(items);
+    if(!lookup.ok){
+      try{
+        document.getElementById('flLoadingStep').style.display='none';
+        document.getElementById('flChooseStep').style.display='block';
+      }catch(e){}
+      showToast(lookup.error|| (uiIsEn()?'⚠️ Food log failed — try again':'⚠️ تسجيل الأكل فشل — جرب تاني'),4200,'warn');
+      return;
+    }
+    if(lookup.anyRejected){
+      showToast(uiIsEn()
+        ?'⚠️ At least one item could not be calculated accurately — totals below may be incomplete. Check the breakdown.'
+        :'⚠️ في عنصر واحد على الأقل من الوجبة معرفتش أحسبه بدقة — القيم اللي هتظهر ناقصة العنصر ده. شوف التفاصيل تحت.',4500,'warn');
+    }
+    const jd=getJDfromISO(SELECTED_DATE);
+    const{target,consumed}=computeDayMacros(jd,SELECTED_DATE);
+    const verdict=await flGetVerdict(task,lookup.macro,target,consumed,lookup.items);
+    try{ document.getElementById('flLoadingStep').style.display='none'; }catch(e){}
+    await flFinalizeLog(task,description,lookup.macro,verdict,true,lookup.items);
+  }catch(e){
+    console.error('flRunLookupAndFinalize',e);
+    try{
+      document.getElementById('flLoadingStep').style.display='none';
+      document.getElementById('flChooseStep').style.display='block';
+    }catch(e2){}
     showToast(uiIsEn()
-      ?'⚠️ At least one item could not be calculated accurately — totals below may be incomplete. Check the breakdown.'
-      :'⚠️ في عنصر واحد على الأقل من الوجبة معرفتش أحسبه بدقة — القيم اللي هتظهر ناقصة العنصر ده. شوف التفاصيل تحت.',4500,'warn');
+      ?'⚠️ Unexpected error while logging food — try a simpler description'
+      :'⚠️ حصل خلل أثناء تسجيل الأكل — جرب وصف أبسط',4200,'warn');
   }
-  const jd=getJDfromISO(SELECTED_DATE);
-  const{target,consumed}=computeDayMacros(jd,SELECTED_DATE);
-  const verdict=await flGetVerdict(task,lookup.macro,target,consumed,lookup.items);
-  document.getElementById('flLoadingStep').style.display='none';
-  await flFinalizeLog(task,description,lookup.macro,verdict,true,lookup.items);
 }
 
 async function flHandleSubmit(){
@@ -19531,15 +19640,30 @@ async function flHandleSubmit(){
   const text=document.getElementById('flFreeText').value.trim();
   if(!text){showToast(uiIsEn()?'Type what you ate first':'اكتب إيه اللي أكلته الأول',2200,'warn');return;}
 
-  document.getElementById('flChooseStep').style.display='none';
-  document.getElementById('flLoadingStep').style.display='block';
+  try{ document.getElementById('flChooseStep').style.display='none'; }catch(e){}
+  try{ document.getElementById('flLoadingStep').style.display='block'; }catch(e){}
 
-  const result=await flExtractMealInfo(text,null);
+  let result;
+  try{
+    result=await flExtractMealInfo(text,null);
+  }catch(e){
+    console.error('flExtractMealInfo threw',e);
+    try{
+      document.getElementById('flLoadingStep').style.display='none';
+      document.getElementById('flChooseStep').style.display='block';
+    }catch(e2){}
+    showToast(uiIsEn()
+      ?'⚠️ Could not understand that description — try again'
+      :'⚠️ مش قادر أفهم الوصف ده — جرب تاني',3800,'warn');
+    return;
+  }
 
-  if(!result.ok){
-    document.getElementById('flLoadingStep').style.display='none';
-    document.getElementById('flChooseStep').style.display='block';
-    showToast(result.error,3800,'warn');
+  if(!result||!result.ok){
+    try{
+      document.getElementById('flLoadingStep').style.display='none';
+      document.getElementById('flChooseStep').style.display='block';
+    }catch(e){}
+    showToast((result&&result.error)||(uiIsEn()?'⚠️ Food log error':'⚠️ خطأ في تسجيل الأكل'),3800,'warn');
     return;
   }
 
@@ -19740,7 +19864,56 @@ let AI_UNDO_ID_COUNTER=0;
 function aiRegisterUndoSnapshot(snap){
   const id='undo-'+(++AI_UNDO_ID_COUNTER)+'-'+Date.now();
   AI_UNDO_SNAPSHOTS.set(id,snap);
+  // sessionStorage backup so a soft reload doesn't instantly kill Undo
+  try{
+    const packed={id, snap, ts:Date.now()};
+    const key='sc:aiUndoLast';
+    sessionStorage.setItem(key, JSON.stringify(packed));
+  }catch(e){}
   return id;
+}
+function aiHydrateUndoFromSession(){
+  try{
+    const raw=sessionStorage.getItem('sc:aiUndoLast');
+    if(!raw) return;
+    const packed=JSON.parse(raw);
+    if(packed&&packed.id&&packed.snap&&(Date.now()-(packed.ts||0)<6*3600*1000)){
+      AI_UNDO_SNAPSHOTS.set(packed.id, packed.snap);
+    }
+  }catch(e){}
+}
+try{ aiHydrateUndoFromSession(); }catch(e){}
+
+// Pending AI mutations that wait for explicit "تمام / Confirm" before executing.
+// User requested: AI must say what it will do FIRST, then wait for approval.
+let AI_PENDING_CONFIRM=null; // { id, resolved, proposalText }
+const AI_CONFIRM_NEEDED=new Set([
+  'replaceWeeklySchedule','deleteTask','moveTask','addCustomTask','createScheduleSlot',
+  'deleteCategory','editCategory','createCategory','setStreak','setBestStreak',
+  'setWeeklyPoints','setPunishRate','skipTask','restoreTask','editPoints'
+]);
+function aiDescribePendingChange(resolved){
+  const en=uiIsEn();
+  if(!resolved||!resolved.tool) return en?'Apply this change?':'أنفّذ التغيير ده؟';
+  try{
+    const t=resolved.tool;
+    if(t==='replaceWeeklySchedule'){
+      const n=(resolved.blocks&&resolved.blocks.length)||0;
+      const days=(resolved.days||resolved.jds||[]).length||'?';
+      return en
+        ?`I will replace the weekly schedule with ${n} block(s) across ${days} day(s). Confirm?`
+        :`هستبدل الجدول الأسبوعي بـ ${n} مهمة/بلوك على ${days} يوم. موافق؟`;
+    }
+    if(t==='deleteTask') return en?`I will delete "${resolved.taskName||resolved.taskId}". Confirm?`:`همسح "${resolved.taskName||resolved.taskId}". موافق؟`;
+    if(t==='moveTask') return en?`I will move "${resolved.taskName||resolved.taskId}" to ${resolved.toDate} at ${resolved.toTime}. Confirm?`:`هنقل "${resolved.taskName||resolved.taskId}" إلى ${resolved.toDate} الساعة ${resolved.toTime}. موافق؟`;
+    if(t==='addCustomTask') return en?`I will add "${resolved.name}" at ${resolved.time} on ${resolved.date}. Confirm?`:`هضيف "${resolved.name}" الساعة ${resolved.time} يوم ${resolved.date}. موافق؟`;
+    if(t==='createScheduleSlot') return en?`I will create schedule slot "${resolved.name}". Confirm?`:`هعمل خانة جدول اسمها "${resolved.name}". موافق؟`;
+    if(t==='skipTask') return en?`I will skip this task for one day only. Confirm?`:`هتخطّى المهمة دي ليوم واحد بس. موافق؟`;
+    if(t==='editPoints') return en?`I will set points to ${resolved.points}. Confirm?`:`هغيّر النقاط إلى ${resolved.points}. موافق؟`;
+    return en?`I will run: ${t}. Confirm?`:`هنفّذ: ${t}. موافق؟`;
+  }catch(e){
+    return en?'Apply this change?':'أنفّذ التغيير ده؟';
+  }
 }
 
 function aiRenderMessages(){
@@ -19762,6 +19935,12 @@ function aiRenderMessages(){
     const undoBtns=(m.undoIds&&m.undoIds.length)
       ?`<div style="margin-top:6px;display:flex;gap:6px;flex-wrap:wrap">${m.undoIds.map((uid,i)=>`<button class="ai-undo-btn" data-undo-id="${uid}" type="button">↩️ ${en?'Undo':'تراجع'}${m.undoIds.length>1?' #'+(i+1):''}</button>`).join('')}</div>`
       :'';
+    const confirmBtns=m.pendingConfirmId
+      ?`<div style="margin-top:8px;display:flex;gap:8px;flex-wrap:wrap">
+          <button class="ai-undo-btn" data-ai-confirm="${m.pendingConfirmId}" type="button" style="background:rgba(16,185,129,.18);border-color:rgba(16,185,129,.5);color:var(--gr)">✅ ${en?'Confirm':'تمام ماشي'}</button>
+          <button class="ai-undo-btn" data-ai-cancel="${m.pendingConfirmId}" type="button">✖️ ${en?'Cancel':'إلغاء'}</button>
+        </div>`
+      :'';
     const rawText=(m.text!=null&&m.text!=='')?String(m.text):(m.content!=null?String(m.content):'');
     const shown=m.role==='user'?rawText:translateAiReply(rawText);
     const safeShown=String(shown||'').replace(/</g,'&lt;');
@@ -19774,7 +19953,7 @@ function aiRenderMessages(){
          ${m.sources.slice(0,3).map(s=>`<a href="${(s.uri||'').replace(/"/g,'&quot;')}" target="_blank" rel="noopener noreferrer" style="color:var(--brand, #38bdf8);text-decoration:underline;text-overflow:ellipsis;overflow:hidden;white-space:nowrap;">${(s.title||s.uri||'').replace(/</g,'&lt;')}</a>`).join('')}
        </div>`
       :'';
-    return`<div class="ai-msg ${cls}">${imgHtml}${safeShown}${sourceLinks}${undoBtns}</div>`;
+    return`<div class="ai-msg ${cls}">${imgHtml}${safeShown}${sourceLinks}${undoBtns}${confirmBtns}</div>`;
   }).join('');
   body.scrollTop=body.scrollHeight;
 }
@@ -19910,15 +20089,12 @@ async function aiProcessClause(clauseText){
     if(!resolved.ok) return{tone:'err',reply:resolved.reply,handled:true};
     const task=aiFindTaskByIdOnDate(resolved.taskId,resolved.fromIso);
     if(!task) return{tone:'err',reply:'⚠️ المهمة مش موجودة على التاريخ المتوقع — جرب تاني.',handled:true};
-    const snapshot=aiSnapshotState();
-    try{
-      await aiMoveTaskExec(task,resolved.fromIso,resolved.toDate,resolved.toTime);
-      const why=resolved.reasoning?` (${resolved.reasoning})`:'';
-      return{tone:'ok',reply:`تم نقل "${resolved.taskName}" إلى ${resolved.toDate} الساعة ${resolved.toTime}${why} ✅`,handled:true,undoSnapshot:snapshot};
-    }catch(e){
-      console.error('relative move exec failed',e);
-      return{tone:'err',reply:'⚠️ حصل خطأ أثناء تنفيذ النقل — جرب تاني.',handled:true};
-    }
+    // Confirm before moving — same rule as tool-path schedule mutations.
+    const pid='pend-'+(++AI_UNDO_ID_COUNTER)+'-'+Date.now();
+    const toolish={tool:'moveTask',taskId:resolved.taskId,taskName:resolved.taskName,fromIso:resolved.fromIso,toDate:resolved.toDate,toTime:resolved.toTime,_relative:true,_resolvedMove:resolved};
+    AI_PENDING_CONFIRM={id:pid, resolved:toolish};
+    const proposal=aiDescribePendingChange(toolish)+(resolved.reasoning?`\n(${resolved.reasoning})`:'');
+    return{tone:'ok',reply:proposal,handled:true,pendingConfirmId:pid};
   }
 
   const intent=aiParseIntent(clauseText);
@@ -19930,16 +20106,24 @@ async function aiProcessClause(clauseText){
   if(['markDone','skipTask','moveTask','deleteTask','deleteFreeForever','restoreTask','unmarkDone','editPoints','addCustomTask','rememberFact','openPrayerModal','openFoodLogModal','setCurStreak','setBestStreak','setWeeklyPoints','setPunishRate','alreadyDone','unrecognizedTask','needMoreInfo'].includes(intent.action)){
     let tone='ok';
     let snapshot=null;
+    // Schedule-shape changes need explicit confirm. Instant actions (done / unmark /
+    // open modal / remember) still run immediately so chat stays snappy.
+    const needsConfirm=['skipTask','moveTask','deleteTask','deleteFreeForever','restoreTask','editPoints','addCustomTask','setCurStreak','setBestStreak','setWeeklyPoints','setPunishRate'];
     const mutatingActions=['markDone','skipTask','moveTask','deleteTask','deleteFreeForever','restoreTask','unmarkDone','editPoints','addCustomTask','createCategory','editCategory','deleteCategory','createScheduleSlot','replaceWeeklySchedule','rememberFact','setCurStreak','setBestStreak','setWeeklyPoints','setPunishRate'];
     try{
+      if(needsConfirm.includes(intent.action)){
+        const pid='pend-'+(++AI_UNDO_ID_COUNTER)+'-'+Date.now();
+        AI_PENDING_CONFIRM={id:pid, resolved:{tool:intent.action, intent}};
+        const en=uiIsEn();
+        const proposal=en
+          ?(`About to run «${intent.action}». Confirm?`)
+          :(`هنفّذ «${intent.action}». موافق؟`);
+        return{tone:'ok',reply:intent.reply?`${intent.reply}\n\n${proposal}`:proposal,handled:true,pendingConfirmId:pid};
+      }
       if(mutatingActions.includes(intent.action)){
         snapshot=aiSnapshotState(); // taken BEFORE execution so undo restores the true prior state
         await aiExecuteAction(intent);
       }else if(['openPrayerModal','openFoodLogModal'].includes(intent.action)){
-        // Modals don't get a pre-emptive snapshot here — they don't mutate anything
-        // themselves (see aiExecuteAction), the modal's own confirm flow does, and
-        // that flow already has its own existing UI (e.g. the ✏️ تعديل edit button)
-        // rather than a chat-level undo, so no snapshot is needed for these two.
         await aiExecuteAction(intent);
       }else{
         tone='err';
@@ -20109,6 +20293,21 @@ async function aiHandleSend(){
       // Question / small talk / router miss → conversational model below.
       continue;
     }
+    // Structural schedule mutations require explicit user confirmation first.
+    if(AI_CONFIRM_NEEDED.has(resolved.tool)){
+      const pid='pend-'+(++AI_UNDO_ID_COUNTER)+'-'+Date.now();
+      AI_PENDING_CONFIRM={id:pid, resolved};
+      const proposal=aiDescribePendingChange(resolved);
+      anyHandled=true;
+      results.push({
+        tone:'ok',
+        reply:proposal,
+        handled:true,
+        pendingConfirmId:pid,
+        _opensModal:false
+      });
+      continue;
+    }
     const snapshot=await aiExecuteToolCall(resolved);
     anyHandled=true;
     anyMutated=true;
@@ -20130,7 +20329,8 @@ async function aiHandleSend(){
     const overallTone=results.some(r=>r.tone==='err')?(results.every(r=>r.tone==='err')?'err':null):'ok';
     const undoSnapshots=results.filter(r=>r.undoSnapshot).map(r=>r.undoSnapshot);
     const undoIds=undoSnapshots.map(s=>aiRegisterUndoSnapshot(s));
-    session.messages.push({role:'bot',text:combinedText,ts:Date.now(),tone:overallTone,undoIds:undoIds.length?undoIds:undefined,hasUndo:undoIds.length>0});
+    const pendingConfirmId=(results.find(r=>r.pendingConfirmId)||{}).pendingConfirmId;
+    session.messages.push({role:'bot',text:combinedText,ts:Date.now(),tone:overallTone,undoIds:undoIds.length?undoIds:undefined,hasUndo:undoIds.length>0,pendingConfirmId:pendingConfirmId||undefined});
     session.lastMsgAt=Date.now();
     aiRenderMessages();
     await saveAiChat();
@@ -20288,11 +20488,85 @@ document.body.addEventListener('click',async e=>{
   if(closest('#aiSidebarNewChat')){await aiStartNewChat();aiCloseSidebar();return;}
   if(closest('#aiSidebarOverlay')){aiCloseSidebar();return;}
 
+  const confirmBtn=closest('[data-ai-confirm]');
+  if(confirmBtn){
+    const pid=confirmBtn.getAttribute('data-ai-confirm');
+    const pending=AI_PENDING_CONFIRM;
+    const enU=uiIsEn();
+    if(!pending||pending.id!==pid){
+      showToast(enU?'⚠️ This confirmation expired':'⚠️ التأكيد ده انتهى',2800,'warn');
+      return;
+    }
+    confirmBtn.disabled=true;
+    const cancelSibling=confirmBtn.parentElement&&confirmBtn.parentElement.querySelector('[data-ai-cancel]');
+    if(cancelSibling) cancelSibling.disabled=true;
+    confirmBtn.textContent=enU?'…Applying':'...بتنفّذ';
+    try{
+      const resolved=pending.resolved;
+      AI_PENDING_CONFIRM=null;
+      let snapshot=null;
+      if(resolved&&resolved._relative&&resolved._resolvedMove){
+        const mv=resolved._resolvedMove;
+        const task=aiFindTaskByIdOnDate(mv.taskId,mv.fromIso);
+        snapshot=aiSnapshotState();
+        if(task) await aiMoveTaskExec(task,mv.fromIso,mv.toDate,mv.toTime);
+      }else if(resolved&&resolved.intent){
+        snapshot=aiSnapshotState();
+        await aiExecuteAction(resolved.intent);
+      }else if(resolved&&resolved.tool){
+        snapshot=await aiExecuteToolCall(resolved);
+      }
+      const session=aiGetActiveSession();
+      const undoId=snapshot?aiRegisterUndoSnapshot(snapshot):null;
+      let doneText=enU?'Done ✅':'تم ✅';
+      try{
+        if(resolved&&resolved.tool&&typeof aiToolCallReplyText==='function'){
+          doneText=aiToolCallReplyText(resolved)||doneText;
+        }else if(resolved&&resolved.intent&&resolved.intent.reply){
+          doneText=resolved.intent.reply;
+        }
+      }catch(e){}
+      session.messages.push({role:'bot',text:doneText,ts:Date.now(),tone:'ok',undoIds:undoId?[undoId]:undefined,hasUndo:!!undoId});
+      session.lastMsgAt=Date.now();
+      try{ renderPanels();switchDay(getJDfromISO(SELECTED_DATE));updateUI(); }catch(e){}
+      aiRenderMessages();
+      await saveAiChat();
+      showToast(enU?'✅ Applied':'✅ تم التنفيذ',2000);
+    }catch(e){
+      console.error('AI confirm exec failed',e);
+      showToast(enU?'⚠️ Failed to apply':'⚠️ فشل التنفيذ',3000,'warn');
+      confirmBtn.disabled=false;
+      confirmBtn.textContent=enU?'Confirm':'تمام ماشي';
+    }
+    return;
+  }
+  const cancelBtn=closest('[data-ai-cancel]');
+  if(cancelBtn){
+    const pid=cancelBtn.getAttribute('data-ai-cancel');
+    if(AI_PENDING_CONFIRM&&AI_PENDING_CONFIRM.id===pid) AI_PENDING_CONFIRM=null;
+    const enU=uiIsEn();
+    const session=aiGetActiveSession();
+    session.messages.push({role:'bot',text:enU?'Cancelled — nothing changed.':'اتلغى — مفيش حاجة اتغيّرت.',ts:Date.now(),tone:'ok'});
+    session.lastMsgAt=Date.now();
+    aiRenderMessages();
+    await saveAiChat();
+    return;
+  }
+
   const undoBtn=closest('[data-undo-id]');
   if(undoBtn){
     const uid=undoBtn.getAttribute('data-undo-id');
-    const snap=AI_UNDO_SNAPSHOTS.get(uid);
+    let snap=AI_UNDO_SNAPSHOTS.get(uid);
     const enU=uiIsEn();
+    if(!snap){
+      try{
+        const raw=sessionStorage.getItem('sc:aiUndoLast');
+        if(raw){
+          const packed=JSON.parse(raw);
+          if(packed&&packed.id===uid&&packed.snap) snap=packed.snap;
+        }
+      }catch(e){}
+    }
     if(!snap){
       showToast(enU?'⚠️ Undo is no longer available (page may have refreshed)':'⚠️ التراجع ده مش متاح دلوقتي (يمكن الصفحة اتحدثت من ساعتها)',3200,'warn');
       return;
@@ -20301,7 +20575,8 @@ document.body.addEventListener('click',async e=>{
     undoBtn.textContent=enU?'…Undoing':'...جاري التراجع';
     const ok=await aiRestoreSnapshot(snap);
     if(ok){
-      AI_UNDO_SNAPSHOTS.delete(uid); // one-time use — prevents undoing an undo into a confusing double-revert
+      AI_UNDO_SNAPSHOTS.delete(uid);
+      try{ sessionStorage.removeItem('sc:aiUndoLast'); }catch(e){}
       undoBtn.textContent=enU?'✅ Undone':'✅ اتراجع';
       showToast(enU?'↩️ Change undone':'↩️ تم التراجع عن التغيير',2400);
     }else{
@@ -21138,6 +21413,13 @@ document.addEventListener('visibilitychange', () => {
       }
     }
     try{ pullCloudUserDelta('visibilitychange'); }catch(e){}
+    // Re-fetch prayers when returning to the app so a long background session
+    // cannot keep half-hour-stale FALLBK / yesterday times on screen.
+    try{
+      if(typeof fetchPrayers==='function'){
+        fetchPrayers(SELECTED_DATE||TODAY).catch(()=>{});
+      }
+    }catch(e){}
   }
 });
 // focus alone used to double-fire with visibilitychange and re-pull every few seconds.
